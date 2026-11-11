@@ -2,7 +2,7 @@
 //!
 //! Every scenario in `tests/e2e/scenarios/*.yaml` runs against the real `kor` binary and the real core,
 //! with the deterministic mock provider (`kor_runtime::e2e::MockServer`) in an isolated Kor home:
-//! - CLI: the line REPL in a pseudo-terminal (`expectrl`; ConPTY on Windows), answering approvals like a
+//! - CLI: the line REPL in a pseudo-terminal (`expectrl`; `ConPTY` on Windows), answering approvals like a
 //!   user, and the parity CLI command for `command` steps;
 //! - TUI: `kor tui` in a pseudo-terminal, keys for prompt / approval, the parity slash command for
 //!   `command` steps.
@@ -89,7 +89,7 @@ fn run_command(env: &IsolatedEnv, st: &Step) -> String {
     )
 }
 
-/// Some Windows builds' ConPTY never hands a child's output to `expectrl` (not even
+/// Some Windows builds' `ConPTY` never hands a child's output to `expectrl` (not even
 /// `cmd /c echo`); the PTY tests cannot say anything there, so they are skipped with the reason.
 fn pty_works() -> bool {
     static OK: std::sync::OnceLock<bool> = std::sync::OnceLock::new();

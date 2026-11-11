@@ -40,7 +40,10 @@ impl Default for Group {
         let mut b = [0u8; 8];
         let _ = getrandom::fill(&mut b);
         Self {
-            key: b.iter().map(|x| format!("{x:02x}")).collect(),
+            key: b.iter().fold(String::new(), |mut s, x| {
+                let _ = std::fmt::Write::write_fmt(&mut s, format_args!("{x:02x}"));
+                s
+            }),
             current: Mutex::new(None),
         }
     }
@@ -90,20 +93,17 @@ impl Run<'_> {
 
     async fn open(&self, url: &str, new_tab: bool) -> Result<(), String> {
         let current = *lock(&self.group.current);
-        match current.filter(|_| !new_tab) {
-            Some(tab) => {
-                self.cmd("navigate", json!({"tabId": tab, "url": url}), NAV_TIMEOUT)
-                    .await?;
-            }
-            None => {
-                let r = self
-                    .cmd("tabs.create", json!({"url": url}), NAV_TIMEOUT)
-                    .await?;
-                let id = r["tabId"]
-                    .as_i64()
-                    .ok_or("the extension returned no tab id")?;
-                *lock(&self.group.current) = Some(id);
-            }
+        if let Some(tab) = current.filter(|_| !new_tab) {
+            self.cmd("navigate", json!({"tabId": tab, "url": url}), NAV_TIMEOUT)
+                .await?;
+        } else {
+            let r = self
+                .cmd("tabs.create", json!({"url": url}), NAV_TIMEOUT)
+                .await?;
+            let id = r["tabId"]
+                .as_i64()
+                .ok_or("the extension returned no tab id")?;
+            *lock(&self.group.current) = Some(id);
         }
         Ok(())
     }

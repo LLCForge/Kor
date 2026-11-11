@@ -9,6 +9,7 @@
 //! `api-version=7.1`.
 
 use serde_json::{Value, json};
+use std::fmt::Write as _;
 
 use super::api::{Comment, InlineNote, PrInfo};
 use super::{ForgeError, Kind, PrRequest, Remote};
@@ -34,13 +35,12 @@ pub fn remote(scheme: &str, authority: &str, host: &str, path: &str) -> Result<R
     let segs: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
     let (owner, repo) = match segs.iter().position(|s| *s == "_git") {
         Some(i) if i >= 1 && i + 1 < segs.len() => (segs[..i].join("/"), segs[i + 1].to_owned()),
-        Some(_) => return Err(ForgeError::NoRemote),
         // SSH form: org/project/repo.
         None if segs.len() >= 2 => (
             segs[..segs.len() - 1].join("/"),
             segs[segs.len() - 1].to_owned(),
         ),
-        None => return Err(ForgeError::NoRemote),
+        Some(_) | None => return Err(ForgeError::NoRemote),
     };
     // dev.azure.com needs org/project; *.visualstudio.com and servers at least a project.
     if owner.is_empty() || (host == "dev.azure.com" && !owner.contains('/')) {
@@ -196,7 +196,7 @@ pub fn item_path(path: &str, commit: &str) -> String {
         if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~' | b'/') {
             enc.push(char::from(b));
         } else {
-            enc.push_str(&format!("%{b:02X}"));
+            let _ = write!(enc, "%{b:02X}");
         }
     }
     format!(

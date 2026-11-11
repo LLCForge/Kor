@@ -266,7 +266,7 @@ pub struct McpClient {
     next_id: AtomicU64,
     stderr: Arc<Mutex<VecDeque<String>>>,
     // Held so the process lives as long as the client (`kill_on_drop`).
-    _child: Mutex<Option<Child>>,
+    child: Mutex<Option<Child>>,
     /// How it was started, for [`McpClient::restart`] (§28.15); `None` for in-memory servers.
     spawn: Mutex<Option<(ServerSpec, PathBuf)>>,
     reader: Mutex<Option<tokio::task::JoinHandle<()>>>,
@@ -374,7 +374,7 @@ impl McpClient {
         let (spec, cwd) = lock(&self.spawn)
             .clone()
             .ok_or("this MCP server was not started by Kor")?;
-        if let Some(mut old) = lock(&self._child).take() {
+        if let Some(mut old) = lock(&self.child).take() {
             let _ = old.start_kill();
         }
         let reader = lock(&self.reader).take();
@@ -385,7 +385,7 @@ impl McpClient {
         lock(&self.stderr).clear();
         let (child, stdin, stdout, stderr_pipe) = spawn_server(&spec, &cwd)?;
         *self.stdin.lock().await = Box::new(stdin);
-        *lock(&self._child) = Some(child);
+        *lock(&self.child) = Some(child);
         *lock(&self.reader) = Some(tokio::spawn(read_loop(
             BufReader::new(stdout),
             self.pending.clone(),
@@ -418,7 +418,7 @@ impl McpClient {
             pending,
             next_id: AtomicU64::new(1),
             stderr: Arc::default(),
-            _child: Mutex::new(child),
+            child: Mutex::new(child),
             spawn: Mutex::new(None),
             reader: Mutex::new(Some(reader)),
         })

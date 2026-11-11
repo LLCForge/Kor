@@ -1,12 +1,13 @@
-//! `kor mount`: the `~/Kor/` tree as a WebDAV drive on `127.0.0.1` (§27.5, ADR 0052).
+//! `kor mount`: the `~/Kor/` tree as a `WebDAV` drive on `127.0.0.1` (§27.5, ADR 0052).
 //!
-//! The operating system's own WebDAV client mounts it (`kor_platform::mount`), so no kernel
+//! The operating system's own `WebDAV` client mounts it (`kor_platform::mount`), so no kernel
 //! driver is needed. Read-mostly: everything can be listed and read; only `Gelen/` and
 //! `Görevler/` accept new files and folders (the drop boxes). Nothing can be deleted or moved.
 //! Requests need the random path token and a loopback `Host` header (DNS rebinding), and the
 //! listener binds to `127.0.0.1` only.
 
 use std::convert::Infallible;
+use std::fmt::Write as _;
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -64,7 +65,7 @@ fn encode(s: &str) -> String {
         if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~' | b'/') {
             out.push(char::from(b));
         } else {
-            out.push_str(&format!("%{b:02X}"));
+            let _ = write!(out, "%{b:02X}");
         }
     }
     out
@@ -210,6 +211,7 @@ fn content_type(p: &Path) -> &'static str {
 }
 
 /// Handle one request against `tree`; `host_ok` already checked the `Host` header.
+#[allow(clippy::missing_panics_doc, clippy::too_many_lines)] // panics only on broken invariants of in-memory data; one linear sequence; splitting it would scatter the steps
 pub async fn handle(tree: &Tree, req: Request<Incoming>) -> Resp {
     let method = req.method().clone();
     let depth = match req.headers().get("depth").and_then(|v| v.to_str().ok()) {
@@ -359,7 +361,10 @@ impl Drop for Server {
 fn random_token() -> std::io::Result<String> {
     let mut b = [0u8; 16];
     getrandom::fill(&mut b).map_err(|e| std::io::Error::other(e.to_string()))?;
-    Ok(b.iter().map(|x| format!("{x:02x}")).collect())
+    Ok(b.iter().fold(String::new(), |mut s, x| {
+        let _ = std::fmt::Write::write_fmt(&mut s, format_args!("{x:02x}"));
+        s
+    }))
 }
 
 /// Serve `root` on `127.0.0.1:<free port>/<random token>/`.

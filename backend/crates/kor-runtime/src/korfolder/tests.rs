@@ -348,8 +348,8 @@ async fn dav_server_lists_reads_and_takes_drops_only() {
     };
     let base = url
         .trim_start_matches("http://")
-        .splitn(2, '/')
-        .nth(1)
+        .split_once('/')
+        .map(|x| x.1)
         .map(|p| format!("/{p}"))
         .unwrap();
     let r = req("PROPFIND", &base, "", &host).await;

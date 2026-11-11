@@ -66,6 +66,7 @@ pub mod media;
 pub mod osint;
 pub mod perf;
 // Tray, notifications, approval queue, ETA, "call me", window layouts (ADR 0051).
+pub mod builtin_skills;
 pub mod prefs;
 pub mod presence;
 pub mod privacycard;
@@ -266,11 +267,13 @@ fn needs_network(name: &str) -> bool {
 }
 
 /// Agent tools from crates that depend on this one (kor-web, §29), registered once at start-up.
-static EXTRA_TOOLS: std::sync::OnceLock<fn() -> Vec<Arc<dyn kor_tools::Tool>>> =
-    std::sync::OnceLock::new();
+/// Builds the extra tools of one session.
+pub type ToolsFn = fn() -> Vec<Arc<dyn kor_tools::Tool>>;
+
+static EXTRA_TOOLS: std::sync::OnceLock<ToolsFn> = std::sync::OnceLock::new();
 
 /// Add tools to every agent session (`kor_web::site::tools::all`). The first call wins.
-pub fn register_extra_tools(f: fn() -> Vec<Arc<dyn kor_tools::Tool>>) {
+pub fn register_extra_tools(f: ToolsFn) {
     let _ = EXTRA_TOOLS.set(f);
 }
 
@@ -366,7 +369,7 @@ fn computer_and_health_setup(
     use std::io::IsTerminal as _;
     kor_computer::policy::set_policy(kor_computer::policy::Policy::from_config(&config.computer));
     kor_computer::set_audit_sink(Arc::new(|action, fields| {
-        kor_agent::audit::record(action, fields)
+        kor_agent::audit::record(action, fields);
     }));
     kor_health::set_config(config.health.clone());
     if surface == prompt::Surface::Terminal {
@@ -490,6 +493,10 @@ pub fn load_compat(root: &Path) -> Compat {
         trusted,
     });
     for dir in plugin_dirs(root, home.as_deref(), trusted) {
+        kor_compat::add_plugin(&mut c, &dir);
+    }
+    // Skills shipped with Kor, last so the user's and the project's own skills win.
+    if let Some(dir) = kor_home().and_then(|h| builtin_skills::ensure(&h)) {
         kor_compat::add_plugin(&mut c, &dir);
     }
     // §15.1: Kor's own `hooks.toml` (global, and the project's when trusted).
@@ -1295,7 +1302,7 @@ pub fn prepare(
                 *tctx
                     .undo
                     .lock()
-                    .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(j)
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(j);
             }
             Err(e) => compat_warnings.push(format!("undo journal: {e}")),
         }

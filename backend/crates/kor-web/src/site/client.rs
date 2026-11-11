@@ -626,6 +626,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
     fn report_from_logged_work() {
         let dir = tempfile::tempdir().unwrap();
         let base = dir.path();

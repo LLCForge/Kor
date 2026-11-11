@@ -58,7 +58,7 @@ pub enum HooksCmd {
 #[derive(Debug, Args)]
 pub struct HookArgs {
     /// pre-edit, post-edit, pre-command, post-command, pre-commit, on-task-start, on-task-done,
-    /// on-approval-needed, on-budget-alert, on-error (Claude files: PreToolUse, PostToolUse, Stop…).
+    /// on-approval-needed, on-budget-alert, on-error (Claude files: `PreToolUse`, `PostToolUse`, Stop…).
     pub event: String,
     #[arg(long, conflicts_with_all = ["mcp", "notify"])]
     pub command: Option<String>,

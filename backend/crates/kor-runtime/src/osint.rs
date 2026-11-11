@@ -20,6 +20,7 @@
 //! marked [`Origin::Link`]: the desktop asks before switching projects and never sends a linked
 //! prompt by itself (it lands in the composer). Every value is length-checked here.
 
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -171,10 +172,14 @@ pub fn project_root(path: &Path) -> PathBuf {
         path.parent()
             .map_or_else(|| path.to_path_buf(), Path::to_path_buf)
     };
+    // `~/.kor` is Kor's own user folder, not a project marker.
+    let home = dirs::home_dir();
     start
         .ancestors()
         .find(|d| {
-            d.join(".git").exists() || d.join("AGENTS.md").is_file() || d.join(".kor").is_dir()
+            d.join(".git").exists()
+                || d.join("AGENTS.md").is_file()
+                || (d.join(".kor").is_dir() && home.as_deref() != Some(*d))
         })
         .map_or_else(|| start.clone(), Path::to_path_buf)
 }
@@ -381,7 +386,7 @@ pub fn encode(s: &str) -> String {
         if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~' | b'/') {
             out.push(char::from(b));
         } else {
-            out.push_str(&format!("%{b:02X}"));
+            let _ = write!(out, "%{b:02X}");
         }
     }
     out

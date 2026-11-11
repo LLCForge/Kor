@@ -171,7 +171,7 @@ fn kor_items(f: &HookFile) -> Result<Vec<Item>, String> {
                 command: s(t, "command"),
                 timeout: t
                     .get("timeout")
-                    .and_then(|v| v.as_integer())
+                    .and_then(toml_edit::Item::as_integer)
                     .and_then(|n| u64::try_from(n).ok()),
                 files,
                 branch: s(t, "branch"),
@@ -179,7 +179,10 @@ fn kor_items(f: &HookFile) -> Result<Vec<Item>, String> {
                 mcp: s(t, "mcp"),
                 args,
                 notify: s(t, "notify"),
-                disabled: t.get("disabled").and_then(|v| v.as_bool()).unwrap_or(false),
+                disabled: t
+                    .get("disabled")
+                    .and_then(toml_edit::Item::as_bool)
+                    .unwrap_or(false),
             });
         }
     }
@@ -235,10 +238,10 @@ pub fn validate(it: &Item) -> Vec<String> {
     let format = it.format.unwrap_or(Format::Kor);
     match format {
         Format::Kor if !KOR_EVENTS.contains(&it.event.as_str()) => {
-            e.push(format!("unknown event `{}`", it.event))
+            e.push(format!("unknown event `{}`", it.event));
         }
         Format::Claude if !CLAUDE_EVENTS.contains(&it.event.as_str()) => {
-            e.push(format!("unknown event `{}`", it.event))
+            e.push(format!("unknown event `{}`", it.event));
         }
         _ => {}
     }
@@ -355,6 +358,7 @@ fn kor_table(it: &Item) -> toml_edit::Table {
 ///
 /// # Errors
 /// Validation errors, an unreadable file, an unknown id.
+#[allow(clippy::missing_panics_doc)] // panics only on broken invariants of in-memory data
 pub fn save(file: &HookFile, it: &Item, replace: Option<(&str, &str)>) -> Result<(), String> {
     let mut it = it.clone();
     it.format = Some(file.format);
@@ -407,7 +411,7 @@ pub fn save(file: &HookFile, it: &Item, replace: Option<(&str, &str)>) -> Result
                 .find(|g| g["matcher"].as_str().unwrap_or("") == matcher)
             {
                 Some(g) if g["hooks"].is_array() => {
-                    g["hooks"].as_array_mut().expect("array").push(hook)
+                    g["hooks"].as_array_mut().expect("array").push(hook);
                 }
                 _ => groups.push(json!({ "matcher": matcher, "hooks": [hook] })),
             }

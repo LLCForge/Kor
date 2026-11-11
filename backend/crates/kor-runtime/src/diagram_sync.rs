@@ -1,4 +1,4 @@
-//! Live diagrams (Master Build Prompt §27.14, ADR 0063): marked Mermaid / PlantUML / D2 blocks in
+//! Live diagrams (Master Build Prompt §27.14, ADR 0063): marked Mermaid / `PlantUML` / D2 blocks in
 //! the project's docs are regenerated from the project graph (§7), so `kor diagram check` can fail
 //! CI when a diagram no longer matches the code.
 //!
@@ -535,6 +535,7 @@ fn file_of(g: &Graph, id: &str) -> Option<String> {
 ///
 /// # Errors
 /// A message when the block cannot be generated (unknown `from` symbol).
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn model(g: &Graph, kind: Kind, params: &BTreeMap<String, String>) -> Result<Model, String> {
     let scope = params.get("scope");
     let max = num(params, "max", DEFAULT_MAX);
@@ -690,6 +691,7 @@ fn label(l: &str) -> String {
 }
 
 /// Render `m` as the structural part of a block.
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn render(m: &Model, kind: Kind, format: Format) -> String {
     let mut o = String::new();
     let seq_label = |l: &str| l.split_once('|').map_or(l, |(_, n)| n).to_owned();
@@ -1033,6 +1035,7 @@ pub fn apply(
 ///
 /// # Errors
 /// Not a diagram file type, a path outside the project, or I/O errors.
+#[allow(clippy::missing_panics_doc)] // panics only on broken invariants of in-memory data
 pub fn add(
     root: &Path,
     file: &str,
@@ -1185,6 +1188,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
     fn sync_check_keep_and_edit_detection() {
         let d = fixture();
         let root = d.path();

@@ -282,13 +282,14 @@ pub fn parse_toml(text: &str, source: &Source, warnings: &mut Vec<String>) -> Ve
                 notify: h.notify.clone(),
                 disabled: h.disabled,
             };
-            let shown = command
-                .map(str::to_owned)
-                .unwrap_or_else(|| match (&h.mcp, &h.notify) {
+            let shown = command.map_or_else(
+                || match (&h.mcp, &h.notify) {
                     (Some(m), _) => format!("mcp:{m}"),
                     (_, Some(n)) => format!("notify:{n}"),
                     _ => String::new(),
-                });
+                },
+                str::to_owned,
+            );
             out.push(Hook {
                 event: event.clone(),
                 matcher: h.matcher,
@@ -536,6 +537,7 @@ impl HookRunner {
 
     /// An `mcp = "server/tool"` hook: start the configured server, call the tool with `args`
     /// plus the event as `event`; its text output goes back to the model, a tool error to the user.
+    #[allow(clippy::similar_names)] // args / argv: the call's JSON and the server's argv
     async fn run_mcp(&self, h: &Hook, k: &KorHook, input: &Value, out: &mut HookOutcome) {
         let Some((server, tool)) = k.mcp.as_deref().and_then(|m| m.split_once('/')) else {
             return;
@@ -825,7 +827,7 @@ mod tests {
 
     /// A command that prints `text` to stdout (or stderr) and exits with `code`.
     fn emit(text: &str, code: i32, to_stderr: bool) -> String {
-        if cfg!(windows) {
+        if kor_tools::Shell::detect().prefix.len() > 1 {
             let q = text.replace('\'', "''");
             if to_stderr {
                 format!("[Console]::Error.WriteLine('{q}'); exit {code}")
@@ -890,7 +892,7 @@ mod tests {
 
     #[tokio::test]
     async fn hook_receives_json_on_stdin() {
-        let save = if cfg!(windows) {
+        let save = if kor_tools::Shell::detect().prefix.len() > 1 {
             "[IO.File]::WriteAllText('hook_input.json', [Console]::In.ReadToEnd())"
         } else {
             "cat > hook_input.json"

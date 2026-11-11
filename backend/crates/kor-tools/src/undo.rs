@@ -87,13 +87,10 @@ pub struct ShellChanges {
     pub unrestorable: Vec<PathBuf>,
 }
 
-fn listing(
-    root: &Path,
-) -> (
-    std::collections::HashMap<PathBuf, (u64, Option<std::time::SystemTime>)>,
-    HashSet<PathBuf>,
-    bool,
-) {
+/// Path → (size, modified) of every file under the root.
+type Sizes = std::collections::HashMap<PathBuf, (u64, Option<std::time::SystemTime>)>;
+
+fn listing(root: &Path) -> (Sizes, HashSet<PathBuf>, bool) {
     let started = std::time::Instant::now();
     let (mut files, mut dirs) = (std::collections::HashMap::new(), HashSet::new());
     let mut stack = vec![root.to_path_buf()];

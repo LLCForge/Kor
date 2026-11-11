@@ -90,8 +90,8 @@ pub fn svg(m: &Model) -> String {
             let _ = writeln!(
                 o,
                 "<text x=\"{:.0}\" y=\"{:.0}\" fill=\"#555\" font-size=\"11\">{}</text>",
-                (x1 + x2) / 2.0 + 4.0,
-                (y1 + y2) / 2.0,
+                f64::midpoint(x1, x2) + 4.0,
+                f64::midpoint(y1, y2),
                 esc(l)
             );
         }
@@ -191,6 +191,11 @@ fn base(id: &str, kind: &str, x: f64, y: f64, w: f64, h: f64, tag: &str) -> Valu
 /// position, size and colours (the user may have moved or restyled them); labels are updated;
 /// new nodes are laid out below; removed nodes and every Kor arrow are rebuilt. Shapes without a
 /// Kor tag (the user's own) are untouched.
+#[allow(
+    clippy::many_single_char_names,
+    clippy::missing_panics_doc,
+    clippy::too_many_lines
+)] // short names of the math or the protocol; panics only on broken invariants of in-memory data; one linear sequence; splitting it would scatter the steps
 pub fn excalidraw_apply(doc: &mut Value, m: &Model) {
     let elements = doc["elements"].as_array().cloned().unwrap_or_default();
     let mut keep: Vec<Value> = Vec::new();

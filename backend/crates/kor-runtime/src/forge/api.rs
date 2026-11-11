@@ -503,6 +503,7 @@ impl Forge {
     ///
     /// # Errors
     /// HTTP, network and guard errors.
+    #[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
     pub async fn comments(&self, number: u64) -> Result<Vec<Comment>, ForgeError> {
         let (prs, repo) = (self.prs(), self.repo());
         let mut out = Vec::new();
@@ -630,6 +631,7 @@ impl Forge {
     ///
     /// # Errors
     /// HTTP, network and guard errors of the summary.
+    #[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
     pub async fn post_review(
         &self,
         number: u64,

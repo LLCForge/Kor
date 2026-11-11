@@ -814,7 +814,7 @@ async fn plan_and_ask(
         }
         let mut switched = false;
         for u in &plan.unsupported {
-            let near = u.nearest.as_ref().map(text).unwrap_or_else(|| "-".into());
+            let near = u.nearest.as_ref().map_or_else(|| "-".into(), text);
             eprintln!(
                 "  {}",
                 l.t_args(
@@ -1539,7 +1539,7 @@ fn ask(ctx: &Ctx, missing: &[fal::MissingInput], input: &mut Value) -> Option<()
                 return None;
             };
             d
-        } else if !opts.is_empty() && !opts.iter().any(|o| *o == answer) {
+        } else if !opts.is_empty() && !opts.contains(&answer) {
             eprintln!(
                 "{}",
                 ctx.l

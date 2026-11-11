@@ -417,6 +417,7 @@ impl crate::Agent {
     }
 
     /// Check the files a successful change touched and append the result to `out`.
+    #[allow(clippy::too_many_lines)] // pre-parse, then each checker in order
     pub(crate) async fn verify_changes(
         &mut self,
         touched: &[String],

@@ -1,5 +1,6 @@
 //! Generated Markdown views of `~/Kor/` and the way back (front matter → store).
 
+use std::fmt::Write as _;
 use std::path::PathBuf;
 
 use kor_core::{ContentPart, Message, Role};
@@ -115,18 +116,16 @@ pub(super) fn render_session(id: &str, msgs: &[Message], meta: &Value) -> String
     );
     for k in ["root", "model"] {
         if let Some(v) = meta[k].as_str() {
-            out.push_str(&format!(
-                "{}: {}\n",
+            let _ = writeln!(
+                out,
+                "{}: {}",
                 if k == "root" { "project" } else { k },
                 yaml_str(v)
-            ));
+            );
         }
     }
     out.push_str("---\n\n");
-    out.push_str(&format!(
-        "# {}\n",
-        if title.is_empty() { id } else { &title }
-    ));
+    let _ = writeln!(out, "# {}", if title.is_empty() { id } else { &title });
     let mut attachments = Vec::new();
     for m in msgs {
         let who = match m.role {
@@ -146,29 +145,30 @@ pub(super) fn render_session(id: &str, msgs: &[Message], meta: &Value) -> String
                         .iter()
                         .find_map(|k| input[*k].as_str())
                         .unwrap_or("");
-                    section.push_str(&format!("> `{name}` {arg}\n\n"));
+                    let _ = write!(section, "> `{name}` {arg}\n\n");
                 }
                 ContentPart::File { path, .. } => {
                     attachments.push(path.clone());
-                    section.push_str(&format!(
+                    let _ = write!(
+                        section,
                         "{}: [{path}](<{path}>)\n\n",
                         l.t("korfolder-view-attachment")
-                    ));
+                    );
                 }
                 ContentPart::Image { .. } => {
-                    section.push_str(&format!("({})\n\n", l.t("korfolder-view-image")));
+                    let _ = write!(section, "({})\n\n", l.t("korfolder-view-image"));
                 }
                 _ => {}
             }
         }
         if !section.is_empty() {
-            out.push_str(&format!("\n{who}\n\n{section}"));
+            let _ = write!(out, "\n{who}\n\n{section}");
         }
     }
     if !attachments.is_empty() {
         out.push_str("\n## Ekler\n\n");
         for a in attachments {
-            out.push_str(&format!("- [{a}](<{a}>)\n"));
+            let _ = writeln!(out, "- [{a}](<{a}>)");
         }
     }
     if out.len() > MAX_VIEW {
@@ -183,6 +183,7 @@ pub(super) fn render_session(id: &str, msgs: &[Message], meta: &Value) -> String
 
 /// Apply an edited view's front matter to `desktop.json` (`sessions.<id>`). Returns `true`
 /// when the store changed.
+#[allow(clippy::many_single_char_names)] // short names of the math or the protocol
 pub(super) fn apply_front(l: &Layout, id: &str, f: &Front) -> std::io::Result<bool> {
     let path = desktop_json(l);
     let mut d = read_desktop(l);
@@ -306,9 +307,7 @@ pub(super) fn diffs(l: &Layout, m: &mut Manifest, r: &mut SyncReport) {
         for e in entries {
             let shown = e.path.display().to_string();
             if e.skipped {
-                out.push_str(&format!(
-                    "# {shown}: (büyük dosya ya da klasör, fark yok)\n"
-                ));
+                let _ = writeln!(out, "# {shown}: (büyük dosya ya da klasör, fark yok)");
                 continue;
             }
             let old = e
@@ -369,17 +368,16 @@ pub(super) fn gallery(l: &Layout, m: &mut Manifest, r: &mut SyncReport) {
         }
         files.sort_by(|a, b| b.2.cmp(&a.2));
         let name = super::project_name(m, p);
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "\n## {name}\n\n| Dosya | Boyut | Tarih |\n| --- | ---: | --- |\n"
-        ));
+        );
         for (f, size, date) in files {
             let file = f
                 .file_name()
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_default();
-            out.push_str(&format!(
-                "| [{file}](<{name}/{file}>) | {size} B | {date} |\n"
-            ));
+            let _ = writeln!(out, "| [{file}](<{name}/{file}>) | {size} B | {date} |");
         }
     }
     let view = l.dir(MEDIA).join("Galeri.md");

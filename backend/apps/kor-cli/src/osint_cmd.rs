@@ -553,7 +553,7 @@ mod tests {
         let other = d.path().join("web");
         std::fs::create_dir_all(&other).unwrap();
         let write = |id: &str, msgs: &[Message]| {
-            kor_agent::session::save(&sessions.join(format!("{id}.jsonl")), msgs).unwrap()
+            kor_agent::session::save(&sessions.join(format!("{id}.jsonl")), msgs).unwrap();
         };
         write(
             "20260101-000000-1",

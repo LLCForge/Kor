@@ -7,6 +7,7 @@
 //! system prompt so it never asks "which OS?" or writes `apt` on Fedora.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -24,7 +25,7 @@ pub struct Distro {
     pub family: String,
     pub name: String,
     pub version: String,
-    /// Image-based system (Silverblue, Kinoite, CoreOS, `ostree`): install with flatpak/toolbox.
+    /// Image-based system (Silverblue, Kinoite, `CoreOS`, `ostree`): install with flatpak/toolbox.
     pub immutable: bool,
 }
 
@@ -622,6 +623,7 @@ pub fn stale(home: &Path, minutes: u32) -> bool {
         .is_none_or(|p| now_secs().saturating_sub(p.collected_at) > u64::from(minutes.max(1)) * 60)
 }
 
+#[allow(clippy::cast_precision_loss)] // shown to one decimal
 fn gb(mbytes: u64) -> String {
     if mbytes >= 10 * 1024 {
         format!("{} GB", (mbytes + 512) / 1024)
@@ -631,7 +633,7 @@ fn gb(mbytes: u64) -> String {
 }
 
 /// The profile for the agent's system prompt, at most `max_chars` characters.
-#[allow(clippy::cast_precision_loss)] // sizes shown to one decimal
+#[allow(clippy::cast_precision_loss, clippy::too_many_lines)] // sizes shown to one decimal; one line per fact
 pub fn prompt_section(p: &Profile, max_chars: usize) -> String {
     let mut lines = Vec::new();
     let mut os = format!(
@@ -643,19 +645,20 @@ pub fn prompt_section(p: &Profile, max_chars: usize) -> String {
         }
     );
     if !p.os.arch.is_empty() {
-        os.push_str(&format!(" ({})", p.os.arch));
+        let _ = write!(os, " ({})", p.os.arch);
     }
     if let Some(d) = &p.os.distro {
-        os.push_str(&format!(
+        let _ = write!(
+            os,
             "; distribution {} {} (family {}{})",
             d.id,
             d.version,
             d.family,
             if d.immutable { ", immutable" } else { "" }
-        ));
+        );
     }
     if let Some(de) = &p.os.desktop {
-        os.push_str(&format!("; desktop {de}"));
+        let _ = write!(os, "; desktop {de}");
     }
     lines.push(os);
     let mut env_line = Vec::new();
@@ -674,7 +677,7 @@ pub fn prompt_section(p: &Profile, max_chars: usize) -> String {
     if let Some(k) = &p.keyboard {
         let mut s = format!("keyboard: {}", k.lang.as_deref().unwrap_or(&k.raw));
         if let Some(v) = &k.variant {
-            s.push_str(&format!(" ({v})"));
+            let _ = write!(s, " ({v})");
         }
         env_line.push(s);
     }
@@ -689,9 +692,9 @@ pub fn prompt_section(p: &Profile, max_chars: usize) -> String {
         gb(p.memory.available_mb)
     );
     for g in &p.gpus {
-        hw.push_str(&format!("; GPU {}", g.name));
+        let _ = write!(hw, "; GPU {}", g.name);
         if let Some(v) = g.vram_mb {
-            hw.push_str(&format!(" {} VRAM", gb(v)));
+            let _ = write!(hw, " {} VRAM", gb(v));
         }
     }
     lines.push(hw);

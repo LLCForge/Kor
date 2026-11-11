@@ -705,7 +705,7 @@ pub fn plan(l: &Localizer, task: &Task, inv: &Inventory, warnings: &[String]) ->
             }
         }
         Task::Perms { path } => {
-            rows.push(row("web-step-perms", path.clone(), l.t("web-impact-perms")))
+            rows.push(row("web-step-perms", path.clone(), l.t("web-impact-perms")));
         }
         Task::Restore { archive, domain } => {
             rows.push(row(

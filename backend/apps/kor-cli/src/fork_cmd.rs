@@ -386,14 +386,11 @@ pub fn run(ctx: &Ctx, cmd: &ForkCmd) -> anyhow::Result<bool> {
                     .collect()
             } else if !std::io::stdin().is_terminal() {
                 return Ok(fail(l, &l.t("fork-merge-needs-tty")));
+            } else if let Some(a) = review(l, &plan.files) {
+                a
             } else {
-                match review(l, &plan.files) {
-                    Some(a) => a,
-                    None => {
-                        println!("{}", l.t("fork-merge-cancelled"));
-                        return Ok(false);
-                    }
-                }
+                println!("{}", l.t("fork-merge-cancelled"));
+                return Ok(false);
             };
             let note = (!*no_note).then_some(plan.summary.as_str());
             let undo = kor_runtime::undo_dir();

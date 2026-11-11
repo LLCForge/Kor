@@ -218,6 +218,7 @@ fn haystack(f: &Field) -> String {
 }
 
 /// Fields Kor never fills: passwords, payment cards, security codes, one-time codes.
+#[allow(clippy::items_after_statements)] // helper kept next to its only use
 pub fn sensitive(f: &Field) -> bool {
     let kind = f.kind.to_lowercase();
     let ac = f.autocomplete.to_lowercase();

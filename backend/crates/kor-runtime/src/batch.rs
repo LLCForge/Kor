@@ -15,6 +15,7 @@
 //! arguments).
 
 use std::collections::BTreeSet;
+use std::fmt::Write as _;
 use std::path::{Component, Path, PathBuf};
 
 use async_trait::async_trait;
@@ -222,7 +223,7 @@ pub fn prompt(files: &[PathBuf], instruction: &str) -> String {
     let mut list = String::new();
     for f in files {
         let size = std::fs::metadata(f).map_or(0, |m| m.len());
-        list.push_str(&format!("- {} ({size} bytes)\n", f.display()));
+        let _ = writeln!(list, "- {} ({size} bytes)", f.display());
     }
     format!(
         "You plan a batch file operation. Do NOT perform it; answer ONLY with a JSON array of operations.\n\
@@ -277,7 +278,8 @@ pub fn unique_path(path: &Path, taken: &[PathBuf]) -> PathBuf {
         .extension()
         .map(|e| format!(".{}", e.to_string_lossy()))
         .unwrap_or_default();
-    (2..)
+    // Bounded: a folder with ten thousand copies keeps the original name rather than spin.
+    (2..10_000)
         .map(|n| path.with_file_name(format!("{stem} ({n}){ext}")))
         .find(|p| free(p))
         .unwrap_or_else(|| path.to_path_buf())
@@ -317,6 +319,7 @@ fn ext_lower(p: &Path) -> String {
 const IMAGE_OUT: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff"];
 
 /// Check the model's operations against the selection. Invalid ones become warnings.
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn validate(files: &[PathBuf], ops: Vec<Op>) -> Plan {
     let allowed: Vec<PathBuf> = {
         let mut v: Vec<PathBuf> = files
@@ -687,6 +690,7 @@ fn write_out(s: &Step, bytes: &[u8]) -> Result<(), String> {
     }
 }
 
+#[allow(clippy::items_after_statements, clippy::too_many_lines)] // helper kept next to its only use; one linear sequence; splitting it would scatter the steps
 fn run_step(s: &Step) -> Result<(), String> {
     let src = &s.sources[0];
     match &s.op {

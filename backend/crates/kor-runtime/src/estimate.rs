@@ -570,6 +570,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::many_single_char_names)] // short names of the math or the protocol
     fn tracking_finishes_into_a_run() {
         let e = estimate("write tests for parser", "x/m1", 0, &prices(), &[]);
         let mut t = Tracking::new(e, "write tests for parser", 1_000);

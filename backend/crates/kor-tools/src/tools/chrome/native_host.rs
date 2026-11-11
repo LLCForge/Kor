@@ -175,17 +175,16 @@ where
                 };
                 let v: Value = serde_json::from_str(&text).unwrap_or(Value::Null);
                 if v["type"] == "host" {
-                    let reply = match v["op"].as_str() {
-                        Some("launch") => match launch() {
+                    let reply = if v["op"] == "launch" {
+                        match launch() {
                             Ok(()) => json!({"op": "launch", "launched": true}),
                             Err(e) => json!({"op": "launch", "launched": false, "error": e.to_string()}),
-                        },
-                        _ => {
-                            if ws.is_none() {
-                                ws = connect(port, &origin, &out_tx, &closed_tx).await.ok();
-                            }
-                            json!({"op": "status", "core": ws.is_some(), "version": env!("CARGO_PKG_VERSION")})
                         }
+                    } else {
+                        if ws.is_none() {
+                            ws = connect(port, &origin, &out_tx, &closed_tx).await.ok();
+                        }
+                        json!({"op": "status", "core": ws.is_some(), "version": env!("CARGO_PKG_VERSION")})
                     };
                     let _ = out_tx.send(host(reply));
                     continue;
@@ -219,6 +218,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(clippy::similar_names)] // host_in / host_out: the two halves of one pipe
 mod tests {
     use super::*;
     use crate::tools::chrome::pairing;

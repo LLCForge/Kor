@@ -295,6 +295,7 @@ fn human_mb(s: &str) -> u64 {
 }
 
 /// The scan as a `kor_health::system::Profile` (same schema as the local `system.json`).
+#[allow(clippy::too_many_lines)] // one field per line of the scan
 fn profile(os_text: &str, snap: &InfraSnapshot) -> kor_health::system::Profile {
     use kor_health::system as hs;
     let field = |k: &str| {
@@ -1248,6 +1249,7 @@ pub(crate) mod tests {
     }
 
     #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one recorded answer per probe
     async fn full_scan_from_recorded_outputs() {
         let sh = server(true);
         let allow = |o: &SudoOffer| o.step == "docker" || o.step == "ports";
@@ -1424,7 +1426,7 @@ pub(crate) mod tests {
                 host: "web1".into(),
                 ..InfraSnapshot::default()
             },
-            system: Default::default(),
+            system: kor_health::system::Profile::default(),
             sudo_offered: Vec::new(),
             sudo_used: Vec::new(),
         };

@@ -116,6 +116,7 @@ fn walk(root: &Path, exts: &[&str], max: usize) -> Vec<std::path::PathBuf> {
 }
 
 /// The project's design system as prompt text: CSS custom properties, Tailwind, component files.
+#[allow(clippy::missing_panics_doc)] // panics only on broken invariants of in-memory data
 pub fn design_system(root: &Path) -> String {
     let mut out = String::new();
     let var = Regex::new(r"(--[A-Za-z0-9_-]+)\s*:\s*([^;{}]{1,80});").expect("valid regex");
@@ -174,6 +175,7 @@ pub fn design_system(root: &Path) -> String {
 
 /// Replace images, inline SVG and CSS background images with placeholders; returns notes for the
 /// user. Logos and licensed images are never copied (spec §27.13).
+#[allow(clippy::missing_panics_doc)] // panics only on broken invariants of in-memory data
 pub fn strip_assets(html: &str, styles: &str) -> (String, String, Vec<String>) {
     let mut notes = Vec::new();
     let img = Regex::new(r"(?is)<(img|picture|video|source|object|embed|canvas)\b[^>]*>(?:</(?:picture|video|object|canvas)>)?").expect("valid regex");
@@ -232,6 +234,11 @@ pub fn prompt(
 
 /// Similarity of two images in percent: mean absolute RGB difference after scaling both to the
 /// same size.
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss
+)] // value is clamped to the target range first; sizes and ratios for display; value is clamped to be non-negative first
 pub fn similarity(a: &[u8], b: &[u8]) -> Option<u8> {
     let a = image::load_from_memory(a)
         .ok()?
@@ -317,22 +324,17 @@ pub async fn generate(
     if files.is_empty() {
         return Err("the model's reply contained no files".into());
     }
-    let similarity = match preview {
-        Some(p) => {
-            match kor_tools::html_screenshot(&p.content, cap.width.max(16), cap.height.max(16))
-                .await
-            {
-                Ok(png) => similarity(&png, &pic.bytes),
-                Err(e) => {
-                    notes.push(format!("visual comparison skipped: {e}"));
-                    None
-                }
+    let similarity = if let Some(p) = preview {
+        match kor_tools::html_screenshot(&p.content, cap.width.max(16), cap.height.max(16)).await {
+            Ok(png) => similarity(&png, &pic.bytes),
+            Err(e) => {
+                notes.push(format!("visual comparison skipped: {e}"));
+                None
             }
         }
-        None => {
-            notes.push("visual comparison skipped: the model wrote no preview".into());
-            None
-        }
+    } else {
+        notes.push("visual comparison skipped: the model wrote no preview".into());
+        None
     };
     Ok(Generated {
         target,

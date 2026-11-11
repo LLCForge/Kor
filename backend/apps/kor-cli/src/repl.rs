@@ -1701,7 +1701,7 @@ async fn tui_turn(
                             }
                         }
                         Ok(Err(e)) => {
-                            screen.notice(l.t_args("error-generic", &args!("error" => e)))
+                            screen.notice(l.t_args("error-generic", &args!("error" => e)));
                         }
                         Err(e) => screen
                             .notice(l.t_args("error-generic", &args!("error" => e.to_string()))),

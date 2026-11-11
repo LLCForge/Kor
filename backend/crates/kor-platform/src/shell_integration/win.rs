@@ -120,6 +120,6 @@ pub(super) fn notify() {
             SHCNF_IDLIST,
             std::ptr::null(),
             std::ptr::null(),
-        )
-    };
+        );
+    }
 }

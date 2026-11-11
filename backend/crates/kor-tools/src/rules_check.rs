@@ -12,6 +12,7 @@
 //! carry the rule's source file and line. Used before a diff is shown (the agent's review step)
 //! and by `kor rules check`.
 
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -487,8 +488,9 @@ pub fn retry_message(violated: &[&Finding]) -> String {
         "This edit was not applied: it breaks the project's rules. Redo it so that it follows them:\n",
     );
     for f in violated {
-        s.push_str(&format!(
-            "- {} ({}){}: {}\n",
+        let _ = writeln!(
+            s,
+            "- {} ({}){}: {}",
             f.rule,
             f.location(),
             f.file
@@ -499,7 +501,7 @@ pub fn retry_message(violated: &[&Finding]) -> String {
                 ))
                 .unwrap_or_default(),
             f.message
-        ));
+        );
     }
     s
 }
@@ -559,7 +561,7 @@ mod tests {
     #[test]
     fn negated_code_spans_paths_and_directives() {
         let text = "# Rules\n\n- Never use `unwrap()` in library code.\n- Prefer small functions and clear names.\n- Do not edit `migrations/` by hand.\n- `console.log` kullanma.\n<!-- kor:forbid /TODO\\(\\w+\\)/ in *.rs -->\n";
-        let (_d, rs) = set(text, None);
+        let (dir, rs) = set(text, None);
         assert_eq!(rs.rules.len(), 5);
         assert_eq!(rs.rules.iter().filter(|r| r.checkable()).count(), 4);
         let f = rs.check(
@@ -612,7 +614,7 @@ mod tests {
                 .any(|x| x.rule.contains("unwrap") && x.verdict == Verdict::Applied)
         );
         rs.log("m/x", &red.into_iter().cloned().collect::<Vec<_>>());
-        let rep = report(&_d.path().join("log.jsonl"), 0);
+        let rep = report(&dir.path().join("log.jsonl"), 0);
         assert_eq!(rep.len(), 4);
         assert_eq!(rep[0].2, "m/x");
     }

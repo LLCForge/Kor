@@ -119,6 +119,7 @@ fn info_disk(out: &str) -> Option<f64> {
     })
 }
 
+#[allow(clippy::too_many_lines)] // one provider: each panel API call in sequence
 #[async_trait]
 impl Panel for Plesk {
     async fn inventory(&self) -> Result<Inventory> {
@@ -147,7 +148,7 @@ impl Panel for Plesk {
                     .into_iter()
                     .flatten()
                     .filter_map(|d| d["name"].as_str().map(str::to_owned))
-                    .collect()
+                    .collect();
             }
             Err(e) => inv.notes.push(e),
         }

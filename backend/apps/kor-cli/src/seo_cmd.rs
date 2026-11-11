@@ -1693,7 +1693,7 @@ async fn agents_cmd(ctx: &Ctx, root: &Path, a: AgentsRun) -> bool {
         let Some(live) = &live else { return };
         match e {
             agents::Event::Started { agent } => {
-                live.set(row(&agent), &agent, "", RowState::Running)
+                live.set(row(&agent), &agent, "", RowState::Running);
             }
             agents::Event::Progress { agent, detail } => {
                 let short: String = detail.chars().take(80).collect();
@@ -1707,7 +1707,7 @@ async fn agents_cmd(ctx: &Ctx, root: &Path, a: AgentsRun) -> bool {
                 live.set(row(&agent), &agent, &text, RowState::Done);
             }
             agents::Event::Skipped { agent, reason } => {
-                live.set(row(&agent), &agent, &reason, RowState::Failed)
+                live.set(row(&agent), &agent, &reason, RowState::Failed);
             }
         }
     };

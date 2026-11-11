@@ -12,7 +12,10 @@ use serde_json::json;
 /// A `node` on `dir` that prints `version`.
 fn shim(dir: &Path, version: &str) {
     if kor_platform::os() == Os::Windows {
+        // PowerShell runs `node.cmd`; Git Bash (the Bash tool's shell when installed) runs the
+        // extension-less script.
         std::fs::write(dir.join("node.cmd"), format!("@echo v{version}\r\n")).unwrap();
+        std::fs::write(dir.join("node"), format!("#!/bin/sh\necho v{version}\n")).unwrap();
     } else {
         let p = dir.join("node");
         std::fs::write(&p, format!("#!/bin/sh\necho v{version}\n")).unwrap();

@@ -604,6 +604,7 @@ pub struct Suggestion {
     pub tags: Vec<String>,
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn suggest(messages: &[Message]) -> Suggestion {
     const TOPICS: &[(&str, &[&str])] = &[
         (

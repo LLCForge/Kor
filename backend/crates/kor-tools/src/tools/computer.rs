@@ -103,7 +103,6 @@ pub fn is_computer_tool(name: &str) -> bool {
 pub fn action_of(tool: &str, input: &Value) -> (Action, bool) {
     match tool {
         "screenshot" => (Action::Observe, false),
-        "undo_last_action" => (Action::Type, false),
         "left_click" | "double_click" | "mouse_move" | "scroll" => (Action::Click, false),
         "right_click" | "left_click_drag" => (Action::Pointer, false),
         "key" => (

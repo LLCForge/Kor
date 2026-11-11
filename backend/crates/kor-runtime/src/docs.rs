@@ -10,6 +10,7 @@
 //! (privacy/offline modes refuse non-local hosts); a page behind a login can be read through the
 //! user's own Chrome with the paired extension (`--browser`).
 
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -273,6 +274,7 @@ pub fn file_text(path: &Path) -> Result<Option<String>, String> {
 }
 
 /// Text of a folder (exports from Confluence, Notion, wikis): every supported file, in path order.
+#[allow(clippy::unnecessary_wraps)] // same signature as the other source readers
 fn dir_text(path: &Path) -> Result<String, String> {
     let mut files: Vec<PathBuf> = ignore::WalkBuilder::new(path)
         .build()
@@ -295,7 +297,7 @@ fn dir_text(path: &Path) -> Result<String, String> {
                 .unwrap_or(&f)
                 .to_string_lossy()
                 .replace('\\', "/");
-            out.push_str(&format!("\n\n# {rel}\n\n{t}"));
+            let _ = write!(out, "\n\n# {rel}\n\n{t}");
         }
         if out.len() > MAX_TEXT {
             break;
@@ -425,7 +427,10 @@ pub fn chunks(text: &str) -> Vec<String> {
 
 fn sha(text: &str) -> String {
     let d = Sha256::digest(text.as_bytes());
-    d.iter().map(|b| format!("{b:02x}")).collect()
+    d.iter().fold(String::new(), |mut s, b| {
+        let _ = std::fmt::Write::write_fmt(&mut s, format_args!("{b:02x}"));
+        s
+    })
 }
 
 /// Store `text` as the chunks of `entry` and return the record ids (newest records of the
@@ -494,18 +499,17 @@ pub async fn add(k: &Knowledge, root: &Path, source: &str, browser: bool) -> Res
     }
     let mut index = read_index(root);
     let old = index.docs.iter().position(|d| d.source == source);
-    let id = match old {
-        Some(i) => index.docs[i].id.clone(),
-        None => {
-            let base = slug(&title);
-            let mut id = base.clone();
-            let mut n = 2;
-            while index.docs.iter().any(|d| d.id == id) {
-                id = format!("{base}-{n}");
-                n += 1;
-            }
-            id
+    let id = if let Some(i) = old {
+        index.docs[i].id.clone()
+    } else {
+        let base = slug(&title);
+        let mut id = base.clone();
+        let mut n = 2;
+        while index.docs.iter().any(|d| d.id == id) {
+            id = format!("{base}-{n}");
+            n += 1;
         }
+        id
     };
     if let Some(i) = old {
         forget(k, &index.docs[i].records);
@@ -600,6 +604,7 @@ pub fn search(
 mod tests {
     use super::*;
 
+    #[allow(clippy::similar_names)] // paired names (in/out, old/new) read best side by side
     fn pdf(text: &str) -> Vec<u8> {
         use lopdf::content::{Content, Operation};
         use lopdf::{Document, Object, Stream, dictionary};
@@ -630,6 +635,7 @@ mod tests {
         out
     }
 
+    #[allow(clippy::format_collect)] // test fixture
     fn docx(paragraphs: &[&str]) -> Vec<u8> {
         let mut buf = std::io::Cursor::new(Vec::new());
         {

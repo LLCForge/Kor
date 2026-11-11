@@ -208,7 +208,7 @@ pub(super) fn ja3(record: &[u8]) -> Option<String> {
             points = data
                 .iter()
                 .skip(1)
-                .map(|b| b.to_string())
+                .map(std::string::ToString::to_string)
                 .collect::<Vec<_>>()
                 .join("-");
         }
@@ -250,6 +250,7 @@ mod tests {
     use tokio::net::TcpListener;
 
     #[tokio::test]
+    #[allow(clippy::items_after_statements)] // helper kept next to its only use
     async fn oauth_client_hello_matches_the_claude_code_capture() {
         let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
         let port = listener.local_addr().unwrap().port();

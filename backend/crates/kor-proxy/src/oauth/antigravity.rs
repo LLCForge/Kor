@@ -68,6 +68,7 @@ pub(super) async fn exchange(net: &Net, code: &str, redirect: &str) -> Result<Re
     ))
 }
 
+#[allow(clippy::similar_names)] // paired names (in/out, old/new) read best side by side
 pub(super) async fn refresh(net: &Net, doc: &mut Value) -> Result<(), Error> {
     let refresh_token = string_field(doc, "refresh_token");
     if refresh_token.is_empty() {
@@ -223,10 +224,10 @@ fn project_of(value: &Value) -> Option<String> {
                 return Some(text.trim().to_owned());
             }
             Some(Value::Object(map)) => {
-                if let Some(id) = map.get("id").and_then(Value::as_str) {
-                    if !id.trim().is_empty() {
-                        return Some(id.trim().to_owned());
-                    }
+                if let Some(id) = map.get("id").and_then(Value::as_str)
+                    && !id.trim().is_empty()
+                {
+                    return Some(id.trim().to_owned());
                 }
             }
             _ => {}
@@ -238,12 +239,11 @@ fn project_of(value: &Value) -> Option<String> {
 fn tier_of(value: &Value) -> String {
     if let Some(tiers) = value.get("allowedTiers").and_then(Value::as_array) {
         for tier in tiers {
-            if tier.get("isDefault").and_then(Value::as_bool) == Some(true) {
-                if let Some(id) = tier.get("id").and_then(Value::as_str) {
-                    if !id.trim().is_empty() {
-                        return id.trim().to_owned();
-                    }
-                }
+            if tier.get("isDefault").and_then(Value::as_bool) == Some(true)
+                && let Some(id) = tier.get("id").and_then(Value::as_str)
+                && !id.trim().is_empty()
+            {
+                return id.trim().to_owned();
             }
         }
     }

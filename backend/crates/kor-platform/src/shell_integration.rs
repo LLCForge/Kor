@@ -787,6 +787,7 @@ pub fn workflow_document(script: &str) -> String {
     )
 }
 
+#[allow(clippy::too_many_lines)] // one linear list of desktop entries per action
 fn linux_plan(t: &Target, apps: &Apps, acts: &[(Action, Vec<String>)], l: &Labels) -> Vec<Item> {
     let mut out = Vec::new();
     let icon_path = t
@@ -1456,7 +1457,7 @@ fn full_status(t: &Target, reg: &dyn Registry, runner: &mut dyn Runner, apps: &A
             s.finder_sync = finder_sync::status(runner)
                 .ok()
                 .filter(|k| k.0)
-                .map(|k| k.1)
+                .map(|k| k.1);
         }
         _ => {}
     }

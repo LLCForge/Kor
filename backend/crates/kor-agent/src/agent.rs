@@ -117,7 +117,7 @@ pub struct PermissionRequest {
     /// Reason key when the call is destructive (`rm-rf`, `delete-file`, ...): shown in red,
     /// and "always allow" is not remembered for it.
     pub destructive: Option<String>,
-    /// Rule compliance of the edit (§28.3): broken rules first, with their source file:line.
+    /// Rule compliance of the edit (§28.3): broken rules first, with their source `file:line`.
     pub rules: Vec<kor_tools::rules_check::Finding>,
 }
 
@@ -275,6 +275,7 @@ impl Agent {
         result
     }
 
+    #[allow(clippy::too_many_lines)] // one turn: request, stream, tools, verify, in order
     pub(crate) async fn send_plain(
         &mut self,
         text: String,
@@ -993,11 +994,12 @@ impl Agent {
                 .take(10)
                 .map(|p| kor_tools::display_path(p))
                 .collect();
-            out.content.push_str(&format!(
+            let _ = write!(
+                out.content,
                 "\n\n[undo] {} file(s) this command changed have no earlier copy and cannot be restored by `kor undo`: {}",
                 ch.unrestorable.len(),
                 names.join(", ")
-            ));
+            );
         }
         if !out.is_error && tool.kind() == kor_tools::ToolKind::Edit {
             // Verified edit loop: checker errors reach the model with this result.

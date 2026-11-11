@@ -201,21 +201,18 @@ pub fn run(ctx: &Ctx, cmd: &IntentsCmd) -> anyhow::Result<bool> {
         }
         IntentsCmd::Add { text, command } => {
             let c = full_command(&router, command);
-            match router.learn(text, &c) {
-                Ok(()) => {
-                    println!(
-                        "{}",
-                        l.t_args(
-                            "intents-added",
-                            &args!("text" => text.clone(), "command" => c)
-                        )
-                    );
-                    Ok(true)
-                }
-                Err(_) => {
-                    eprintln!("{}", l.t_args("intents-unknown", &args!("command" => c)));
-                    Ok(false)
-                }
+            if let Ok(()) = router.learn(text, &c) {
+                println!(
+                    "{}",
+                    l.t_args(
+                        "intents-added",
+                        &args!("text" => text.clone(), "command" => c)
+                    )
+                );
+                Ok(true)
+            } else {
+                eprintln!("{}", l.t_args("intents-unknown", &args!("command" => c)));
+                Ok(false)
             }
         }
         IntentsCmd::Forget { text } => {

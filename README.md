@@ -284,6 +284,13 @@ against mock servers. An OpenAI-compatible provider needs only a TOML manifest, 
 - **Server:** `kor mcp serve` exposes Kor's graph, memory, cost and task tools to other MCP clients.
 - **Plugins:** `kor plugin marketplace add`, `kor plugin install | list | enable | update | doctor`. Plugins' commands,
   agents and skills load into the agent.
+- **Built-in skills:** 37 skills ship with Kor and install on first run: Addy Osmani's
+  [agent-skills](https://github.com/addyosmani/agent-skills) (spec, plan, TDD, review, security, performance, shipping…),
+  [humanizer](https://github.com/blader/humanizer), [scroll-craft](https://github.com/nateherkai/scroll-craft),
+  [HyperFrames](https://github.com/heygen-com/hyperframes) (HTML to video) and an index of
+  [awesome lists](https://github.com/sindresorhus/awesome). Each is listed in the system prompt, so the agent loads the
+  one that fits what you wrote; your own skill with the same name wins. HyperFrames' usage beacons and automatic
+  feedback reports are removed. Sources, commits and licences: `SOURCES.md` in `assets/builtin-skills.zip`.
 
 ### Desktop app
 
@@ -757,6 +764,9 @@ Maintained by LLCForge and contributors.
 - **[OpenRouter](https://openrouter.ai)** and **[Hugging Face](https://huggingface.co)** for the public model metadata
   behind the catalogue.
 - **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)**, which `kor-proxy` ports to Rust.
+- The authors of the built-in skills: [Addy Osmani](https://github.com/addyosmani/agent-skills) (MIT),
+  [blader](https://github.com/blader/humanizer) (MIT), [Nate Herk](https://github.com/nateherkai/scroll-craft) (MIT),
+  [HeyGen](https://github.com/heygen-com/hyperframes) (Apache-2.0) and [Sindre Sorhus](https://github.com/sindresorhus/awesome) (CC0).
 - The open-source projects Kor is built on, among them [Tauri](https://tauri.app), [tree-sitter](https://tree-sitter.github.io),
   [llama.cpp](https://github.com/ggml-org/llama.cpp), [whisper.cpp](https://github.com/ggml-org/whisper.cpp),
   [candle](https://github.com/huggingface/candle), [ratatui](https://ratatui.rs), [Tokio](https://tokio.rs),

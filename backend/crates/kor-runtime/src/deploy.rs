@@ -1553,6 +1553,7 @@ pub fn removed_api(diff: &str) -> (Named, Named) {
 /// `kor deploy risk-check <env>`: irreversible migrations (with the code reading/writing each
 /// dropped table, from the graph's database layer), removed public symbols (confirmed by the
 /// graph diff when it can be built) and routes, uncommitted changes, and the peak-hours window.
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn risk_check(root: &Path, env: &str, now: chrono::NaiveTime) -> Result<RiskReport, String> {
     let file = load(root)?;
     let cfg = env_config(&file, env)?;
@@ -1818,6 +1819,7 @@ mod tests {
 
     /// PATH is process-wide: one test drives every scenario with the shims.
     #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
     async fn compose_and_kubernetes_with_fake_clis() {
         let bin = tempfile::tempdir().unwrap();
         fake_bin(bin.path(), "docker");
@@ -1829,7 +1831,7 @@ mod tests {
         let search = std::env::join_paths(paths).unwrap();
         let calls = || std::fs::read_to_string(bin.path().join("calls.log")).unwrap_or_default();
         let reply = |k: &str, v: &str| {
-            std::fs::write(bin.path().join(format!("reply_{k}.txt")), v).unwrap()
+            std::fs::write(bin.path().join(format!("reply_{k}.txt")), v).unwrap();
         };
 
         // --- compose: first deploy builds everything, health ok, commit recorded.

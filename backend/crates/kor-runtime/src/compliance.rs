@@ -3,6 +3,7 @@
 //! and the model's judgment for prose rules. The deterministic checks live in
 //! `kor_tools::rules_check`.
 
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -141,7 +142,7 @@ pub fn judge_prompt(rules: &[&Finding], changes: &[Change]) -> String {
          \"line\": <new-file line or null>, \"message\": \"one short sentence\"}]\n\nRules:\n",
     );
     for (i, r) in rules.iter().take(MAX_RULES).enumerate() {
-        p.push_str(&format!("{}. {} ({})\n", i + 1, r.rule, r.location()));
+        let _ = writeln!(p, "{}. {} ({})", i + 1, r.rule, r.location());
     }
     p.push_str("\nChange (unified diff):\n");
     p.push_str(&diff);

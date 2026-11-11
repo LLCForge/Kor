@@ -1,7 +1,7 @@
 //! `kor rules check|list|report` (Master Build Prompt §28.3, ADR 0063): the working tree's
 //! changes against the loaded rules (AGENTS.md, CLAUDE.md, `.kor/rules`, Cursor/Windsurf/… rules).
 //! Deterministic checks always; `--model` lets a light model judge the prose rules. Findings carry
-//! the rule's source file:line; `check` exits non-zero on a violation (CI). The agent runs the same
+//! the rule's source <file:line>; `check` exits non-zero on a violation (CI). The agent runs the same
 //! check before it shows a diff. Logic: `kor_runtime::compliance`, `kor_tools::rules_check`.
 
 use clap::Subcommand;

@@ -364,6 +364,7 @@ fn sections(text: &str) -> std::collections::HashMap<&str, Vec<&str>> {
     out
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub(crate) fn parse_plain(host: &str, text: &str) -> Inventory {
     let s = sections(text);
     let get = |k: &str| s.get(k).cloned().unwrap_or_default();

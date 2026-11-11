@@ -341,7 +341,7 @@ async fn hooks_block_and_annotate_and_scoped_rules_attach_once() {
         scope: Scope::User,
         path: "settings.json".into(),
     };
-    let (block, note) = if cfg!(windows) {
+    let (block, note) = if kor_tools::Shell::detect().prefix.len() > 1 {
         (
             "[Console]::Error.WriteLine('no shell today'); exit 2",
             "[Console]::Out.WriteLine('{\"hookSpecificOutput\":{\"additionalContext\":\"lint ok\"}}')",

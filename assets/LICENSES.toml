@@ -52,3 +52,8 @@ source = "Kor brand assets (logos, icons, spinners)"
 globs = ["*.ts", "*.tsx", "*.rs", "*.css", "*.json", "*.toml", "*.txt", "*.md", "intents/*", "panels/*"]
 license = "Apache-2.0 OR MIT"
 source = "Kor source: theme, banners, verbs, spinner code, intent and hosting-panel data"
+
+[[rule]]
+globs = ["builtin-skills.zip"]
+license = "MIT AND Apache-2.0 AND CC0-1.0"
+source = "Third-party agent skills shipped with Kor, built by scripts/pack-skills.py from pinned commits: addyosmani/agent-skills (MIT), blader/humanizer (MIT), nateherkai/scroll-craft (MIT), heygen-com/hyperframes skills/ (Apache-2.0), sindresorhus/awesome readme (CC0-1.0). Each skill keeps its upstream licence as LICENSE.upstream; SOURCES.md inside the archive lists commits and Kor's changes."

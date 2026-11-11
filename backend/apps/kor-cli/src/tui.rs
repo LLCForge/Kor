@@ -774,7 +774,7 @@ pub fn theme_color(name: &str) -> Option<Color> {
 
 /// §23.2 in the terminal: the provider mark left of the model name. Terminals cannot draw the SVG logos, so
 /// the TUI uses the desktop's fallback: the provider's initial in a circle (Ⓓ), `⌂` for local runtimes;
-/// models routed through OpenRouter show their real provider.
+/// models routed through `OpenRouter` show their real provider.
 pub fn provider_glyph(model: &str) -> char {
     let mut parts = model.split('/');
     let first = parts.next().unwrap_or_default();

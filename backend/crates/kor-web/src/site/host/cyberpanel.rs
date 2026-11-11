@@ -75,6 +75,7 @@ fn parse_json(out: &str) -> Value {
     }
 }
 
+#[allow(clippy::too_many_lines)] // one provider: each panel API call in sequence
 #[async_trait]
 impl Panel for CyberPanel {
     async fn inventory(&self) -> Result<Inventory> {

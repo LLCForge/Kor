@@ -2030,6 +2030,15 @@ params = [{ name = "file", kind = "path", required = true }]
 eta_s = 2
 
 [[intent]]
+command = "kor sessions import-from"
+run = "confirm"
+tr = ["claude code sohbetlerini içe aktar", "cursor geçmişini kor'a aktar", "eski sohbetlerimi claude code'dan al"]
+en = ["import my claude code chats", "bring my cursor history into kor", "import past conversations from cursor"]
+fr = ["importer mes conversations claude code", "importer l'historique de cursor"]
+params = [{ name = "tool", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
 command = "kor sessions fork"
 run = "confirm"
 tr = ["oturumu dallandır", "sohbeti bu mesajdan çatalla", "konuşmayı başka modelle dallandır"]

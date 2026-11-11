@@ -267,33 +267,30 @@ pub fn run(ctx: &Ctx, cmd: ChromeCmd) -> anyhow::Result<bool> {
                     }
                     continue;
                 }
-                match extension_dir(b) {
-                    Some(dir) => {
-                        let key = if b == Browser::Firefox {
-                            "chrome-load-firefox"
+                if let Some(dir) = extension_dir(b) {
+                    let key = if b == Browser::Firefox {
+                        "chrome-load-firefox"
+                    } else {
+                        "chrome-load-unpacked"
+                    };
+                    println!(
+                        "{}",
+                        l.t_args(
+                            key,
+                            &args!("browser" => b.id(), "path" => dir.display().to_string())
+                        )
+                    );
+                    if !no_open {
+                        let page = if b == Browser::Firefox {
+                            "about:debugging#/runtime/this-firefox"
                         } else {
-                            "chrome-load-unpacked"
+                            "chrome://extensions"
                         };
-                        println!(
-                            "{}",
-                            l.t_args(
-                                key,
-                                &args!("browser" => b.id(), "path" => dir.display().to_string())
-                            )
-                        );
-                        if !no_open {
-                            let page = if b == Browser::Firefox {
-                                "about:debugging#/runtime/this-firefox"
-                            } else {
-                                "chrome://extensions"
-                            };
-                            let _ = nm::open_in(b, page);
-                        }
+                        let _ = nm::open_in(b, page);
                     }
-                    None => {
-                        ok = false;
-                        eprintln!("{}", l.t("chrome-no-build"));
-                    }
+                } else {
+                    ok = false;
+                    eprintln!("{}", l.t("chrome-no-build"));
                 }
             }
             println!("{}", l.t("chrome-pair-next"));

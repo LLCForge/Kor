@@ -285,6 +285,13 @@ edildiler. OpenAI uyumlu bir sağlayıcı yalnızca bir TOML manifestosu ister, 
 - **Sunucu:** `kor mcp serve`, Kor'un graf, hafıza, maliyet ve görev araçlarını diğer MCP istemcilerine açar.
 - **Eklentiler:** `kor plugin marketplace add`, `kor plugin install | list | enable | update | doctor`. Eklentilerin
   komutları, ajanları ve becerileri ajana yüklenir.
+- **Yerleşik beceriler:** Kor 37 beceriyle gelir ve ilk açılışta kurar: Addy Osmani'nin
+  [agent-skills](https://github.com/addyosmani/agent-skills) setleri (spesifikasyon, plan, TDD, inceleme, güvenlik,
+  performans, yayın…), [humanizer](https://github.com/blader/humanizer), [scroll-craft](https://github.com/nateherkai/scroll-craft),
+  [HyperFrames](https://github.com/heygen-com/hyperframes) (HTML'den video) ve
+  [awesome listeleri](https://github.com/sindresorhus/awesome) dizini. Hepsi sistem isteminde listelenir; ajan yazdığına
+  uyanı kendisi yükler. Aynı adlı kendi becerin önce gelir. HyperFrames'in kullanım sinyali ve otomatik geri bildirimi
+  kaldırıldı. Kaynaklar, commit'ler ve lisanslar: `assets/builtin-skills.zip` içindeki `SOURCES.md`.
 
 ### Masaüstü uygulaması
 
@@ -759,6 +766,9 @@ dosyasında listelenir. Bakımını LLCForge ve katkıda bulunanlar yapar.
 - Kataloğun dayandığı herkese açık model bilgileri için **[OpenRouter](https://openrouter.ai)** ve
   **[Hugging Face](https://huggingface.co)**.
 - `kor-proxy`'nin Rust'a taşıdığı **[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)**.
+- Yerleşik becerilerin yazarları: [Addy Osmani](https://github.com/addyosmani/agent-skills) (MIT),
+  [blader](https://github.com/blader/humanizer) (MIT), [Nate Herk](https://github.com/nateherkai/scroll-craft) (MIT),
+  [HeyGen](https://github.com/heygen-com/hyperframes) (Apache-2.0) ve [Sindre Sorhus](https://github.com/sindresorhus/awesome) (CC0).
 - Kor'un üzerine kurulduğu açık kaynak projeler; aralarında [Tauri](https://tauri.app), [tree-sitter](https://tree-sitter.github.io),
   [llama.cpp](https://github.com/ggml-org/llama.cpp), [whisper.cpp](https://github.com/ggml-org/whisper.cpp),
   [candle](https://github.com/huggingface/candle), [ratatui](https://ratatui.rs), [Tokio](https://tokio.rs),

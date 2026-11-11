@@ -57,31 +57,28 @@ pub fn use_page(ctx: &Ctx, a: &UseArgs) -> anyhow::Result<bool> {
         .build()?;
     let question = a.question.join(" ");
     let cached = docs::cache_dir().and_then(|d| docs::cache_get(&d, &a.url));
-    let page = match cached {
-        Some(c) => {
-            println!("{}", l.t("docs-use-cached"));
-            c.page
-        }
-        None => {
-            println!(
-                "{}",
-                l.t_args("docs-use-reading", &args!("url" => a.url.clone()))
-            );
-            let (title, text) = if a.browser {
-                rt.block_on(kor_tools::chrome::read_page(&a.url))
-                    .map_err(|e| anyhow::anyhow!(e))?
-            } else {
-                let (text, title) = rt
-                    .block_on(kor_runtime::docs::extract(&a.url, false))
-                    .map_err(|e| anyhow::anyhow!(e))?;
-                (title, text)
-            };
-            docs::Page {
-                url: a.url.clone(),
-                title,
-                text,
-                selection: String::new(),
-            }
+    let page = if let Some(c) = cached {
+        println!("{}", l.t("docs-use-cached"));
+        c.page
+    } else {
+        println!(
+            "{}",
+            l.t_args("docs-use-reading", &args!("url" => a.url.clone()))
+        );
+        let (title, text) = if a.browser {
+            rt.block_on(kor_tools::chrome::read_page(&a.url))
+                .map_err(|e| anyhow::anyhow!(e))?
+        } else {
+            let (text, title) = rt
+                .block_on(kor_runtime::docs::extract(&a.url, false))
+                .map_err(|e| anyhow::anyhow!(e))?;
+            (title, text)
+        };
+        docs::Page {
+            url: a.url.clone(),
+            title,
+            text,
+            selection: String::new(),
         }
     };
     let lang = l.lang();

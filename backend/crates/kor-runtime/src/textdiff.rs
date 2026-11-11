@@ -17,6 +17,7 @@ enum Op {
 }
 
 /// Edit script from `a` to `b` (Myers 1986, greedy forward search with trace).
+#[allow(clippy::many_single_char_names)] // short names of the math or the protocol
 fn script(a: &[&str], b: &[&str]) -> Option<Vec<Op>> {
     let (n, m) = (a.len(), b.len());
     let max = (n + m).min(MAX_D);
@@ -50,6 +51,7 @@ fn script(a: &[&str], b: &[&str]) -> Option<Vec<Op>> {
 }
 
 #[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)] // indices bounded by the search
+#[allow(clippy::many_single_char_names)] // short names of the math or the protocol
 fn backtrack(trace: &[Vec<usize>], n: usize, m: usize, off: usize) -> Vec<Op> {
     let (mut x, mut y) = (n as isize, m as isize);
     let mut ops = Vec::new();
@@ -82,6 +84,7 @@ fn backtrack(trace: &[Vec<usize>], n: usize, m: usize, off: usize) -> Vec<Op> {
 
 /// Unified diff of `old` → `new` under `a/<path>` / `b/<path>` headers; `None` means the file
 /// does not exist on that side. Empty when both are equal.
+#[allow(clippy::many_single_char_names)] // short names of the math or the protocol
 pub fn unified(path: &str, old: Option<&str>, new: Option<&str>) -> String {
     if old == new {
         return String::new();
@@ -197,7 +200,10 @@ mod tests {
 
     #[test]
     fn far_apart_changes_make_two_hunks() {
-        let old: String = (0..40).map(|i| format!("l{i}\n")).collect();
+        let old: String = (0..40).fold(String::new(), |mut s, i| {
+            let _ = std::fmt::Write::write_fmt(&mut s, format_args!("l{i}\n"));
+            s
+        });
         let new = old.replace("l2\n", "X\n").replace("l35\n", "Y\n");
         let d = unified("f", Some(&old), Some(&new));
         assert_eq!(d.matches("@@ -").count(), 2);

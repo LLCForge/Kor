@@ -232,7 +232,7 @@ impl Cpanel {
                     .into_iter()
                     .flatten()
                     .filter_map(|v| v.as_str().and_then(php_version))
-                    .collect()
+                    .collect();
             }
             Err(e) => inv.notes.push(e),
         }
@@ -240,6 +240,7 @@ impl Cpanel {
     }
 }
 
+#[allow(clippy::too_many_lines)] // one provider: each panel API call in sequence
 #[async_trait]
 impl Panel for Cpanel {
     async fn inventory(&self) -> Result<Inventory> {
@@ -303,7 +304,7 @@ impl Panel for Cpanel {
                     .into_iter()
                     .flatten()
                     .filter_map(|x| x.as_str().and_then(php_version))
-                    .collect()
+                    .collect();
             }
             Err(e) => inv.notes.push(e),
         }
@@ -314,7 +315,7 @@ impl Panel for Cpanel {
                     .into_iter()
                     .flatten()
                     .map(|d| s(&d["database"]))
-                    .collect()
+                    .collect();
             }
             Err(e) => inv.notes.push(e),
         }
@@ -357,7 +358,7 @@ impl Panel for Cpanel {
             Ok(v) => {
                 inv.email_accounts = v
                     .as_u64()
-                    .or_else(|| v.as_str().and_then(|x| x.parse().ok()))
+                    .or_else(|| v.as_str().and_then(|x| x.parse().ok()));
             }
             Err(e) => inv.notes.push(e),
         }

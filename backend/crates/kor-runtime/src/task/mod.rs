@@ -8,7 +8,7 @@
 //! checks each result (diff + test output) before it is merged into the task branch
 //! (`kor/task/<id>/merged`) in plan order. A conflicting merge is aborted, so nothing is
 //! half-merged; the conflict is kept for the user (`resolve`: re-plan that part or drop it).
-//! The task is checkpointed after every step in SQLite (`<repo>/.kor/tasks/checkpoints.sqlite`,
+//! The task is checkpointed after every step in `SQLite` (`<repo>/.kor/tasks/checkpoints.sqlite`,
 //! WAL, one row per task holding its JSON state, each save one transaction), so `resume`
 //! continues after a crash and two processes never see half a checkpoint. Checkpoints written by
 //! older versions as `<id>.json` are imported once (renamed `<id>.json.imported`).

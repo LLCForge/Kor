@@ -123,31 +123,29 @@ async fn account_record(token: &Value, net: &Net) -> Result<Record, Error> {
     let mut organization_name = pointer_str(token, "/organization/name");
     let _ = fetch_roles(net, &access).await;
     if let Some(profile) = fetch_profile(net, &access).await {
-        if let Some(value) = profile.pointer("/account/uuid").and_then(Value::as_str) {
-            if !value.trim().is_empty() {
-                account = value.trim().to_owned();
-            }
+        if let Some(value) = profile.pointer("/account/uuid").and_then(Value::as_str)
+            && !value.trim().is_empty()
+        {
+            account = value.trim().to_owned();
         }
-        if let Some(value) = profile.pointer("/account/email").and_then(Value::as_str) {
-            if !value.trim().is_empty() {
-                email = value.trim().to_owned();
-            }
+        if let Some(value) = profile.pointer("/account/email").and_then(Value::as_str)
+            && !value.trim().is_empty()
+        {
+            email = value.trim().to_owned();
         }
         if let Some(value) = profile
             .pointer("/organization/uuid")
             .and_then(Value::as_str)
+            && !value.trim().is_empty()
         {
-            if !value.trim().is_empty() {
-                organization = value.trim().to_owned();
-            }
+            organization = value.trim().to_owned();
         }
         if let Some(value) = profile
             .pointer("/organization/name")
             .and_then(Value::as_str)
+            && !value.trim().is_empty()
         {
-            if !value.trim().is_empty() {
-                organization_name = value.trim().to_owned();
-            }
+            organization_name = value.trim().to_owned();
         }
     }
     let device = hex_encode(&rng(32)?);
@@ -184,10 +182,10 @@ fn apply_profile(doc: &mut Value, profile: &Value) {
         ("/organization/uuid", "organization_uuid"),
         ("/organization/name", "organization_name"),
     ] {
-        if let Some(value) = profile.pointer(pointer).and_then(Value::as_str) {
-            if !value.trim().is_empty() {
-                doc[key] = json!(value.trim());
-            }
+        if let Some(value) = profile.pointer(pointer).and_then(Value::as_str)
+            && !value.trim().is_empty()
+        {
+            doc[key] = json!(value.trim());
         }
     }
 }

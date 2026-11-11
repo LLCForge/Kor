@@ -1,7 +1,7 @@
 //! `kor export --all` (Master Build Prompt §22.2): every piece of the user's data in one zip, so
 //! nothing ties them to Kor. Kor's data folder (sessions, memory, knowledge base, audit log, undo
 //! journals, gallery, notifications) and settings folder go in as they are: plain Markdown, JSON
-//! and SQLite. Left out: secrets (they live in the OS keychain; key-like files are skipped too),
+//! and `SQLite`. Left out: secrets (they live in the OS keychain; key-like files are skipped too),
 //! downloaded components and caches (re-downloadable, not the user's data), lock files.
 //! `manifest.json` at the archive root lists every file and where it came from.
 
@@ -40,6 +40,7 @@ const SKIP_DIRS: &[&str] = &[
     "target",
 ];
 
+#[allow(clippy::case_sensitive_file_extension_comparisons)] // `n` is lowercased just above
 fn skipped(name: &str) -> bool {
     let n = name.to_ascii_lowercase();
     n.ends_with(".lock")

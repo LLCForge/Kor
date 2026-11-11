@@ -102,7 +102,7 @@ impl Panel for Hestia {
                 inv.databases = v
                     .as_object()
                     .map(|o| o.keys().cloned().collect())
-                    .unwrap_or_default()
+                    .unwrap_or_default();
             }
             Err(e) => inv.notes.push(e),
         }

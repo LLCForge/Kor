@@ -133,6 +133,7 @@ pub async fn run(targets: &[(Arc<dyn Provider>, String)], prompt: &str) -> Conse
 // ---------------------------------------------------------------------------------------------
 
 /// Word-level F1 of two answers, 0–1 (1 = the same words).
+#[allow(clippy::many_single_char_names)] // short names of the math or the protocol
 pub fn similarity(a: &str, b: &str) -> f64 {
     let words = |t: &str| -> BTreeMap<String, usize> {
         let mut m = BTreeMap::new();

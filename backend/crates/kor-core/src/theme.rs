@@ -67,6 +67,7 @@ pub mod ansi256 {
 mod tests {
     use super::*;
 
+    #[allow(clippy::many_single_char_names)] // r, g, b, h, s, n: the colour math's own names
     fn rgb(v: &serde_json::Value) -> Rgb {
         let s = v.as_str().expect("hex string");
         let n = u32::from_str_radix(s.trim_start_matches('#'), 16).expect("hex");

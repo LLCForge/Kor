@@ -14,6 +14,7 @@ pub mod forms;
 pub mod page_code;
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::path::Path;
 
 use serde::Serialize;
@@ -171,7 +172,7 @@ impl Stack {
             self.languages.join(", ")
         };
         if let Some(d) = ui {
-            out.push_str(&format!("; UI {}{}", self.ui, v(d)));
+            let _ = write!(out, "; UI {}{}", self.ui, v(d));
         }
         if !self.frameworks.is_empty() {
             let list: Vec<String> = self
@@ -179,7 +180,7 @@ impl Stack {
                 .iter()
                 .map(|f| format!("{f}{}", v(f)))
                 .collect();
-            out.push_str(&format!("; {}", list.join(", ")));
+            let _ = write!(out, "; {}", list.join(", "));
         }
         out
     }
@@ -190,7 +191,7 @@ pub(crate) fn language_name(lang: kor_i18n::Lang) -> &'static str {
     match lang {
         kor_i18n::Lang::Tr => "Turkish",
         kor_i18n::Lang::Fr => "French",
-        _ => "English",
+        kor_i18n::Lang::En => "English",
     }
 }
 

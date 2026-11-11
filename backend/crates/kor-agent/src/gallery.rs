@@ -207,7 +207,11 @@ pub fn list(root: &Path) -> Vec<Item> {
         .filter(|p| {
             p.file_name().and_then(|n| n.to_str()).is_some_and(|n| {
                 let lower = n.to_ascii_lowercase();
-                !n.starts_with('.') && !lower.ends_with(SIDECAR) && !lower.ends_with(".part")
+                !n.starts_with('.')
+                    && !lower.ends_with(SIDECAR)
+                    && !Path::new(n)
+                        .extension()
+                        .is_some_and(|e| e.eq_ignore_ascii_case("part"))
             })
         })
         .map(|p| read_item(root, &p))

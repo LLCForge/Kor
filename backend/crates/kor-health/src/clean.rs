@@ -97,11 +97,10 @@ fn id_of(kind: &str, path: Option<&Path>) -> String {
     if let Some(p) = path {
         h.update(p.to_string_lossy().as_bytes());
     }
-    h.finalize()
-        .iter()
-        .take(5)
-        .map(|b| format!("{b:02x}"))
-        .collect()
+    h.finalize().iter().take(5).fold(String::new(), |mut s, b| {
+        let _ = std::fmt::Write::write_fmt(&mut s, format_args!("{b:02x}"));
+        s
+    })
 }
 
 fn is_link(p: &Path) -> bool {

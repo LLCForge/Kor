@@ -130,10 +130,10 @@ fn logs(l: &Localizer, root: &std::path::Path, source: &str) -> anyhow::Result<b
             );
         }
         Event::Limited { total } => {
-            println!("{}", l.t_args("watch-limited", &args!("count" => *total)))
+            println!("{}", l.t_args("watch-limited", &args!("count" => *total)));
         }
         Event::Ended { error: Some(e) } => {
-            eprintln!("{}", l.t_args("watch-error", &args!("error" => e.clone())))
+            eprintln!("{}", l.t_args("watch-error", &args!("error" => e.clone())));
         }
         _ => {}
     };

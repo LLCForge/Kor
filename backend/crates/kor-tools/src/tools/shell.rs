@@ -74,7 +74,7 @@ impl Shell {
         }
     }
 
-    /// PowerShell 7 when installed, else Windows PowerShell.
+    /// `PowerShell` 7 when installed, else Windows `PowerShell`.
     pub fn powershell() -> Self {
         let ps = ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"]
             .map(String::from)
@@ -388,7 +388,7 @@ fn start_background(child: kor_sandbox::Child, ctx: &ToolCtx) -> ToolOutput {
 mod tests {
     use super::*;
 
-    /// Windows without Git Bash runs PowerShell; tests write commands for the shell in use.
+    /// Windows without Git Bash runs `PowerShell`; tests write commands for the shell in use.
     fn powershell() -> bool {
         Shell::detect().prefix.len() > 1
     }

@@ -7,6 +7,7 @@ use futures::StreamExt;
 use kor_core::{Message, Role, StreamEvent};
 use kor_providers::{CancellationToken, ChatRequest, ProviderManifest, build};
 use kor_secrets::SecretString;
+use std::fmt::Write as _;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
@@ -21,9 +22,10 @@ const MAX_PER_TOKEN: u64 = 40;
 async fn streaming_allocations_per_token_stay_bounded() {
     let mut body = String::new();
     for i in 0..TOKENS {
-        body.push_str(&format!(
+        let _ = write!(
+            body,
             "data: {{\"id\":\"1\",\"choices\":[{{\"index\":0,\"delta\":{{\"content\":\"t{i} \"}},\"finish_reason\":null}}]}}\n\n"
-        ));
+        );
     }
     body.push_str("data: {\"id\":\"1\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n");
     let server = MockServer::start().await;

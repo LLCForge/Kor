@@ -19,6 +19,7 @@
 //! added. `notify` keeps it live in `kor daemon` and in the desktop app ([`watch`]).
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -260,6 +261,7 @@ pub struct RemoveReport {
 ///
 /// # Errors
 /// If the manifest cannot be removed.
+#[allow(clippy::many_single_char_names)] // short names of the math or the protocol
 pub fn disable(l: &Layout) -> std::io::Result<RemoveReport> {
     let mut r = RemoveReport::default();
     let Some(m) = Manifest::load(l) else {
@@ -422,20 +424,17 @@ pub(crate) fn write_generated(
 ) -> bool {
     let key = rel(l, path);
     let new_hash = hash(body.as_bytes());
-    match std::fs::read(path) {
-        Ok(cur) => {
-            let cur_hash = hash(&cur);
-            if cur_hash == new_hash {
-                m.generated.insert(key, new_hash);
-                return false;
-            }
-            // Not Kor's, or changed by the user: the file wins.
-            if m.generated.get(&key) != Some(&cur_hash) {
-                r.kept.push(path.to_path_buf());
-                return false;
-            }
+    if let Ok(cur) = std::fs::read(path) {
+        let cur_hash = hash(&cur);
+        if cur_hash == new_hash {
+            m.generated.insert(key, new_hash);
+            return false;
         }
-        Err(_) => {}
+        // Not Kor's, or changed by the user: the file wins.
+        if m.generated.get(&key) != Some(&cur_hash) {
+            r.kept.push(path.to_path_buf());
+            return false;
+        }
     }
     if let Some(d) = path.parent() {
         let _ = std::fs::create_dir_all(d);
@@ -521,12 +520,11 @@ pub fn inbox_block(files: &[PathBuf]) -> String {
             .filter(|t| !t.contains('\0'));
         match text {
             Some(t) if out.len() + t.len() < INBOX_TOTAL_MAX => {
-                out.push_str(&format!(
-                    "\n<file path=\"{}\">\n{t}\n</file>\n",
-                    f.display()
-                ));
+                let _ = write!(out, "\n<file path=\"{}\">\n{t}\n</file>\n", f.display());
             }
-            _ => out.push_str(&format!("\n- {} ({size} bytes)\n", f.display())),
+            _ => {
+                let _ = write!(out, "\n- {} ({size} bytes)\n", f.display());
+            }
         }
     }
     out

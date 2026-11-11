@@ -369,9 +369,9 @@ fn rewind_to(
             None => false,
         };
         if done {
-            rewound.push(rel_s)
+            rewound.push(rel_s);
         } else {
-            unrestored.push(rel_s)
+            unrestored.push(rel_s);
         }
     }
     (rewound, unrestored, shell_after)
@@ -553,6 +553,7 @@ pub fn tree(
     for f in &forks {
         children.entry(f.parent.as_str()).or_default().push(f);
     }
+    #[allow(clippy::items_after_statements)] // helper kept next to its only use
     fn build(
         id: &str,
         fork: Option<&Fork>,
@@ -806,12 +807,11 @@ pub fn merge_plan(sessions: &Path, store: &Path, fork: &str) -> Result<MergePlan
                 continue;
             }
             let before = if dst.exists() {
-                match read_small(&dst) {
-                    Some(b) => Some(b),
-                    None => {
-                        skipped.push(p);
-                        continue;
-                    }
+                if let Some(b) = read_small(&dst) {
+                    Some(b)
+                } else {
+                    skipped.push(p);
+                    continue;
                 }
             } else {
                 None
@@ -1071,6 +1071,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::many_single_char_names)] // short names of the math or the protocol
     fn worktree_starts_from_the_files_at_the_fork_point() {
         let d = tempfile::tempdir().unwrap();
         let repo = d.path().join("repo");
@@ -1159,6 +1160,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::many_single_char_names, clippy::too_many_lines)] // short names of the math or the protocol; one linear sequence; splitting it would scatter the steps
     fn worktree_compare_and_merge_with_undo() {
         let d = tempfile::tempdir().unwrap();
         let repo = d.path().join("repo");

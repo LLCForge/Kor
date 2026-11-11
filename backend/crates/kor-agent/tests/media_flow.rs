@@ -214,6 +214,7 @@ fn agent(
 }
 
 #[tokio::test]
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 async fn card_gallery_chain_ledger_and_collect() {
     let (server, fal) = fal_mock().await;
     let dir = tempfile::tempdir().unwrap();
@@ -354,6 +355,7 @@ async fn card_gallery_chain_ledger_and_collect() {
 }
 
 #[tokio::test]
+#[allow(clippy::items_after_statements)] // helper kept next to its only use
 async fn venice_video_above_the_threshold_needs_a_yes() {
     let server = MockServer::start().await;
     Mock::given(method("GET")).and(path("/models")).and(query_param("type", "video"))

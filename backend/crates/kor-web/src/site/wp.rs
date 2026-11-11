@@ -854,6 +854,7 @@ pub fn scan_code(file: &str, text: &str) -> Vec<(String, u32, String)> {
 
 /// Compare core files with `api.wordpress.org/core/checksums/1.0`, plugin checksums, and scan the
 /// changed/unknown files and PHP in uploads.
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub async fn integrity(wp: &Wp) -> Result<Integrity> {
     let sh = wp
         .sh
@@ -906,7 +907,7 @@ pub async fn integrity(wp: &Wp) -> Result<Integrity> {
                 .is_some_and(|e| e.eq_ignore_ascii_case("php"))
                 && file != "wp-config.php" =>
             {
-                out.unknown.push(file.to_owned())
+                out.unknown.push(file.to_owned());
             }
             None => {}
         }

@@ -142,7 +142,10 @@ pub fn redeem(dir: &Path, code: &str, store: &dyn SecretStore) -> Result<String,
         return Err(REFUSED.into());
     }
     let _ = std::fs::remove_file(&file);
-    let key: String = random(32)?.iter().map(|b| format!("{b:02x}")).collect();
+    let key: String = random(32)?.iter().fold(String::new(), |mut s, b| {
+        let _ = std::fmt::Write::write_fmt(&mut s, format_args!("{b:02x}"));
+        s
+    });
     let mut list = keys(store);
     list.push(sha(&key));
     // Oldest pairings fall off; a browser profile that was reset does not keep a slot forever.

@@ -88,7 +88,6 @@ fn confirm_with_per_file_review_matches_the_schema() {
             message: "`unwrap()` on an added line".into(),
             deterministic: true,
         }],
-        ..PermissionRequest::default()
     };
     assert_valid("confirm", &with_session(confirm_json(&req)));
     // The review file shape itself.

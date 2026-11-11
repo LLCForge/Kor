@@ -568,6 +568,7 @@ fn sym_table(syms: &Value) -> SymTable {
 
 /// Firefox profiler processed format (samply). Unsymbolicated names (`0x…`) are resolved with
 /// the sidecar when given.
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn firefox(v: &Value, syms: Option<&Value>) -> Result<Profile, String> {
     let threads = v["threads"].as_array().ok_or("firefox: no threads")?;
     let libs = v["libs"].as_array();

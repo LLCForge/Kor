@@ -135,6 +135,7 @@ pub(super) async fn finish_device(
     }
 }
 
+#[allow(clippy::similar_names)] // paired names (in/out, old/new) read best side by side
 pub(super) async fn refresh(net: &Net, doc: &mut Value) -> Result<(), Error> {
     let refresh_token = string_field(doc, "refresh_token");
     if refresh_token.is_empty() {

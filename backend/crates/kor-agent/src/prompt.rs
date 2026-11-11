@@ -15,6 +15,34 @@ use crate::prompt_text::{
 
 /// Characters of skill listing in the system prompt; the rest are named by count only.
 const SKILL_LIST_BUDGET: usize = 8_000;
+/// The skills shipped with Kor (37 today, ≈ 6 KB at 140 characters each).
+const BUILTIN_SKILL_BUDGET: usize = 7_000;
+
+/// One `- name: description` line per skill until `budget` bytes, then a count of the rest.
+fn list_skills(p: &mut String, skills: &[&kor_compat::Skill], budget: usize, desc_chars: usize) {
+    let mut used = 0;
+    for (i, s) in skills.iter().enumerate() {
+        let desc: String = s
+            .description
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .chars()
+            .take(desc_chars)
+            .collect();
+        let line = format!("- {}: {desc}\n", s.name);
+        used += line.len();
+        if used > budget {
+            let _ = writeln!(
+                p,
+                "- … and {} more skills; call `skill` with an exact name if you know it.",
+                skills.len() - i
+            );
+            return;
+        }
+        p.push_str(&line);
+    }
+}
 
 const CORE: &str = "# Ground rules
 - Work in small, verifiable steps. Read files with `Read` before `Edit` or `Write`; prefer `Edit` over rewriting whole files.
@@ -138,21 +166,15 @@ pub fn build(
     }
     if !compat.skills.is_empty() {
         p.push_str("\n# Skills\nLoad a skill with the `skill` tool when the task matches its description:\n");
-        let mut used = 0;
-        for (i, s) in compat.skills.iter().enumerate() {
-            let desc: String = s.description.chars().take(200).collect();
-            let line = format!("- {}: {desc}\n", s.name);
-            used += line.len();
-            if used > SKILL_LIST_BUDGET {
-                let _ = writeln!(
-                    p,
-                    "- … and {} more skills; call `skill` with an exact name if you know it.",
-                    compat.skills.len() - i
-                );
-                break;
-            }
-            p.push_str(&line);
-        }
+        // Skills shipped with Kor get their own budget so a large personal collection never
+        // pushes them out of the list (the model can only pick what it sees).
+        let (builtin, own): (Vec<_>, Vec<_>) = compat.skills.iter().partition(|s| {
+            s.dir
+                .components()
+                .any(|c| c.as_os_str() == "builtin-skills")
+        });
+        list_skills(&mut p, &own, SKILL_LIST_BUDGET, 200);
+        list_skills(&mut p, &builtin, BUILTIN_SKILL_BUDGET, 140);
     }
     p.push('\n');
     p.push_str(&output_section(surface));

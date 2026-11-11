@@ -193,6 +193,16 @@ pub fn mark_due(triggers: &mut [Value], now: u64) -> Vec<Value> {
     due
 }
 
+/// §27.15 (ADR 0063): the weekly knowledge digest (`<kor home>/knowledge/digest/<week>.md`), written
+/// once per ISO week by whichever scheduler runs (`kor daemon` or the desktop app). Local only.
+pub fn knowledge_digest_tick() -> Option<PathBuf> {
+    let home = crate::kor_home()?;
+    let now = chrono::Utc::now().timestamp();
+    kor_memory::digest::due(&home, now)?;
+    let k = kor_memory::open_knowledge(&home).ok()?;
+    kor_memory::digest::write_due(&k, &home, now).ok().flatten()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -224,14 +234,4 @@ mod tests {
         assert!(remove(&p, &id).unwrap());
         assert!(list(&p).is_empty());
     }
-}
-
-/// §27.15 (ADR 0063): the weekly knowledge digest (`<kor home>/knowledge/digest/<week>.md`), written
-/// once per ISO week by whichever scheduler runs (`kor daemon` or the desktop app). Local only.
-pub fn knowledge_digest_tick() -> Option<PathBuf> {
-    let home = crate::kor_home()?;
-    let now = chrono::Utc::now().timestamp();
-    kor_memory::digest::due(&home, now)?;
-    let k = kor_memory::open_knowledge(&home).ok()?;
-    kor_memory::digest::write_due(&k, &home, now).ok().flatten()
 }
