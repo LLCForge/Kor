@@ -141,6 +141,11 @@ pub fn other_tools(
             "mcpServers",
         ),
     ];
+    files.push((
+        "Gemini CLI",
+        home.join(".gemini").join("settings.json"),
+        "mcpServers",
+    ));
     if let Some(c) = app_config {
         files.push((
             "Claude Desktop",
@@ -152,21 +157,174 @@ pub fn other_tools(
             c.join("Code").join("User").join("mcp.json"),
             "servers",
         ));
+        // VS Code extensions keep their own MCP files in their global storage.
+        let storage = c.join("Code").join("User").join("globalStorage");
+        files.push((
+            "Roo Code",
+            storage
+                .join("rooveterinaryinc.roo-cline")
+                .join("settings")
+                .join("mcp_settings.json"),
+            "mcpServers",
+        ));
+        files.push((
+            "Cline",
+            storage
+                .join("saoudrizwan.claude-dev")
+                .join("settings")
+                .join("cline_mcp_settings.json"),
+            "mcpServers",
+        ));
     }
-    files
+    let mut out: Vec<(&'static str, Map<String, Value>)> = files
         .into_iter()
         .filter_map(|(label, path, key)| {
             let file = read_object(&path).ok()?;
-            let servers: Map<String, Value> = file
-                .get(key)?
-                .as_object()?
-                .iter()
-                .filter(|(id, raw)| valid_id(id, 64) && !raw.to_string().contains("${input:"))
-                .map(|(id, raw)| (id.clone(), raw.clone()))
-                .collect();
+            let servers = usable(file.get(key)?.as_object()?.clone());
             (!servers.is_empty()).then_some((label, servers))
         })
+        .collect();
+    for (label, servers) in [
+        (
+            "Codex",
+            codex_servers(&home.join(".codex").join("config.toml")),
+        ),
+        ("Continue", continue_servers(&home.join(".continue"))),
+        ("OpenCode", opencode_servers(home, app_config)),
+    ] {
+        let servers = usable(servers);
+        if !servers.is_empty() {
+            out.push((label, servers));
+        }
+    }
+    out
+}
+
+/// Entries Kor can start: a valid id, and no `${input:…}` prompt only the other editor answers.
+fn usable(servers: Map<String, Value>) -> Map<String, Value> {
+    servers
+        .into_iter()
+        .filter(|(id, raw)| valid_id(id, 64) && !raw.to_string().contains("${input:"))
         .collect()
+}
+
+/// Read a text file of at most `MAX_JSON_BYTES`; `None` when missing or too large.
+fn small_text(path: &Path) -> Option<String> {
+    let meta = std::fs::metadata(path).ok()?;
+    (meta.is_file() && meta.len() <= MAX_JSON_BYTES)
+        .then(|| std::fs::read_to_string(path).ok())
+        .flatten()
+}
+
+/// Codex: `[mcp_servers.<id>]` tables with `command`, `args`, `env` (and `url` for remote ones).
+fn codex_servers(path: &Path) -> Map<String, Value> {
+    let Some(text) = small_text(path) else {
+        return Map::new();
+    };
+    let Ok(doc) = text.parse::<toml::Table>() else {
+        return Map::new();
+    };
+    let Some(table) = doc.get("mcp_servers").and_then(toml::Value::as_table) else {
+        return Map::new();
+    };
+    table
+        .iter()
+        .filter_map(|(id, v)| Some((id.clone(), serde_json::to_value(v.as_table()?).ok()?)))
+        .collect()
+}
+
+/// Continue: `config.yaml` → `mcpServers: [{ name, command, args, env }]` (older `config.json` has
+/// the same list under `experimental.modelContextProtocolServers` with a `transport` object).
+fn continue_servers(dir: &Path) -> Map<String, Value> {
+    let mut out = Map::new();
+    if let Some(text) = small_text(&dir.join("config.yaml"))
+        && let Ok(doc) = serde_yaml::from_str::<Value>(&text)
+    {
+        for s in doc["mcpServers"].as_array().into_iter().flatten() {
+            if let Some(name) = s["name"].as_str() {
+                let mut entry = s.clone();
+                if let Some(o) = entry.as_object_mut() {
+                    o.remove("name");
+                }
+                out.insert(slug(name), entry);
+            }
+        }
+    }
+    if let Ok(file) = read_object(&dir.join("config.json")) {
+        let list = file
+            .get("experimental")
+            .and_then(|e| e.get("modelContextProtocolServers"))
+            .and_then(Value::as_array);
+        for (i, s) in list.into_iter().flatten().enumerate() {
+            let t = &s["transport"];
+            if t["type"] == "stdio"
+                && let Some(cmd) = t["command"].as_str()
+            {
+                let id = s["name"]
+                    .as_str()
+                    .map_or_else(|| format!("continue-{}", i + 1), slug);
+                out.entry(id).or_insert_with(
+                    || json!({ "command": cmd, "args": t["args"], "env": t["env"] }),
+                );
+            }
+        }
+    }
+    out
+}
+
+/// OpenCode: `opencode.json` → `mcp: { <id>: { type: "local", command: [prog, args…], environment } }`.
+fn opencode_servers(home: &Path, app_config: Option<&Path>) -> Map<String, Value> {
+    let paths = [
+        Some(home.join(".config").join("opencode").join("opencode.json")),
+        app_config.map(|c| c.join("opencode").join("opencode.json")),
+    ];
+    let mut out = Map::new();
+    for path in paths.into_iter().flatten() {
+        let Ok(file) = read_object(&path) else {
+            continue;
+        };
+        for (id, s) in file
+            .get("mcp")
+            .and_then(Value::as_object)
+            .into_iter()
+            .flatten()
+        {
+            if s["enabled"] == false {
+                continue;
+            }
+            let entry = if s["type"] == "remote" {
+                json!({ "type": "http", "url": s["url"], "headers": s["headers"] })
+            } else {
+                let mut cmd = s["command"]
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default()
+                    .into_iter();
+                let Some(program) = cmd.next().and_then(|v| v.as_str().map(str::to_owned)) else {
+                    continue;
+                };
+                json!({ "command": program, "args": cmd.collect::<Vec<_>>(), "env": s["environment"] })
+            };
+            out.entry(id.clone()).or_insert(entry);
+        }
+    }
+    out
+}
+
+/// An id Kor accepts from a free-form name (`My Server` → `my-server`).
+fn slug(name: &str) -> String {
+    let s: String = name
+        .trim()
+        .chars()
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' || c == '-' {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
+        .collect();
+    s.trim_matches('-').chars().take(64).collect()
 }
 
 /// [`other_tools`] for the real user only: a test or sandbox with its own `home` sees none.
@@ -547,6 +705,53 @@ mod tests {
             other_tools_for(&home).is_empty(),
             "a test home never sees the real user's tools"
         );
+    }
+
+    #[test]
+    fn reads_codex_continue_opencode_gemini_and_roo() {
+        let dir = tempfile::tempdir().unwrap();
+        let (home, cfg) = (dir.path().join("h"), dir.path().join("c"));
+        let w = |p: PathBuf, t: &str| {
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, t).unwrap();
+        };
+        w(
+            home.join(".codex/config.toml"),
+            "model = \"x\"\n[mcp_servers.docs]\ncommand = \"docs-mcp\"\nargs = [\"--stdio\"]\nenv = { TOKEN = \"t\" }\n",
+        );
+        w(
+            home.join(".continue/config.yaml"),
+            "name: c\nmcpServers:\n  - name: My Search\n    command: search-mcp\n    args: [\"-v\"]\n",
+        );
+        w(
+            home.join(".config/opencode/opencode.json"),
+            r#"{"mcp":{"fs":{"type":"local","command":["fs-mcp","/tmp"],"environment":{"A":"1"}},"off":{"type":"local","command":["x"],"enabled":false},"web":{"type":"remote","url":"https://e.example/mcp"}}}"#,
+        );
+        w(
+            home.join(".gemini/settings.json"),
+            r#"{"theme":"x","mcpServers":{"gem":{"command":"gem-mcp"}}}"#,
+        );
+        w(
+            cfg.join(
+                "Code/User/globalStorage/rooveterinaryinc.roo-cline/settings/mcp_settings.json",
+            ),
+            r#"{"mcpServers":{"roo":{"command":"roo-mcp"}}}"#,
+        );
+        let got: BTreeMap<&str, Map<String, Value>> =
+            other_tools(&home, Some(&cfg)).into_iter().collect();
+        let codex = &got["Codex"]["docs"];
+        assert_eq!(codex["command"], "docs-mcp");
+        assert_eq!(codex["args"], json!(["--stdio"]));
+        assert_eq!(codex["env"]["TOKEN"], "t");
+        assert_eq!(got["Continue"]["my-search"]["command"], "search-mcp");
+        let oc = &got["OpenCode"];
+        assert_eq!(oc["fs"]["command"], "fs-mcp");
+        assert_eq!(oc["fs"]["args"], json!(["/tmp"]));
+        assert_eq!(oc["fs"]["env"]["A"], "1");
+        assert!(!oc.contains_key("off"), "disabled servers stay off");
+        assert_eq!(oc["web"]["url"], "https://e.example/mcp");
+        assert_eq!(got["Gemini CLI"]["gem"]["command"], "gem-mcp");
+        assert_eq!(got["Roo Code"]["roo"]["command"], "roo-mcp");
     }
 
     fn loc(dir: &Path) -> Locations {

@@ -27,6 +27,10 @@ struct Keys {
 
 #[async_trait]
 impl Approver for Keys {
+    fn surface(&self) -> &'static str {
+        "tui"
+    }
+
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply {
         self.asked
             .lock()

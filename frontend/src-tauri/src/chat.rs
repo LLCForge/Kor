@@ -156,7 +156,7 @@ impl Chats {
 
     /// `approval`: 'yes' | 'no' | 'always' (`core/agent.ts` `Approval`). `files` (isteğe bağlı,
     /// `ipc-review.ts` `FileDecisions`): dosya başına `"accept"` | `"reject"` | `{ "edit": içerik }`.
-    pub fn approve(&self, id: &str, approval: &str, files: Option<&Value>) -> Result<(), String> {
+    pub fn approve(&self, id: &str, approval: &str, files: Option<&Value>, by: &'static str) -> Result<(), String> {
         let reply = match approval {
             "yes" => PermissionReply::Allow,
             "always" => PermissionReply::AllowAlways,
@@ -164,6 +164,7 @@ impl Chats {
             other => return Err(format!("Bilinmeyen onay yanıtı: {other}")),
         };
         let mut review = Review::from(reply);
+        review.by = Some(by);
         if let Some(map) = files.and_then(Value::as_object) {
             for (path, d) in map {
                 let decision = match (d.as_str(), d.get("edit").and_then(Value::as_str)) {
@@ -224,6 +225,10 @@ struct DesktopApprover {
 
 #[async_trait]
 impl Approver for DesktopApprover {
+    fn surface(&self) -> &'static str {
+        "desktop"
+    }
+
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply {
         self.review(req).await.reply
     }

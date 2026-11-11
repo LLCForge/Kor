@@ -787,10 +787,10 @@ async fn poll_answers(s: Arc<Shared>, mut stop: watch::Receiver<bool>) {
             for a in answers {
                 match a {
                     Answer::Approve(id) => {
-                        s.env.hub.answer(&id, true);
+                        s.env.hub.answer(&id, true, "telegram");
                     }
                     Answer::Reject(id) => {
-                        s.env.hub.answer(&id, false);
+                        s.env.hub.answer(&id, false, "telegram");
                     }
                     Answer::Details(id) => {
                         if let Some(text) = s.env.hub.details(&id) {
@@ -952,7 +952,7 @@ fn control_route(s: &Shared, method: &Method, rest: &str, body: &[u8]) -> Resp {
             let (Some(id), Some(ok)) = (v["id"].as_str(), v["approve"].as_bool()) else {
                 return err(400, "id and approve required");
             };
-            jresp(200, &json!({ "ok": s.env.hub.answer(id, ok) }))
+            jresp(200, &json!({ "ok": s.env.hub.answer(id, ok, "api") }))
         }
         (&Method::POST, "test") => {
             let name = v["name"].as_str().unwrap_or_default();

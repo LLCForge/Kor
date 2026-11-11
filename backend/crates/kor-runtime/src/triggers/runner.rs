@@ -180,7 +180,8 @@ impl DaemonApprover<'_> {
         let _ = save_job(&self.env.dir, &j);
     }
 
-    async fn ask(&self, req: &PermissionRequest) -> bool {
+    /// The answer and the channel it came from (`telegram`, `link`, `api`).
+    async fn ask(&self, req: &PermissionRequest) -> (bool, Option<&'static str>) {
         let l = &self.env.l;
         let (job_id, trigger) = {
             let j = self
@@ -191,7 +192,7 @@ impl DaemonApprover<'_> {
         };
         let summary = clip(&format!("{}: {}", req.tool, req.summary), 300);
         let Ok((id, token, rx)) = self.env.hub.open(&job_id, &summary, &change_view(req)) else {
-            return false;
+            return (false, None);
         };
         self.set(|j| {
             j.status = Status::Waiting;
@@ -228,34 +229,44 @@ impl DaemonApprover<'_> {
         for e in broadcast(&self.env.notifiers, &note).await {
             eprintln!("kor daemon: {e}");
         }
-        let approved = matches!(
-            tokio::time::timeout(self.env.approval_timeout, rx).await,
-            Ok(Ok(true))
-        );
+        let (approved, by) = match tokio::time::timeout(self.env.approval_timeout, rx).await {
+            Ok(Ok((yes, by))) => (yes, Some(by)),
+            _ => (false, None),
+        };
         self.env.hub.forget(&id);
         kor_agent::audit::record(
             "trigger.approval",
-            serde_json::json!({ "job": job_id, "tool": req.tool, "approved": approved }),
+            serde_json::json!({ "job": job_id, "tool": req.tool, "approved": approved, "by": by }),
         );
         self.set(|j| j.status = Status::Running);
-        approved
+        (approved, by)
     }
 }
 
 #[async_trait]
 impl Approver for DaemonApprover<'_> {
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply {
-        let ok = match self.policy {
-            Approval::Deny => false,
-            Approval::Auto if req.destructive.is_none() => true,
+        self.review(req).await.reply
+    }
+
+    fn surface(&self) -> &'static str {
+        "trigger"
+    }
+
+    async fn review(&self, req: &PermissionRequest) -> kor_agent::Review {
+        let (ok, by) = match self.policy {
+            Approval::Deny => (false, Some("policy")),
+            Approval::Auto if req.destructive.is_none() => (true, Some("policy")),
             Approval::Auto | Approval::Notify => self.ask(req).await,
         };
         // Never "always": a trigger's answer covers one call.
-        if ok {
+        let mut r = kor_agent::Review::from(if ok {
             PermissionReply::Allow
         } else {
             PermissionReply::Deny
-        }
+        });
+        r.by = by;
+        r
     }
 }
 

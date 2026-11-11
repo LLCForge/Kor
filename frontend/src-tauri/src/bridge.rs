@@ -188,7 +188,7 @@ async fn dispatch(
         }
         "approve" => state
             .chats
-            .approve(arg(0)?, arg(1)?, args.get(2))
+            .approve(arg(0)?, arg(1)?, args.get(2), "desktop")
             .map(|()| Value::Null),
         // Interactive cards: the event draft's Save/Cancel answers the tool's permission request.
         "g3Answer" => {
@@ -198,7 +198,7 @@ async fn dispatch(
                     let yes = answer["confirmed"].as_bool().unwrap_or(false);
                     state
                         .chats
-                        .approve(arg(1)?, if yes { "yes" } else { "no" }, None)
+                        .approve(arg(1)?, if yes { "yes" } else { "no" }, None, "desktop")
                         .map(|()| Value::Null)
                 }
                 _ => Err("Bu etkileşim türü henüz desteklenmiyor".into()),

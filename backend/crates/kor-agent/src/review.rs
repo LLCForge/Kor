@@ -26,6 +26,9 @@ pub struct Review {
     pub reply: PermissionReply,
     /// Keyed by `Proposal::path`.
     pub files: BTreeMap<String, FileDecision>,
+    /// Where the answer came from when the approver knows better than its own surface
+    /// (`chrome`, `tray`, `telegram`, `link`…); `None` = [`crate::Approver::surface`].
+    pub by: Option<&'static str>,
 }
 
 impl From<PermissionReply> for Review {
@@ -33,6 +36,7 @@ impl From<PermissionReply> for Review {
         Self {
             reply,
             files: BTreeMap::new(),
+            by: None,
         }
     }
 }
@@ -146,6 +150,7 @@ mod tests {
                 .iter()
                 .map(|(p, d)| ((*p).to_owned(), d.clone()))
                 .collect(),
+            by: None,
         }
     }
 

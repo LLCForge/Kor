@@ -203,7 +203,7 @@ async fn handle(app: &AppHandle, op: &str, v: &Value) -> Res {
         "approve" => {
             let id = v["id"].as_str().ok_or("Onay kimliği eksik")?;
             let files = v.get("files").filter(|f| f.is_object());
-            chats.approve(id, v["approval"].as_str().unwrap_or("no"), files).map(|()| Value::Null)
+            chats.approve(id, v["approval"].as_str().unwrap_or("no"), files, "chrome").map(|()| Value::Null)
         }
         "answer" => chats.answer(v["id"].as_str().ok_or("Soru kimliği eksik")?, v["value"].clone()).map(|()| Value::Null),
         "abort" => {

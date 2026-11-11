@@ -510,6 +510,10 @@ struct InboxApprover {
 
 #[async_trait]
 impl Approver for InboxApprover {
+    fn surface(&self) -> &'static str {
+        "remote"
+    }
+
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply {
         self.review(req).await.reply
     }

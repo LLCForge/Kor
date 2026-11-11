@@ -654,7 +654,7 @@ fn answer_desktop(app: &AppHandle, id: &str, approve: bool) -> Result<(), String
         .map(|a| a.owner);
     app.state::<AppState>()
         .chats
-        .approve(id, if approve { "yes" } else { "no" }, None)?;
+        .approve(id, if approve { "yes" } else { "no" }, None, "tray")?;
     answered(app, id);
     if let Some(s) = session {
         let _ = app.emit("kor:shellui/answered", json!({ "sessionId": s, "id": id }));

@@ -164,6 +164,7 @@ fn review(reply: PermissionReply, d: &[(&str, FileDecision)]) -> Review {
             .iter()
             .map(|(p, d)| ((*p).to_owned(), d.clone()))
             .collect::<BTreeMap<_, _>>(),
+        by: None,
     }
 }
 

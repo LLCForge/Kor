@@ -553,6 +553,10 @@ struct Unattended;
 
 #[async_trait::async_trait]
 impl Approver for Unattended {
+    fn surface(&self) -> &'static str {
+        "unattended"
+    }
+
     async fn approve(&self, _: &PermissionRequest) -> PermissionReply {
         PermissionReply::Deny
     }

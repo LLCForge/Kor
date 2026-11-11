@@ -277,6 +277,10 @@ impl Recording<'_> {
 
 #[async_trait]
 impl Approver for Recording<'_> {
+    fn surface(&self) -> &'static str {
+        self.inner.surface()
+    }
+
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply {
         self.asked(req);
         let r = self.inner.approve(req).await;

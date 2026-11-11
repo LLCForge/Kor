@@ -477,6 +477,7 @@ impl crate::agent::Agent {
         decision: crate::permissions::Decision,
         allowed: bool,
         ok: Option<bool>,
+        by: Option<&str>,
     ) {
         if path().is_none() {
             return;
@@ -498,6 +499,10 @@ impl crate::agent::Agent {
         });
         if let Some(ok) = ok {
             v["ok"] = json!(ok);
+        }
+        // §18.3: which surface the user answered on.
+        if let Some(by) = by {
+            v["by"] = json!(by);
         }
         record("tool", v);
     }

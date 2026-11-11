@@ -132,6 +132,11 @@ pub enum PermissionReply {
 #[async_trait]
 pub trait Approver: Send + Sync {
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply;
+    /// Where this approver asks (`cli`, `tui`, `desktop`, `editor`, `remote`, `trigger`,
+    /// `unattended`); written to the audit log with each answer.
+    fn surface(&self) -> &'static str {
+        ""
+    }
     /// Per-file answer for a request with `files`; by default the plain answer for all of them.
     async fn review(&self, req: &PermissionRequest) -> crate::review::Review {
         self.approve(req).await.into()
@@ -717,7 +722,14 @@ impl Agent {
                 }
             };
             if self.permissions.decide(&*tool, &input) != Decision::Allow {
-                self.audit_tool(&name, &tool.summary(&input), Decision::Deny, false, None);
+                self.audit_tool(
+                    &name,
+                    &tool.summary(&input),
+                    Decision::Deny,
+                    false,
+                    None,
+                    None,
+                );
                 results.push(ContentPart::ToolResult {
                     tool_use_id: id,
                     content: "permission denied; do not retry this call".into(),
@@ -747,7 +759,14 @@ impl Agent {
         });
         let outs = futures::future::join_all(futs).await;
         for (id, name, mut out, summary) in outs {
-            self.audit_tool(&name, &summary, Decision::Allow, true, Some(!out.is_error));
+            self.audit_tool(
+                &name,
+                &summary,
+                Decision::Allow,
+                true,
+                Some(!out.is_error),
+                None,
+            );
             out.content = self.redactor.redact(&out.content).into_owned();
             let _ = events.send(AgentEvent::ToolEnd {
                 id: id.clone(),
@@ -888,6 +907,7 @@ impl Agent {
             }
         }
         let mut reviewed = None;
+        let mut answered_by: Option<&'static str> = None;
         let allowed = match decision {
             Decision::Allow => true,
             Decision::Deny => false,
@@ -916,6 +936,7 @@ impl Agent {
                     rules: rule_findings,
                 };
                 let review = approver.review(&req).await;
+                answered_by = answer_source(review.by, approver.surface());
                 match crate::review::outcome(&req.files, &review) {
                     crate::review::Outcome::All => {
                         // A destructive call is never remembered; only an explicit rule allows it.
@@ -943,7 +964,7 @@ impl Agent {
             kor_tools::computer_approved();
         }
         if !allowed {
-            self.audit_tool(name, &summary, decision, false, None);
+            self.audit_tool(name, &summary, decision, false, None, answered_by);
             let out = ToolOutput::err(denial);
             let _ = events.send(AgentEvent::ToolEnd {
                 id: id.to_owned(),
@@ -1039,7 +1060,14 @@ impl Agent {
             }
             self.attach_rules(&t, &mut out, events);
         }
-        self.audit_tool(name, &summary, decision, true, Some(!out.is_error));
+        self.audit_tool(
+            name,
+            &summary,
+            decision,
+            true,
+            Some(!out.is_error),
+            answered_by,
+        );
         self.report_sandbox_denials(name, &summary, events);
         let _ = events.send(AgentEvent::ToolEnd {
             id: id.to_owned(),
@@ -1049,6 +1077,11 @@ impl Agent {
         });
         out
     }
+}
+
+/// §18.3: the channel the answer came from (the answer's own, else the approver's surface).
+fn answer_source(by: Option<&'static str>, surface: &'static str) -> Option<&'static str> {
+    by.or(Some(surface)).filter(|s| !s.is_empty())
 }
 
 /// A command tool's live view starts with the command itself (`$ git status`), then its output
@@ -1327,5 +1360,21 @@ impl Agent {
             });
         }
         Ok((parts, calls, finish))
+    }
+}
+
+#[cfg(test)]
+mod answer_source_tests {
+    use super::answer_source;
+
+    #[test]
+    fn the_answers_own_channel_wins_over_the_surface() {
+        assert_eq!(answer_source(Some("chrome"), "desktop"), Some("chrome"));
+        assert_eq!(answer_source(None, "cli"), Some("cli"));
+        assert_eq!(
+            answer_source(None, ""),
+            None,
+            "an approver without a surface writes none"
+        );
     }
 }

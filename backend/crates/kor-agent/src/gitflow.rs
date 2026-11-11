@@ -349,13 +349,39 @@ pub async fn ask(
         .complete(req, CancellationToken::new())
         .await
         .map_err(|e| FlowError::Model(e.message))?;
-    let text = crate::subagent::collect_text(stream)
+    let (text, thinking) = collect_answer(stream)
         .await
         .map_err(|e| FlowError::Model(e.message))?;
-    if text.trim().is_empty() {
-        Err(FlowError::BadReply("empty reply".into()))
-    } else {
+    reply_or_reasoning(text, thinking)
+}
+
+/// The visible text and the reasoning of a reply.
+async fn collect_answer(
+    mut stream: kor_providers::EventStream,
+) -> Result<(String, String), kor_core::ProviderError> {
+    use futures::StreamExt as _;
+    let (mut text, mut thinking) = (String::new(), String::new());
+    while let Some(ev) = stream.next().await {
+        match ev? {
+            kor_core::StreamEvent::TextDelta { text: t } => text.push_str(&t),
+            kor_core::StreamEvent::ThinkingDelta { text: t } => thinking.push_str(&t),
+            _ => {}
+        }
+    }
+    Ok((text, thinking))
+}
+
+/// Reasoning models sometimes put the whole answer in their reasoning and send no text; that
+/// answer is used rather than reporting an empty reply.
+fn reply_or_reasoning(text: String, thinking: String) -> Result<String, FlowError> {
+    if !text.trim().is_empty() {
         Ok(text)
+    } else if !thinking.trim().is_empty() {
+        Ok(thinking)
+    } else {
+        Err(FlowError::BadReply(
+            "the model sent an empty answer; try again or pick another model".into(),
+        ))
     }
 }
 
@@ -679,6 +705,19 @@ mod tests {
         assert_eq!(parts[1].message.body, "why");
         assert!(parse_split("no json", &staged).is_err());
         assert!(parse_split(r#"[{"files":["q"],"message":"m"}]"#, &staged).is_err());
+    }
+
+    #[test]
+    fn reasoning_only_replies_are_used_and_empty_ones_explained() {
+        assert_eq!(reply_or_reasoning("a".into(), "b".into()).unwrap(), "a");
+        assert_eq!(
+            reply_or_reasoning("  ".into(), "[{\"x\":1}]".into()).unwrap(),
+            "[{\"x\":1}]"
+        );
+        let e = reply_or_reasoning(String::new(), String::new())
+            .unwrap_err()
+            .to_string();
+        assert!(e.contains("empty answer"), "{e}");
     }
 
     struct Mock {

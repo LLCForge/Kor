@@ -121,6 +121,10 @@ struct TerminalApprover<'a> {
 
 #[async_trait]
 impl Approver for TerminalApprover<'_> {
+    fn surface(&self) -> &'static str {
+        "cli"
+    }
+
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply {
         self.review(req).await.reply
     }
@@ -1342,6 +1346,10 @@ struct ChanApprover {
 
 #[async_trait]
 impl Approver for ChanApprover {
+    fn surface(&self) -> &'static str {
+        "tui"
+    }
+
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply {
         self.review(req).await.reply
     }

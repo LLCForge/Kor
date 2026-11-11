@@ -311,7 +311,7 @@ impl Notifier for Email {
 
 #[derive(Debug)]
 struct Pending {
-    tx: oneshot::Sender<bool>,
+    tx: oneshot::Sender<(bool, &'static str)>,
     token: String,
     job: String,
     summary: String,
@@ -355,7 +355,7 @@ impl Hub {
         job: &str,
         summary: &str,
         details: &str,
-    ) -> Result<(String, String, oneshot::Receiver<bool>), String> {
+    ) -> Result<(String, String, oneshot::Receiver<(bool, &'static str)>), String> {
         let id = random_hex(8)?;
         let token = random_hex(24)?;
         let (tx, rx) = oneshot::channel();
@@ -378,11 +378,12 @@ impl Hub {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
-    /// Answer `id`; `false` when unknown or already answered.
-    pub fn answer(&self, id: &str, approve: bool) -> bool {
+    /// Answer `id` from channel `by` (`telegram`, `api`, `link`); `false` when unknown or
+    /// already answered.
+    pub fn answer(&self, id: &str, approve: bool, by: &'static str) -> bool {
         self.lock()
             .remove(id)
-            .is_some_and(|p| p.tx.send(approve).is_ok())
+            .is_some_and(|p| p.tx.send((approve, by)).is_ok())
     }
 
     /// Answer from an approve link: only with the link's token.
@@ -392,7 +393,7 @@ impl Hub {
             .lock()
             .get(id)
             .is_some_and(|p| bool::from(p.token.as_bytes().ct_eq(token.as_bytes())));
-        ok && self.answer(id, approve)
+        ok && self.answer(id, approve, "link")
     }
 
     pub fn forget(&self, id: &str) {
@@ -448,8 +449,8 @@ mod tests {
         assert!(!hub.answer_with_token(&id, "wrong", true));
         assert!(hub.summary_with_token(&id, &token).is_some());
         assert!(hub.answer_with_token(&id, &token, false));
-        assert_eq!(rx.try_recv(), Ok(false));
-        assert!(!hub.answer(&id, true), "only once");
+        assert_eq!(rx.try_recv(), Ok((false, "link")));
+        assert!(!hub.answer(&id, true, "test"), "only once");
     }
 
     #[tokio::test]

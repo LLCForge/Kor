@@ -387,6 +387,10 @@ struct AcpApprover {
 
 #[async_trait]
 impl Approver for AcpApprover {
+    fn surface(&self) -> &'static str {
+        "editor"
+    }
+
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply {
         self.pump.drain();
         let content: Vec<Value> = req
