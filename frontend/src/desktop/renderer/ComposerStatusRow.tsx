@@ -26,6 +26,8 @@ export function ComposerStatusRow({ files, added, removed, todos, running, sessi
   const total = todos?.length ?? 0
   const current = sessions.find((s) => s.id === activeId)
   const recent = sessions.slice(0, 8)
+  // Gösterecek değişiklik ya da görev yokken şerit hiç çizilmez (oturum geçişi kenar çubuğunda).
+  if (files === 0 && total === 0) return null
   return (
     <div className="cdx-status-row">
       <button type="button" className="cdx-files-pill" onClick={onOpenPanel} title="Değişiklikleri göster">

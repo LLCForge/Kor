@@ -164,6 +164,36 @@ tui = "/proxy key"
 desktop = "proxy.key"
 
 [[feature]]
+name = "Proxy abonelik hesaplarını listele"
+cli = "kor proxy auth list"
+tui = "/proxy auth list"
+desktop = "proxy.oauthAccounts"
+
+[[feature]]
+name = "Proxy abonelik OAuth girişi"
+cli = "kor proxy auth login"
+tui = "/proxy auth login"
+desktop = "proxy.oauthLogin"
+
+[[feature]]
+name = "Proxy çoklu hesap havuzu yönlendirmesi"
+cli = "kor proxy auth list"
+tui = "/proxy auth list"
+desktop = "proxy.routing"
+
+[[feature]]
+name = "Proxy abonelik belirteçlerini yenile"
+cli = "kor proxy auth refresh"
+tui = "/proxy auth refresh"
+desktop = "proxy.oauthRefresh"
+
+[[feature]]
+name = "Proxy abonelik hesabını kaldır"
+cli = "kor proxy auth remove"
+tui = "/proxy auth remove"
+desktop = "proxy.oauthRemove"
+
+[[feature]]
 name = "Özel uç / yerel sunucu / abonelik proxy'si ekle"
 cli = "kor provider add"
 tui = "/provider add"

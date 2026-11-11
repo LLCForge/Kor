@@ -26,7 +26,7 @@ use std::time::Duration;
 use base64::Engine;
 use base64::engine::general_purpose::{URL_SAFE, URL_SAFE_NO_PAD};
 use serde::Serialize;
-use serde_json::Value;
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
@@ -150,7 +150,7 @@ impl Default for Options {
     }
 }
 
-pub(crate) fn default_auth_dir() -> PathBuf {
+pub fn default_auth_dir() -> PathBuf {
     kor_config::user_dir().map_or_else(|| PathBuf::from("proxy-auth"), |dir| dir.join("proxy-auth"))
 }
 
@@ -623,6 +623,164 @@ impl Pending {
 
 /// Refresh the access token in an auth file written by this module (or CLIProxyAPI).
 pub(crate) use session::load_subscriptions;
+
+/// One JSON auth file on disk (CLIProxyAPI layout).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AccountEntry {
+    pub file_name: String,
+    pub provider: String,
+    pub label: String,
+    /// Credential id in the proxy pool (`email` / account label), when [`in_pool`].
+    pub pool_id: String,
+    pub weight: u32,
+    pub priority: i64,
+    /// Loaded into the rotating credential pool (quota failover).
+    pub in_pool: bool,
+}
+
+fn pools_type(typ: &str) -> bool {
+    matches!(typ, "claude" | "codex")
+}
+
+fn account_label(doc: &Value, provider: &str) -> String {
+    doc.get("email")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .or_else(|| doc.get("account_id").and_then(Value::as_str))
+        .filter(|s| !s.is_empty())
+        .or_else(|| doc.get("login").and_then(Value::as_str))
+        .filter(|s| !s.is_empty())
+        .unwrap_or(provider)
+        .to_owned()
+}
+
+fn account_meta(doc: &Value) -> (u32, i64) {
+    let weight = doc
+        .get("kor")
+        .and_then(|v| v.get("weight"))
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+        .filter(|w| *w > 0)
+        .unwrap_or(1);
+    let priority = doc
+        .get("kor")
+        .and_then(|v| v.get("priority"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    (weight, priority)
+}
+
+/// List saved subscription accounts in `dir` (missing dir → empty list).
+pub fn list_accounts(dir: &Path) -> Vec<AccountEntry> {
+    let mut out = Vec::new();
+    let entries = match std::fs::read_dir(dir) {
+        Ok(entries) => entries,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return out,
+        Err(_) => return out,
+    };
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(doc) = serde_json::from_str::<Value>(&text) else {
+            continue;
+        };
+        let provider = doc
+            .get("type")
+            .and_then(Value::as_str)
+            .unwrap_or("unknown")
+            .to_owned();
+        let label = account_label(&doc, &provider);
+        let (weight, priority) = account_meta(&doc);
+        let in_pool = pools_type(&provider);
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("")
+            .to_owned();
+        if file_name.is_empty() {
+            continue;
+        }
+        let pool_id = if in_pool { label.clone() } else { String::new() };
+        out.push(AccountEntry {
+            file_name,
+            provider,
+            label,
+            pool_id,
+            weight,
+            priority,
+            in_pool,
+        });
+    }
+    out.sort_by(|left, right| left.label.cmp(&right.label).then(left.file_name.cmp(&right.file_name)));
+    out
+}
+
+/// Build login [`Options`] from proxy settings.
+pub fn options_from_settings(settings: &crate::config::Settings, open_browser: bool) -> Options {
+    let mut opts = Options::default();
+    if let Some(dir) = settings.auth_dir.clone() {
+        opts.auth_dir = dir;
+    }
+    opts.open_browser = open_browser;
+    opts
+}
+
+/// Run a full subscription login; `on_prompt` runs before waiting for approval (for UI or logs).
+pub async fn login_with<F>(
+    provider: Provider,
+    opts: &Options,
+    on_prompt: F,
+) -> Result<Saved, Error>
+where
+    F: FnOnce(&Prompt),
+{
+    let pending = begin(provider, opts).await?;
+    on_prompt(&pending.prompt);
+    pending.finish().await
+}
+
+/// Update Kor routing metadata on an auth file (`kor.weight`, `kor.priority`).
+pub fn set_account_meta(path: &Path, weight: Option<u32>, priority: Option<i64>) -> Result<(), Error> {
+    let text = std::fs::read_to_string(path).map_err(|e| err(format!("read auth file: {e}")))?;
+    let mut doc: Value =
+        serde_json::from_str(&text).map_err(|e| err(format!("auth file is not JSON: {e}")))?;
+    let kor = doc
+        .as_object_mut()
+        .ok_or_else(|| err("auth file root must be an object"))?
+        .entry("kor")
+        .or_insert_with(|| json!({}));
+    let kor = kor
+        .as_object_mut()
+        .ok_or_else(|| err("auth file `kor` must be an object"))?;
+    if let Some(weight) = weight.filter(|w| *w > 0) {
+        kor.insert("weight".to_owned(), json!(weight));
+    }
+    if let Some(priority) = priority {
+        kor.insert("priority".to_owned(), json!(priority));
+    }
+    write_json(path, &doc)?;
+    Ok(())
+}
+
+/// Delete one auth file by basename (refuses paths outside `dir`).
+pub fn remove_account(dir: &Path, file_name: &str) -> Result<(), Error> {
+    if file_name.contains('/')
+        || file_name.contains('\\')
+        || Path::new(file_name).components().count() != 1
+    {
+        return Err(err(
+            "refusing to delete an auth file outside the auth directory",
+        ));
+    }
+    let path = dir.join(file_name);
+    std::fs::remove_file(&path).map_err(|e| err(format!("delete auth file: {e}")))?;
+    Ok(())
+}
 
 pub async fn refresh_file(path: &Path, opts: &Options) -> Result<Saved, Error> {
     let text = std::fs::read_to_string(path).map_err(|e| err(format!("read auth file: {e}")))?;

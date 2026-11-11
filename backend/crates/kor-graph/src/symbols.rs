@@ -64,6 +64,7 @@ fn name_of<'a>(n: Node<'_>, src: &'a str) -> Option<&'a str> {
 }
 
 /// Every definition in `src`, outermost first.
+#[allow(clippy::items_after_statements)]
 pub fn definitions(lang: Lang, src: &str) -> Vec<Symbol> {
     let mut p = Parser::new();
     if p.set_language(&lang.language()).is_err() {
@@ -100,7 +101,7 @@ pub fn definitions(lang: Lang, src: &str) -> Vec<Symbol> {
 /// Definitions whose name is `name`: a bare name matches at any depth, `A::b` / `A.b` must match
 /// the end of the qualified name.
 pub fn find(lang: Lang, src: &str, name: &str) -> Vec<Symbol> {
-    let want: Vec<&str> = name.split(|c| c == ':' || c == '.').filter(|s| !s.is_empty()).collect();
+    let want: Vec<&str> = name.split([':', '.']).filter(|s| !s.is_empty()).collect();
     if want.is_empty() {
         return Vec::new();
     }

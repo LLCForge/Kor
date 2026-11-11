@@ -197,7 +197,7 @@ const GENERAL_GROUP = { id: 'general', label: 'Genel', icon: Wrench } as const
  * daraltılmış şeritte her grup tek ikon + yana açılan liste.
  */
 function ToolsLauncher({ collapsed, children }: { collapsed: boolean; children: ReactNode }) {
-  const [openState, setOpenState] = usePersistentState<Record<string, boolean>>('kor.sidebar.tools', {})
+  const [openState, setOpenState] = usePersistentState<Record<string, boolean>>('kor.sidebar.tools.v2', {}) // v2: gruplar herkes için kapalı başlar
   const isOpen = (id: string, fallback = false) => openState[id] ?? fallback
   const toggle = (id: string, fallback = false) => setOpenState((prev) => ({ ...prev, [id]: !(prev[id] ?? fallback) }))
 

@@ -124,6 +124,25 @@ pub struct Settings {
     pub ignored: Vec<String>,
 }
 
+impl Strategy {
+    pub fn yaml_name(self) -> &'static str {
+        match self {
+            Self::RoundRobin => "round-robin",
+            Self::WeightedRoundRobin => "weighted-round-robin",
+            Self::FillFirst => "fill-first",
+        }
+    }
+
+    pub fn parse_name(name: &str) -> Result<Self, String> {
+        match name.trim().to_ascii_lowercase().as_str() {
+            "" | "round-robin" | "roundrobin" | "rr" => Ok(Self::RoundRobin),
+            "weighted-round-robin" | "weighted" => Ok(Self::WeightedRoundRobin),
+            "fill-first" | "fillfirst" | "ff" => Ok(Self::FillFirst),
+            other => Err(format!("routing.strategy `{other}` is not supported")),
+        }
+    }
+}
+
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -490,6 +509,41 @@ pub fn load(path: &Path) -> Result<Settings, String> {
         Err(e) => return Err(format!("{}: {e}", path.display())),
     }
     parse(&text).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// Update routing strategy and retry rounds in `proxy.yaml` (creates the file if missing).
+pub fn patch_routing(path: &Path, strategy: Strategy, request_retry: u32) -> Result<Settings, String> {
+    let mut root: serde_yaml::Value = if path.exists() {
+        let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
+        serde_yaml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?
+    } else {
+        serde_yaml::Mapping::new().into()
+    };
+    let map = root
+        .as_mapping_mut()
+        .ok_or_else(|| "config root must be a mapping".to_owned())?;
+    let routing = map
+        .entry(serde_yaml::Value::from("routing"))
+        .or_insert_with(|| serde_yaml::Mapping::new().into());
+    let routing = routing
+        .as_mapping_mut()
+        .ok_or_else(|| "routing must be a mapping".to_owned())?;
+    routing.insert(
+        serde_yaml::Value::from("strategy"),
+        serde_yaml::Value::from(strategy.yaml_name()),
+    );
+    let retry = routing
+        .entry(serde_yaml::Value::from("retry"))
+        .or_insert_with(|| serde_yaml::Mapping::new().into());
+    let retry = retry
+        .as_mapping_mut()
+        .ok_or_else(|| "retry must be a mapping".to_owned())?;
+    retry.insert(
+        serde_yaml::Value::from("request-retry"),
+        serde_yaml::Value::from(i64::from(request_retry.min(10))),
+    );
+    let text = serde_yaml::to_string(&root).map_err(|e| e.to_string())?;
+    save(path, &text)
 }
 
 /// Validate then write `text` atomically (temp file + rename), for `PUT /config.yaml`.

@@ -622,6 +622,9 @@
             },
             "result": {
               "type": "string"
+            },
+            "command": {
+              "type": "string"
             }
           },
           "required": [
@@ -630,7 +633,8 @@
             "name",
             "summary",
             "result"
-          ]
+          ],
+          "description": "command: the command line of a shell tool call (shown as `$ …` when the card opens)"
         },
         {
           "type": "object",
@@ -23874,6 +23878,105 @@
         "config"
       ]
     },
+    "ProxyOauthAccount": {
+      "type": "object",
+      "properties": {
+        "file_name": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "pool_id": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "number"
+        },
+        "priority": {
+          "type": "number"
+        },
+        "in_pool": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "file_name",
+        "provider",
+        "label",
+        "pool_id",
+        "weight",
+        "priority",
+        "in_pool"
+      ]
+    },
+    "ProxyRouting": {
+      "type": "object",
+      "properties": {
+        "strategy": {
+          "enum": [
+            "round-robin",
+            "weighted-round-robin",
+            "fill-first"
+          ]
+        },
+        "requestRetry": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "strategy",
+        "requestRetry"
+      ]
+    },
+    "ProxyOauthAccounts": {
+      "type": "object",
+      "properties": {
+        "dir": {
+          "type": "string"
+        },
+        "accounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ProxyOauthAccount"
+          }
+        }
+      },
+      "required": [
+        "dir",
+        "accounts"
+      ]
+    },
+    "ProxyOauthLoginResult": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "fileName": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "dir": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "label",
+        "fileName",
+        "path",
+        "dir"
+      ]
+    },
     "ComponentView": {
       "type": "object",
       "properties": {
@@ -35595,6 +35698,161 @@
         ]
       }
     },
+    "proxy.oauthAccounts": {
+      "description": "Kayıtlı abonelik kimlik dosyalarını listele (kor-proxy oauth auth dizini).",
+      "params": [],
+      "result": {
+        "$ref": "#/$defs/ProxyOauthAccounts"
+      }
+    },
+    "proxy.oauthLogin": {
+      "description": "Abonelik OAuth girişi; ilerleme `kor:proxy/oauth` olayıyla (tarayıcı URL veya cihaz kodu).",
+      "params": [
+        {
+          "name": "provider",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "$ref": "#/$defs/ProxyOauthLoginResult"
+      }
+    },
+    "proxy.oauthRefresh": {
+      "params": [
+        {
+          "name": "fileName",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "fileName",
+          "label",
+          "provider"
+        ]
+      }
+    },
+    "proxy.oauthRemove": {
+      "params": [
+        {
+          "name": "fileName",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "type": "object",
+        "properties": {
+          "removed": {
+            "type": "string"
+          },
+          "dir": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "removed",
+          "dir"
+        ]
+      }
+    },
+    "proxy.oauthSetMeta": {
+      "description": "Havuzdaki bir abonelik hesabının ağırlık ve önceliğini güncelle.",
+      "params": [
+        {
+          "name": "fileName",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "weight",
+          "schema": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "optional": true
+        },
+        {
+          "name": "priority",
+          "schema": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "optional": true
+        }
+      ],
+      "result": {
+        "const": true
+      }
+    },
+    "proxy.routing": {
+      "description": "Çoklu abonelik hesabı havuzu: yönlendirme stratejisi ve kota yeniden deneme.",
+      "params": [],
+      "result": {
+        "$ref": "#/$defs/ProxyRouting"
+      }
+    },
+    "proxy.routingSet": {
+      "params": [
+        {
+          "name": "strategy",
+          "schema": {
+            "enum": [
+              "round-robin",
+              "weighted-round-robin",
+              "fill-first"
+            ]
+          }
+        },
+        {
+          "name": "requestRetry",
+          "schema": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "optional": true
+        }
+      ],
+      "result": {
+        "$ref": "#/$defs/ProxyRouting"
+      }
+    },
     "readFile": {
       "params": [
         {
@@ -43093,6 +43351,43 @@
           }
         },
         "required": [
+          "url"
+        ]
+      }
+    },
+    "kor:proxy/oauth": {
+      "param": "e",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "browser",
+              "device"
+            ]
+          },
+          "url": {
+            "type": "string"
+          },
+          "userCode": {
+            "type": "string"
+          },
+          "verificationUri": {
+            "type": "string"
+          },
+          "verificationUriComplete": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind",
           "url"
         ]
       }

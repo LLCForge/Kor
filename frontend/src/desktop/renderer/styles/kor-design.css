@@ -585,7 +585,7 @@ img, svg { -webkit-user-drag: none; }
 
 /* ---------- Kenar çubuğu "Araçlar" başlatıcısı: katlanır gruplar; daraltılmış şeritte grup ikonu + yan liste ---------- */
 .kor-launcher { display: flex; flex-direction: column; min-height: 0; }
-.kor-launcher-body { display: flex; flex-direction: column; max-height: 30vh; overflow-y: auto; overflow-x: hidden; }
+.kor-launcher-body { display: flex; flex-direction: column; max-height: 42vh; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 .kor-launcher-head > .kor-launch-chev { margin-inline-start: auto; }
 .kor-launch-chev { flex: none; color: var(--muted); transition: transform var(--kor-dur-menu) var(--kor-ease); }
 [aria-expanded="true"] > .kor-launch-chev { transform: rotate(90deg); }
@@ -611,3 +611,34 @@ img, svg { -webkit-user-drag: none; }
 /* ---------- Bağlamsal girişler: ölçerlerdeki "Ayrıntılar", composer ek menüsü ---------- */
 .kor-meter-details { display: inline-flex; align-items: center; gap: var(--kor-space-1); margin-inline-start: auto; }
 .menu.menu-left.kor-attach-menu { width: calc(var(--kor-space-7) * 5); }
+
+/* ---------- Pencere boyutuna uyum ----------
+   Dar pencere: yan panel çekmecesi sohbetin üstünde belli olsun diye gölge alır; 900 px altında
+   sohbetten kalan anlamsız şeridi bırakmaz, alanın tamamını kaplar. */
+@media (max-width: 1100px) {
+  .app .app-body > .side-panel { box-shadow: calc(var(--kor-space-2) * -1) 0 var(--kor-space-5) rgb(0 0 0 / 0.14); }
+}
+@media (max-width: 900px) {
+  /* !important: sürükleyerek verilen satır içi genişliği de ezer. */
+  .app .app-body > .side-panel { width: 100% !important; max-width: none; border-left: 0; box-shadow: none; }
+}
+/* Alçak pencere (dizüstü, yarım yükseklik): karşılama ekranı logoyu küçültür, mesaj kutusu ekranda kalır. */
+@media (max-height: 720px) {
+  .empty-inner { gap: var(--kor-space-3); }
+}
+/* Büyük ekran (2K/4K, ölçekleme %100): yazılar ve sütunlar büyür; 13 px metin 2560 px'de okunmuyor. */
+@media (min-width: 2200px) {
+  :root {
+    --kor-text-12: calc(var(--kor-space-1) * 3.5); --kor-text-13: calc(var(--kor-space-1) * 3.75); --kor-text-14: calc(var(--kor-space-1) * 4); --kor-text-16: calc(var(--kor-space-1) * 4.5);
+    --kor-text-20: calc(var(--kor-space-1) * 5.75); --kor-text-28: calc(var(--kor-space-1) * 8); --kor-text-40: calc(var(--kor-space-1) * 11.5);
+    --kor-chat-max: calc(var(--kor-space-1) * 260); --kor-rail-open: calc(var(--kor-space-1) * 80);
+  }
+  .rail:not(.collapsed) { width: var(--kor-rail-open); }
+}
+@media (min-width: 3200px) {
+  :root {
+    --kor-text-12: calc(var(--kor-space-1) * 4); --kor-text-13: calc(var(--kor-space-1) * 4.25); --kor-text-14: calc(var(--kor-space-1) * 4.75); --kor-text-16: calc(var(--kor-space-1) * 5.25);
+    --kor-text-20: calc(var(--kor-space-1) * 6.75); --kor-text-28: calc(var(--kor-space-1) * 9.5); --kor-text-40: calc(var(--kor-space-1) * 13.5);
+    --kor-chat-max: calc(var(--kor-space-1) * 310); --kor-rail-open: calc(var(--kor-space-1) * 95);
+  }
+}

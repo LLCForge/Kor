@@ -174,18 +174,25 @@ pub fn transcript(messages: &[Message]) -> Value {
                         ContentPart::Text { text } if !text.trim().is_empty() => {
                             out.push(json!({ "kind": "assistant", "text": text }));
                         }
-                        ContentPart::ToolUse { id, name, input } => out.push(json!({
-                            "kind": "tool",
-                            "id": id,
-                            "name": name,
-                            // Card tools are redrawn from their whole input.
-                            "summary": if kor_agent::assistant::is_card_tool(name) {
-                                input.to_string()
-                            } else {
-                                tool_summary(input)
-                            },
-                            "result": results.get(id.as_str()).copied().unwrap_or(""),
-                        })),
+                        ContentPart::ToolUse { id, name, input } => {
+                            let mut item = json!({
+                                "kind": "tool",
+                                "id": id,
+                                "name": name,
+                                // Card tools are redrawn from their whole input.
+                                "summary": if kor_agent::assistant::is_card_tool(name) {
+                                    input.to_string()
+                                } else {
+                                    tool_summary(input)
+                                },
+                                "result": results.get(id.as_str()).copied().unwrap_or(""),
+                            });
+                            // Shell tools: the open card starts with the command that ran.
+                            if let Some(cmd) = input.get("command").and_then(Value::as_str) {
+                                item["command"] = json!(cmd);
+                            }
+                            out.push(item);
+                        }
                         _ => {}
                     }
                 }

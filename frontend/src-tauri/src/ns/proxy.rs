@@ -3,14 +3,17 @@
 //! Anahtar yalnızca açıkça istendiğinde (`key(false, true)`) tam döner.
 
 use std::net::{IpAddr, SocketAddr};
+use std::path::PathBuf;
 use std::sync::Arc;
 
+use kor_proxy::oauth::{self, Prompt};
 use kor_secrets::{ExposeSecret, KeychainStore};
 use serde_json::{Value, json};
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
+use tauri_plugin_opener::OpenerExt;
 use tokio::sync::Mutex;
 
-use crate::api::{Res, b, root};
+use crate::api::{Res, b, root, s};
 use crate::state::AppState;
 
 /// Köprü ad alanı (`ns/mod.rs` bunu `proxy::call`'a yönlendirir).
@@ -22,7 +25,7 @@ pub async fn call(
     _ns: &str,
     name: &str,
     args: &[Value],
-    _app: &AppHandle,
+    app: &AppHandle,
     state: &AppState,
 ) -> Option<Res> {
     Some(match name {
@@ -33,8 +36,169 @@ pub async fn call(
         "config" => config().await,
         // args: rotate, show
         "key" => key(b(args, 0), b(args, 1)),
+        "oauthAccounts" => oauth_accounts(),
+        "oauthLogin" => oauth_login(app, args).await,
+        "oauthRefresh" => oauth_refresh(args).await,
+        "oauthRemove" => oauth_remove(args).await,
+        "oauthSetMeta" => oauth_set_meta(args).await,
+        "routing" => routing_get(),
+        "routingSet" => routing_set(args).await,
         _ => return None,
     })
+}
+
+fn proxy_settings() -> Result<kor_proxy::config::Settings, String> {
+    let path = kor_proxy::default_config_path();
+    match &path {
+        Some(p) if p.exists() => kor_proxy::config::load(p),
+        _ => Ok(kor_proxy::config::Settings::default()),
+    }
+}
+
+fn auth_dir(st: &kor_proxy::config::Settings) -> PathBuf {
+    st.auth_dir
+        .clone()
+        .unwrap_or_else(oauth::default_auth_dir)
+}
+
+async fn reload_running_gateway() {
+    let Ok(st) = proxy_settings() else {
+        return;
+    };
+    let running = RUNNING.lock().await;
+    if let Some(r) = running.as_ref().filter(|r| !r.is_finished()) {
+        let _ = r.gateway.reload(st);
+    }
+}
+
+fn prompt_payload(prompt: &Prompt) -> Value {
+    match prompt {
+        Prompt::Browser { url } => json!({ "kind": "browser", "url": url }),
+        Prompt::Device {
+            user_code,
+            verification_uri,
+            verification_uri_complete,
+        } => {
+            let link = verification_uri_complete
+                .as_deref()
+                .unwrap_or(verification_uri);
+            json!({
+                "kind": "device",
+                "url": link,
+                "userCode": user_code,
+                "verificationUri": verification_uri,
+                "verificationUriComplete": verification_uri_complete,
+            })
+        }
+    }
+}
+
+fn oauth_accounts() -> Res {
+    let st = proxy_settings()?;
+    let dir = auth_dir(&st);
+    let accounts = oauth::list_accounts(&dir);
+    Ok(json!({
+        "dir": dir.display().to_string(),
+        "accounts": accounts,
+    }))
+}
+
+async fn oauth_login(app: &AppHandle, args: &[Value]) -> Res {
+    let provider_name = s(args, 0, "proxy.oauthLogin")?;
+    let Some(provider) = oauth::Provider::parse(provider_name) else {
+        return Err(format!(
+            "Bilinmeyen sağlayıcı: `{provider_name}` (claude, codex, codex-device, antigravity, kimi, kimi-ai, devin, copilot)"
+        ));
+    };
+    let st = proxy_settings()?;
+    let dir = auth_dir(&st);
+    let opts = oauth::options_from_settings(&st, false);
+    let app = app.clone();
+    let saved = oauth::login_with(provider, &opts, |prompt| {
+        let payload = prompt_payload(prompt);
+        let _ = app.emit("kor:proxy/oauth", payload.clone());
+        if let Some(url) = payload.get("url").and_then(Value::as_str) {
+            let _ = app.opener().open_url(url, None::<&str>);
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    reload_running_gateway().await;
+    Ok(json!({
+        "provider": saved.provider.to_string(),
+        "label": saved.label,
+        "fileName": saved.file_name,
+        "path": saved.path.display().to_string(),
+        "dir": dir.display().to_string(),
+    }))
+}
+
+async fn oauth_refresh(args: &[Value]) -> Res {
+    let file = s(args, 0, "proxy.oauthRefresh")?;
+    let st = proxy_settings()?;
+    let dir = auth_dir(&st);
+    let path = dir.join(file);
+    let opts = oauth::options_from_settings(&st, false);
+    let saved = oauth::refresh_file(&path, &opts)
+        .await
+        .map_err(|e| e.to_string())?;
+    reload_running_gateway().await;
+    Ok(json!({
+        "fileName": saved.file_name,
+        "label": saved.label,
+        "provider": saved.provider.to_string(),
+    }))
+}
+
+async fn oauth_remove(args: &[Value]) -> Res {
+    let file = s(args, 0, "proxy.oauthRemove")?;
+    let st = proxy_settings()?;
+    let dir = auth_dir(&st);
+    oauth::remove_account(&dir, file).map_err(|e| e.to_string())?;
+    reload_running_gateway().await;
+    Ok(json!({ "removed": file, "dir": dir.display().to_string() }))
+}
+
+async fn oauth_set_meta(args: &[Value]) -> Res {
+    let file = s(args, 0, "proxy.oauthSetMeta")?;
+    let weight = args
+        .get(1)
+        .and_then(|v| v.as_u64())
+        .and_then(|n| u32::try_from(n).ok());
+    let priority = args.get(2).and_then(Value::as_i64);
+    let st = proxy_settings()?;
+    let path = auth_dir(&st).join(file);
+    oauth::set_account_meta(&path, weight, priority).map_err(|e| e.to_string())?;
+    reload_running_gateway().await;
+    Ok(json!(true))
+}
+
+fn routing_get() -> Res {
+    let st = proxy_settings()?;
+    Ok(json!({
+        "strategy": st.strategy.yaml_name(),
+        "requestRetry": st.request_retry,
+    }))
+}
+
+async fn routing_set(args: &[Value]) -> Res {
+    let strategy = s(args, 0, "proxy.routingSet")?;
+    let request_retry = args
+        .get(1)
+        .and_then(|v| v.as_u64())
+        .and_then(|n| u32::try_from(n).ok())
+        .unwrap_or(3);
+    let strat = kor_proxy::config::Strategy::parse_name(strategy)?;
+    let path = kor_proxy::default_config_path().ok_or("Proxy yapılandırma dosyası yolu yok")?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let st = kor_proxy::config::patch_routing(&path, strat, request_retry)?;
+    reload_running_gateway().await;
+    Ok(json!({
+        "strategy": st.strategy.yaml_name(),
+        "requestRetry": st.request_retry,
+    }))
 }
 
 fn privacy(state: &AppState) -> bool {

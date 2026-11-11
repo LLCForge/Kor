@@ -223,6 +223,9 @@ export function useIntentGate(): { gate: (text: string, deliver: (t: string) => 
       .route(text, selection ? { selection } : undefined)
       .then((d) => {
         if (d.kind === 'agent') deliver(text)
+        // Yalnızca anahtar kelimeyle eşleşen, yazan bir komut en zayıf sinyaldir ("not dosyası oluştur"
+        // bir migration isteği değildir): mesajın önünü kesmez, doğrudan ajana gider.
+        else if ((d.kind === 'confirm' || d.kind === 'missing') && d.plan.via === 'keyword') deliver(text)
         else if (d.kind === 'run') {
           setAuto({ plan: d.plan, result: null, error: null })
           intentApi

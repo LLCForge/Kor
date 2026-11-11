@@ -552,7 +552,8 @@ export function SessionList({ sessions, error, activeId, statusOf, onOpen, onPin
         <Search size={13} aria-hidden="true" />
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Ara…" aria-label="Sohbetlerde ara" spellCheck={false} />
       </label>
-      <div className="cdx-filters">
+      {/* Süzgeçler ancak süzülecek sohbet varken görünür; boş listede yalnızca arama ve ipucu kalır. */}
+      {sessions.length > 0 && <div className="cdx-filters">
         <label className="cdx-pill" title="Projeye göre süz">
           <Folder size={12} aria-hidden="true" />
           <select value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)} aria-label="Proje filtresi">
@@ -571,7 +572,7 @@ export function SessionList({ sessions, error, activeId, statusOf, onOpen, onPin
         <button type="button" className={`action-btn cdx-group-toggle${byStatus ? ' active' : ''}`} onClick={() => setByStatus((b) => !b)} aria-pressed={byStatus} aria-label="Duruma göre grupla" title={byStatus ? 'Projeye göre grupla' : 'Duruma göre grupla'}>
           <Layers size={13} aria-hidden="true" />
         </button>
-      </div>
+      </div>}
       <NewSection onCreate={extras.onCreateSection} />
       {extras.sectionsError && <p className="tree-status error">{extras.sectionsError}</p>}
       {sessions.length === 0 && <p className="tree-status">Henüz kayıtlı sohbet yok. İlk mesajından sonra burada görünecek.</p>}

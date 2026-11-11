@@ -1,4 +1,5 @@
 // [g10] Güvenilirlik katmanı: yarım tur kurtarma bantları, ölü mektup kuyruğu, başlangıç öz-denetimi ve kısa olay bildirimleri.
+import { NoticePortal } from './NoticePortal.tsx'
 import { Inbox, RotateCcw, ShieldAlert, TriangleAlert, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import useSWR, { useSWRConfig } from 'swr'
@@ -10,6 +11,8 @@ import { RewindDialog } from './RewindDialog.tsx'
 import { uiLocale } from './ui-locale.ts'
 
 interface G10LayerProps {
+  /** Bantların çizileceği yer (başlığın altı); yoksa yüzen eski konum */
+  noticeHost: HTMLElement | null
   activeId: string
   chat: ChatState
   dispatchStore: (action: { sessionId: string; action: ChatAction }) => void
@@ -52,7 +55,7 @@ export function describeG10Event(e: G10Event): string {
 
 const shortTime = (ms: number) => new Date(ms).toLocaleString(uiLocale(), { dateStyle: 'short', timeStyle: 'short' })
 
-export function G10Layer({ activeId, chat, dispatchStore, onOpenSession }: G10LayerProps) {
+export function G10Layer({ noticeHost, activeId, chat, dispatchStore, onOpenSession }: G10LayerProps) {
   const { mutate } = useSWRConfig()
   const recoverable = useSWR('g10:recoverable', () => api.g10.listRecoverable(), { revalidateOnFocus: false })
   const selfCheck = useSWR('g10:selfcheck', () => api.g10.selfCheck(), { revalidateOnFocus: false })
@@ -186,6 +189,7 @@ export function G10Layer({ activeId, chat, dispatchStore, onOpenSession }: G10La
 
   return (
     <>
+      <NoticePortal host={noticeHost}>
       <div className="g10-bands" aria-live="polite">
         {crashed.map((turn) => (
           <div key={`${turn.sessionId}:${turn.startedAt}`} className="g10-band pop-in" role="status">
@@ -327,6 +331,7 @@ export function G10Layer({ activeId, chat, dispatchStore, onOpenSession }: G10La
           </div>
         ))}
       </div>
+      </NoticePortal>
 
       {rewind && (
         <RewindDialog

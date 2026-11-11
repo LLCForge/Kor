@@ -365,8 +365,10 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
     case 'load': {
       const loaded = action.transcript.map((t): ChatItem => {
         if (t.kind === 'tool') {
+          const { command, ...rest } = t
           return {
-            ...t,
+            ...rest,
+            ...(command ? { live: [`$ ${command}`] } : {}),
             awaitingApproval: false,
             added: 0,
             removed: 0,

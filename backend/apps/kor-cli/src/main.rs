@@ -995,6 +995,25 @@ fn localized_command(l: &Localizer) -> clap::Command {
                         .mut_arg("rotate", |a| a.help(l.t("arg-proxy-rotate")))
                         .mut_arg("show", |a| a.help(l.t("arg-proxy-show")))
                 })
+                .mut_subcommand("auth", |s| {
+                    s.about(l.t("cmd-proxy-auth"))
+                        .mut_subcommand("login", |s| {
+                            s.about(l.t("cmd-proxy-auth-login")).mut_arg("provider", |a| {
+                                a.help(l.t("arg-proxy-auth-provider")).required(true)
+                            })
+                        })
+                        .mut_subcommand("list", |s| s.about(l.t("cmd-proxy-auth-list")))
+                        .mut_subcommand("refresh", |s| {
+                            s.about(l.t("cmd-proxy-auth-refresh")).mut_arg("file", |a| {
+                                a.help(l.t("arg-proxy-auth-file")).required(true)
+                            })
+                        })
+                        .mut_subcommand("remove", |s| {
+                            s.about(l.t("cmd-proxy-auth-remove")).mut_arg("file", |a| {
+                                a.help(l.t("arg-proxy-auth-file")).required(true)
+                            })
+                        })
+                })
         })
         .mut_subcommand("models", |c| {
             c.about(l.t("cmd-models"))

@@ -52,17 +52,42 @@ pub(crate) fn load_subscriptions(dir: &Path, settings: &mut Settings, creds: &mu
     notes
 }
 
+fn kor_meta(doc: &Value) -> (u32, i64) {
+    let weight = doc
+        .get("kor")
+        .and_then(|v| v.get("weight"))
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+        .filter(|w| *w > 0)
+        .unwrap_or(1);
+    let priority = doc
+        .get("kor")
+        .and_then(|v| v.get("priority"))
+        .and_then(Value::as_i64)
+        .unwrap_or(0);
+    (weight, priority)
+}
+
 fn load_file(path: &Path, group: usize) -> Result<Option<(Group, Credential)>, Error> {
     let text = std::fs::read_to_string(path).map_err(|e| err(e.to_string()))?;
     let doc: Value = serde_json::from_str(&text).map_err(|e| err(e.to_string()))?;
-    if doc.get("type").and_then(Value::as_str) != Some("claude") {
+    let Some(typ) = doc.get("type").and_then(Value::as_str) else {
         return Ok(None);
+    };
+    let (weight, priority) = kor_meta(&doc);
+    match typ {
+        "claude" => load_claude(&doc, group, weight, priority),
+        "codex" => load_codex(&doc, group, weight, priority),
+        _ => Ok(None),
     }
-    let access = string_field(&doc, "access_token");
+}
+
+fn load_claude(doc: &Value, group: usize, weight: u32, priority: i64) -> Result<Option<(Group, Credential)>, Error> {
+    let access = string_field(doc, "access_token");
     if access.is_empty() {
         return Err(err("claude auth file has no access token"));
     }
-    let email = string_field(&doc, "email");
+    let email = string_field(doc, "email");
     let label = if email.is_empty() { "claude".to_owned() } else { email };
     let provider = Arc::new(ClaudeSession {
         manifest: manifest(),
@@ -75,13 +100,70 @@ fn load_file(path: &Path, group: usize) -> Result<Option<(Group, Credential)>, E
         name: label.clone(),
         base_url: Some(MESSAGES.to_owned()),
         prefix: None,
-        priority: 0,
+        priority,
         models: Vec::new(),
         excluded: Vec::new(),
         keys: Vec::new(),
         disable_cooling: None,
     };
-    let cred = Credential::subscription(label, group, Kind::Claude, provider, kor_secrets::mask(&access), MESSAGES.to_owned());
+    let cred = Credential::subscription(
+        label,
+        group,
+        Kind::Claude,
+        provider,
+        kor_secrets::mask(&access),
+        MESSAGES.to_owned(),
+        weight,
+        priority,
+    );
+    Ok(Some((group_spec, cred)))
+}
+
+const CODEX_API: &str = "https://api.openai.com/v1";
+
+fn load_codex(doc: &Value, group: usize, weight: u32, priority: i64) -> Result<Option<(Group, Credential)>, Error> {
+    let access = string_field(doc, "access_token");
+    if access.is_empty() {
+        return Err(err("codex auth file has no access token"));
+    }
+    let email = string_field(doc, "email");
+    let label = if email.is_empty() {
+        format!("codex-{group}")
+    } else {
+        email
+    };
+    let builtin = kor_providers::Registry::builtin();
+    let mut manifest = builtin
+        .get("openai")
+        .cloned()
+        .ok_or_else(|| err("built-in openai provider is missing"))?;
+    manifest.id = format!("codex-oauth-{group}");
+    manifest.name.clone_from(&label);
+    manifest.base_url = CODEX_API.to_owned();
+    manifest.base_url_env = None;
+    let provider: Arc<dyn Provider> = kor_providers::build(&manifest, Some(kor_secrets::SecretString::from(access.clone())))
+        .map_err(|e| err(e.message))?;
+    let group_spec = Group {
+        kind: Kind::Codex,
+        name: label.clone(),
+        base_url: Some(CODEX_API.to_owned()),
+        prefix: None,
+        priority,
+        models: Vec::new(),
+        excluded: Vec::new(),
+        keys: Vec::new(),
+        disable_cooling: None,
+    };
+    let cred = Credential::subscription(
+        label,
+        group,
+        Kind::Codex,
+        provider,
+        kor_secrets::mask(&access),
+        CODEX_API.to_owned(),
+        weight,
+        priority,
+    );
     Ok(Some((group_spec, cred)))
 }
 
@@ -429,5 +511,24 @@ mod tests {
         let order = pool.order("claude-sonnet-4-5", false);
         assert_eq!(order.len(), 1);
         assert_eq!(order[0].model, "claude-sonnet-4-5");
+    }
+
+    #[test]
+    fn multiple_claude_accounts_share_the_same_model_pool() {
+        let dir = tempfile::tempdir().unwrap();
+        for (file, email) in [("claude-a.json", "a@b.c"), ("claude-b.json", "b@b.c")] {
+            std::fs::write(
+                dir.path().join(file),
+                format!(r#"{{"type":"claude","access_token":"tok-{email}","email":"{email}"}}"#),
+            )
+            .unwrap();
+        }
+        let mut settings = Settings::default();
+        let mut creds = Vec::new();
+        load_subscriptions(dir.path(), &mut settings, &mut creds);
+        assert_eq!(creds.len(), 2);
+        let pool = crate::routing::Pool::new(settings, creds);
+        let order = pool.order("claude-sonnet-4-5", false);
+        assert_eq!(order.len(), 2);
     }
 }

@@ -339,10 +339,10 @@ impl Child {
     /// `on_line` as it arrives, for a live view. An `AppContainer` child reports at the end.
     pub async fn wait_with_output_streaming(self, on_line: &(dyn Fn(&str) + Sync)) -> io::Result<Output> {
         match self.0 {
-            Inner::Process(c) => stream_process(c, on_line).await,
+            Inner::Process(c) => Box::pin(stream_process(c, on_line)).await,
             Inner::Container(c) => c.wait_with_output().await,
             Inner::Docker(c, mut guard) => {
-                let out = stream_process(c, on_line).await;
+                let out = Box::pin(stream_process(c, on_line)).await;
                 guard.finished();
                 out
             }

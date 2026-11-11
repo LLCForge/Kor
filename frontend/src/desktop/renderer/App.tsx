@@ -168,6 +168,7 @@ export function App() {
     return () => mq.removeEventListener('change', onChange)
   }, [])
   const [panelOpen, setPanelOpen] = useState(false)
+  const [noticeHost, setNoticeHost] = useState<HTMLDivElement | null>(null)
   // Kapanırken panel `--kor-dur-panel` boyunca çizili kalır (çıkış animasyonu, §23.1).
   const panelShown = usePresence(panelOpen, 'panel')
   // Kullanıcı değişiklik panelini kapattıysa, aynı turun sonraki dosya değişikliklerinde tekrar açılmasın (tur başında sıfırlanır).
@@ -746,6 +747,8 @@ export function App() {
             </button>
           </Tooltip>
         </header>
+        {/* Uyarı bantları: başlığın altında, akışın içinde (sohbeti örtmez) */}
+        <div className="kor-notices" ref={setNoticeHost} />
         {/* cdesktop dikey eylem şeridi (sohbet alanının sağ kenarı) */}
         {chat.items.length > 0 && <FloatingRail root={appState.root} onOpenPanel={paletteActions.openPanel} onOpenFolder={() => void openFolder()} />}
 
@@ -848,7 +851,7 @@ export function App() {
       {/* [g9] diyaloglar ve katmanlar */}
 
       {/* [g10] diyaloglar ve katmanlar */}
-      <G10Layer activeId={activeId} chat={chat} dispatchStore={dispatchStore} onOpenSession={openSession} />
+      <G10Layer noticeHost={noticeHost} activeId={activeId} chat={chat} dispatchStore={dispatchStore} onOpenSession={openSession} />
 
       {/* [g11] diyaloglar ve katmanlar */}
       <G11Layer sessionId={activeId} onOpenGlobalEditor={() => setMemoryDialogOpen(true)} />
@@ -883,6 +886,7 @@ export function App() {
 
       {/* [g7] diyaloglar ve katmanlar */}
       <G7Layer
+        noticeHost={noticeHost}
         root={appState.root}
         currentModel={appState.model}
         items={chat.items}

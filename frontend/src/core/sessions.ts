@@ -474,7 +474,8 @@ export type TranscriptItem =
   | { kind: 'assistant'; text: string }
   /** Arka plan bildirimi (<task-notification>): kullanıcı yazmadı; arayüz başlığını satır olarak gösterir */
   | { kind: 'notice'; text: string }
-  | { kind: 'tool'; id: string; name: string; summary: string; result: string }
+  /** command: kabuk aracının çalıştırdığı komut (kart açılınca `$ …` olarak gösterilir) */
+  | { kind: 'tool'; id: string; name: string; summary: string; result: string; command?: string }
   // [g6] sıkıştırılmış önceki kısım
   | { kind: 'compaction'; summary: string }
 

@@ -13,6 +13,25 @@ use kor_secrets::{ExposeSecret, KeychainStore};
 use crate::Ctx;
 
 #[derive(Debug, Subcommand)]
+pub enum ProxyAuthCmd {
+    /// Sign in with a subscription (Claude Code, Codex, Copilot, …) and save an auth file.
+    Login {
+        /// Provider name: claude, codex, codex-device, antigravity, kimi, kimi-ai, devin, copilot.
+        provider: String,
+    },
+    /// List saved subscription auth files.
+    List,
+    /// Refresh tokens in one auth file (basename under the auth dir).
+    Refresh {
+        file: String,
+    },
+    /// Remove one saved auth file.
+    Remove {
+        file: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
 pub enum ProxyCmd {
     /// Serve OpenAI, Anthropic and Gemini compatible endpoints until Ctrl+C.
     Serve {
@@ -44,6 +63,9 @@ pub enum ProxyCmd {
         #[arg(long)]
         show: bool,
     },
+    /// Subscription OAuth accounts used by the proxy credential pool.
+    #[command(subcommand)]
+    Auth(ProxyAuthCmd),
 }
 
 fn settings(
@@ -68,6 +90,12 @@ fn addr(host: Option<&str>, port: u16) -> anyhow::Result<SocketAddr> {
     Ok(SocketAddr::new(ip, port))
 }
 
+fn auth_dir(st: &kor_proxy::config::Settings) -> std::path::PathBuf {
+    st.auth_dir
+        .clone()
+        .unwrap_or_else(kor_proxy::oauth::default_auth_dir)
+}
+
 pub fn run(ctx: &Ctx, cmd: ProxyCmd) -> anyhow::Result<bool> {
     match cmd {
         ProxyCmd::Serve {
@@ -86,6 +114,84 @@ pub fn run(ctx: &Ctx, cmd: ProxyCmd) -> anyhow::Result<bool> {
         ),
         ProxyCmd::Status { port, host } => status(ctx, port, host.as_deref()),
         ProxyCmd::Key { rotate, show } => access_key(ctx, rotate, show),
+        ProxyCmd::Auth(command) => auth(ctx, command),
+    }
+}
+
+fn auth(ctx: &Ctx, cmd: ProxyAuthCmd) -> anyhow::Result<bool> {
+    let l = &ctx.l;
+    let (st, _) = settings(None)?;
+    let dir = auth_dir(&st);
+    let opts = kor_proxy::oauth::options_from_settings(&st, true);
+    match cmd {
+        ProxyAuthCmd::Login { provider } => {
+            let Some(name) = kor_proxy::oauth::Provider::parse(&provider) else {
+                anyhow::bail!(
+                    "unknown provider `{provider}`; try claude, codex, codex-device, antigravity, kimi, kimi-ai, devin, copilot"
+                );
+            };
+            let saved = crate::providers::runtime()?
+                .block_on(kor_proxy::oauth::login_with(name, &opts, |prompt| {
+                    println!("{}", prompt.instructions());
+                }))
+                .map_err(|e| anyhow!(e.to_string()))?;
+            println!(
+                "{}",
+                l.t_args(
+                    "proxy-auth-saved",
+                    &kor_i18n::args!("provider" => saved.provider.to_string(), "label" => saved.label, "file" => saved.file_name),
+                )
+            );
+            println!(
+                "{}",
+                l.t_args("proxy-auth-dir", &kor_i18n::args!("dir" => dir.display().to_string()))
+            );
+            Ok(true)
+        }
+        ProxyAuthCmd::List => {
+            let accounts = kor_proxy::oauth::list_accounts(&dir);
+            if accounts.is_empty() {
+                println!("{}", l.t("proxy-auth-none"));
+                println!(
+                    "{}",
+                    l.t_args("proxy-auth-dir", &kor_i18n::args!("dir" => dir.display().to_string()))
+                );
+                return Ok(false);
+            }
+            println!(
+                "{}",
+                l.t_args("proxy-auth-dir", &kor_i18n::args!("dir" => dir.display().to_string()))
+            );
+            for entry in accounts {
+                println!(
+                    "  {}  {}  ({})",
+                    entry.file_name, entry.label, entry.provider
+                );
+            }
+            Ok(true)
+        }
+        ProxyAuthCmd::Refresh { file } => {
+            let path = dir.join(&file);
+            let saved = crate::providers::runtime()?
+                .block_on(kor_proxy::oauth::refresh_file(&path, &opts))
+                .map_err(|e| anyhow!(e.to_string()))?;
+            println!(
+                "{}",
+                l.t_args(
+                    "proxy-auth-refreshed",
+                    &kor_i18n::args!("file" => saved.file_name, "label" => saved.label),
+                )
+            );
+            Ok(true)
+        }
+        ProxyAuthCmd::Remove { file } => {
+            kor_proxy::oauth::remove_account(&dir, &file).map_err(|e| anyhow!(e.to_string()))?;
+            println!(
+                "{}",
+                l.t_args("proxy-auth-removed", &kor_i18n::args!("file" => file)),
+            );
+            Ok(true)
+        }
     }
 }
 

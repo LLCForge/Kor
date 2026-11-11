@@ -148,6 +148,7 @@ pub fn capture(name: &str, monitors: &[Monitor], windows: &[Window], saved_at: u
 }
 
 /// Moves that bring `layout` back on today's `monitors` with today's `windows`.
+#[allow(clippy::many_single_char_names)]
 pub fn plan(layout: &Layout, monitors: &[Monitor], windows: &[Window]) -> Plan {
     let mut used = vec![false; windows.len()];
     let mut out = Plan::default();

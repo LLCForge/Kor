@@ -103,9 +103,8 @@ pub fn undocumented(lang: Lang, src: &str) -> Vec<Undocumented> {
 /// The line-comment marker a new doc comment uses in `lang`.
 pub fn doc_marker(lang: Lang) -> &'static str {
     match lang {
-        Lang::Rust => "///",
+        Lang::Rust | Lang::CSharp => "///",
         Lang::Python | Lang::Ruby => "#",
-        Lang::CSharp => "///",
         _ => "//",
     }
 }

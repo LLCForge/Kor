@@ -13,6 +13,7 @@ use wreq::tls::{AlpnProtocol, ExtensionType, KeyShare, TlsOptions, TlsVersion};
 
 use super::{Error, err};
 
+#[allow(dead_code)] // kept for reference and tests
 pub(super) const OAUTH_JA3: &str = "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49161-49171-49162-49172-156-157-47-53,0-23-65281-10-11-35-13-51-45-43,29-23-24,0";
 
 const CIPHERS: &str = "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:\
@@ -148,6 +149,7 @@ async fn send(request: wreq::RequestBuilder) -> Result<(u16, String), Error> {
     Ok((status, body))
 }
 
+#[allow(dead_code)] // kept for reference and tests
 pub(super) fn ja3(record: &[u8]) -> Option<String> {
     if record.len() < 5 || record[0] != 22 {
         return None;
@@ -200,6 +202,7 @@ pub(super) fn ja3(record: &[u8]) -> Option<String> {
     Some(format!("{version},{cipher_ids},{},{curves},{points}", ext_ids.join("-")))
 }
 
+#[allow(dead_code)] // kept for reference and tests
 fn groups(data: &[u8]) -> String {
     let list = data.get(2..).unwrap_or_default();
     list.chunks(2)
@@ -210,6 +213,7 @@ fn groups(data: &[u8]) -> String {
         .join("-")
 }
 
+#[allow(dead_code)] // kept for reference and tests
 fn grease(value: u16) -> bool {
     value & 0x0f0f == 0x0a0a
 }

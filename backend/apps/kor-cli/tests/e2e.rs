@@ -69,6 +69,32 @@ fn run_command(env: &IsolatedEnv, st: &Step) -> String {
     format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr))
 }
 
+/// Some Windows builds' ConPTY never hands a child's output to `expectrl` (not even
+/// `cmd /c echo`); the PTY tests cannot say anything there, so they are skipped with the reason.
+fn pty_works() -> bool {
+    static OK: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *OK.get_or_init(|| {
+        let windows = std::env::consts::OS == "windows";
+        let mut c = if windows { Command::new("cmd") } else { Command::new("sh") };
+        if windows {
+            c.args(["/c", "echo kor-pty-probe"]);
+        } else {
+            c.args(["-c", "echo kor-pty-probe"]);
+        }
+        let Ok(mut p) = Session::spawn(c) else { return false };
+        p.set_expect_timeout(Some(Duration::from_secs(10)));
+        p.expect("kor-pty-probe").is_ok()
+    })
+}
+
+fn skip_without_pty(test: &str) -> bool {
+    if pty_works() {
+        return false;
+    }
+    eprintln!("{test}: skipped, this machine's pseudo-terminal does not pass a child's output through");
+    true
+}
+
 fn pty(cmd: Command) -> Session {
     let mut p = Session::spawn(cmd).expect("pseudo-terminal (ConPTY on Windows)");
     p.set_expect_timeout(Some(TIMEOUT));
@@ -230,6 +256,9 @@ fn report(all: &[(String, Vec<Outcome>)]) -> Vec<String> {
 
 #[test]
 fn scenarios_on_cli_and_tui_match_the_catalog_and_each_other() {
+    if skip_without_pty("scenarios_on_cli_and_tui_match_the_catalog_and_each_other") {
+        return;
+    }
     let rt = runtime();
     let mut all = Vec::new();
     for s in scenarios() {
@@ -248,6 +277,9 @@ fn scenarios_on_cli_and_tui_match_the_catalog_and_each_other() {
 
 #[test]
 fn pty_repl_shows_banner_and_quits() {
+    if skip_without_pty("pty_repl_shows_banner_and_quits") {
+        return;
+    }
     let s = Scenario::parse("name: banner\ntitle: banner\n").expect("scenario");
     let rt = runtime();
     let e = setup(&rt, &s, "cli");

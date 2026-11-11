@@ -330,3 +330,18 @@
 .core-form .text-input { flex: 1 1 160px; min-width: 0; }
 .g7-h4 svg { vertical-align: -3px; margin-right: 4px; }
 .g7-band-error { color: var(--danger); font-size: var(--kor-text-12); }
+
+/* ---------- Uyarı sırası: başlığın altında, akışın içinde ----------
+   Bantlar eskiden pencerenin üstünde yüzüyor, birbirinin ve sohbetin üstüne biniyordu. Burada tek
+   sütunda, sohbet genişliğinde durur; uzun metin kesilmez, alt satıra geçer. */
+.kor-notices { display: flex; flex-direction: column; gap: var(--kor-space-1); flex-shrink: 0; width: 100%; max-width: calc(var(--chat-width) + var(--kor-space-6)); margin: 0 auto; padding: 0 var(--kor-space-4); }
+.kor-notices:has(.g7-band, .g10-band, .g10-panel) { padding-bottom: var(--kor-space-2); }
+.kor-notices .g7-bands, .kor-notices .g10-bands {
+  position: static; transform: none; width: auto; max-width: none; align-items: stretch; gap: var(--kor-space-1); pointer-events: auto;
+}
+.kor-notices .g7-bands:empty, .kor-notices .g10-bands:empty { display: none; }
+.kor-notices .g7-band, .kor-notices .g10-band { flex-wrap: wrap; border-radius: var(--kor-radius-card); box-shadow: none; }
+.kor-notices .g7-band > span:not(.g7-band-error) { flex: 1 1 240px; min-width: 0; overflow-wrap: anywhere; }
+.kor-notices .g7-band > svg { flex: none; }
+/* Akışın içindeki bantlar menüleri örtmez; gizlemeye gerek yok. */
+.app:has(.menu) .kor-notices .g7-bands, .app:has(.menu) .kor-notices .g10-bands { visibility: visible; }

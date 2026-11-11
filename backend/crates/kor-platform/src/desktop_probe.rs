@@ -5,7 +5,7 @@
 //!
 //! - Windows: `GetLastInputInfo`, `GetForegroundWindow` + `QueryFullProcessImageNameW`,
 //!   `GetKeyboardLayoutNameW`, `GetSystemPowerStatus`, `Win32_VideoController` (CIM).
-//! - macOS: `ioreg` (`HIDIdleTime`), System Events (front process), `defaults` (HIToolbox),
+//! - macOS: `ioreg` (`HIDIdleTime`), System Events (front process), `defaults` (`HIToolbox`),
 //!   `pmset -g batt`, `system_profiler SPDisplaysDataType -json`.
 //! - Linux (X11): `xprintidle`, `xprop` (`_NET_ACTIVE_WINDOW` → `_NET_WM_PID` → `/proc`),
 //!   `setxkbmap -query`, `/sys/class/power_supply`, `lspci` + `/sys/class/drm` (AMD VRAM).
@@ -126,7 +126,7 @@ fn parse_hid_idle(out: &str) -> Option<u64> {
         .map(|ns| ns / 1_000_000)
 }
 
-/// `pmset -g batt`: `-InternalBattery-0 (id=…)	87%; charging; 1:02 remaining`.
+/// `pmset -g batt`: `-InternalBattery-0 (id=…) 87%; charging; 1:02 remaining`.
 #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
 fn parse_pmset(out: &str) -> Option<Battery> {
     let line = out.lines().find(|l| l.contains("InternalBattery"))?;

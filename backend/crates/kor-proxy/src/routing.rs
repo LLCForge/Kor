@@ -84,6 +84,8 @@ impl Credential {
         provider: Arc<dyn Provider>,
         masked_key: String,
         base_url: String,
+        weight: u32,
+        priority: i64,
     ) -> Self {
         Self {
             label,
@@ -92,8 +94,8 @@ impl Credential {
             provider,
             masked_key,
             base_url,
-            weight: 1,
-            priority: 0,
+            weight: weight.max(1),
+            priority,
             local: false,
             disable_cooling: false,
             state: Mutex::new(State::default()),

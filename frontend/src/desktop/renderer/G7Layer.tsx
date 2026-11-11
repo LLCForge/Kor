@@ -1,4 +1,5 @@
 import { RotateCcw, ShieldAlert, ShieldCheck, WifiOff } from 'lucide-react'
+import { NoticePortal } from './NoticePortal.tsx'
 import { useEffect, useState } from 'react'
 import useSWR from 'swr'
 import { isNetworkErrorMessage } from '../../core/usage-history.ts'
@@ -11,6 +12,8 @@ import { SettingsDialog } from './SettingsDialog.tsx'
 import { TrustDialog } from './TrustDialog.tsx'
 
 interface G7LayerProps {
+  /** Bantların çizileceği yer (başlığın altı); yoksa yüzen eski konum */
+  noticeHost: HTMLElement | null
   root: string | null
   currentModel: string
   items: readonly ChatItem[]
@@ -76,6 +79,7 @@ export function G7Layer(props: G7LayerProps) {
 
   return (
     <>
+      <NoticePortal host={props.noticeHost}>
       <div className="g7-bands" aria-live="polite">
         {!online && (
           <div className="g7-band offline pop-in" role="status">
@@ -102,6 +106,7 @@ export function G7Layer(props: G7LayerProps) {
           </div>
         )}
       </div>
+      </NoticePortal>
 
       {askTrust && <TrustDialog key={info.root} info={info} onDecide={decideTrust} onDismiss={() => setDismissedTrust(info.root)} />}
 
