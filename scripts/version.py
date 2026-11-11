@@ -90,7 +90,9 @@ def crate_hash(name: str) -> str:
     """Content hash of a crate, ignoring line endings, build output and its own version line."""
     root = CRATES / name
     h = hashlib.sha256()
-    for f in sorted(p for p in root.rglob("*") if p.is_file() and "target" not in p.relative_to(root).parts):
+    # Sort by the `/` path string: `Path` ordering is case-insensitive on Windows only.
+    files = [p for p in root.rglob("*") if p.is_file() and "target" not in p.relative_to(root).parts]
+    for f in sorted(files, key=lambda p: p.relative_to(root).as_posix()):
         rel = f.relative_to(root).as_posix()
         data = f.read_bytes().replace(b"\r\n", b"\n")
         if rel == "Cargo.toml":
