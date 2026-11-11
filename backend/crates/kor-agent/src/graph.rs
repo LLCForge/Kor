@@ -179,7 +179,9 @@ impl Session {
         let items = crate::gallery::list(&self.root)
             .into_iter()
             .map(|i| kor_graph::MediaItem {
-                text: format!("{} {} {}", i.prompt, i.provider, i.model).trim().to_owned(),
+                text: format!("{} {} {}", i.prompt, i.provider, i.model)
+                    .trim()
+                    .to_owned(),
                 id: i.id,
                 file: i.file,
                 inputs: i.inputs,

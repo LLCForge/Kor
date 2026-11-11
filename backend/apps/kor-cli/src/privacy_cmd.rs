@@ -17,10 +17,11 @@ pub enum ProvidersCmd {
 }
 
 pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
-    c.about(l.t("cmd-providers")).mut_subcommand("privacy", |s| {
-        s.about(l.t("cmd-providers-privacy"))
-            .mut_arg("json", |a| a.help(l.t("arg-providers-privacy-json")))
-    })
+    c.about(l.t("cmd-providers"))
+        .mut_subcommand("privacy", |s| {
+            s.about(l.t("cmd-providers-privacy"))
+                .mut_arg("json", |a| a.help(l.t("arg-providers-privacy-json")))
+        })
 }
 
 pub fn run(ctx: &Ctx, cmd: &ProvidersCmd) -> bool {

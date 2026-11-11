@@ -469,7 +469,11 @@ async fn context_budget_reports_and_summarizes_with_the_cheap_model() {
         .await
         .unwrap();
     assert_eq!(cheap.seen.lock().unwrap()[0].model, "small-model");
-    assert_eq!(scripted.seen.lock().unwrap().len(), 1, "main model: one turn");
+    assert_eq!(
+        scripted.seen.lock().unwrap().len(),
+        1,
+        "main model: one turn"
+    );
     let mut report = None;
     while let Ok(ev) = rx.try_recv() {
         if let AgentEvent::Context(b) = ev {
@@ -804,13 +808,21 @@ async fn text_protocol_model_calls_tools_without_native_support() {
     let approver = Answers(Mutex::new(VecDeque::new()), Mutex::new(Vec::new()));
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
     let stop = a
-        .send("what does lib.txt say?".into(), &tx, &approver, CancellationToken::new())
+        .send(
+            "what does lib.txt say?".into(),
+            &tx,
+            &approver,
+            CancellationToken::new(),
+        )
         .await
         .unwrap();
     assert_eq!(stop, StopReason::Done(FinishReason::Stop));
 
     let seen = provider.seen.lock().unwrap();
-    assert!(seen.iter().all(|r| r.tools.is_empty()), "text mode sends no native tools");
+    assert!(
+        seen.iter().all(|r| r.tools.is_empty()),
+        "text mode sends no native tools"
+    );
     assert!(seen[0].system.as_deref().unwrap().contains("<tool_call>"));
     let result = seen[1].messages.last().unwrap().plain_text();
     assert!(result.contains("<tool_result name=\"Read\">"), "{result}");
@@ -825,13 +837,19 @@ async fn native_call_with_foreign_name_and_arguments_runs_the_kor_tool() {
         dir.path(),
         PermissionMode::Default,
         vec![
-            tool_call("c1", "view_file", &json!({"filename": "a.txt", "explanation": "look"})),
+            tool_call(
+                "c1",
+                "view_file",
+                &json!({"filename": "a.txt", "explanation": "look"}),
+            ),
             say("ok"),
         ],
     );
     let approver = Answers(Mutex::new(VecDeque::new()), Mutex::new(Vec::new()));
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-    a.send("go".into(), &tx, &approver, CancellationToken::new()).await.unwrap();
+    a.send("go".into(), &tx, &approver, CancellationToken::new())
+        .await
+        .unwrap();
     let r = results(&a);
     assert!(!r[0].1 && r[0].0.contains("hello"), "{}", r[0].0);
 }
@@ -851,7 +869,11 @@ impl Provider for NoTools {
     async fn list_models(&self) -> Result<Vec<ModelInfo>, ProviderError> {
         Ok(Vec::new())
     }
-    async fn complete(&self, req: ChatRequest, _c: CancellationToken) -> Result<EventStream, ProviderError> {
+    async fn complete(
+        &self,
+        req: ChatRequest,
+        _c: CancellationToken,
+    ) -> Result<EventStream, ProviderError> {
         let has_tools = !req.tools.is_empty();
         self.seen.lock().unwrap().push(req);
         if has_tools {
@@ -861,7 +883,12 @@ impl Provider for NoTools {
                 "this model does not support tools",
             ));
         }
-        let evs = self.turns.lock().unwrap().pop_front().expect("unexpected call");
+        let evs = self
+            .turns
+            .lock()
+            .unwrap()
+            .pop_front()
+            .expect("unexpected call");
         Ok(Box::pin(futures::stream::iter(evs.into_iter().map(Ok))))
     }
 }
@@ -875,17 +902,28 @@ async fn provider_rejecting_native_tools_switches_to_text() {
     let p = Arc::new(NoTools {
         manifest: Registry::builtin().get("local").unwrap().clone(),
         turns: Mutex::new(
-            vec![text_call("Read", &json!({"file_path": "a.txt"})), say("done")].into(),
+            vec![
+                text_call("Read", &json!({"file_path": "a.txt"})),
+                say("done"),
+            ]
+            .into(),
         ),
         seen: Mutex::new(Vec::new()),
     });
     a.provider = p.clone();
     let approver = Answers(Mutex::new(VecDeque::new()), Mutex::new(Vec::new()));
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
-    let stop = a.send("go".into(), &tx, &approver, CancellationToken::new()).await.unwrap();
+    let stop = a
+        .send("go".into(), &tx, &approver, CancellationToken::new())
+        .await
+        .unwrap();
     assert_eq!(stop, StopReason::Done(FinishReason::Stop));
     assert_eq!(a.tool_mode, ToolMode::Text);
-    assert_eq!(p.seen.lock().unwrap().len(), 3, "rejected native call, then two text calls");
+    assert_eq!(
+        p.seen.lock().unwrap().len(),
+        3,
+        "rejected native call, then two text calls"
+    );
     let mut noticed = false;
     while let Ok(ev) = rx.try_recv() {
         noticed |= matches!(ev, AgentEvent::Notice(n) if n.contains("text tool protocol"));
@@ -920,7 +958,10 @@ impl kor_tools::Tool for Snap {
     }
     async fn call(&self, _input: serde_json::Value, _ctx: &ToolCtx) -> kor_tools::ToolOutput {
         let mut out = kor_tools::ToolOutput::ok("captured");
-        out.image = Some(kor_core::ImageSource::Base64 { media_type: "image/png".into(), data: "AAAA".into() });
+        out.image = Some(kor_core::ImageSource::Base64 {
+            media_type: "image/png".into(),
+            data: "AAAA".into(),
+        });
         out
     }
 }
@@ -936,11 +977,15 @@ async fn tool_images_reach_the_model_after_the_results() {
     a.tools.push(Arc::new(Snap));
     let approver = Answers(Mutex::new(VecDeque::new()), Mutex::new(Vec::new()));
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-    a.send("look".into(), &tx, &approver, CancellationToken::new()).await.unwrap();
+    a.send("look".into(), &tx, &approver, CancellationToken::new())
+        .await
+        .unwrap();
     let seen = provider.seen.lock().unwrap();
     let last = seen[1].messages.last().unwrap();
     assert!(matches!(last.parts[0], ContentPart::ToolResult { .. }));
-    assert!(matches!(&last.parts[1], ContentPart::Image { source: kor_core::ImageSource::Base64 { data, .. } } if data == "AAAA"));
+    assert!(
+        matches!(&last.parts[1], ContentPart::Image { source: kor_core::ImageSource::Base64 { data, .. } } if data == "AAAA")
+    );
 }
 
 #[tokio::test]
@@ -958,13 +1003,22 @@ async fn models_without_vision_get_ocr_text_instead_of_images() {
     a.tools.push(Arc::new(Snap));
     let approver = Answers(Mutex::new(VecDeque::new()), Mutex::new(Vec::new()));
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
-    a.send("look".into(), &tx, &approver, CancellationToken::new()).await.unwrap();
+    a.send("look".into(), &tx, &approver, CancellationToken::new())
+        .await
+        .unwrap();
     let seen = provider.seen.lock().unwrap();
     let last = seen[1].messages.last().unwrap();
-    assert!(!last.parts.iter().any(|p| matches!(p, ContentPart::Image { .. })));
+    assert!(
+        !last
+            .parts
+            .iter()
+            .any(|p| matches!(p, ContentPart::Image { .. }))
+    );
     // "AAAA" is not a decodable image, so the OCR engine reports a failure in the same place.
-    assert!(matches!(&last.parts[0], ContentPart::ToolResult { content, .. }
-        if content.starts_with("captured") && content.contains("cannot see images; OCR text")));
+    assert!(
+        matches!(&last.parts[0], ContentPart::ToolResult { content, .. }
+        if content.starts_with("captured") && content.contains("cannot see images; OCR text"))
+    );
 }
 
 #[tokio::test]
@@ -983,7 +1037,11 @@ async fn undo_reverts_every_file_change_of_the_session() {
                 "Edit",
                 &json!({"file_path": "lib.txt", "old_string": "broken", "new_string": "fixed"}),
             ),
-            tool_call("c3", "Write", &json!({"file_path": "src/new.txt", "content": "yeni"})),
+            tool_call(
+                "c3",
+                "Write",
+                &json!({"file_path": "src/new.txt", "content": "yeni"}),
+            ),
             say("Done."),
         ],
     );
@@ -1021,7 +1079,11 @@ fn crate_with(root: &std::path::Path, body: &str) {
         "[package]\nname = \"v\"\nversion = \"0.1.0\"\nedition = \"2021\"\n\n[workspace]\n",
     )
     .unwrap();
-    std::fs::write(root.join("src/lib.rs"), format!("pub fn f() -> u32 {{ {body} }}\n")).unwrap();
+    std::fs::write(
+        root.join("src/lib.rs"),
+        format!("pub fn f() -> u32 {{ {body} }}\n"),
+    )
+    .unwrap();
 }
 
 /// Edit needs a fresh full Read before every change.
@@ -1058,8 +1120,16 @@ async fn broken_edit_gets_the_checker_error_and_is_fixed_in_round_two() {
         .await
         .unwrap();
     let r = results(&a);
-    assert!(r[1].0.contains("round 1/3") && r[1].0.contains("src/lib.rs"), "{}", r[1].0);
-    assert!(r[1].0.contains("error"), "the checker's error reaches the model: {}", r[1].0);
+    assert!(
+        r[1].0.contains("round 1/3") && r[1].0.contains("src/lib.rs"),
+        "{}",
+        r[1].0
+    );
+    assert!(
+        r[1].0.contains("error"),
+        "the checker's error reaches the model: {}",
+        r[1].0
+    );
     assert!(r[3].0.contains("no errors in src/lib.rs"), "{}", r[3].0);
     assert_eq!(
         std::fs::read_to_string(dir.path().join("src/lib.rs")).unwrap(),
@@ -1134,7 +1204,10 @@ async fn project_checkers_need_bash_permission() {
             say("ok"),
         ],
     );
-    let approver = Answers(Mutex::new([PermissionReply::Deny].into()), Mutex::new(Vec::new()));
+    let approver = Answers(
+        Mutex::new([PermissionReply::Deny].into()),
+        Mutex::new(Vec::new()),
+    );
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
     a.send("go".into(), &tx, &approver, CancellationToken::new())
         .await
@@ -1155,8 +1228,16 @@ async fn write_over_a_long_existing_file_is_refused_with_a_hint() {
         PermissionMode::BypassPermissions,
         vec![
             tool_call("r", "Read", &json!({"file_path": "big.txt"})),
-            tool_call("w", "Write", &json!({"file_path": "big.txt", "content": "all new\n"})),
-            tool_call("n", "Write", &json!({"file_path": "new.txt", "content": "fresh\n"})),
+            tool_call(
+                "w",
+                "Write",
+                &json!({"file_path": "big.txt", "content": "all new\n"}),
+            ),
+            tool_call(
+                "n",
+                "Write",
+                &json!({"file_path": "new.txt", "content": "fresh\n"}),
+            ),
             say("ok"),
         ],
     );
@@ -1167,7 +1248,11 @@ async fn write_over_a_long_existing_file_is_refused_with_a_hint() {
         .await
         .unwrap();
     let r = results(&a);
-    assert!(r[1].1 && r[1].0.contains("has 10 lines") && r[1].0.contains("with Edit"), "{}", r[1].0);
+    assert!(
+        r[1].1 && r[1].0.contains("has 10 lines") && r[1].0.contains("with Edit"),
+        "{}",
+        r[1].0
+    );
     assert_eq!(
         std::fs::read_to_string(dir.path().join("big.txt")).unwrap(),
         "line\n".repeat(10)
@@ -1185,7 +1270,9 @@ async fn malformed_text_tool_call_is_repaired_locally() {
         PermissionMode::Default,
         vec![
             // Single quotes, a foreign name, a string for a number and no closing braces.
-            say("<tool_call>\n{'name': 'read_file', 'arguments': {'target_file': 'lib.txt', 'offset': '1'\n</tool_call>"),
+            say(
+                "<tool_call>\n{'name': 'read_file', 'arguments': {'target_file': 'lib.txt', 'offset': '1'\n</tool_call>",
+            ),
             say("It says broken."),
         ],
     );
@@ -1195,11 +1282,19 @@ async fn malformed_text_tool_call_is_repaired_locally() {
     a.send("read".into(), &tx, &approver, CancellationToken::new())
         .await
         .unwrap();
-    let result = provider.seen.lock().unwrap()[1].messages.last().unwrap().plain_text();
+    let result = provider.seen.lock().unwrap()[1]
+        .messages
+        .last()
+        .unwrap()
+        .plain_text();
     assert!(result.contains("status = broken"), "{result}");
     assert_eq!(
         a.stats,
-        kor_agent::repair::ToolStats { tool_calls_ok: 0, tool_calls_repaired: 1, tool_calls_failed: 0 }
+        kor_agent::repair::ToolStats {
+            tool_calls_ok: 0,
+            tool_calls_repaired: 1,
+            tool_calls_failed: 0
+        }
     );
 }
 
@@ -1209,9 +1304,18 @@ async fn unparseable_call_gets_one_model_repair_then_fails_after_three_attempts(
     std::fs::write(dir.path().join("a.txt"), "hello\n").unwrap();
     let raw = |id: &str, text: &str| {
         vec![
-            StreamEvent::ToolCallStart { index: 0, id: id.into(), name: "Read".into() },
-            StreamEvent::ToolCallDelta { index: 0, json: text.into() },
-            StreamEvent::Finish { reason: FinishReason::ToolUse },
+            StreamEvent::ToolCallStart {
+                index: 0,
+                id: id.into(),
+                name: "Read".into(),
+            },
+            StreamEvent::ToolCallDelta {
+                index: 0,
+                json: text.into(),
+            },
+            StreamEvent::Finish {
+                reason: FinishReason::ToolUse,
+            },
         ]
     };
     let (mut a, provider) = agent(
@@ -1237,14 +1341,21 @@ async fn unparseable_call_gets_one_model_repair_then_fails_after_three_attempts(
     {
         let seen = provider.seen.lock().unwrap();
         assert!(seen[1].tools.is_empty() && seen[1].system.as_deref().unwrap().contains("repair"));
-        assert_eq!(seen[1].messages.len(), 1, "only the schema and the broken output");
+        assert_eq!(
+            seen[1].messages.len(),
+            1,
+            "only the schema and the broken output"
+        );
     }
     let mut failed_notice = false;
     while let Ok(ev) = rx.try_recv() {
         failed_notice |= matches!(ev, AgentEvent::Notice(n) if n.contains("could not be repaired"));
     }
     assert!(failed_notice);
-    assert_eq!((a.stats.tool_calls_repaired, a.stats.tool_calls_failed), (1, 1));
+    assert_eq!(
+        (a.stats.tool_calls_repaired, a.stats.tool_calls_failed),
+        (1, 1)
+    );
 }
 
 #[tokio::test]
@@ -1254,7 +1365,11 @@ async fn schema_invalid_input_is_rejected_without_side_effects() {
         dir.path(),
         PermissionMode::BypassPermissions,
         vec![
-            tool_call("w", "Write", &json!({"file_path": "x.txt", "content": {"not": "text"}})),
+            tool_call(
+                "w",
+                "Write",
+                &json!({"file_path": "x.txt", "content": {"not": "text"}}),
+            ),
             tool_call(
                 "m",
                 "MultiEdit",
@@ -1270,11 +1385,28 @@ async fn schema_invalid_input_is_rejected_without_side_effects() {
         .await
         .unwrap();
     let r = results(&a);
-    assert!(r[0].1 && r[0].0.contains("invalid input for `Write`: `content` must be string"), "{}", r[0].0);
-    assert!(r[1].1 && r[1].0.contains("`edits[0].old_string`"), "{}", r[1].0);
-    assert!(!dir.path().join("x.txt").exists(), "nothing reached the file system");
+    assert!(
+        r[0].1
+            && r[0]
+                .0
+                .contains("invalid input for `Write`: `content` must be string"),
+        "{}",
+        r[0].0
+    );
+    assert!(
+        r[1].1 && r[1].0.contains("`edits[0].old_string`"),
+        "{}",
+        r[1].0
+    );
+    assert!(
+        !dir.path().join("x.txt").exists(),
+        "nothing reached the file system"
+    );
     // A number where a string belongs is coerced, not rejected.
-    assert_eq!(std::fs::read_to_string(dir.path().join("y.txt")).unwrap(), "42");
+    assert_eq!(
+        std::fs::read_to_string(dir.path().join("y.txt")).unwrap(),
+        "42"
+    );
     assert_eq!(a.stats.tool_calls_failed, 2);
     assert_eq!(a.stats.tool_calls_repaired, 1);
 }
@@ -1294,7 +1426,11 @@ impl kor_tools::Tool for Hang {
         kor_tools::ToolKind::Read
     }
     fn spec(&self) -> kor_core::ToolSpec {
-        kor_core::ToolSpec { name: "Hang".into(), description: "hangs".into(), input_schema: json!({"type": "object"}) }
+        kor_core::ToolSpec {
+            name: "Hang".into(),
+            description: "hangs".into(),
+            input_schema: json!({"type": "object"}),
+        }
     }
     fn target(&self, _input: &serde_json::Value) -> Option<String> {
         None
@@ -1307,7 +1443,11 @@ impl kor_tools::Tool for Hang {
 #[tokio::test]
 async fn stop_interrupts_a_tool_that_never_returns() {
     let dir = tempfile::tempdir().unwrap();
-    let (mut a, _) = agent(dir.path(), PermissionMode::BypassPermissions, vec![tool_call("h", "Hang", &json!({}))]);
+    let (mut a, _) = agent(
+        dir.path(),
+        PermissionMode::BypassPermissions,
+        vec![tool_call("h", "Hang", &json!({}))],
+    );
     a.tools.push(Arc::new(Hang));
     let approver = Answers(Mutex::new(VecDeque::new()), Mutex::new(Vec::new()));
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
@@ -1317,8 +1457,15 @@ async fn stop_interrupts_a_tool_that_never_returns() {
         tokio::time::sleep(std::time::Duration::from_millis(200)).await;
         stop.cancel();
     });
-    let r = tokio::time::timeout(std::time::Duration::from_secs(10), a.send("go".into(), &tx, &approver, cancel)).await;
-    assert_eq!(r.expect("Stop must not wait for the tool").unwrap(), StopReason::Cancelled);
+    let r = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        a.send("go".into(), &tx, &approver, cancel),
+    )
+    .await;
+    assert_eq!(
+        r.expect("Stop must not wait for the tool").unwrap(),
+        StopReason::Cancelled
+    );
     assert!(results(&a)[0].0.contains("cancelled"));
     // The tool card is closed for the front end.
     drop(tx);
@@ -1328,4 +1475,3 @@ async fn stop_interrupts_a_tool_that_never_returns() {
     }
     assert!(ended);
 }
-

@@ -141,7 +141,10 @@ pub fn run(l: &Localizer, given: Option<&Path>, r: &mut Results, notes: &mut Vec
     };
     eprintln!(
         "{}",
-        l.t_args("pbench-phase", &args!("what" => format!("desktop: {}", exe.display())))
+        l.t_args(
+            "pbench-phase",
+            &args!("what" => format!("desktop: {}", exe.display()))
+        )
     );
     if let Ok(m) = std::fs::metadata(&exe) {
         #[allow(clippy::cast_precision_loss)]

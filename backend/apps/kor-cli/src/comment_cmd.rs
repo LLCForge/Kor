@@ -44,15 +44,30 @@ pub fn run(ctx: &Ctx, a: &CommentArgs) -> anyhow::Result<bool> {
     let mut ok = true;
     let mut jobs = Vec::new();
     for f in &a.files {
-        let lang = f.extension().and_then(|e| e.to_str()).and_then(kor_graph::lang::Lang::from_ext);
+        let lang = f
+            .extension()
+            .and_then(|e| e.to_str())
+            .and_then(kor_graph::lang::Lang::from_ext);
         match (lang, std::fs::read_to_string(f)) {
             (Some(lang), Ok(src)) => jobs.push((f, lang, src)),
             (None, _) => {
-                eprintln!("{}", l.t_args("comment-unsupported", &args!("file" => f.display().to_string())));
+                eprintln!(
+                    "{}",
+                    l.t_args(
+                        "comment-unsupported",
+                        &args!("file" => f.display().to_string())
+                    )
+                );
                 ok = false;
             }
             (_, Err(e)) => {
-                eprintln!("{}", l.t_args("error-generic", &args!("error" => format!("{}: {e}", f.display()))));
+                eprintln!(
+                    "{}",
+                    l.t_args(
+                        "error-generic",
+                        &args!("error" => format!("{}: {e}", f.display()))
+                    )
+                );
                 ok = false;
             }
         }
@@ -65,7 +80,15 @@ pub fn run(ctx: &Ctx, a: &CommentArgs) -> anyhow::Result<bool> {
     };
     let rt = crate::providers::runtime()?;
     for (file, lang, src) in jobs {
-        let out = rt.block_on(kor_runtime::comment::run(&provider, &model, lang, &src, &a.lang, !a.only_missing, a.missing));
+        let out = rt.block_on(kor_runtime::comment::run(
+            &provider,
+            &model,
+            lang,
+            &src,
+            &a.lang,
+            !a.only_missing,
+            a.missing,
+        ));
         let out = match out {
             Ok(o) => o,
             Err(e) => {
@@ -81,7 +104,10 @@ pub fn run(ctx: &Ctx, a: &CommentArgs) -> anyhow::Result<bool> {
         }
         if a.write {
             if let Err(e) = std::fs::write(file, &out.text) {
-                eprintln!("{}", l.t_args("error-generic", &args!("error" => format!("{name}: {e}"))));
+                eprintln!(
+                    "{}",
+                    l.t_args("error-generic", &args!("error" => format!("{name}: {e}")))
+                );
                 ok = false;
                 continue;
             }
@@ -113,8 +139,20 @@ mod tests {
     fn needs_files_and_a_language() {
         assert!(T::try_parse_from(["kor", "--lang", "tr"]).is_err());
         assert!(T::try_parse_from(["kor", "a.rs"]).is_err());
-        assert!(T::try_parse_from(["kor", "a.rs", "--lang", "tr", "--only-missing"]).is_err(), "--only-missing needs --missing");
-        let t = T::try_parse_from(["kor", "a.rs", "b.py", "--lang", "tr", "--missing", "--write"]).unwrap();
+        assert!(
+            T::try_parse_from(["kor", "a.rs", "--lang", "tr", "--only-missing"]).is_err(),
+            "--only-missing needs --missing"
+        );
+        let t = T::try_parse_from([
+            "kor",
+            "a.rs",
+            "b.py",
+            "--lang",
+            "tr",
+            "--missing",
+            "--write",
+        ])
+        .unwrap();
         assert_eq!(t.a.files.len(), 2);
         assert!(t.a.missing && t.a.write && !t.a.only_missing);
     }

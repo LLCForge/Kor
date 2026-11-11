@@ -38,14 +38,20 @@ fn esc(s: &str) -> String {
 
 /// Warm colour from the name, stable between runs.
 fn color(name: &str) -> (u8, u8, u8) {
-    let h = name.bytes().fold(2_166_136_261u32, |h, b| (h ^ u32::from(b)).wrapping_mul(16_777_619));
+    let h = name.bytes().fold(2_166_136_261u32, |h, b| {
+        (h ^ u32::from(b)).wrapping_mul(16_777_619)
+    });
     let [a, b, c, _] = h.to_le_bytes();
     (205 + a % 50, 80 + b % 120, 30 + c % 50)
 }
 
 #[allow(clippy::cast_precision_loss)] // weights far below 2^52 in practice
 fn pct(part: u64, total: u64) -> f64 {
-    if total == 0 { 0.0 } else { part as f64 * 100.0 / total as f64 }
+    if total == 0 {
+        0.0
+    } else {
+        part as f64 * 100.0 / total as f64
+    }
 }
 
 /// Flamegraph of `p` (root at the bottom). `title` is shown on top.
@@ -81,8 +87,17 @@ pub fn svg(p: &Profile, title: &str) -> String {
         let y = height - PAD - (level as f64 + 1.0) * ROW;
         let label = frame.map_or_else(|| "all".to_owned(), |f| frame_text(&p.frames[f as usize]));
         let name = frame.map_or("all", |f| p.frames[f as usize].name.as_str());
-        let (r, g, b) = if frame.is_some() { color(name) } else { (200, 200, 200) };
-        let tip = format!("{label} — {} {} ({:.2}%)", n.value, p.unit.as_str(), pct(n.value, total));
+        let (r, g, b) = if frame.is_some() {
+            color(name)
+        } else {
+            (200, 200, 200)
+        };
+        let tip = format!(
+            "{label} — {} {} ({:.2}%)",
+            n.value,
+            p.unit.as_str(),
+            pct(n.value, total)
+        );
         let _ = write!(
             out,
             r#"<g><title>{}</title><rect x="{x:.2}" y="{y:.1}" width="{w:.2}" height="{:.1}" rx="2" fill="rgb({r},{g},{b})"/>"#,
@@ -95,11 +110,20 @@ pub fn svg(p: &Profile, title: &str) -> String {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let fit = fit as usize;
             let shown: String = if name.chars().count() > fit {
-                name.chars().take(fit.saturating_sub(2)).chain("..".chars()).collect()
+                name.chars()
+                    .take(fit.saturating_sub(2))
+                    .chain("..".chars())
+                    .collect()
             } else {
                 name.to_owned()
             };
-            let _ = write!(out, r#"<text x="{:.2}" y="{:.1}" fill="rgb(20,20,20)">{}</text>"#, x + 3.0, y + ROW - 5.0, esc(&shown));
+            let _ = write!(
+                out,
+                r#"<text x="{:.2}" y="{:.1}" fill="rgb(20,20,20)">{}</text>"#,
+                x + 3.0,
+                y + ROW - 5.0,
+                esc(&shown)
+            );
         }
         out.push_str("</g>");
         let mut cx = x;
@@ -119,19 +143,30 @@ mod tests {
 
     #[test]
     fn writes_a_static_svg() {
-        let p = parse::collapsed("main (src/a.rs:1);fib<&'a> (src/a.rs:9) 75\nmain (src/a.rs:1);work 25\n");
+        let p = parse::collapsed(
+            "main (src/a.rs:1);fib<&'a> (src/a.rs:9) 75\nmain (src/a.rs:1);work 25\n",
+        );
         let s = svg(&p, "kor perf <cargo test>");
         assert!(s.starts_with("<svg") && s.ends_with("</svg>\n"));
         assert!(!s.contains("<script") && !s.contains("href") && !s.contains("onload"));
         assert!(s.contains("kor perf &lt;cargo test&gt;"));
-        assert!(s.contains("fib&lt;&amp;&#39;a&gt; (src/a.rs:9) — 75 samples (75.00%)"), "{s}");
+        assert!(
+            s.contains("fib&lt;&amp;&#39;a&gt; (src/a.rs:9) — 75 samples (75.00%)"),
+            "{s}"
+        );
         // all + main + fib + work
         assert_eq!(s.matches("<rect x=").count(), 4);
         // fib starts at the left edge of main and is three times as wide as work.
         let width = |label: &str| {
             let i = s.find(label).unwrap();
             let rest = &s[i..];
-            let w = rest.split("width=\"").nth(1).unwrap().split('"').next().unwrap();
+            let w = rest
+                .split("width=\"")
+                .nth(1)
+                .unwrap()
+                .split('"')
+                .next()
+                .unwrap();
             w.parse::<f64>().unwrap()
         };
         let (fib, work) = (width("fib&lt;"), width("work — "));

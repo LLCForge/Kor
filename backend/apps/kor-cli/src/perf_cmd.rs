@@ -83,13 +83,20 @@ pub fn run(ctx: &Ctx, a: &PerfArgs) -> anyhow::Result<bool> {
             if runs.is_empty() {
                 println!("{}", l.t("perf-list-empty"));
             }
-            let mut rows = vec![l.t("perf-list-columns").split('|').map(str::to_owned).collect::<Vec<_>>()];
+            let mut rows = vec![
+                l.t("perf-list-columns")
+                    .split('|')
+                    .map(str::to_owned)
+                    .collect::<Vec<_>>(),
+            ];
             for s in runs {
                 rows.push(vec![
                     s.id,
                     s.profiler,
                     s.wall_ms.map(|w| format!("{w:.0} ms")).unwrap_or_default(),
-                    s.hottest.map(|h| format!("{h} {:.1}%", s.hottest_pct.unwrap_or(0.0))).unwrap_or_default(),
+                    s.hottest
+                        .map(|h| format!("{h} {:.1}%", s.hottest_pct.unwrap_or(0.0)))
+                        .unwrap_or_default(),
                     s.target,
                 ]);
             }
@@ -113,7 +120,12 @@ pub fn run(ctx: &Ctx, a: &PerfArgs) -> anyhow::Result<bool> {
     }
 }
 
-fn options(ctx: &Ctx, root: &std::path::Path, a: &PerfArgs, baseline: Option<String>) -> perf::Options {
+fn options(
+    ctx: &Ctx,
+    root: &std::path::Path,
+    a: &PerfArgs,
+    baseline: Option<String>,
+) -> perf::Options {
     perf::Options {
         root: root.to_owned(),
         target: a.target.clone().unwrap_or_default(),
@@ -130,7 +142,12 @@ fn options(ctx: &Ctx, root: &std::path::Path, a: &PerfArgs, baseline: Option<Str
 }
 
 /// Plan, ask when the run leaves the sandbox, run.
-fn measure(ctx: &Ctx, config: &kor_config::Config, opts: &perf::Options, yes: bool) -> anyhow::Result<Option<Report>> {
+fn measure(
+    ctx: &Ctx,
+    config: &kor_config::Config,
+    opts: &perf::Options,
+    yes: bool,
+) -> anyhow::Result<Option<Report>> {
     let l = &ctx.l;
     let plan = match perf::plan(opts, config) {
         Ok(p) => p,
@@ -169,7 +186,12 @@ fn measure(ctx: &Ctx, config: &kor_config::Config, opts: &perf::Options, yes: bo
 
 fn profile(ctx: &Ctx, root: &std::path::Path, a: &PerfArgs) -> anyhow::Result<bool> {
     let l = &ctx.l;
-    let config = ctx.config.as_ref().map_err(|e| anyhow::anyhow!(e.to_string()))?.config.clone();
+    let config = ctx
+        .config
+        .as_ref()
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?
+        .config
+        .clone();
     kor_runtime::apply_network_policy(l, &config);
     let Some(before) = measure(ctx, &config, &options(ctx, root, a, None), a.yes)? else {
         return Ok(false);
@@ -184,7 +206,13 @@ fn profile(ctx: &Ctx, root: &std::path::Path, a: &PerfArgs) -> anyhow::Result<bo
         return Ok(true);
     };
     if let Some(h) = &before.hottest {
-        println!("\n{}", l.t_args("perf-optimize-target", &args!("name" => h.name.clone(), "pct" => format!("{:.2}", h.self_pct))));
+        println!(
+            "\n{}",
+            l.t_args(
+                "perf-optimize-target",
+                &args!("name" => h.name.clone(), "pct" => format!("{:.2}", h.self_pct))
+            )
+        );
     }
     if !crate::shell_cmd::confirm(l, &l.t("perf-optimize-ask"), a.yes) {
         return Ok(true);
@@ -232,14 +260,22 @@ fn human(v: u64, unit: perf::Unit) -> String {
 }
 
 fn table(l: &Localizer, rows: &[Row], n: usize) {
-    let mut t = vec![l.t("perf-columns").split('|').map(str::to_owned).collect::<Vec<_>>()];
+    let mut t = vec![
+        l.t("perf-columns")
+            .split('|')
+            .map(str::to_owned)
+            .collect::<Vec<_>>(),
+    ];
     for r in rows.iter().take(n) {
         t.push(vec![
             format!("{:.2}", r.self_pct),
             format!("{:.2}", r.total_pct),
             r.name.chars().take(60).collect(),
             location(r),
-            r.node.as_ref().map(|n| format!("{} ({})", n.id, n.by)).unwrap_or_default(),
+            r.node
+                .as_ref()
+                .map(|n| format!("{} ({})", n.id, n.by))
+                .unwrap_or_default(),
         ]);
     }
     crate::providers::table(&t);
@@ -285,8 +321,14 @@ fn print_report(l: &Localizer, r: &Report) {
     table(l, &r.top, 15);
     match &r.memory {
         Some(m) => {
-            let count = m.count.map(|c| l.t_args("perf-alloc-count", &args!("count" => c))).unwrap_or_default();
-            println!("\n{} {count}", l.t_args("perf-memory", &args!("total" => human(m.total, m.unit))));
+            let count = m
+                .count
+                .map(|c| l.t_args("perf-alloc-count", &args!("count" => c)))
+                .unwrap_or_default();
+            println!(
+                "\n{} {count}",
+                l.t_args("perf-memory", &args!("total" => human(m.total, m.unit)))
+            );
             table(l, &m.top, 8);
         }
         None => {
@@ -298,9 +340,15 @@ fn print_report(l: &Localizer, r: &Report) {
     for n in &r.notes {
         println!("  · {n}");
     }
-    println!("\n{}", l.t_args("perf-flamegraph", &args!("path" => r.flamegraph.clone())));
+    println!(
+        "\n{}",
+        l.t_args("perf-flamegraph", &args!("path" => r.flamegraph.clone()))
+    );
     if let Some(m) = &r.memory_flamegraph {
-        println!("{}", l.t_args("perf-flamegraph-memory", &args!("path" => m.clone())));
+        println!(
+            "{}",
+            l.t_args("perf-flamegraph-memory", &args!("path" => m.clone()))
+        );
     }
     if !r.compare.is_empty() {
         print_compare(l, &r.compare);
@@ -309,15 +357,24 @@ fn print_report(l: &Localizer, r: &Report) {
 
 fn print_compare(l: &Localizer, rows: &[CompareRow]) {
     println!("\n{}", l.t("perf-compare"));
-    let mut t = vec![l.t("perf-compare-columns").split('|').map(str::to_owned).collect::<Vec<_>>()];
+    let mut t = vec![
+        l.t("perf-compare-columns")
+            .split('|')
+            .map(str::to_owned)
+            .collect::<Vec<_>>(),
+    ];
     for c in rows {
         let label = l.t(&format!("perf-metric-{}", c.metric.replace('_', "-")));
-        let label = c.subject.as_ref().map_or(label.clone(), |s| format!("{label} ({s})"));
+        let label = c
+            .subject
+            .as_ref()
+            .map_or(label.clone(), |s| format!("{label} ({s})"));
         t.push(vec![
             label,
             format!("{:.2}", c.before),
             c.after.map_or_else(|| "-".into(), |a| format!("{a:.2}")),
-            c.change_pct.map_or_else(String::new, |p| format!("{p:+.2}%")),
+            c.change_pct
+                .map_or_else(String::new, |p| format!("{p:+.2}%")),
         ]);
     }
     crate::providers::table(&t);
@@ -326,7 +383,13 @@ fn print_compare(l: &Localizer, rows: &[CompareRow]) {
 fn copy_out(l: &Localizer, root: &std::path::Path, r: &Report, out: Option<&std::path::Path>) {
     let Some(out) = out else { return };
     match std::fs::copy(root.join(&r.flamegraph), out) {
-        Ok(_) => println!("{}", l.t_args("perf-flamegraph", &args!("path" => out.display().to_string()))),
+        Ok(_) => println!(
+            "{}",
+            l.t_args(
+                "perf-flamegraph",
+                &args!("path" => out.display().to_string())
+            )
+        ),
         Err(e) => eprintln!("{}: {e}", out.display()),
     }
 }
@@ -344,11 +407,31 @@ mod tests {
 
     #[test]
     fn parses_and_localizes() {
-        let t = T::try_parse_from(["perf", "cargo test --release", "--profiler", "samply", "--optimize"]).unwrap();
+        let t = T::try_parse_from([
+            "perf",
+            "cargo test --release",
+            "--profiler",
+            "samply",
+            "--optimize",
+        ])
+        .unwrap();
         assert_eq!(t.a.target.as_deref(), Some("cargo test --release"));
         assert!(t.a.optimize && t.a.command.is_none());
-        let t = T::try_parse_from(["perf", "http://127.0.0.1:3000/api", "--requests", "500", "--concurrency", "20", "--cmd", "node server.js"]).unwrap();
-        assert_eq!((t.a.requests, t.a.concurrency, t.a.server_cmd.as_deref()), (500, 20, Some("node server.js")));
+        let t = T::try_parse_from([
+            "perf",
+            "http://127.0.0.1:3000/api",
+            "--requests",
+            "500",
+            "--concurrency",
+            "20",
+            "--cmd",
+            "node server.js",
+        ])
+        .unwrap();
+        assert_eq!(
+            (t.a.requests, t.a.concurrency, t.a.server_cmd.as_deref()),
+            (500, 20, Some("node server.js"))
+        );
         let t = T::try_parse_from(["perf", "report", "cpu.pprof", "--out", "f.svg"]).unwrap();
         assert!(matches!(t.a.command, Some(PerfCmd::Report { .. })));
         let t = T::try_parse_from(["perf", "list"]).unwrap();

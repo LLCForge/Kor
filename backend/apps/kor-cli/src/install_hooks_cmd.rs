@@ -39,17 +39,34 @@ pub fn run(ctx: &Ctx, cmd: &HookCmd) -> anyhow::Result<bool> {
     let mut ok = true;
     let mut fail = |what: &str, e: &dyn std::fmt::Display| {
         ok = false;
-        eprintln!("{}", l.t_args("install-hooks-failed", &args!("what" => what.to_owned(), "error" => e.to_string())));
+        eprintln!(
+            "{}",
+            l.t_args(
+                "install-hooks-failed",
+                &args!("what" => what.to_owned(), "error" => e.to_string())
+            )
+        );
     };
     if a.path {
-        let r = if install { kor_platform::cli_path::install(&exe) } else { kor_platform::cli_path::remove(&exe) };
+        let r = if install {
+            kor_platform::cli_path::install(&exe)
+        } else {
+            kor_platform::cli_path::remove(&exe)
+        };
         if let Err(e) = r {
             fail("PATH", &e);
         }
     }
     let host = &brand.chrome.native_host;
     let r = if install {
-        native_host::register(scope, host, &brand.product.description, &exe, &brand.chrome.extension_ids).map(drop)
+        native_host::register(
+            scope,
+            host,
+            &brand.product.description,
+            &exe,
+            &brand.chrome.extension_ids,
+        )
+        .map(drop)
     } else {
         native_host::unregister(scope, host)
     };
@@ -82,13 +99,25 @@ mod tests {
 
     #[test]
     fn parses() {
-        let Top::InstallHooks { cmd: HookCmd::PostInstall(a) } = Cli::try_parse_from(["k", "install-hooks", "post-install", "--path"]).unwrap().cmd else {
+        let Top::InstallHooks {
+            cmd: HookCmd::PostInstall(a),
+        } = Cli::try_parse_from(["k", "install-hooks", "post-install", "--path"])
+            .unwrap()
+            .cmd
+        else {
             panic!()
         };
         assert!(a.path && !a.system);
         assert!(matches!(
-            Cli::try_parse_from(["k", "install-hooks", "pre-uninstall", "--system"]).unwrap().cmd,
-            Top::InstallHooks { cmd: HookCmd::PreUninstall(HookArgs { system: true, path: false }) }
+            Cli::try_parse_from(["k", "install-hooks", "pre-uninstall", "--system"])
+                .unwrap()
+                .cmd,
+            Top::InstallHooks {
+                cmd: HookCmd::PreUninstall(HookArgs {
+                    system: true,
+                    path: false
+                })
+            }
         ));
         assert!(Cli::try_parse_from(["k", "install-hooks", "upgrade"]).is_err());
         let l = kor_i18n::Localizer::new(kor_i18n::Lang::Tr);

@@ -134,23 +134,41 @@ fn patterns(list: &[(&'static str, &str)]) -> Vec<(&'static str, Regex)> {
 /// Commands that always ask (spec §6.3), with a reason key (`destructive-<key>` in the UI).
 static DANGEROUS: LazyLock<Vec<(&'static str, Regex)>> = LazyLock::new(|| {
     patterns(&[
-        ("rm-rf", r"\brm\s+(-[a-z]*\s+)*-[a-z]*r[a-z]*\s+(-[a-z]+\s+)*(/|~|\$home|\*|\.)(\s|$)"),
-        ("force-push", r"\bgit\s+push\b.*(--force\b|\s-f\b|--force-with-lease)"),
+        (
+            "rm-rf",
+            r"\brm\s+(-[a-z]*\s+)*-[a-z]*r[a-z]*\s+(-[a-z]+\s+)*(/|~|\$home|\*|\.)(\s|$)",
+        ),
+        (
+            "force-push",
+            r"\bgit\s+push\b.*(--force\b|\s-f\b|--force-with-lease)",
+        ),
         ("reset-hard", r"\bgit\s+reset\s+--hard\b"),
         ("git-clean", r"\bgit\s+clean\s+-[a-z]*f"),
-        ("pipe-to-shell", r"\b(curl|wget|iwr|irm|invoke-webrequest|invoke-restmethod)\b[^|]*\|\s*(sudo\s+)?(sh|bash|zsh|iex|invoke-expression|pwsh|powershell)\b"),
+        (
+            "pipe-to-shell",
+            r"\b(curl|wget|iwr|irm|invoke-webrequest|invoke-restmethod)\b[^|]*\|\s*(sudo\s+)?(sh|bash|zsh|iex|invoke-expression|pwsh|powershell)\b",
+        ),
         ("disk", r"\bmkfs(\.|\b)"),
         ("disk", r"\bdd\s+.*\bof=/dev/"),
         ("fork-bomb", r":\(\)\s*\{\s*:\|:&\s*\};:"),
-        ("rm-rf", r"\bremove-item\b.*-recurse\b.*\s(/|[a-z]:\\?|~|\$home)(\s|$)"),
+        (
+            "rm-rf",
+            r"\bremove-item\b.*-recurse\b.*\s(/|[a-z]:\\?|~|\$home)(\s|$)",
+        ),
         ("disk", r"\bformat(\.com)?\s+[a-z]:"),
         ("shutdown", r"\b(shutdown|reboot|halt)\b"),
         ("chmod", r"\bchmod\s+-r\s+777\s+/"),
         ("sudo", r"\bsudo\b"),
-        ("sql-drop", r"\b(drop\s+(table|database|schema)|truncate\s+table)\b"),
+        (
+            "sql-drop",
+            r"\b(drop\s+(table|database|schema)|truncate\s+table)\b",
+        ),
         // An MCP tool its server marks destructive (`kor_agent::mcp_tools::WRITE_MARK`).
         ("mcp-write", r"^mcp-write\s"),
-        ("migration", r"(\bmanage\.py\s+migrate\b|\bprisma\s+migrate\b|\bdb:(migrate|rollback|drop|reset)\b|\b(sqlx|knex|flyway)\s+migrate\b|\bdiesel\s+migration\b|\balembic\s+(upgrade|downgrade)\b|\bef\s+database\s+update\b)"),
+        (
+            "migration",
+            r"(\bmanage\.py\s+migrate\b|\bprisma\s+migrate\b|\bdb:(migrate|rollback|drop|reset)\b|\b(sqlx|knex|flyway)\s+migrate\b|\bdiesel\s+migration\b|\balembic\s+(upgrade|downgrade)\b|\bef\s+database\s+update\b)",
+        ),
     ])
 });
 
@@ -160,12 +178,17 @@ static DESTRUCTIVE: LazyLock<Vec<(&'static str, Regex)>> = LazyLock::new(|| {
         ("rm-rf", r"\brm\s+(-[a-z]*\s+)*-[a-z]*r[a-z]*\b"),
         ("rm-rf", r"\b(remove-item|rmdir|rd)\b.*\s(-recurse|/s)\b"),
         ("delete-file", r"\b(rm|del|remove-item|unlink)\s"),
-        ("reset-hard", r"\bgit\s+(checkout\s+--\s|restore\s|branch\s+-D\b|stash\s+(drop|clear)\b)"),
+        (
+            "reset-hard",
+            r"\bgit\s+(checkout\s+--\s|restore\s|branch\s+-D\b|stash\s+(drop|clear)\b)",
+        ),
     ])
 });
 
 fn reason_in(list: &[(&'static str, Regex)], command: &str) -> Option<&'static str> {
-    list.iter().find(|(_, r)| r.is_match(command)).map(|(why, _)| *why)
+    list.iter()
+        .find(|(_, r)| r.is_match(command))
+        .map(|(why, _)| *why)
 }
 
 pub fn is_dangerous(command: &str) -> bool {
@@ -555,11 +578,24 @@ mod tests {
         }
         // DROP and migrations always ask (§6.3); a recursive rm of a subfolder is only marked.
         for c in ["psql -c 'drop database x'", "rails db:migrate"] {
-            assert_eq!(p.decide(&*bash, &json!({"command": c})), Decision::Ask, "{c}");
+            assert_eq!(
+                p.decide(&*bash, &json!({"command": c})),
+                Decision::Ask,
+                "{c}"
+            );
         }
-        assert_eq!(p.decide(&*bash, &json!({"command": "rm -rf target"})), Decision::Allow);
-        assert_eq!(destructive(&*tool("Delete"), &json!({"path": "a"})), Some("delete-file"));
-        assert_eq!(destructive(&*tool("Edit"), &json!({"file_path": "a"})), None);
+        assert_eq!(
+            p.decide(&*bash, &json!({"command": "rm -rf target"})),
+            Decision::Allow
+        );
+        assert_eq!(
+            destructive(&*tool("Delete"), &json!({"path": "a"})),
+            Some("delete-file")
+        );
+        assert_eq!(
+            destructive(&*tool("Edit"), &json!({"file_path": "a"})),
+            None
+        );
     }
 
     #[test]
@@ -590,18 +626,37 @@ mod elevation_tests {
 
     #[test]
     fn elevation_always_asks_unless_named() {
-        let tool = kor_tools::default_tools().into_iter().find(|t| t.name() == "RunElevated").unwrap();
+        let tool = kor_tools::default_tools()
+            .into_iter()
+            .find(|t| t.name() == "RunElevated")
+            .unwrap();
         let input = json!({"command": "apt-get update"});
         let v = |x: &[&str]| x.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
-        for mode in [PermissionMode::Default, PermissionMode::AcceptEdits, PermissionMode::Auto] {
+        for mode in [
+            PermissionMode::Default,
+            PermissionMode::AcceptEdits,
+            PermissionMode::Auto,
+        ] {
             let p = Permissions::new(mode, &v(&["Bash"]), &[], &[]).unwrap();
             assert_eq!(p.decide(&*tool, &input), Decision::Ask, "{mode:?}");
         }
         let plan = Permissions::new(PermissionMode::Plan, &[], &[], &[]).unwrap();
         assert_eq!(plan.decide(&*tool, &input), Decision::Deny);
-        let named = Permissions::new(PermissionMode::Default, &v(&["RunElevated(apt-get update)"]), &[], &[]).unwrap();
+        let named = Permissions::new(
+            PermissionMode::Default,
+            &v(&["RunElevated(apt-get update)"]),
+            &[],
+            &[],
+        )
+        .unwrap();
         assert_eq!(named.decide(&*tool, &input), Decision::Allow);
-        let denied = Permissions::new(PermissionMode::BypassPermissions, &[], &[], &v(&["RunElevated"])).unwrap();
+        let denied = Permissions::new(
+            PermissionMode::BypassPermissions,
+            &[],
+            &[],
+            &v(&["RunElevated"]),
+        )
+        .unwrap();
         assert_eq!(denied.decide(&*tool, &input), Decision::Deny);
     }
 }

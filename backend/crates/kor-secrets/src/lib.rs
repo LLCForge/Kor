@@ -544,11 +544,23 @@ mod tests {
                      id=call_Zx8Qw2Lm9Rt4Yu7Io1Pa5Sd3Fg6Hj0Kl";
         let (out, n) = r.redact_outbound(input);
         assert_eq!(n, 3, "{out}");
-        assert!(out.contains("postgres://admin:[REDACTED]@db.local"), "{out}");
-        assert!(!out.contains("sk-proj") && !out.contains("vault-value"), "{out}");
-        assert!(!out.contains("-longer"), "the longer value is masked whole: {out}");
+        assert!(
+            out.contains("postgres://admin:[REDACTED]@db.local"),
+            "{out}"
+        );
+        assert!(
+            !out.contains("sk-proj") && !out.contains("vault-value"),
+            "{out}"
+        );
+        assert!(
+            !out.contains("-longer"),
+            "the longer value is masked whole: {out}"
+        );
         // No entropy guess outbound: ids and signatures round-trip.
-        assert!(out.contains("call_Zx8Qw2Lm9Rt4Yu7Io1Pa5Sd3Fg6Hj0Kl"), "{out}");
+        assert!(
+            out.contains("call_Zx8Qw2Lm9Rt4Yu7Io1Pa5Sd3Fg6Hj0Kl"),
+            "{out}"
+        );
         // Already masked passwords are not counted twice.
         let (again, n) = r.redact_outbound(&out);
         assert_eq!((again.as_ref(), n), (out.as_ref(), 0));

@@ -174,7 +174,8 @@ pub fn modules(g: &Graph, scope: &str) -> View {
         }
     }
     for e in g.edges() {
-        let (Some(label), Some(a), Some(t)) = (code_dep(e.kind), g.node(&e.source), g.node(&e.target))
+        let (Some(label), Some(a), Some(t)) =
+            (code_dep(e.kind), g.node(&e.source), g.node(&e.target))
         else {
             continue;
         };
@@ -195,7 +196,12 @@ pub fn modules(g: &Graph, scope: &str) -> View {
 pub fn calls(g: &Graph, scope: &str) -> View {
     let mut candidates: Vec<&GraphNode> = g
         .nodes()
-        .filter(|n| matches!(n.kind, NodeKind::Function | NodeKind::Struct | NodeKind::Trait))
+        .filter(|n| {
+            matches!(
+                n.kind,
+                NodeKind::Function | NodeKind::Struct | NodeKind::Trait
+            )
+        })
         .filter(|n| file_of(n).is_some_and(|f| in_scope(&f, scope)))
         .filter(|n| n.degree > 0)
         .collect();
@@ -249,7 +255,11 @@ pub fn data_flow(g: &Graph, scope: &str) -> View {
             line: None,
             weight: 1,
         });
-        let group = if dst.kind == NodeKind::EnvVar { "env" } else { "table" };
+        let group = if dst.kind == NodeKind::EnvVar {
+            "env"
+        } else {
+            "table"
+        };
         let t = b.node(VNode {
             id: dst.id.clone(),
             label: dst.name.clone(),
@@ -297,7 +307,13 @@ pub fn mermaid(v: &View) -> String {
             "env" => ("{{", "}}"),
             _ => ("[", "]"),
         };
-        let _ = writeln!(s, "  n{i}{}\"{}\"{}", shape.0, mermaid_label(&n.label), shape.1);
+        let _ = writeln!(
+            s,
+            "  n{i}{}\"{}\"{}",
+            shape.0,
+            mermaid_label(&n.label),
+            shape.1
+        );
     }
     for e in &v.edges {
         let _ = writeln!(s, "  n{} -->|{} ×{}| n{}", e.from, e.label, e.weight, e.to);
@@ -319,9 +335,15 @@ pub fn html(v: &View) -> Result<String, String> {
         .collect();
     let links: Vec<[usize; 2]> = v.edges.iter().map(|e| [e.from, e.to]).collect();
     let labels: BTreeMap<usize, &str> = gs.iter().enumerate().map(|(i, g)| (i, *g)).collect();
-    let page = kor_graph::export::html_viewer(&json!({"nodes": nodes, "links": links, "communities": labels}))
-        .map_err(|e| e.to_string())?;
-    Ok(page.replacen("<title>Kor graph</title>", &format!("<title>Kor · {}</title>", v.kind.title()), 1))
+    let page = kor_graph::export::html_viewer(
+        &json!({"nodes": nodes, "links": links, "communities": labels}),
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(page.replacen(
+        "<title>Kor graph</title>",
+        &format!("<title>Kor · {}</title>", v.kind.title()),
+        1,
+    ))
 }
 
 fn xml(s: &str) -> String {
@@ -393,7 +415,8 @@ pub fn svg(v: &View) -> String {
         let tip = if n.file.is_empty() {
             n.label.clone()
         } else {
-            n.line.map_or_else(|| n.file.clone(), |l| format!("{}:{l}", n.file))
+            n.line
+                .map_or_else(|| n.file.clone(), |l| format!("{}:{l}", n.file))
         };
         let _ = writeln!(
             s,
@@ -493,7 +516,12 @@ body{{margin:0;padding:24px 16px;background:var(--bg);color:var(--fg);font:15px/
         Format::Mermaid => {
             let mut md = String::from("# Kor visualize\n");
             for v in views {
-                let _ = write!(md, "\n## {}\n\n```mermaid\n{}```\n", v.kind.title(), mermaid(v));
+                let _ = write!(
+                    md,
+                    "\n## {}\n\n```mermaid\n{}```\n",
+                    v.kind.title(),
+                    mermaid(v)
+                );
             }
             let p = dir.join("visualize.md");
             put(&p, &md, &mut files)?;
@@ -501,7 +529,11 @@ body{{margin:0;padding:24px 16px;background:var(--bg);color:var(--fg);font:15px/
         }
         Format::Svg => {
             for v in views {
-                put(&dir.join(format!("{}.svg", v.kind.slug())), &svg(v), &mut files)?;
+                put(
+                    &dir.join(format!("{}.svg", v.kind.slug())),
+                    &svg(v),
+                    &mut files,
+                )?;
             }
             files[0].clone()
         }
@@ -547,29 +579,54 @@ mod tests {
         let vs = views(&graph, "");
         let mods = &vs[0];
         let names: Vec<&str> = mods.nodes.iter().map(|n| n.label.as_str()).collect();
-        assert!(names.contains(&"src/api") && names.contains(&"src/db"), "{names:?}");
         assert!(
-            mods.edges.iter().any(|e| mods.nodes[e.from].label == "src/api" && mods.nodes[e.to].label == "src/db"),
+            names.contains(&"src/api") && names.contains(&"src/db"),
+            "{names:?}"
+        );
+        assert!(
+            mods.edges.iter().any(
+                |e| mods.nodes[e.from].label == "src/api" && mods.nodes[e.to].label == "src/db"
+            ),
             "{:?}",
             mods.edges
         );
         let call = &vs[1];
-        assert!(call.edges.iter().any(|e| call.nodes[e.from].label == "serve" && call.nodes[e.to].label == "handle"), "{call:?}");
+        assert!(
+            call.edges
+                .iter()
+                .any(|e| call.nodes[e.from].label == "serve" && call.nodes[e.to].label == "handle"),
+            "{call:?}"
+        );
         let flow = &vs[2];
         assert!(
-            flow.edges.iter().any(|e| flow.nodes[e.from].label == "src/db/mod.rs" && flow.nodes[e.to].group == "env" && e.label == "reads env"),
+            flow.edges
+                .iter()
+                .any(|e| flow.nodes[e.from].label == "src/db/mod.rs"
+                    && flow.nodes[e.to].group == "env"
+                    && e.label == "reads env"),
             "{flow:?}"
         );
-        assert!(mermaid(mods).starts_with("flowchart LR") && mermaid(flow).contains("{{\"DATABASE_URL\"}}"));
+        assert!(
+            mermaid(mods).starts_with("flowchart LR")
+                && mermaid(flow).contains("{{\"DATABASE_URL\"}}")
+        );
         let svg_text = svg(call);
         assert!(svg_text.starts_with("<svg") && svg_text.contains(">serve</text>"));
         let page = html(flow).unwrap();
-        assert!(page.contains("Data flow") && page.contains("DATABASE_URL") && !page.contains("/*DATA*/"));
+        assert!(
+            page.contains("Data flow")
+                && page.contains("DATABASE_URL")
+                && !page.contains("/*DATA*/")
+        );
         // Scope: only src/db.
         let scoped = modules(&graph, "src/db");
         assert_eq!(scoped.nodes.len(), 1);
         let out = tempfile::tempdir().unwrap();
-        for (fmt, main) in [(Format::Html, "index.html"), (Format::Mermaid, "visualize.md"), (Format::Svg, "modules.svg")] {
+        for (fmt, main) in [
+            (Format::Html, "index.html"),
+            (Format::Mermaid, "visualize.md"),
+            (Format::Svg, "modules.svg"),
+        ] {
             let w = write(&vs, fmt, &out.path().join(format!("{fmt:?}"))).unwrap();
             assert!(w.main.ends_with(main) && w.main.is_file());
         }
@@ -579,7 +636,12 @@ mod tests {
 
     #[test]
     fn layers_survive_cycles_and_scope_is_relative() {
-        let e = |from, to| VEdge { from, to, label: String::new(), weight: 1 };
+        let e = |from, to| VEdge {
+            from,
+            to,
+            label: String::new(),
+            weight: 1,
+        };
         assert_eq!(layers(3, &[e(0, 1), e(1, 2)]), [0, 1, 2]);
         let cyc = layers(2, &[e(0, 1), e(1, 0)]);
         assert!(cyc.iter().all(|d| *d <= 2));

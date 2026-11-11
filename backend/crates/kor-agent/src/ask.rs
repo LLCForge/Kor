@@ -59,7 +59,11 @@ impl Default for CompactChoice {
 const LABEL_CHARS: usize = 80;
 
 fn first_line(s: &str) -> String {
-    let line = s.lines().map(str::trim).find(|l| !l.is_empty()).unwrap_or("");
+    let line = s
+        .lines()
+        .map(str::trim)
+        .find(|l| !l.is_empty())
+        .unwrap_or("");
     let mut out: String = line.chars().take(LABEL_CHARS).collect();
     if line.chars().count() > LABEL_CHARS {
         out.push('…');
@@ -103,7 +107,11 @@ pub fn compact_items(messages: &[Message]) -> Vec<CompactItem> {
             (None, _) => (
                 "assistant",
                 if text.is_empty() {
-                    calls.values().last().map(|c| first_line(c)).unwrap_or_default()
+                    calls
+                        .values()
+                        .last()
+                        .map(|c| first_line(c))
+                        .unwrap_or_default()
                 } else {
                     first_line(&text)
                 },
@@ -140,7 +148,13 @@ pub fn kept_message(messages: &[Message], keep: &[usize]) -> Option<Message> {
         if text.is_empty() {
             continue;
         }
-        let _ = write!(body, "\n--- {} #{i}: {} ---\n{}\n", item.kind, item.label, text.join("\n"));
+        let _ = write!(
+            body,
+            "\n--- {} #{i}: {} ---\n{}\n",
+            item.kind,
+            item.label,
+            text.join("\n")
+        );
     }
     (!body.is_empty()).then(|| {
         Message::text(
@@ -157,7 +171,9 @@ pub fn drop_item(messages: &mut [Message], index: usize) -> bool {
         return false;
     };
     let marker = format!("[removed from context by the user: {label}]");
-    let Some(m) = messages.get_mut(index) else { return false };
+    let Some(m) = messages.get_mut(index) else {
+        return false;
+    };
     for p in &mut m.parts {
         match p {
             ContentPart::Text { text } => text.clone_from(&marker),
@@ -227,11 +243,23 @@ mod tests {
         let m = msgs();
         let items = compact_items(&m);
         assert_eq!(items.len(), 3);
-        assert_eq!((items[0].kind, items[0].label.as_str()), ("user", "fix the login bug"));
-        assert_eq!((items[2].kind, items[2].label.as_str()), ("tool", "Read src/login.rs"));
+        assert_eq!(
+            (items[0].kind, items[0].label.as_str()),
+            ("user", "fix the login bug")
+        );
+        assert_eq!(
+            (items[2].kind, items[2].label.as_str()),
+            ("tool", "Read src/login.rs")
+        );
         let kept = kept_message(&m, &[2]).unwrap().plain_text();
-        assert!(kept.contains("Read src/login.rs") && kept.contains("fn login() {}"), "{kept}");
-        assert!(kept_message(&m, &[1]).is_none(), "a bare tool call has no text to keep");
+        assert!(
+            kept.contains("Read src/login.rs") && kept.contains("fn login() {}"),
+            "{kept}"
+        );
+        assert!(
+            kept_message(&m, &[1]).is_none(),
+            "a bare tool call has no text to keep"
+        );
     }
 
     #[test]
@@ -240,7 +268,14 @@ mod tests {
         let before = crate::compact::estimate_tokens(&m);
         assert!(drop_item(&mut m, 2));
         assert!(!drop_item(&mut m, 9));
-        let ContentPart::ToolResult { content, tool_use_id, .. } = &m[2].parts[0] else { panic!() };
+        let ContentPart::ToolResult {
+            content,
+            tool_use_id,
+            ..
+        } = &m[2].parts[0]
+        else {
+            panic!()
+        };
         assert_eq!(tool_use_id, "t1");
         assert!(content.starts_with("[removed from context by the user: Read src/login.rs"));
         assert!(crate::compact::estimate_tokens(&m) <= before + 20);

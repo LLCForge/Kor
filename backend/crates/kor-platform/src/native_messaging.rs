@@ -62,7 +62,9 @@ impl Browser {
     }
 
     pub fn parse(s: &str) -> Option<Self> {
-        ALL.iter().copied().find(|b| b.id() == s.trim().to_ascii_lowercase())
+        ALL.iter()
+            .copied()
+            .find(|b| b.id() == s.trim().to_ascii_lowercase())
     }
 
     fn registry_key(self) -> String {
@@ -158,7 +160,10 @@ pub struct Env<'a> {
 
 impl std::fmt::Debug for Env<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Env").field("os", &self.os).field("data", &self.data).finish_non_exhaustive()
+        f.debug_struct("Env")
+            .field("os", &self.os)
+            .field("data", &self.data)
+            .finish_non_exhaustive()
     }
 }
 
@@ -271,7 +276,12 @@ pub struct Installed {
 ///
 /// # Errors
 /// File or registry write failures.
-pub fn install(env: &Env, browser: Browser, kor: &Path, chrome_ids: &[String]) -> io::Result<Installed> {
+pub fn install(
+    env: &Env,
+    browser: Browser,
+    kor: &Path,
+    chrome_ids: &[String],
+) -> io::Result<Installed> {
     let wrapper = env.wrapper_path();
     write_atomic(&wrapper, &wrapper_text(env.os, kor))?;
     make_executable(&wrapper)?;
@@ -281,12 +291,17 @@ pub fn install(env: &Env, browser: Browser, kor: &Path, chrome_ids: &[String]) -
     write_atomic(&manifest_path, &text)?;
     let registry_key = if env.os == Os::Windows {
         let key = browser.registry_key();
-        env.registry.set_default(&key, &manifest_path.to_string_lossy())?;
+        env.registry
+            .set_default(&key, &manifest_path.to_string_lossy())?;
         Some(key)
     } else {
         None
     };
-    Ok(Installed { browser, manifest: manifest_path, registry_key })
+    Ok(Installed {
+        browser,
+        manifest: manifest_path,
+        registry_key,
+    })
 }
 
 /// Remove what [`install`] wrote for `browser`. Returns whether anything was there. A manifest
@@ -303,7 +318,11 @@ pub fn uninstall(env: &Env, browser: Browser) -> io::Result<bool> {
     }
     if env.os == Os::Windows {
         let key = browser.registry_key();
-        if env.registry.get_default(&key)?.is_some_and(|v| Path::new(&v) == manifest_path) {
+        if env
+            .registry
+            .get_default(&key)?
+            .is_some_and(|v| Path::new(&v) == manifest_path)
+        {
             removed |= env.registry.delete(&key)?;
         }
     }
@@ -317,7 +336,11 @@ fn is_ours(env: &Env, manifest_path: &Path) -> bool {
     std::fs::read(manifest_path)
         .ok()
         .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
-        .is_some_and(|m| m["path"].as_str().is_some_and(|p| Path::new(p) == env.wrapper_path()))
+        .is_some_and(|m| {
+            m["path"]
+                .as_str()
+                .is_some_and(|p| Path::new(p) == env.wrapper_path())
+        })
 }
 
 /// Whether `browser` will find Kor's host.
@@ -387,7 +410,11 @@ pub fn browser_exe(browser: Browser) -> Option<PathBuf> {
 pub fn open_in(browser: Browser, url: &str) -> io::Result<()> {
     use crate::NoWindow as _;
     let exe = browser_exe(browser).ok_or(io::ErrorKind::NotFound)?;
-    std::process::Command::new(exe).arg(url).no_window().spawn().map(drop)
+    std::process::Command::new(exe)
+        .arg(url)
+        .no_window()
+        .spawn()
+        .map(drop)
 }
 
 /// Open a web URL or a folder with the system handler, detached.
@@ -454,11 +481,24 @@ mod tests {
         let reg = FakeRegistry::default();
         let e = env(Os::Windows, dir.path(), &reg);
         let kor = Path::new(r"C:\Program Files\Kor\kor.exe");
-        let i = install(&e, Browser::Chrome, kor, &["abcdefghijklmnopabcdefghijklmnop".into(), "bad".into()]).unwrap();
-        assert_eq!(i.registry_key.as_deref(), Some(r"Software\Google\Chrome\NativeMessagingHosts\dev.kor.chrome_host"));
+        let i = install(
+            &e,
+            Browser::Chrome,
+            kor,
+            &["abcdefghijklmnopabcdefghijklmnop".into(), "bad".into()],
+        )
+        .unwrap();
+        assert_eq!(
+            i.registry_key.as_deref(),
+            Some(r"Software\Google\Chrome\NativeMessagingHosts\dev.kor.chrome_host")
+        );
         let m: Value = serde_json::from_slice(&std::fs::read(&i.manifest).unwrap()).unwrap();
         assert_eq!(m["name"], HOST_NAME);
-        assert_eq!(m["allowed_origins"].as_array().unwrap().len(), 2, "bad ids are dropped");
+        assert_eq!(
+            m["allowed_origins"].as_array().unwrap().len(),
+            2,
+            "bad ids are dropped"
+        );
         let wrapper = std::fs::read_to_string(e.wrapper_path()).unwrap();
         assert!(wrapper.contains(r#""C:\Program Files\Kor\kor.exe" chrome-native-host"#));
         assert!(wrapper.contains("KOR_NATIVE_ORIGIN=%~1"));
@@ -475,15 +515,33 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let reg = FakeRegistry::default();
         let linux = env(Os::Linux, dir.path(), &reg);
-        assert!(linux.manifest_path(Browser::Chrome).ends_with("home/.config/google-chrome/NativeMessagingHosts/dev.kor.chrome_host.json"));
-        assert!(linux.manifest_path(Browser::Firefox).ends_with("home/.mozilla/native-messaging-hosts/dev.kor.chrome_host.json"));
+        assert!(
+            linux.manifest_path(Browser::Chrome).ends_with(
+                "home/.config/google-chrome/NativeMessagingHosts/dev.kor.chrome_host.json"
+            )
+        );
+        assert!(
+            linux
+                .manifest_path(Browser::Firefox)
+                .ends_with("home/.mozilla/native-messaging-hosts/dev.kor.chrome_host.json")
+        );
         let mac = env(Os::Mac, dir.path(), &reg);
         assert!(mac.manifest_path(Browser::Edge).ends_with("Library/Application Support/Microsoft Edge/NativeMessagingHosts/dev.kor.chrome_host.json"));
-        let i = install(&linux, Browser::Firefox, Path::new("/opt/kor/it's/kor"), &[]).unwrap();
+        let i = install(
+            &linux,
+            Browser::Firefox,
+            Path::new("/opt/kor/it's/kor"),
+            &[],
+        )
+        .unwrap();
         let m: Value = serde_json::from_slice(&std::fs::read(&i.manifest).unwrap()).unwrap();
         assert_eq!(m["allowed_extensions"], json!([FIREFOX_EXTENSION_ID]));
         assert!(m.get("allowed_origins").is_none());
-        assert!(std::fs::read_to_string(linux.wrapper_path()).unwrap().contains(r"exec '/opt/kor/it'\''s/kor' chrome-native-host"));
+        assert!(
+            std::fs::read_to_string(linux.wrapper_path())
+                .unwrap()
+                .contains(r"exec '/opt/kor/it'\''s/kor' chrome-native-host")
+        );
         assert!(reg.0.borrow().is_empty(), "no registry outside Windows");
         // Someone else's manifest is not removed.
         std::fs::create_dir_all(linux.manifest_path(Browser::Chrome).parent().unwrap()).unwrap();

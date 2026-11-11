@@ -23,7 +23,12 @@ const MAX_LINES: usize = 2_000;
 /// Identity of a record on every machine.
 pub fn key(r: &Record) -> String {
     let mut h = Sha256::new();
-    for part in [r.project.as_str(), r.kind.as_str(), &r.ts.to_string(), r.task.as_str()] {
+    for part in [
+        r.project.as_str(),
+        r.kind.as_str(),
+        &r.ts.to_string(),
+        r.task.as_str(),
+    ] {
         h.update(part.as_bytes());
         h.update([0]);
     }
@@ -81,9 +86,8 @@ pub fn text3(base: &str, ours: &str, theirs: &str) -> Result<String, String> {
     let (mut i, mut j, mut k) = (0, 0, 0);
     loop {
         // Next base line kept by both sides at or after the current positions.
-        let sync = (i..o.len()).find(|&x| {
-            ma[x].is_some_and(|y| y >= j) && mb[x].is_some_and(|y| y >= k)
-        });
+        let sync =
+            (i..o.len()).find(|&x| ma[x].is_some_and(|y| y >= j) && mb[x].is_some_and(|y| y >= k));
         let (i1, j1, k1) = match sync {
             Some(x) => (x, ma[x].unwrap_or(a.len()), mb[x].unwrap_or(b.len())),
             None => (o.len(), a.len(), b.len()),
@@ -172,7 +176,11 @@ fn record3(base: &Record, ours: &Record, theirs: &Record) -> (Record, bool) {
 /// Merge `ours` and `theirs` against `base` (all keyed by [`key`]).
 #[allow(clippy::many_single_char_names)] // b/o/t: base, ours, theirs
 pub fn merge(base: &Snapshot, ours: &Snapshot, theirs: &Snapshot) -> Outcome {
-    let keys: BTreeSet<&String> = base.keys().chain(ours.keys()).chain(theirs.keys()).collect();
+    let keys: BTreeSet<&String> = base
+        .keys()
+        .chain(ours.keys())
+        .chain(theirs.keys())
+        .collect();
     let mut out = Outcome::default();
     let conflict = |k: &str, r: &Record, field: &str| Conflict {
         key: k.to_owned(),
@@ -327,9 +335,15 @@ mod tests {
     #[test]
     fn text_merge_takes_both_sides_and_marks_overlaps() {
         let base = "a\nb\nc\nd";
-        assert_eq!(text3(base, "A\nb\nc\nd", "a\nb\nc\nD").unwrap(), "A\nb\nc\nD");
+        assert_eq!(
+            text3(base, "A\nb\nc\nd", "a\nb\nc\nD").unwrap(),
+            "A\nb\nc\nD"
+        );
         let e = text3(base, "a\nX\nc\nd", "a\nY\nc\nd").unwrap_err();
-        assert!(e.contains("<<<<<<< ours\nX\n=======\nY\n>>>>>>> theirs"), "{e}");
+        assert!(
+            e.contains("<<<<<<< ours\nX\n=======\nY\n>>>>>>> theirs"),
+            "{e}"
+        );
         assert_eq!(text3("x", "x", "y").unwrap(), "y");
     }
 
@@ -361,7 +375,11 @@ mod tests {
         // Delete vs edit keeps the edit and reports it.
         let mut edited = gone.clone();
         edited.summary = "new".into();
-        let out = merge(&base, &snapshot([shared.clone()]), &snapshot([shared.clone(), edited]));
+        let out = merge(
+            &base,
+            &snapshot([shared.clone()]),
+            &snapshot([shared.clone(), edited]),
+        );
         assert_eq!(out.merged[&key(&gone)].summary, "new");
         assert_eq!(out.conflicts[0].field, "deleted");
 
@@ -388,7 +406,14 @@ mod tests {
         b2.files.push("f.rs".into());
         let merged = snapshot([b2.clone(), rec("c", "z", &[])]);
         let a = apply(home.path(), &merged).unwrap();
-        assert_eq!(a, Applied { added: 1, updated: 1, removed: 1 });
+        assert_eq!(
+            a,
+            Applied {
+                added: 1,
+                updated: 1,
+                removed: 1
+            }
+        );
         let now = snapshot(local_records(home.path()).unwrap());
         assert_eq!(now, merged);
     }

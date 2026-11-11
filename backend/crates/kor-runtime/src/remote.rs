@@ -415,7 +415,10 @@ impl TaskStore {
         }
         let text = std::fs::read_to_string(self.events_path(id)).unwrap_or_default();
         let mut open: Vec<Value> = Vec::new();
-        for v in text.lines().filter_map(|l| serde_json::from_str::<Value>(l).ok()) {
+        for v in text
+            .lines()
+            .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+        {
             match v["type"].as_str() {
                 Some("confirm") => open.push(v),
                 Some("confirmed") => open.retain(|c| c["id"] != v["id"]),

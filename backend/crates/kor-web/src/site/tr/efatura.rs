@@ -122,7 +122,12 @@ fn esc(s: &str) -> String {
 
 /// Kuruş → `123.45`.
 pub fn amount(k: i64) -> String {
-    format!("{}{}.{:02}", if k < 0 { "-" } else { "" }, k.unsigned_abs() / 100, k.unsigned_abs() % 100)
+    format!(
+        "{}{}.{:02}",
+        if k < 0 { "-" } else { "" },
+        k.unsigned_abs() / 100,
+        k.unsigned_abs() % 100
+    )
 }
 
 fn qty(m: i64) -> String {
@@ -140,12 +145,21 @@ pub fn uuid4() -> Result<String> {
         let _ = write!(o, "{x:02x}");
         o
     });
-    Ok(format!("{}-{}-{}-{}-{}", &h[0..8], &h[8..12], &h[12..16], &h[16..20], &h[20..32]))
+    Ok(format!(
+        "{}-{}-{}-{}-{}",
+        &h[0..8],
+        &h[8..12],
+        &h[12..16],
+        &h[16..20],
+        &h[20..32]
+    ))
 }
 
 pub fn valid_doc_id(id: &str) -> bool {
     id.len() == 16
-        && id[..3].bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
+        && id[..3]
+            .bytes()
+            .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
         && id[3..].bytes().all(|b| b.is_ascii_digit())
 }
 
@@ -175,18 +189,31 @@ fn party_xml(o: &mut String, p: &Party) {
         esc(&p.tax_office)
     );
     if !p.email.is_empty() {
-        let _ = write!(o, "<cac:Contact><cbc:ElectronicMail>{}</cbc:ElectronicMail></cac:Contact>", esc(&p.email));
+        let _ = write!(
+            o,
+            "<cac:Contact><cbc:ElectronicMail>{}</cbc:ElectronicMail></cac:Contact>",
+            esc(&p.email)
+        );
     }
     if scheme == "TCKN" {
         let (first, family) = p.name.rsplit_once(' ').unwrap_or((&p.name, ""));
-        let _ = write!(o, "<cac:Person><cbc:FirstName>{}</cbc:FirstName><cbc:FamilyName>{}</cbc:FamilyName></cac:Person>", esc(first), esc(family));
+        let _ = write!(
+            o,
+            "<cac:Person><cbc:FirstName>{}</cbc:FirstName><cbc:FamilyName>{}</cbc:FamilyName></cac:Person>",
+            esc(first),
+            esc(family)
+        );
     }
     o.push_str("</cac:Party>");
 }
 
 fn tax_total(o: &mut String, groups: &[(u32, i64, i64)]) {
     let total: i64 = groups.iter().map(|g| g.2).sum();
-    let _ = write!(o, "<cac:TaxTotal><cbc:TaxAmount currencyID=\"TRY\">{}</cbc:TaxAmount>", amount(total));
+    let _ = write!(
+        o,
+        "<cac:TaxTotal><cbc:TaxAmount currencyID=\"TRY\">{}</cbc:TaxAmount>",
+        amount(total)
+    );
     for (rate, base, tax) in groups {
         let _ = write!(
             o,
@@ -225,18 +252,31 @@ xmlns:cbc=\"urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2
 /// The invoice as UBL-TR 1.2 XML (unsigned).
 pub fn invoice_xml(inv: &Invoice, uuid: &str) -> Result<String> {
     if !valid_doc_id(&inv.id) {
-        return Err(format!("invoice number `{}` must look like ABC2026000000001", inv.id));
+        return Err(format!(
+            "invoice number `{}` must look like ABC2026000000001",
+            inv.id
+        ));
     }
     check_party(&inv.supplier, "supplier")?;
     check_party(&inv.customer, "customer")?;
     if inv.lines.is_empty() {
         return Err("an invoice needs at least one line".into());
     }
-    if let Some(l) = inv.lines.iter().find(|l| !super::KDV_RATES.contains(&l.kdv) && l.kdv != 0) {
-        return Err(format!("{}: KDV {}% is not a current rate (0, 1, 10, 20)", l.name, l.kdv));
+    if let Some(l) = inv
+        .lines
+        .iter()
+        .find(|l| !super::KDV_RATES.contains(&l.kdv) && l.kdv != 0)
+    {
+        return Err(format!(
+            "{}: KDV {}% is not a current rate (0, 1, 10, 20)",
+            l.name, l.kdv
+        ));
     }
     let (net, _tax, gross, groups) = totals(&inv.lines);
-    let mut o = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Invoice {}>", NS.replace("{DOC}", "Invoice"));
+    let mut o = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Invoice {}>",
+        NS.replace("{DOC}", "Invoice")
+    );
     let _ = write!(
         o,
         "<cbc:UBLVersionID>2.1</cbc:UBLVersionID><cbc:CustomizationID>TR1.2</cbc:CustomizationID><cbc:ProfileID>{}</cbc:ProfileID>\
@@ -250,7 +290,11 @@ pub fn invoice_xml(inv: &Invoice, uuid: &str) -> Result<String> {
     for n in &inv.notes {
         let _ = write!(o, "<cbc:Note>{}</cbc:Note>", esc(n));
     }
-    let _ = write!(o, "<cbc:DocumentCurrencyCode>TRY</cbc:DocumentCurrencyCode><cbc:LineCountNumeric>{}</cbc:LineCountNumeric>", inv.lines.len());
+    let _ = write!(
+        o,
+        "<cbc:DocumentCurrencyCode>TRY</cbc:DocumentCurrencyCode><cbc:LineCountNumeric>{}</cbc:LineCountNumeric>",
+        inv.lines.len()
+    );
     o.push_str("<cac:AccountingSupplierParty>");
     party_xml(&mut o, &inv.supplier);
     o.push_str("</cac:AccountingSupplierParty><cac:AccountingCustomerParty>");
@@ -307,14 +351,20 @@ pub struct Despatch {
 /// e-İrsaliye (UBL-TR DespatchAdvice, TEMELIRSALIYE, SEVK).
 pub fn despatch_xml(d: &Despatch, uuid: &str) -> Result<String> {
     if !valid_doc_id(&d.id) {
-        return Err(format!("despatch number `{}` must look like ABC2026000000001", d.id));
+        return Err(format!(
+            "despatch number `{}` must look like ABC2026000000001",
+            d.id
+        ));
     }
     check_party(&d.supplier, "supplier")?;
     check_party(&d.customer, "customer")?;
     if d.driver.is_none() && d.carrier.is_none() {
         return Err("an e-İrsaliye needs a driver (name + TCKN) or a carrier (VKN + name)".into());
     }
-    let mut o = format!("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DespatchAdvice {}>", NS.replace("{DOC}", "DespatchAdvice"));
+    let mut o = format!(
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DespatchAdvice {}>",
+        NS.replace("{DOC}", "DespatchAdvice")
+    );
     let _ = write!(
         o,
         "<cbc:UBLVersionID>2.1</cbc:UBLVersionID><cbc:CustomizationID>TR1.2.1</cbc:CustomizationID><cbc:ProfileID>TEMELIRSALIYE</cbc:ProfileID>\
@@ -335,16 +385,36 @@ pub fn despatch_xml(d: &Despatch, uuid: &str) -> Result<String> {
             return Err("driver TCKN is not valid".into());
         }
         let (first, family) = name.rsplit_once(' ').unwrap_or((name, ""));
-        let _ = write!(o, "<cac:DriverPerson><cbc:FirstName>{}</cbc:FirstName><cbc:FamilyName>{}</cbc:FamilyName><cbc:Title>Şoför</cbc:Title><cbc:NationalityID>{}</cbc:NationalityID></cac:DriverPerson>", esc(first), esc(family), esc(tckn));
+        let _ = write!(
+            o,
+            "<cac:DriverPerson><cbc:FirstName>{}</cbc:FirstName><cbc:FamilyName>{}</cbc:FamilyName><cbc:Title>Şoför</cbc:Title><cbc:NationalityID>{}</cbc:NationalityID></cac:DriverPerson>",
+            esc(first),
+            esc(family),
+            esc(tckn)
+        );
     }
     o.push_str("</cac:ShipmentStage><cac:Delivery>");
     if let Some((vkn, name)) = &d.carrier {
-        let _ = write!(o, "<cac:CarrierParty><cac:PartyIdentification><cbc:ID schemeID=\"VKN\">{}</cbc:ID></cac:PartyIdentification><cac:PartyName><cbc:Name>{}</cbc:Name></cac:PartyName></cac:CarrierParty>", esc(vkn), esc(name));
+        let _ = write!(
+            o,
+            "<cac:CarrierParty><cac:PartyIdentification><cbc:ID schemeID=\"VKN\">{}</cbc:ID></cac:PartyIdentification><cac:PartyName><cbc:Name>{}</cbc:Name></cac:PartyName></cac:CarrierParty>",
+            esc(vkn),
+            esc(name)
+        );
     }
-    let _ = write!(o, "<cac:Despatch><cbc:ActualDespatchDate>{}</cbc:ActualDespatchDate><cbc:ActualDespatchTime>{}</cbc:ActualDespatchTime></cac:Despatch>", esc(&d.date), esc(&d.time));
+    let _ = write!(
+        o,
+        "<cac:Despatch><cbc:ActualDespatchDate>{}</cbc:ActualDespatchDate><cbc:ActualDespatchTime>{}</cbc:ActualDespatchTime></cac:Despatch>",
+        esc(&d.date),
+        esc(&d.time)
+    );
     o.push_str("</cac:Delivery>");
     if let Some(p) = &d.plate {
-        let _ = write!(o, "<cac:TransportHandlingUnit><cac:TransportEquipment><cbc:ID schemeID=\"PLAKA\">{}</cbc:ID></cac:TransportEquipment></cac:TransportHandlingUnit>", esc(p));
+        let _ = write!(
+            o,
+            "<cac:TransportHandlingUnit><cac:TransportEquipment><cbc:ID schemeID=\"PLAKA\">{}</cbc:ID></cac:TransportEquipment></cac:TransportHandlingUnit>",
+            esc(p)
+        );
     }
     o.push_str("</cac:Shipment>");
     for (i, l) in d.lines.iter().enumerate() {
@@ -374,7 +444,11 @@ pub async fn send(http: &Http, url: &str, token: &str, xml: &str) -> Result<Stri
     if r.ok() {
         Ok(r.body.chars().take(2000).collect())
     } else {
-        Err(format!("integrator: HTTP {}: {}", r.status, r.body.chars().take(500).collect::<String>()))
+        Err(format!(
+            "integrator: HTTP {}: {}",
+            r.status,
+            r.body.chars().take(500).collect::<String>()
+        ))
     }
 }
 
@@ -384,11 +458,20 @@ mod tests {
 
     /// A VKN with a correct check digit for the first nine digits.
     fn make_vkn(first9: &str) -> String {
-        (0..10).map(|c| format!("{first9}{c}")).find(|v| valid_vkn(v)).unwrap()
+        (0..10)
+            .map(|c| format!("{first9}{c}"))
+            .find(|v| valid_vkn(v))
+            .unwrap()
     }
 
     fn party(name: &str, id: &str) -> Party {
-        Party { name: name.into(), tax_id: id.into(), tax_office: "Kadıköy".into(), city: "İstanbul".into(), ..Party::default() }
+        Party {
+            name: name.into(),
+            tax_id: id.into(),
+            tax_office: "Kadıköy".into(),
+            city: "İstanbul".into(),
+            ..Party::default()
+        }
     }
 
     #[test]
@@ -413,8 +496,20 @@ mod tests {
             supplier: party("Acme Yazılım <Ltd>", &make_vkn("123456789")),
             customer: party("Ayşe Yılmaz", "10000000146"),
             lines: vec![
-                Line { name: "Web sitesi bakımı".into(), qty_milli: 1500, unit: "HUR".into(), price: 100_000, kdv: 20 },
-                Line { name: "Kitap".into(), qty_milli: 1000, unit: "C62".into(), price: 5_000, kdv: 10 },
+                Line {
+                    name: "Web sitesi bakımı".into(),
+                    qty_milli: 1500,
+                    unit: "HUR".into(),
+                    price: 100_000,
+                    kdv: 20,
+                },
+                Line {
+                    name: "Kitap".into(),
+                    qty_milli: 1000,
+                    unit: "C62".into(),
+                    price: 5_000,
+                    kdv: 10,
+                },
             ],
             notes: vec![],
         };
@@ -425,9 +520,15 @@ mod tests {
         assert!(xml.contains("<cbc:ProfileID>EARSIVFATURA</cbc:ProfileID>"));
         assert!(xml.contains("<cbc:PayableAmount currencyID=\"TRY\">1855.00</cbc:PayableAmount>"));
         assert!(xml.contains("<cbc:InvoicedQuantity unitCode=\"HUR\">1.5</cbc:InvoicedQuantity>"));
-        assert!(xml.contains("schemeID=\"TCKN\">10000000146") && xml.contains("<cbc:FamilyName>Yılmaz</cbc:FamilyName>"));
+        assert!(
+            xml.contains("schemeID=\"TCKN\">10000000146")
+                && xml.contains("<cbc:FamilyName>Yılmaz</cbc:FamilyName>")
+        );
         assert!(xml.contains("Acme Yazılım &lt;Ltd&gt;"));
-        let bad = Invoice { customer: party("X", "123"), ..inv.clone() };
+        let bad = Invoice {
+            customer: party("X", "123"),
+            ..inv.clone()
+        };
         assert!(invoice_xml(&bad, "u").is_err());
         let d = Despatch {
             id: "KOR2026000000002".into(),
@@ -441,7 +542,10 @@ mod tests {
             lines: inv.lines.clone(),
         };
         let x = despatch_xml(&d, "u2").unwrap();
-        assert!(x.contains("<cbc:DespatchAdviceTypeCode>SEVK</cbc:DespatchAdviceTypeCode>") && x.contains("PLAKA"));
+        assert!(
+            x.contains("<cbc:DespatchAdviceTypeCode>SEVK</cbc:DespatchAdviceTypeCode>")
+                && x.contains("PLAKA")
+        );
         let u = uuid4().unwrap();
         assert_eq!(u.len(), 36);
         assert_eq!(&u[14..15], "4");

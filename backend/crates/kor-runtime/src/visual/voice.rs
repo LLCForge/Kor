@@ -67,9 +67,16 @@ pub fn recorder(os: Os, wav: &Path, seconds: u32) -> Result<Recorder, String> {
     match os {
         Os::Windows => Ok((
             "powershell".into(),
-            ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", WIN_SCRIPT]
-                .map(str::to_owned)
-                .to_vec(),
+            [
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                WIN_SCRIPT,
+            ]
+            .map(str::to_owned)
+            .to_vec(),
             vec![
                 ("KOR_REC_PATH".into(), path),
                 ("KOR_REC_MS".into(), (u64::from(seconds) * 1000).to_string()),
@@ -77,7 +84,9 @@ pub fn recorder(os: Os, wav: &Path, seconds: u32) -> Result<Recorder, String> {
         )),
         Os::Mac => Ok((
             "osascript".into(),
-            ["-l", "JavaScript", "-e", MAC_SCRIPT].map(str::to_owned).to_vec(),
+            ["-l", "JavaScript", "-e", MAC_SCRIPT]
+                .map(str::to_owned)
+                .to_vec(),
             vec![
                 ("KOR_REC_PATH".into(), path),
                 ("KOR_REC_SECONDS".into(), seconds.to_string()),
@@ -131,7 +140,11 @@ async fn run(
         Ok(String::from_utf8_lossy(&out.stdout).into_owned())
     } else {
         let err = String::from_utf8_lossy(&out.stderr);
-        let last = err.lines().rev().find(|l| !l.trim().is_empty()).unwrap_or("");
+        let last = err
+            .lines()
+            .rev()
+            .find(|l| !l.trim().is_empty())
+            .unwrap_or("");
         Err(format!("{program} failed: {}", last.trim()))
     }
 }
@@ -179,7 +192,10 @@ pub fn status() -> Status {
     let whisper = on_path("whisper-cli").or_else(|| kor_components::path(WHISPER));
     let model = kor_components::path(WHISPER_MODEL);
     let mut missing = Vec::new();
-    for (name, have) in [(WHISPER, whisper.is_some()), (WHISPER_MODEL, model.is_some())] {
+    for (name, have) in [
+        (WHISPER, whisper.is_some()),
+        (WHISPER_MODEL, model.is_some()),
+    ] {
         if !have && let Some(s) = kor_components::info(name) {
             missing.push((s.name, s.version, s.size));
         }
@@ -249,7 +265,11 @@ pub async fn transcribe(
 ///
 /// # Errors
 /// whisper or its model missing, or any recording/transcription error.
-pub async fn listen(seconds: u32, language: Option<&str>, cancel: &CancellationToken) -> Result<String, String> {
+pub async fn listen(
+    seconds: u32,
+    language: Option<&str>,
+    cancel: &CancellationToken,
+) -> Result<String, String> {
     let st = status();
     let (Some(whisper), Some(model)) = (st.whisper, st.model) else {
         return Err(format!(
@@ -281,7 +301,10 @@ mod tests {
         assert!(a.ends_with(&["5".into(), "/tmp/a.wav".into()]) && e.is_empty());
         let (p, a, e) = recorder(Os::Windows, wav, 3).unwrap();
         assert_eq!(p, "powershell");
-        assert!(a.last().unwrap().contains("mciSendStringW") && a.last().unwrap().contains("samplespersec 16000"));
+        assert!(
+            a.last().unwrap().contains("mciSendStringW")
+                && a.last().unwrap().contains("samplespersec 16000")
+        );
         assert!(e.contains(&("KOR_REC_MS".into(), "3000".into())));
         let (p, a, _) = recorder(Os::Mac, wav, 3).unwrap();
         assert_eq!(p, "osascript");
@@ -295,7 +318,10 @@ mod tests {
         assert_eq!(a, ["-m", "m.bin", "-f", "a.wav", "-nt", "-np", "-l", "tr"]);
         let a = whisper_args(Path::new("m.bin"), Path::new("a.wav"), Some("tr; rm -rf"));
         assert_eq!(a.last().map(String::as_str), Some("auto"));
-        assert_eq!(clean(" Add a login button.\n\n[BLANK_AUDIO]\n to settings\n"), "Add a login button. to settings");
+        assert_eq!(
+            clean(" Add a login button.\n\n[BLANK_AUDIO]\n to settings\n"),
+            "Add a login button. to settings"
+        );
         assert_eq!(clean("[BLANK_AUDIO]\n"), "");
     }
 
@@ -307,7 +333,10 @@ mod tests {
         let model = m.get(WHISPER_MODEL).expect("model component");
         let a = model.artifact("any").expect("model is target-independent");
         assert_eq!(a.size, 147_951_465);
-        assert_eq!(a.sha256, "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe");
+        assert_eq!(
+            a.sha256,
+            "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
+        );
     }
 
     /// `cargo test -p kor-runtime -- --ignored records_from`
@@ -331,10 +360,14 @@ mod tests {
         let quiet = |_: kor_components::Progress| {};
         let dir = tempfile::tempdir().unwrap();
         // A throwaway store: the real download and checksum path, nothing left in the user's data.
-        let store = kor_components::Store::new(dir.path().join("c"), kor_components::Manifest::builtin());
+        let store =
+            kor_components::Store::new(dir.path().join("c"), kor_components::Manifest::builtin());
         let target = kor_components::target();
         let exe = store.ensure_for(WHISPER, &target, &quiet).await.unwrap();
-        let model = store.ensure_for(WHISPER_MODEL, &target, &quiet).await.unwrap();
+        let model = store
+            .ensure_for(WHISPER_MODEL, &target, &quiet)
+            .await
+            .unwrap();
         let wav = dir.path().join("t.wav");
         let say = "Add-Type -AssemblyName System.Speech; $s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $f=New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000,[System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen,[System.Speech.AudioFormat.AudioChannel]::Mono); $s.SetOutputToWaveFile($env:P,$f); $s.Speak('Add a login button to the settings page.'); $s.Dispose()";
         let ok = std::process::Command::new("powershell")

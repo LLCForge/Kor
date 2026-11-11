@@ -75,14 +75,17 @@ mod tests {
 
     #[test]
     fn parses_image_and_options() {
-        let Sub::Diagram(a) = Cli::try_parse_from(["kor", "diagram", "arch.png", "--out", "svc", "-m", "x"])
-            .unwrap()
-            .cmd;
+        let Sub::Diagram(a) =
+            Cli::try_parse_from(["kor", "diagram", "arch.png", "--out", "svc", "-m", "x"])
+                .unwrap()
+                .cmd;
         assert_eq!(a.image, Some(PathBuf::from("arch.png")));
         assert_eq!(a.model.as_deref(), Some("x"));
         assert!(!a.yes);
         assert!(Cli::try_parse_from(["kor", "diagram"]).is_err());
-        let Sub::Diagram(a) = Cli::try_parse_from(["kor", "diagram", "check"]).unwrap().cmd;
+        let Sub::Diagram(a) = Cli::try_parse_from(["kor", "diagram", "check"])
+            .unwrap()
+            .cmd;
         assert!(a.command.is_some() && a.image.is_none());
     }
 }

@@ -40,8 +40,13 @@ fn pct(v: f64) -> u64 {
 }
 
 fn shadow(l: &Localizer) -> bool {
-    let log = kor_runtime::kor_home().map(|h| kor_runtime::consensus::read_log(&h.join("shadow.jsonl"))).unwrap_or_default();
-    let mut pairs: Vec<(String, String)> = log.iter().map(|e| (e.main.clone(), e.shadow.clone())).collect();
+    let log = kor_runtime::kor_home()
+        .map(|h| kor_runtime::consensus::read_log(&h.join("shadow.jsonl")))
+        .unwrap_or_default();
+    let mut pairs: Vec<(String, String)> = log
+        .iter()
+        .map(|e| (e.main.clone(), e.shadow.clone()))
+        .collect();
     pairs.sort();
     pairs.dedup();
     if pairs.is_empty() {
@@ -50,7 +55,13 @@ fn shadow(l: &Localizer) -> bool {
     }
     for (main, sh) in pairs {
         if let Some((avg, n)) = kor_runtime::consensus::average(&log, &main, &sh) {
-            println!("{}", l.t_args("shadow-row", &args!("main" => main, "cheap" => sh, "pct" => pct(avg), "count" => n)));
+            println!(
+                "{}",
+                l.t_args(
+                    "shadow-row",
+                    &args!("main" => main, "cheap" => sh, "pct" => pct(avg), "count" => n)
+                )
+            );
         }
     }
     true
@@ -65,12 +76,23 @@ pub fn run(ctx: &Ctx, a: &ConsensusArgs) -> anyhow::Result<bool> {
     let loaded = match &ctx.config {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("{}", l.t_args("error-generic", &args!("error" => e.to_string())));
+            eprintln!(
+                "{}",
+                l.t_args("error-generic", &args!("error" => e.to_string()))
+            );
             return Ok(false);
         }
     };
-    let models: Vec<String> = if a.models.is_empty() { loaded.config.routing.consensus.clone() } else { a.models.clone() };
-    let models: Vec<String> = models.into_iter().map(|m| m.trim().to_owned()).filter(|m| !m.is_empty()).collect();
+    let models: Vec<String> = if a.models.is_empty() {
+        loaded.config.routing.consensus.clone()
+    } else {
+        a.models.clone()
+    };
+    let models: Vec<String> = models
+        .into_iter()
+        .map(|m| m.trim().to_owned())
+        .filter(|m| !m.is_empty())
+        .collect();
     if !(2..=3).contains(&models.len()) {
         eprintln!("{}", l.t("consensus-need-models"));
         return Ok(false);
@@ -92,13 +114,25 @@ pub fn run(ctx: &Ctx, a: &ConsensusArgs) -> anyhow::Result<bool> {
         return Ok(c.answers.len() >= 2);
     }
     for (m, e) in &c.failed {
-        eprintln!("{}", l.t_args("consensus-failed", &args!("model" => m.clone(), "error" => e.clone())));
+        eprintln!(
+            "{}",
+            l.t_args(
+                "consensus-failed",
+                &args!("model" => m.clone(), "error" => e.clone())
+            )
+        );
     }
     if c.answers.len() < 2 {
         eprintln!("{}", l.t("consensus-too-few"));
         return Ok(false);
     }
-    println!("{}", l.t_args("consensus-head", &args!("count" => c.answers.len(), "pct" => pct(c.agreement))));
+    println!(
+        "{}",
+        l.t_args(
+            "consensus-head",
+            &args!("count" => c.answers.len(), "pct" => pct(c.agreement))
+        )
+    );
     if c.agreed.is_empty() {
         println!("  {}", l.t("consensus-none-agreed"));
     }

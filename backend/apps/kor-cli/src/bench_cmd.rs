@@ -79,11 +79,15 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
         .mut_arg("history", |a| a.help(l.t("arg-bench-history")))
         .mut_arg("record", |a| a.help(l.t("arg-bench-record")))
         .mut_arg("check", |a| a.help(l.t("arg-bench-check")))
-        .mut_arg("update_baseline", |a| a.help(l.t("arg-bench-update-baseline")))
+        .mut_arg("update_baseline", |a| {
+            a.help(l.t("arg-bench-update-baseline"))
+        })
         .mut_arg("weak", |a| a.help(l.t("arg-bench-weak")))
         .mut_arg("desktop", |a| a.help(l.t("arg-bench-desktop")))
         .mut_arg("records", |a| a.help(l.t("arg-bench-records")))
-        .mut_arg("performance_md", |a| a.help(l.t("arg-bench-performance-md")))
+        .mut_arg("performance_md", |a| {
+            a.help(l.t("arg-bench-performance-md"))
+        })
 }
 
 /// `kor doctor --perf` (§32.3): where the time went, from the local `perf.log`.
@@ -95,7 +99,14 @@ pub fn doctor_perf(ctx: &Ctx) -> anyhow::Result<bool> {
         .map(|p| budgets::read_log(&p))
         .unwrap_or_default();
     if entries.is_empty() {
-        println!("{}", l.t(if on { "doctor-perf-empty" } else { "doctor-perf-off" }));
+        println!(
+            "{}",
+            l.t(if on {
+                "doctor-perf-empty"
+            } else {
+                "doctor-perf-off"
+            })
+        );
         return Ok(true);
     }
     println!(
@@ -403,8 +414,19 @@ mod tests {
         }
         let m = T::command()
             .try_get_matches_from([
-                "kor", "--ui", "--cli", "--memory", "--check", "--record", "--weak",
-                "--records", "1000", "--history", "h.json", "--performance-md", "P.md",
+                "kor",
+                "--ui",
+                "--cli",
+                "--memory",
+                "--check",
+                "--record",
+                "--weak",
+                "--records",
+                "1000",
+                "--history",
+                "h.json",
+                "--performance-md",
+                "P.md",
             ])
             .unwrap();
         let t = T::from_arg_matches(&m).unwrap();

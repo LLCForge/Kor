@@ -11,8 +11,8 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 
 pub mod compliance;
-pub mod explain;
 pub mod deps;
+pub mod explain;
 pub mod metrics;
 mod render;
 pub mod rules;

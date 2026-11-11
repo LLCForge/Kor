@@ -135,7 +135,11 @@ pub fn capture(name: &str, monitors: &[Monitor], windows: &[Window], saved_at: u
                 ry: rel(w.y, m.y, m.height),
                 rw: rel(w.x + w.w, m.x, m.width) - rel(w.x, m.x, m.width),
                 rh: rel(w.y + w.h, m.y, m.height) - rel(w.y, m.y, m.height),
-                state: if w.state == "maximized" { "maximized".into() } else { "normal".into() },
+                state: if w.state == "maximized" {
+                    "maximized".into()
+                } else {
+                    "normal".into()
+                },
             })
         })
         .collect();
@@ -152,7 +156,10 @@ pub fn capture(name: &str, monitors: &[Monitor], windows: &[Window], saved_at: u
 pub fn plan(layout: &Layout, monitors: &[Monitor], windows: &[Window]) -> Plan {
     let mut used = vec![false; windows.len()];
     let mut out = Plan::default();
-    let fallback = monitors.iter().find(|m| m.primary).or_else(|| monitors.first());
+    let fallback = monitors
+        .iter()
+        .find(|m| m.primary)
+        .or_else(|| monitors.first());
     for s in &layout.windows {
         let same_app = |w: &Window| kor_platform::desktop_probe::app_name(&w.process) == s.process;
         // Exact title first, then any unused window of the same app.
@@ -160,7 +167,12 @@ pub fn plan(layout: &Layout, monitors: &[Monitor], windows: &[Window]) -> Plan {
             .iter()
             .enumerate()
             .find(|(i, w)| !used[*i] && same_app(w) && w.title == s.title)
-            .or_else(|| windows.iter().enumerate().find(|(i, w)| !used[*i] && same_app(w)));
+            .or_else(|| {
+                windows
+                    .iter()
+                    .enumerate()
+                    .find(|(i, w)| !used[*i] && same_app(w))
+            });
         let Some((i, w)) = pick else {
             out.missing.push(format!("{} — {}", s.process, s.title));
             continue;
@@ -209,12 +221,16 @@ pub struct Store {
 
 impl Store {
     pub fn at(dir: &Path) -> Self {
-        Self { dir: dir.to_owned() }
+        Self {
+            dir: dir.to_owned(),
+        }
     }
 
     fn file(&self, name: &str) -> Result<PathBuf, String> {
         if !valid_name(name) {
-            return Err(format!("invalid layout name `{name}` (letters, digits, - _ . only)"));
+            return Err(format!(
+                "invalid layout name `{name}` (letters, digits, - _ . only)"
+            ));
         }
         Ok(self.dir.join(format!("{name}.json")))
     }
@@ -271,7 +287,10 @@ pub fn link(root: &Path, name: Option<&str>) -> Result<(), String> {
                 return Err(format!("invalid layout name `{n}`"));
             }
             std::fs::create_dir_all(root.join(".kor")).map_err(|e| e.to_string())?;
-            let text = serde_json::to_string_pretty(&Link { layout: n.to_owned() }).map_err(|e| e.to_string())?;
+            let text = serde_json::to_string_pretty(&Link {
+                layout: n.to_owned(),
+            })
+            .map_err(|e| e.to_string())?;
             std::fs::write(f, text).map_err(|e| e.to_string())
         }
         None => match std::fs::remove_file(f) {
@@ -292,16 +311,35 @@ mod tests {
     use super::*;
 
     fn mon(name: &str, x: i32, w: u32, h: u32, primary: bool) -> Monitor {
-        Monitor { name: name.into(), x, y: 0, width: w, height: h, primary }
+        Monitor {
+            name: name.into(),
+            x,
+            y: 0,
+            width: w,
+            height: h,
+            primary,
+        }
     }
 
     fn win(hwnd: i64, process: &str, title: &str, x: i32, y: i32, w: i32, h: i32) -> Window {
-        Window { hwnd, title: title.into(), process: process.into(), x, y, w, h, state: "normal".into() }
+        Window {
+            hwnd,
+            title: title.into(),
+            process: process.into(),
+            x,
+            y,
+            w,
+            h,
+            state: "normal".into(),
+        }
     }
 
     #[test]
     fn save_and_restore_across_monitors() {
-        let mons = [mon("DISPLAY1", 0, 1920, 1080, true), mon("DISPLAY2", 1920, 2560, 1440, false)];
+        let mons = [
+            mon("DISPLAY1", 0, 1920, 1080, true),
+            mon("DISPLAY2", 1920, 2560, 1440, false),
+        ];
         let wins = [
             win(1, "Code.exe", "main.rs - kor", 0, 0, 960, 1080),
             win(2, "chrome.exe", "Docs", 1920, 0, 1280, 1440),
@@ -314,7 +352,10 @@ mod tests {
         assert_eq!((l.windows[0].rw, l.windows[0].rh), (5000, 10000));
 
         // Same monitors, windows reopened elsewhere with new handles.
-        let now = [win(11, "chrome.exe", "Docs", 5, 5, 300, 300), win(12, "code.exe", "other - kor", 9, 9, 300, 300)];
+        let now = [
+            win(11, "chrome.exe", "Docs", 5, 5, 300, 300),
+            win(12, "code.exe", "other - kor", 9, 9, 300, 300),
+        ];
         let p = plan(&l, &mons, &now);
         assert!(p.missing.is_empty());
         let code = p.moves.iter().find(|m| m.hwnd == 12).unwrap();
@@ -336,10 +377,29 @@ mod tests {
     fn store_and_project_link() {
         let d = tempfile::tempdir().unwrap();
         let s = Store::at(&d.path().join("layouts"));
-        assert!(s.save(&Layout { name: "../x".into(), ..Layout::default() }).is_err());
-        s.save(&Layout { name: "a".into(), saved_at: 1, ..Layout::default() }).unwrap();
-        s.save(&Layout { name: "b".into(), saved_at: 2, ..Layout::default() }).unwrap();
-        assert_eq!(s.list().iter().map(|l| l.name.as_str()).collect::<Vec<_>>(), ["b", "a"]);
+        assert!(
+            s.save(&Layout {
+                name: "../x".into(),
+                ..Layout::default()
+            })
+            .is_err()
+        );
+        s.save(&Layout {
+            name: "a".into(),
+            saved_at: 1,
+            ..Layout::default()
+        })
+        .unwrap();
+        s.save(&Layout {
+            name: "b".into(),
+            saved_at: 2,
+            ..Layout::default()
+        })
+        .unwrap();
+        assert_eq!(
+            s.list().iter().map(|l| l.name.as_str()).collect::<Vec<_>>(),
+            ["b", "a"]
+        );
         assert_eq!(s.load("a").unwrap().saved_at, 1);
         s.delete("a").unwrap();
         assert!(s.load("a").is_err());

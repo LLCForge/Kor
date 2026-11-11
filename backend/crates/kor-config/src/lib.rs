@@ -210,7 +210,10 @@ impl ToolsConfig {
     /// Whether the command `name` (`git`, `ffmpeg.exe`) may be offered to and run by the agent.
     pub fn permits(&self, name: &str) -> bool {
         let n = name.trim_end_matches(".exe").to_ascii_lowercase();
-        let hit = |list: &[String]| list.iter().any(|x| x.trim_end_matches(".exe").eq_ignore_ascii_case(&n));
+        let hit = |list: &[String]| {
+            list.iter()
+                .any(|x| x.trim_end_matches(".exe").eq_ignore_ascii_case(&n))
+        };
         !hit(&self.deny) && (self.allow.is_empty() || hit(&self.allow))
     }
 }
@@ -249,7 +252,12 @@ pub struct Integrations {
 
 impl Default for Integrations {
     fn default() -> Self {
-        Self { auto: true, context_menu: true, shell: true, os: BTreeMap::new() }
+        Self {
+            auto: true,
+            context_menu: true,
+            shell: true,
+            os: BTreeMap::new(),
+        }
     }
 }
 
@@ -259,7 +267,10 @@ impl Integrations {
     /// `systemd --user` service (a background daemon) — each needs the user present or runs Kor
     /// in the background.
     pub fn os_on(&self, id: &str) -> bool {
-        self.os.get(id).copied().unwrap_or(!matches!(id, "portals" | "shortcuts" | "systemd-user"))
+        self.os
+            .get(id)
+            .copied()
+            .unwrap_or(!matches!(id, "portals" | "shortcuts" | "systemd-user"))
     }
 }
 
@@ -1085,7 +1096,10 @@ pub struct Computer {
 
 impl Default for Computer {
     fn default() -> Self {
-        Self { enabled: true, apps: std::collections::BTreeMap::new() }
+        Self {
+            enabled: true,
+            apps: std::collections::BTreeMap::new(),
+        }
     }
 }
 
@@ -1107,7 +1121,13 @@ pub enum ComputerTier {
 }
 
 impl ComputerTier {
-    pub const ALL: [Self; 5] = [Self::Blocked, Self::Read, Self::Click, Self::Ask, Self::Full];
+    pub const ALL: [Self; 5] = [
+        Self::Blocked,
+        Self::Read,
+        Self::Click,
+        Self::Ask,
+        Self::Full,
+    ];
 
     pub fn key(self) -> &'static str {
         match self {
@@ -1407,7 +1427,9 @@ impl Default for Privacy {
     }
 }
 
-fn requirements<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<PrivacyRequirement>, D::Error> {
+fn requirements<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Vec<PrivacyRequirement>, D::Error> {
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum Raw {
@@ -1528,7 +1550,11 @@ pub fn load(
         .ok()
         .and_then(|v| v.as_table().cloned())
         .unwrap_or_default();
-    set_dotted(&mut defaults, "agent.model", Value::String(DEFAULT_MODEL.to_owned()));
+    set_dotted(
+        &mut defaults,
+        "agent.model",
+        Value::String(DEFAULT_MODEL.to_owned()),
+    );
 
     let mut layers: Vec<(Layer, String, Table)> =
         vec![(Layer::Default, "default".into(), defaults)];
@@ -1755,21 +1781,31 @@ pub fn set_string_list(file: &Path, key: &str, values: &[String]) -> Result<(), 
 /// As [`set_string`].
 pub fn unset(file: &Path, key: &str) -> Result<(), ConfigError> {
     let origin = file.display().to_string();
-    let io = |source: std::io::Error| ConfigError::Io { origin: origin.clone(), source };
+    let io = |source: std::io::Error| ConfigError::Io {
+        origin: origin.clone(),
+        source,
+    };
     let text = match fs::read_to_string(file) {
         Ok(t) => t,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(()),
         Err(e) => return Err(io(e)),
     };
-    let mut doc: toml_edit::DocumentMut = text.parse().map_err(|e: toml_edit::TomlError| ConfigError::Invalid {
-        origin: origin.clone(),
-        message: e.to_string(),
-    })?;
+    let mut doc: toml_edit::DocumentMut =
+        text.parse()
+            .map_err(|e: toml_edit::TomlError| ConfigError::Invalid {
+                origin: origin.clone(),
+                message: e.to_string(),
+            })?;
     let mut parts: Vec<&str> = key.split('.').collect();
-    let Some(leaf) = parts.pop() else { return Ok(()) };
+    let Some(leaf) = parts.pop() else {
+        return Ok(());
+    };
     let mut table: &mut dyn toml_edit::TableLike = doc.as_table_mut();
     for part in parts {
-        match table.get_mut(part).and_then(toml_edit::Item::as_table_like_mut) {
+        match table
+            .get_mut(part)
+            .and_then(toml_edit::Item::as_table_like_mut)
+        {
             Some(t) => table = t,
             None => return Ok(()),
         }
@@ -1779,10 +1815,17 @@ pub fn unset(file: &Path, key: &str) -> Result<(), ConfigError> {
     }
     let tmp = file.with_extension("toml.tmp");
     fs::write(&tmp, doc.to_string()).map_err(io)?;
-    let check = Paths { system: None, user: Some(tmp.clone()), project: None };
+    let check = Paths {
+        system: None,
+        user: Some(tmp.clone()),
+        project: None,
+    };
     if let Err(e) = load(&check, std::iter::empty(), &[]) {
         let _ = fs::remove_file(&tmp);
-        return Err(ConfigError::Invalid { origin, message: e.to_string() });
+        return Err(ConfigError::Invalid {
+            origin,
+            message: e.to_string(),
+        });
     }
     fs::rename(&tmp, file).map_err(io)
 }
@@ -1806,13 +1849,20 @@ fn set_item(file: &Path, key: &str, item: toml_edit::Item) -> Result<(), ConfigE
         .parse()
         .map_err(|e: toml_edit::TomlError| invalid(e.to_string()))?;
     // `sandbox` is both the short `sandbox = "on"` and the `[sandbox]` table (ADR 0033).
-    let key = if key == "sandbox" && doc.get("sandbox").is_some_and(toml_edit::Item::is_table_like) {
+    let key = if key == "sandbox"
+        && doc
+            .get("sandbox")
+            .is_some_and(toml_edit::Item::is_table_like)
+    {
         "sandbox.mode"
     } else {
         key
     };
     if key.starts_with("sandbox.")
-        && let Some(mode) = doc.get("sandbox").and_then(toml_edit::Item::as_str).map(str::to_owned)
+        && let Some(mode) = doc
+            .get("sandbox")
+            .and_then(toml_edit::Item::as_str)
+            .map(str::to_owned)
     {
         let mut t = toml_edit::Table::new();
         t.insert("mode", toml_edit::value(mode));
@@ -1859,11 +1909,25 @@ mod tests {
         let f = dir.path().join("config.toml");
         assert_eq!(Config::default().browser.backend, BrowserBackend::Auto);
         set_scalar(&f, "browser.backend", "extension").unwrap();
-        let paths = Paths { system: None, user: Some(f.clone()), project: None };
-        assert_eq!(load(&paths, [], &[]).unwrap().config.browser.backend, BrowserBackend::Chrome);
+        let paths = Paths {
+            system: None,
+            user: Some(f.clone()),
+            project: None,
+        };
+        assert_eq!(
+            load(&paths, [], &[]).unwrap().config.browser.backend,
+            BrowserBackend::Chrome
+        );
         set_scalar(&f, "browser.backend", "headless").unwrap();
-        let paths = Paths { system: None, user: Some(f.clone()), project: None };
-        assert_eq!(load(&paths, [], &[]).unwrap().config.browser.backend, BrowserBackend::Headless);
+        let paths = Paths {
+            system: None,
+            user: Some(f.clone()),
+            project: None,
+        };
+        assert_eq!(
+            load(&paths, [], &[]).unwrap().config.browser.backend,
+            BrowserBackend::Headless
+        );
         assert!(set_scalar(&f, "browser.backend", "firefox").is_err());
     }
 
@@ -1881,7 +1945,11 @@ mod tests {
         set_scalar(&f, "keys.mode", "vi").unwrap();
         assert!(set_scalar(&f, "auto.nope", "false").is_err());
         assert!(set_scalar(&f, "agent.ask_threshold", "sometimes").is_err());
-        let paths = Paths { system: None, user: Some(f), project: None };
+        let paths = Paths {
+            system: None,
+            user: Some(f),
+            project: None,
+        };
         let env = [("KOR_AUTO__ROUTING".to_owned(), "false".to_owned())];
         let c = load(&paths, env, &[]).unwrap();
         assert!(!c.config.auto.compact && !c.config.auto.routing);
@@ -1904,25 +1972,47 @@ mod tests {
         assert!(Config::default().computer.enabled);
         // The default model lives in `load`'s default layer only: code-built configs (tests) have none.
         assert!(Config::default().agent.model.is_empty());
-        let none = Paths { system: None, user: None, project: None };
+        let none = Paths {
+            system: None,
+            user: None,
+            project: None,
+        };
         let fresh = load(&none, std::iter::empty(), &[]).unwrap();
         assert_eq!(fresh.config.agent.model, DEFAULT_MODEL);
-        assert_eq!(fresh.settings.get("agent.model").map(|s| s.layer), Some(Layer::Default));
+        assert_eq!(
+            fresh.settings.get("agent.model").map(|s| s.layer),
+            Some(Layer::Default)
+        );
         let i = Config::default().integrations;
-        assert!(i.auto && i.context_menu && i.shell && i.os_on("powertoys-run") && !i.os_on("portals"));
+        assert!(
+            i.auto && i.context_menu && i.shell && i.os_on("powertoys-run") && !i.os_on("portals")
+        );
         let dir = tempfile::tempdir().unwrap();
         let f = dir.path().join("config.toml");
         set_scalar(&f, "computer.enabled", "false").unwrap();
         // A removed integration is remembered as `false` (the desktop's "Kaldır").
         set_scalar(&f, "integrations.os.widgets", "false").unwrap();
         set_scalar(&f, "integrations.context_menu", "false").unwrap();
-        let off = load(&Paths { system: None, user: Some(f.clone()), project: None }, std::iter::empty(), &[]).unwrap();
+        let off = load(
+            &Paths {
+                system: None,
+                user: Some(f.clone()),
+                project: None,
+            },
+            std::iter::empty(),
+            &[],
+        )
+        .unwrap();
         assert!(!off.config.computer.enabled);
         assert!(!off.config.integrations.os_on("widgets") && !off.config.integrations.context_menu);
         set_scalar(&f, "computer.enabled", "true").unwrap();
         set_scalar(&f, "agent.max_turns", "12").unwrap();
         let loaded = load(
-            &Paths { system: None, user: Some(f.clone()), project: None },
+            &Paths {
+                system: None,
+                user: Some(f.clone()),
+                project: None,
+            },
             std::iter::empty(),
             &[],
         )
@@ -1937,7 +2027,10 @@ mod tests {
         // A TOML array literal becomes a list (`kor config set sandbox.network '["*"]'`).
         set_scalar(&f, "sandbox.network", r#"["*", "registry.npmjs.org:443"]"#).unwrap();
         let text = std::fs::read_to_string(&f).unwrap();
-        assert!(text.contains(r#"network = ["*", "registry.npmjs.org:443"]"#), "{text}");
+        assert!(
+            text.contains(r#"network = ["*", "registry.npmjs.org:443"]"#),
+            "{text}"
+        );
 
         // `kor config set sandbox ask`: a top-level key after tables exist.
         assert_eq!(Config::default().sandbox.mode, SandboxMode::Off);
@@ -1969,16 +2062,29 @@ mod tests {
             user: Some(user.clone()),
             project: Some(project.clone()),
         };
-        let s = load(&paths, std::iter::empty(), &[]).unwrap().config.sandbox;
-        assert_eq!(s.mode, SandboxMode::Ask, "the short form survives a table above it");
-        assert_eq!((s.network, s.memory_mb), (vec!["github.com:443".to_owned()], 512));
+        let s = load(&paths, std::iter::empty(), &[])
+            .unwrap()
+            .config
+            .sandbox;
+        assert_eq!(
+            s.mode,
+            SandboxMode::Ask,
+            "the short form survives a table above it"
+        );
+        assert_eq!(
+            (s.network, s.memory_mb),
+            (vec!["github.com:443".to_owned()], 512)
+        );
         assert_eq!(s.cpu_percent, 90);
 
         // Setting a field turns the short form into a table; `sandbox` then sets `mode`.
         set_scalar(&user, "sandbox.cpu_percent", "50").unwrap();
         set_scalar(&user, "sandbox", "off").unwrap();
         let text = std::fs::read_to_string(&user).unwrap();
-        assert!(text.contains("[sandbox]") && text.contains("mode = \"off\""), "{text}");
+        assert!(
+            text.contains("[sandbox]") && text.contains("mode = \"off\""),
+            "{text}"
+        );
         let s = load(
             &Paths {
                 system: None,
@@ -2088,13 +2194,21 @@ mod tests {
             l.config.privacy.require,
             vec![PrivacyRequirement::NoTraining, PrivacyRequirement::EuOnly]
         );
-        let t: Config = toml::from_str("[privacy]
+        let t: Config = toml::from_str(
+            "[privacy]
 require = [\"local-only\"]
-").unwrap();
+",
+        )
+        .unwrap();
         assert_eq!(t.privacy.require, vec![PrivacyRequirement::LocalOnly]);
-        assert!(toml::from_str::<Config>("[privacy]
+        assert!(
+            toml::from_str::<Config>(
+                "[privacy]
 require = \"mars-only\"
-").is_err());
+"
+            )
+            .is_err()
+        );
     }
 
     #[test]

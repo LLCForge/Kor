@@ -88,7 +88,11 @@ pub fn install_continue_handler() -> io::Result<()> {
 }
 
 /// The `kor://` link a continued activity carries: Spotlight's identifier or Handoff's `url`.
-pub fn continued_link(activity_type: &str, spotlight_id: Option<&str>, user_url: Option<&str>) -> Option<String> {
+pub fn continued_link(
+    activity_type: &str,
+    spotlight_id: Option<&str>,
+    user_url: Option<&str>,
+) -> Option<String> {
     let link = if activity_type == "com.apple.corespotlightitem" {
         spotlight_id
     } else if activity_type == ACTIVITY {
@@ -159,7 +163,8 @@ mod imp {
             // SAFETY: alloc/init pairs on Core Spotlight classes; arguments are live NSStrings.
             unsafe {
                 let set: *mut AnyObject = msg_send![attr_cls, alloc];
-                let set: *mut AnyObject = msg_send![set, initWithItemContentType: &*ns("public.text")];
+                let set: *mut AnyObject =
+                    msg_send![set, initWithItemContentType: &*ns("public.text")];
                 if set.is_null() {
                     continue;
                 }
@@ -332,14 +337,24 @@ mod imp {
         // method with the documented signature (BOOL, id, id, block).
         unsafe {
             let app: *mut AnyObject = msg_send![app_cls, sharedApplication];
-            let delegate: *mut AnyObject = if app.is_null() { app } else { msg_send![app, delegate] };
+            let delegate: *mut AnyObject = if app.is_null() {
+                app
+            } else {
+                msg_send![app, delegate]
+            };
             if delegate.is_null() {
                 return Err(io::Error::other("no app delegate"));
             }
             let cls = (*delegate).class();
             let imp: Imp = std::mem::transmute(
                 continue_activity
-                    as extern "C-unwind" fn(*mut AnyObject, Sel, *mut AnyObject, *mut AnyObject, *mut AnyObject) -> Bool,
+                    as extern "C-unwind" fn(
+                        *mut AnyObject,
+                        Sel,
+                        *mut AnyObject,
+                        *mut AnyObject,
+                        *mut AnyObject,
+                    ) -> Bool,
             );
             // Returns NO when the delegate already has the method: nothing to do then.
             let _ = ffi::class_addMethod(
@@ -384,15 +399,26 @@ mod tests {
     #[test]
     fn continued_activities_only_open_kor_links() {
         assert_eq!(
-            continued_link("com.apple.corespotlightitem", Some("kor://resume?id=a1"), None).as_deref(),
+            continued_link(
+                "com.apple.corespotlightitem",
+                Some("kor://resume?id=a1"),
+                None
+            )
+            .as_deref(),
             Some("kor://resume?id=a1")
         );
-        assert_eq!(continued_link(ACTIVITY, None, Some("kor://resume?id=b")).as_deref(), Some("kor://resume?id=b"));
+        assert_eq!(
+            continued_link(ACTIVITY, None, Some("kor://resume?id=b")).as_deref(),
+            Some("kor://resume?id=b")
+        );
         assert!(continued_link(ACTIVITY, None, Some("https://evil")).is_none());
         assert!(continued_link("other", Some("kor://x"), Some("kor://y")).is_none());
         if crate::os() != crate::Os::Mac {
             assert!(!remote_clipboard());
-            assert_eq!(spotlight_clear().unwrap_err().kind(), io::ErrorKind::Unsupported);
+            assert_eq!(
+                spotlight_clear().unwrap_err().kind(),
+                io::ErrorKind::Unsupported
+            );
             handoff_end();
         }
     }

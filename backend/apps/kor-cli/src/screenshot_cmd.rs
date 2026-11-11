@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 
 use kor_agent::Proposal;
 use kor_i18n::{Localizer, args};
-use kor_runtime::visual::{self, GenFile, Kind, Picture, SystemOcr, Target};
 use kor_providers::CancellationToken;
+use kor_runtime::visual::{self, GenFile, Kind, Picture, SystemOcr, Target};
 
 use crate::Ctx;
 
@@ -169,7 +169,10 @@ pub async fn paste_prompt(l: &Localizer, question: &str) -> Option<String> {
             return None;
         }
         Err(e) => {
-            eprintln!("{}", l.t_args("paste-clipboard-failed", &args!("error" => e)));
+            eprintln!(
+                "{}",
+                l.t_args("paste-clipboard-failed", &args!("error" => e))
+            );
             return None;
         }
     };
@@ -205,7 +208,10 @@ fn review(l: &Localizer, props: &[Proposal]) -> Vec<GenFile> {
     let mut keep = Vec::new();
     for p in props {
         println!("\n{}", crate::tui::review::diff(p));
-        print!("{} ", l.t_args("perm-file", &args!("path" => p.path.clone())));
+        print!(
+            "{} ",
+            l.t_args("perm-file", &args!("path" => p.path.clone()))
+        );
         let _ = std::io::stdout().flush();
         let after = p.after.clone().unwrap_or_default();
         match read_answer().as_str() {
@@ -219,7 +225,10 @@ fn review(l: &Localizer, props: &[Proposal]) -> Vec<GenFile> {
                     content,
                 }),
                 Err(error) => {
-                    eprintln!("{}", l.t_args("perm-editor-failed", &args!("error" => error)));
+                    eprintln!(
+                        "{}",
+                        l.t_args("perm-editor-failed", &args!("error" => error))
+                    );
                 }
             },
             _ => {}
@@ -246,12 +255,23 @@ mod tests {
 
     #[test]
     fn parses_targets_and_rejects_unknown_ones() {
-        let Sub::Screenshot(a) = Cli::try_parse_from(["kor", "screenshot", "ui.png", "--target", "svelte", "--out", "web", "-y"])
-            .unwrap()
-            .cmd;
+        let Sub::Screenshot(a) = Cli::try_parse_from([
+            "kor",
+            "screenshot",
+            "ui.png",
+            "--target",
+            "svelte",
+            "--out",
+            "web",
+            "-y",
+        ])
+        .unwrap()
+        .cmd;
         assert_eq!((a.target.as_str(), a.yes), ("svelte", true));
         assert_eq!(a.out.as_deref(), Some(Path::new("web")));
-        let Sub::Screenshot(a) = Cli::try_parse_from(["kor", "screenshot", "ui.png"]).unwrap().cmd;
+        let Sub::Screenshot(a) = Cli::try_parse_from(["kor", "screenshot", "ui.png"])
+            .unwrap()
+            .cmd;
         assert_eq!(a.target, "react");
         assert!(Cli::try_parse_from(["kor", "screenshot", "ui.png", "--target", "vue"]).is_err());
         assert!(Cli::try_parse_from(["kor", "screenshot"]).is_err());

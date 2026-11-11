@@ -56,17 +56,33 @@ struct Env {
 
 fn detect(setting: ImageProtocol, e: &Env) -> Option<ImageProtocol> {
     let term = e.term.as_deref().unwrap_or("");
-    if setting == ImageProtocol::Off || !e.tty || dumb_from(Some(term)) || e.tmux || term.starts_with("screen") || term.starts_with("tmux") {
+    if setting == ImageProtocol::Off
+        || !e.tty
+        || dumb_from(Some(term))
+        || e.tmux
+        || term.starts_with("screen")
+        || term.starts_with("tmux")
+    {
         return None;
     }
     if setting != ImageProtocol::Auto {
         return Some(setting);
     }
     let program = e.program.as_deref().unwrap_or("");
-    if e.kitty || term.contains("kitty") || term == "xterm-ghostty" || matches!(program, "ghostty" | "WezTerm") {
+    if e.kitty
+        || term.contains("kitty")
+        || term == "xterm-ghostty"
+        || matches!(program, "ghostty" | "WezTerm")
+    {
         return Some(ImageProtocol::Kitty);
     }
-    if term.starts_with("foot") || term.contains("mlterm") || term.contains("contour") || program == "iTerm.app" || e.wt || e.konsole.is_some_and(|v| v >= 220_400) {
+    if term.starts_with("foot")
+        || term.contains("mlterm")
+        || term.contains("contour")
+        || program == "iTerm.app"
+        || e.wt
+        || e.konsole.is_some_and(|v| v >= 220_400)
+    {
         return Some(ImageProtocol::Sixel);
     }
     None
@@ -85,7 +101,11 @@ pub fn kitty(png: &[u8]) -> String {
     let mut out = String::new();
     for (i, c) in chunks.iter().enumerate() {
         let more = u8::from(i + 1 < chunks.len());
-        let head = if i == 0 { format!("f=100,a=T,m={more}") } else { format!("m={more}") };
+        let head = if i == 0 {
+            format!("f=100,a=T,m={more}")
+        } else {
+            format!("m={more}")
+        };
         let _ = write!(out, "\x1b_G{head};{}\x1b\\", String::from_utf8_lossy(c));
     }
     out.push('\n');
@@ -105,7 +125,13 @@ pub fn sixel(img: &image::RgbaImage) -> String {
     let mut out = format!("\x1bPq\"1;1;{w};{h}");
     for i in 0..216_u32 {
         let pct = |v: u32| v * 100 / 5;
-        let _ = write!(out, "#{i};2;{};{};{}", pct(i / 36), pct(i / 6 % 6), pct(i % 6));
+        let _ = write!(
+            out,
+            "#{i};2;{};{};{}",
+            pct(i / 36),
+            pct(i / 6 % 6),
+            pct(i % 6)
+        );
     }
     for band in (0..h).step_by(6) {
         let mut used = [false; 216];
@@ -160,12 +186,21 @@ pub fn sixel(img: &image::RgbaImage) -> String {
 /// Show an image file inline when the terminal can; `false` = the caller prints the path.
 pub fn show_image(path: &std::path::Path, proto: Option<ImageProtocol>) -> bool {
     let Some(proto) = proto else { return false };
-    let Ok(img) = image::open(path) else { return false };
-    let img = if img.width() > MAX_PX { img.resize(MAX_PX, MAX_PX * 4, image::imageops::FilterType::Triangle) } else { img };
+    let Ok(img) = image::open(path) else {
+        return false;
+    };
+    let img = if img.width() > MAX_PX {
+        img.resize(MAX_PX, MAX_PX * 4, image::imageops::FilterType::Triangle)
+    } else {
+        img
+    };
     let seq = match proto {
         ImageProtocol::Kitty => {
             let mut png = Vec::new();
-            if img.write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png).is_err() {
+            if img
+                .write_to(&mut std::io::Cursor::new(&mut png), image::ImageFormat::Png)
+                .is_err()
+            {
                 return false;
             }
             kitty(&png)
@@ -174,7 +209,9 @@ pub fn show_image(path: &std::path::Path, proto: Option<ImageProtocol>) -> bool 
         ImageProtocol::Auto | ImageProtocol::Off => return false,
     };
     let mut out = std::io::stdout();
-    out.write_all(seq.as_bytes()).and_then(|()| out.flush()).is_ok()
+    out.write_all(seq.as_bytes())
+        .and_then(|()| out.flush())
+        .is_ok()
 }
 
 /// Image files named in a tool's output (media tools report the saved path).
@@ -184,7 +221,9 @@ pub fn image_paths(output: &str) -> Vec<std::path::PathBuf> {
         .map(|w| w.trim_end_matches(['.', ':']))
         .filter(|w| {
             let lw = w.to_lowercase();
-            [".png", ".jpg", ".jpeg", ".webp", ".gif"].iter().any(|e| lw.ends_with(e))
+            [".png", ".jpg", ".jpeg", ".webp", ".gif"]
+                .iter()
+                .any(|e| lw.ends_with(e))
         })
         .map(std::path::PathBuf::from)
         .filter(|p| p.is_file())
@@ -213,7 +252,10 @@ pub fn init(c: &kor_config::Config) {
     };
     WRAP.store(width, Ordering::Relaxed);
     set_verbosity(c.ui.tool_output);
-    STILL.store(c.ui.screen_reader || c.ui.reduced_motion || dumb(), Ordering::Relaxed);
+    STILL.store(
+        c.ui.screen_reader || c.ui.reduced_motion || dumb(),
+        Ordering::Relaxed,
+    );
     IMAGES.store(
         match image_protocol(c.tui.images) {
             Some(ImageProtocol::Kitty) => 1,
@@ -280,7 +322,10 @@ pub struct Wrapper {
 
 impl Wrapper {
     pub fn new(width: usize) -> Self {
-        Self { width, ..Self::default() }
+        Self {
+            width,
+            ..Self::default()
+        }
     }
 
     /// Text ready to print (a word still being streamed is held back).
@@ -355,7 +400,9 @@ pub fn json_event(ev: &kor_agent::AgentEvent) -> Option<String> {
             "total": b.total(),
             "percent": b.percent(b.total()),
         }),
-        kor_agent::AgentEvent::Usage(u) => serde_json::json!({ "type": "usage", "input": u.input, "output": u.output }),
+        kor_agent::AgentEvent::Usage(u) => {
+            serde_json::json!({ "type": "usage", "input": u.input, "output": u.output })
+        }
         other => kor_agent::remote::wire::event_json(other.clone())?,
     };
     Some(v.to_string())
@@ -374,22 +421,79 @@ mod tests {
     use super::*;
 
     fn env(term: &str) -> Env {
-        Env { term: Some(term.into()), tty: true, ..Env::default() }
+        Env {
+            term: Some(term.into()),
+            tty: true,
+            ..Env::default()
+        }
     }
 
     #[test]
     fn image_protocol_from_the_environment_only() {
-        assert_eq!(detect(ImageProtocol::Auto, &env("xterm-kitty")), Some(ImageProtocol::Kitty));
-        assert_eq!(detect(ImageProtocol::Auto, &Env { program: Some("WezTerm".into()), ..env("xterm-256color") }), Some(ImageProtocol::Kitty));
-        assert_eq!(detect(ImageProtocol::Auto, &env("foot")), Some(ImageProtocol::Sixel));
-        assert_eq!(detect(ImageProtocol::Auto, &Env { wt: true, ..env("xterm-256color") }), Some(ImageProtocol::Sixel));
-        assert_eq!(detect(ImageProtocol::Auto, &env("xterm-256color")), None, "unknown terminal: fall back to the path");
+        assert_eq!(
+            detect(ImageProtocol::Auto, &env("xterm-kitty")),
+            Some(ImageProtocol::Kitty)
+        );
+        assert_eq!(
+            detect(
+                ImageProtocol::Auto,
+                &Env {
+                    program: Some("WezTerm".into()),
+                    ..env("xterm-256color")
+                }
+            ),
+            Some(ImageProtocol::Kitty)
+        );
+        assert_eq!(
+            detect(ImageProtocol::Auto, &env("foot")),
+            Some(ImageProtocol::Sixel)
+        );
+        assert_eq!(
+            detect(
+                ImageProtocol::Auto,
+                &Env {
+                    wt: true,
+                    ..env("xterm-256color")
+                }
+            ),
+            Some(ImageProtocol::Sixel)
+        );
+        assert_eq!(
+            detect(ImageProtocol::Auto, &env("xterm-256color")),
+            None,
+            "unknown terminal: fall back to the path"
+        );
         assert_eq!(detect(ImageProtocol::Auto, &env("dumb")), None);
-        assert_eq!(detect(ImageProtocol::Kitty, &env("dumb")), None, "a dumb terminal never gets escapes");
-        assert_eq!(detect(ImageProtocol::Auto, &Env { tmux: true, ..env("xterm-kitty") }), None);
-        assert_eq!(detect(ImageProtocol::Auto, &Env { tty: false, ..env("xterm-kitty") }), None);
+        assert_eq!(
+            detect(ImageProtocol::Kitty, &env("dumb")),
+            None,
+            "a dumb terminal never gets escapes"
+        );
+        assert_eq!(
+            detect(
+                ImageProtocol::Auto,
+                &Env {
+                    tmux: true,
+                    ..env("xterm-kitty")
+                }
+            ),
+            None
+        );
+        assert_eq!(
+            detect(
+                ImageProtocol::Auto,
+                &Env {
+                    tty: false,
+                    ..env("xterm-kitty")
+                }
+            ),
+            None
+        );
         assert_eq!(detect(ImageProtocol::Off, &env("xterm-kitty")), None);
-        assert_eq!(detect(ImageProtocol::Sixel, &env("xterm-256color")), Some(ImageProtocol::Sixel));
+        assert_eq!(
+            detect(ImageProtocol::Sixel, &env("xterm-256color")),
+            Some(ImageProtocol::Sixel)
+        );
         assert!(dumb_from(Some("dumb")) && !dumb_from(None));
     }
 
@@ -423,8 +527,15 @@ mod tests {
         assert_eq!(verbosity(), Verbosity::Quiet);
         set_verbosity(Verbosity::Normal);
         assert!(push_title("Kor").starts_with("\x1b[22;0t"));
-        let b = kor_agent::context::Breakdown { window: 1000, history: 250, ..Default::default() };
+        let b = kor_agent::context::Breakdown {
+            window: 1000,
+            history: 250,
+            ..Default::default()
+        };
         let line = json_event(&kor_agent::AgentEvent::Context(b)).unwrap();
-        assert!(line.contains("\"type\":\"context.usage\"") && line.contains("\"percent\":25"), "{line}");
+        assert!(
+            line.contains("\"type\":\"context.usage\"") && line.contains("\"percent\":25"),
+            "{line}"
+        );
     }
 }

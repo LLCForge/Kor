@@ -52,7 +52,11 @@ fn title(ctx: &ToolCtx) -> String {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
-    if name.is_empty() { "Kor".into() } else { format!("Kor · {name}") }
+    if name.is_empty() {
+        "Kor".into()
+    } else {
+        format!("Kor · {name}")
+    }
 }
 
 struct Run<'a> {
@@ -80,18 +84,24 @@ impl Run<'_> {
     }
 
     async fn snapshot(&self) -> Result<Value, String> {
-        self.cmd("snapshot", json!({"tabId": self.tab()?}), ACT_TIMEOUT).await
+        self.cmd("snapshot", json!({"tabId": self.tab()?}), ACT_TIMEOUT)
+            .await
     }
 
     async fn open(&self, url: &str, new_tab: bool) -> Result<(), String> {
         let current = *lock(&self.group.current);
         match current.filter(|_| !new_tab) {
             Some(tab) => {
-                self.cmd("navigate", json!({"tabId": tab, "url": url}), NAV_TIMEOUT).await?;
+                self.cmd("navigate", json!({"tabId": tab, "url": url}), NAV_TIMEOUT)
+                    .await?;
             }
             None => {
-                let r = self.cmd("tabs.create", json!({"url": url}), NAV_TIMEOUT).await?;
-                let id = r["tabId"].as_i64().ok_or("the extension returned no tab id")?;
+                let r = self
+                    .cmd("tabs.create", json!({"url": url}), NAV_TIMEOUT)
+                    .await?;
+                let id = r["tabId"]
+                    .as_i64()
+                    .ok_or("the extension returned no tab id")?;
                 *lock(&self.group.current) = Some(id);
             }
         }
@@ -110,7 +120,10 @@ impl Run<'_> {
         match a.action.as_deref().unwrap_or("list") {
             "list" => {}
             "new" => {
-                let url = a.url.as_deref().map_or_else(|| Ok("about:blank".to_owned()), checked_url)?;
+                let url = a
+                    .url
+                    .as_deref()
+                    .map_or_else(|| Ok("about:blank".to_owned()), checked_url)?;
                 if url != "about:blank" {
                     policy::current().check(&url)?;
                 }
@@ -119,7 +132,8 @@ impl Run<'_> {
             }
             "switch" => {
                 let tab = pick(&tabs, a.id)?;
-                self.cmd("tabs.select", json!({"tabId": tab}), ACT_TIMEOUT).await?;
+                self.cmd("tabs.select", json!({"tabId": tab}), ACT_TIMEOUT)
+                    .await?;
                 *lock(&self.group.current) = Some(tab);
             }
             "close" => {
@@ -127,7 +141,8 @@ impl Run<'_> {
                     Some(_) => pick(&tabs, a.id)?,
                     None => self.tab()?,
                 };
-                self.cmd("tabs.close", json!({"tabId": tab}), ACT_TIMEOUT).await?;
+                self.cmd("tabs.close", json!({"tabId": tab}), ACT_TIMEOUT)
+                    .await?;
                 tabs.retain(|t| t["tabId"].as_i64() != Some(tab));
                 let mut cur = lock(&self.group.current);
                 if *cur == Some(tab) {
@@ -141,7 +156,11 @@ impl Run<'_> {
             .iter()
             .enumerate()
             .map(|(i, t)| {
-                let mark = if t["tabId"].as_i64() == current { "*" } else { " " };
+                let mark = if t["tabId"].as_i64() == current {
+                    "*"
+                } else {
+                    " "
+                };
                 format!(
                     "{mark}{} {} — {}",
                     i + 1,
@@ -150,18 +169,26 @@ impl Run<'_> {
                 )
             })
             .collect();
-        Ok(format!("{UNTRUSTED}\nTabs of Kor's group (* current):\n{}", lines.join("\n")))
+        Ok(format!(
+            "{UNTRUSTED}\nTabs of Kor's group (* current):\n{}",
+            lines.join("\n")
+        ))
     }
 }
 
 fn data_url_image(url: &str) -> Result<ImageSource, String> {
-    let (head, data) = url.split_once(',').ok_or("the extension returned no image")?;
+    let (head, data) = url
+        .split_once(',')
+        .ok_or("the extension returned no image")?;
     let media_type = head
         .strip_prefix("data:")
         .and_then(|h| h.strip_suffix(";base64"))
         .filter(|m| matches!(*m, "image/png" | "image/jpeg"))
         .ok_or("the extension returned an unexpected image type")?;
-    Ok(ImageSource::Base64 { media_type: media_type.into(), data: data.to_owned() })
+    Ok(ImageSource::Base64 {
+        media_type: media_type.into(),
+        data: data.to_owned(),
+    })
 }
 
 fn upload_files(ctx: &ToolCtx, paths: &[String]) -> Result<Vec<Value>, String> {
@@ -191,11 +218,21 @@ fn upload_files(ctx: &ToolCtx, paths: &[String]) -> Result<Vec<Value>, String> {
 
 /// Run one browser tool call in the user's browser.
 #[allow(clippy::too_many_lines)]
-pub(super) async fn run(op: Op, a: Args, ctx: &ToolCtx, group: &Group, bridge: &Bridge) -> Result<ToolOutput, String> {
+pub(super) async fn run(
+    op: Op,
+    a: Args,
+    ctx: &ToolCtx,
+    group: &Group,
+    bridge: &Bridge,
+) -> Result<ToolOutput, String> {
     if kor_core::net::policy() != kor_core::net::Policy::Open {
         return Err("Privacy or offline mode is on: Kor does not drive the user's browser. Use browser_open with the headless backend for local pages (`kor config browser.backend headless`).".into());
     }
-    let r = Run { bridge, group, task: json!({"key": group.key, "title": title(ctx)}) };
+    let r = Run {
+        bridge,
+        group,
+        task: json!({"key": group.key, "title": title(ctx)}),
+    };
     if lock(&group.current).is_none() && !matches!(op, Op::Open | Op::Tabs) {
         return Err("No Kor tab yet; start with browser_open.".into());
     }
@@ -229,7 +266,12 @@ pub(super) async fn run(op: Op, a: Args, ctx: &ToolCtx, group: &Group, bridge: &
             if !["left", "right", "middle"].contains(&button) {
                 return Err("button must be left, right or middle".into());
             }
-            let v = r.act("click", json!({"ref": rf, "button": button, "double": a.double})).await?;
+            let v = r
+                .act(
+                    "click",
+                    json!({"ref": rf, "button": button, "double": a.double}),
+                )
+                .await?;
             format!("clicked {rf}; now at {}", v["url"].as_str().unwrap_or(""))
         }
         Op::Fill => {
@@ -256,7 +298,12 @@ pub(super) async fn run(op: Op, a: Args, ctx: &ToolCtx, group: &Group, bridge: &
         }
         Op::Select => {
             let rf = need(a.reference.as_ref(), "ref")?;
-            let v = r.act("select", json!({"ref": rf, "value": a.value.clone().unwrap_or_default()})).await?;
+            let v = r
+                .act(
+                    "select",
+                    json!({"ref": rf, "value": a.value.clone().unwrap_or_default()}),
+                )
+                .await?;
             format!("{rf}: {}", v["message"].as_str().unwrap_or("selected"))
         }
         Op::Hover => {
@@ -290,13 +337,30 @@ pub(super) async fn run(op: Op, a: Args, ctx: &ToolCtx, group: &Group, bridge: &
             if !["back", "forward", "reload"].contains(&action) {
                 return Err("action must be back, forward or reload".into());
             }
-            let v = r.cmd("history", json!({"tabId": r.tab()?, "action": action}), NAV_TIMEOUT).await?;
+            let v = r
+                .cmd(
+                    "history",
+                    json!({"tabId": r.tab()?, "action": action}),
+                    NAV_TIMEOUT,
+                )
+                .await?;
             format!("{action}; now at {}", v["url"].as_str().unwrap_or(""))
         }
         Op::Tabs => r.tabs(&a).await?,
         Op::Console => {
-            let v = r.cmd("console", json!({"tabId": r.tab()?, "clear": a.clear == Some(true)}), ACT_TIMEOUT).await?;
-            let lines: Vec<&str> = v.as_array().into_iter().flatten().filter_map(Value::as_str).collect();
+            let v = r
+                .cmd(
+                    "console",
+                    json!({"tabId": r.tab()?, "clear": a.clear == Some(true)}),
+                    ACT_TIMEOUT,
+                )
+                .await?;
+            let lines: Vec<&str> = v
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_str)
+                .collect();
             if lines.is_empty() {
                 "No console output.".to_owned()
             } else {
@@ -304,15 +368,30 @@ pub(super) async fn run(op: Op, a: Args, ctx: &ToolCtx, group: &Group, bridge: &
             }
         }
         Op::Network => {
-            let v = r.cmd("network", json!({"tabId": r.tab()?, "clear": a.clear == Some(true)}), ACT_TIMEOUT).await?;
+            let v = r
+                .cmd(
+                    "network",
+                    json!({"tabId": r.tab()?, "clear": a.clear == Some(true)}),
+                    ACT_TIMEOUT,
+                )
+                .await?;
             let filter = a.filter.as_deref().unwrap_or("").to_lowercase();
-            let failed = |e: &Value| e["error"].is_string() || e["status"].as_u64().is_some_and(|s| s >= 400);
+            let failed = |e: &Value| {
+                e["error"].is_string() || e["status"].as_u64().is_some_and(|s| s >= 400)
+            };
             let picked: Vec<&Value> = v
                 .as_array()
                 .into_iter()
                 .flatten()
                 .filter(|e| !a.failed || failed(e))
-                .filter(|e| filter.is_empty() || e["url"].as_str().unwrap_or("").to_lowercase().contains(&filter))
+                .filter(|e| {
+                    filter.is_empty()
+                        || e["url"]
+                            .as_str()
+                            .unwrap_or("")
+                            .to_lowercase()
+                            .contains(&filter)
+                })
                 .collect();
             let limit = a.limit.unwrap_or(50).clamp(1, 300);
             let skipped = picked.len().saturating_sub(limit);
@@ -320,28 +399,54 @@ pub(super) async fn run(op: Op, a: Args, ctx: &ToolCtx, group: &Group, bridge: &
                 .iter()
                 .map(|e| {
                     let status = e["error"].as_str().map_or_else(
-                        || e["status"].as_u64().map_or_else(|| "pending".to_owned(), |s| s.to_string()),
+                        || {
+                            e["status"]
+                                .as_u64()
+                                .map_or_else(|| "pending".to_owned(), |s| s.to_string())
+                        },
                         |err| format!("failed {err}"),
                     );
-                    format!("{} {status} {} {}", e["method"].as_str().unwrap_or("GET"), e["type"].as_str().unwrap_or(""), e["url"].as_str().unwrap_or(""))
+                    format!(
+                        "{} {status} {} {}",
+                        e["method"].as_str().unwrap_or("GET"),
+                        e["type"].as_str().unwrap_or(""),
+                        e["url"].as_str().unwrap_or("")
+                    )
                 })
                 .collect();
             if lines.is_empty() {
                 "No network requests recorded for this tab.".to_owned()
             } else {
                 let failures = picked.iter().filter(|e| failed(e)).count();
-                format!("{UNTRUSTED}\n{} request(s), {failures} failed:\n{}", picked.len(), lines.join("\n"))
+                format!(
+                    "{UNTRUSTED}\n{} request(s), {failures} failed:\n{}",
+                    picked.len(),
+                    lines.join("\n")
+                )
             }
         }
         Op::Screenshot => {
-            let v = r.cmd("screenshot", json!({"tabId": r.tab()?, "fullPage": a.full_page}), NAV_TIMEOUT).await?;
-            let mut out = ToolOutput::ok(format!("Screenshot of {}", v["url"].as_str().unwrap_or("")));
+            let v = r
+                .cmd(
+                    "screenshot",
+                    json!({"tabId": r.tab()?, "fullPage": a.full_page}),
+                    NAV_TIMEOUT,
+                )
+                .await?;
+            let mut out =
+                ToolOutput::ok(format!("Screenshot of {}", v["url"].as_str().unwrap_or("")));
             out.image = Some(data_url_image(v["dataUrl"].as_str().unwrap_or(""))?);
             return Ok(out);
         }
         Op::Eval => {
             let code = need(a.code.as_ref(), "code")?;
-            let v = r.cmd("eval", json!({"tabId": r.tab()?, "code": code}), ACT_TIMEOUT).await?;
+            let v = r
+                .cmd(
+                    "eval",
+                    json!({"tabId": r.tab()?, "code": code}),
+                    ACT_TIMEOUT,
+                )
+                .await?;
             format!("{UNTRUSTED}\n{}", crate::truncate(&v.to_string(), 20_000))
         }
         Op::Upload => {
@@ -393,22 +498,48 @@ mod tests {
             let c = recv(&mut ws).await;
             assert_eq!(c["cmd"], "tabs.create");
             assert!(c["task"]["title"].as_str().unwrap().starts_with("Kor · "));
-            send(&mut ws, json!({"id": c["id"], "ok": true, "result": {"tabId": 42}})).await;
+            send(
+                &mut ws,
+                json!({"id": c["id"], "ok": true, "result": {"tabId": 42}}),
+            )
+            .await;
             let c = recv(&mut ws).await;
-            assert_eq!((c["cmd"].as_str(), c["tabId"].as_i64()), (Some("snapshot"), Some(42)));
+            assert_eq!(
+                (c["cmd"].as_str(), c["tabId"].as_i64()),
+                (Some("snapshot"), Some(42))
+            );
             send(&mut ws, json!({"id": c["id"], "ok": true, "result": {
                 "url": "https://example.com/", "title": "Example", "scroll": {"y": 0, "height": 900, "viewport": 800},
                 "nodes": [{"ref": "e1", "role": "button", "name": "Sign in"}], "text": "Hello"}})).await;
             let c = recv(&mut ws).await;
-            assert_eq!((c["action"].as_str(), c["ref"].as_str()), (Some("fill"), Some("e1")));
-            send(&mut ws, json!({"id": c["id"], "ok": false, "error": "Güvenlik: parola alanına yazılmaz"})).await;
+            assert_eq!(
+                (c["action"].as_str(), c["ref"].as_str()),
+                (Some("fill"), Some("e1"))
+            );
+            send(
+                &mut ws,
+                json!({"id": c["id"], "ok": false, "error": "Güvenlik: parola alanına yazılmaz"}),
+            )
+            .await;
             ws
         });
-        let a = Args { url: Some("https://example.com".into()), ..Args::default() };
+        let a = Args {
+            url: Some("https://example.com".into()),
+            ..Args::default()
+        };
         let out = run(Op::Open, a, &ctx, &group, &bridge).await.unwrap();
         assert!(out.content.contains("Sign in") && out.content.starts_with(UNTRUSTED));
-        let a = Args { reference: Some("e1".into()), text: Some("x".into()), ..Args::default() };
-        assert!(run(Op::Fill, a, &ctx, &group, &bridge).await.unwrap_err().contains("parola"));
+        let a = Args {
+            reference: Some("e1".into()),
+            text: Some("x".into()),
+            ..Args::default()
+        };
+        assert!(
+            run(Op::Fill, a, &ctx, &group, &bridge)
+                .await
+                .unwrap_err()
+                .contains("parola")
+        );
         drop(ext.await.unwrap());
     }
 
@@ -416,7 +547,11 @@ mod tests {
     fn uploads_stay_in_the_project_and_skip_secrets() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("cv.pdf"), b"%PDF-1.4 plain").unwrap();
-        std::fs::write(dir.path().join(".env"), "GH_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123456789\n").unwrap();
+        std::fs::write(
+            dir.path().join(".env"),
+            "GH_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123456789\n",
+        )
+        .unwrap();
         let ctx = ToolCtx::new(dir.path()).unwrap();
         let ok = upload_files(&ctx, &["cv.pdf".into()]).unwrap();
         assert_eq!(ok[0]["mime"], "application/pdf");
@@ -458,77 +593,225 @@ mod tests {
     async fn real_extension_runs_browser_tools_in_its_tab_group() {
         use crate::tools::browser::cdp::{Cdp, NetRule};
         use crate::tools::chrome::{PORT, pairing, server::Auth};
-        let dist = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../frontend/extension/dist/chrome");
-        assert!(dist.join("manifest.json").is_file(), "build the extension first: cd frontend && npm run build:extension");
+        let dist =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../frontend/extension/dist/chrome");
+        assert!(
+            dist.join("manifest.json").is_file(),
+            "build the extension first: cd frontend && npm run build:extension"
+        );
         let state = tempfile::tempdir().unwrap();
-        let auth = Auth { dir: state.path().to_path_buf(), store: std::sync::Arc::new(kor_secrets::MemoryStore::default()) };
-        let bridge = Bridge::bind(PORT, auth).await.expect("127.0.0.1:49201 must be free (close Kor)");
+        let auth = Auth {
+            dir: state.path().to_path_buf(),
+            store: std::sync::Arc::new(kor_secrets::MemoryStore::default()),
+        };
+        let bridge = Bridge::bind(PORT, auth)
+            .await
+            .expect("127.0.0.1:49201 must be free (close Kor)");
         let (code, _) = pairing::new_code(state.path()).unwrap();
-        let cdp = Cdp::launch_with(false, &NetRule::Open, Some(&dist)).await.unwrap();
+        let cdp = Cdp::launch_with(false, &NetRule::Open, Some(&dist))
+            .await
+            .unwrap();
 
         // The extension's service worker is up: open its side panel page and pair from there.
         let mut id = String::new();
         for _ in 0..50 {
-            let t = cdp.call(None, "Target.getTargets", json!({})).await.unwrap();
-            if let Some(u) = t["targetInfos"].as_array().into_iter().flatten().filter_map(|x| x["url"].as_str()).find(|u| u.ends_with("/background.js")) {
-                id = u.trim_start_matches("chrome-extension://").split('/').next().unwrap_or("").to_owned();
+            let t = cdp
+                .call(None, "Target.getTargets", json!({}))
+                .await
+                .unwrap();
+            if let Some(u) = t["targetInfos"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|x| x["url"].as_str())
+                .find(|u| u.ends_with("/background.js"))
+            {
+                id = u
+                    .trim_start_matches("chrome-extension://")
+                    .split('/')
+                    .next()
+                    .unwrap_or("")
+                    .to_owned();
                 break;
             }
             tokio::time::sleep(Duration::from_millis(200)).await;
         }
-        assert_eq!(id, kor_platform::native_messaging::CHROME_EXTENSION_ID, "the manifest key fixes the id");
-        let panel = cdp.call(None, "Target.createTarget", json!({"url": format!("chrome-extension://{id}/sidepanel.html")})).await.unwrap();
+        assert_eq!(
+            id,
+            kor_platform::native_messaging::CHROME_EXTENSION_ID,
+            "the manifest key fixes the id"
+        );
+        let panel = cdp
+            .call(
+                None,
+                "Target.createTarget",
+                json!({"url": format!("chrome-extension://{id}/sidepanel.html")}),
+            )
+            .await
+            .unwrap();
         let session = cdp
-            .call(None, "Target.attachToTarget", json!({"targetId": panel["targetId"], "flatten": true}))
+            .call(
+                None,
+                "Target.attachToTarget",
+                json!({"targetId": panel["targetId"], "flatten": true}),
+            )
             .await
             .unwrap()["sessionId"]
             .as_str()
             .unwrap()
             .to_owned();
         tokio::time::sleep(Duration::from_millis(800)).await;
-        let js = format!("chrome.runtime.connect({{name: 'kor-panel'}}).postMessage({{op: 'pair', code: '{code}', rid: 1}})");
-        cdp.call(Some(&session), "Runtime.evaluate", json!({"expression": js})).await.unwrap();
+        let js = format!(
+            "chrome.runtime.connect({{name: 'kor-panel'}}).postMessage({{op: 'pair', code: '{code}', rid: 1}})"
+        );
+        cdp.call(
+            Some(&session),
+            "Runtime.evaluate",
+            json!({"expression": js}),
+        )
+        .await
+        .unwrap();
         for _ in 0..50 {
             if bridge.connected() {
                 break;
             }
             tokio::time::sleep(Duration::from_millis(200)).await;
         }
-        assert!(bridge.connected(), "the extension paired over the WebSocket fallback");
+        assert!(
+            bridge.connected(),
+            "the extension paired over the WebSocket fallback"
+        );
 
         let dir = tempfile::tempdir().unwrap();
         let ctx = ToolCtx::new(dir.path()).unwrap();
         let group = Group::default();
         let url = format!("http://127.0.0.1:{}/", serve().await);
-        let out = run(Op::Open, Args { url: Some(url.clone()), ..Args::default() }, &ctx, &group, &bridge).await.unwrap();
+        let out = run(
+            Op::Open,
+            Args {
+                url: Some(url.clone()),
+                ..Args::default()
+            },
+            &ctx,
+            &group,
+            &bridge,
+        )
+        .await
+        .unwrap();
         assert!(out.content.contains("Kor e2e"), "{}", out.content);
         let find = |q: &str| {
             let q = q.to_owned();
             let (ctx, group, bridge) = (&ctx, &group, &bridge);
-            async move { run(Op::Find, Args { query: Some(q), ..Args::default() }, ctx, group, bridge).await.unwrap().content }
+            async move {
+                run(
+                    Op::Find,
+                    Args {
+                        query: Some(q),
+                        ..Args::default()
+                    },
+                    ctx,
+                    group,
+                    bridge,
+                )
+                .await
+                .unwrap()
+                .content
+            }
         };
         let email = find("email field").await;
-        let r_email = email.lines().nth(1).and_then(|l| l.split_whitespace().next()).unwrap().to_owned();
-        let filled = run(Op::Fill, Args { reference: Some(r_email), text: Some("ada@example.com".into()), ..Args::default() }, &ctx, &group, &bridge).await;
+        let r_email = email
+            .lines()
+            .nth(1)
+            .and_then(|l| l.split_whitespace().next())
+            .unwrap()
+            .to_owned();
+        let filled = run(
+            Op::Fill,
+            Args {
+                reference: Some(r_email),
+                text: Some("ada@example.com".into()),
+                ..Args::default()
+            },
+            &ctx,
+            &group,
+            &bridge,
+        )
+        .await;
         assert!(filled.is_ok(), "{filled:?}");
         let pw = find("parola password").await;
-        let r_pw = pw.lines().nth(1).and_then(|l| l.split_whitespace().next()).unwrap().to_owned();
-        let refused = run(Op::Fill, Args { reference: Some(r_pw), text: Some("x".into()), ..Args::default() }, &ctx, &group, &bridge).await;
+        let r_pw = pw
+            .lines()
+            .nth(1)
+            .and_then(|l| l.split_whitespace().next())
+            .unwrap()
+            .to_owned();
+        let refused = run(
+            Op::Fill,
+            Args {
+                reference: Some(r_pw),
+                text: Some("x".into()),
+                ..Args::default()
+            },
+            &ctx,
+            &group,
+            &bridge,
+        )
+        .await;
         assert!(refused.unwrap_err().contains("Güvenlik"));
         let button = find("gönder button").await;
-        let r_btn = button.lines().nth(1).and_then(|l| l.split_whitespace().next()).unwrap().to_owned();
-        run(Op::Click, Args { reference: Some(r_btn), ..Args::default() }, &ctx, &group, &bridge).await.unwrap();
-        let console = run(Op::Console, Args::default(), &ctx, &group, &bridge).await.unwrap();
-        assert!(console.content.contains("kor-e2e-click"), "{}", console.content);
-        let network = run(Op::Network, Args::default(), &ctx, &group, &bridge).await.unwrap();
+        let r_btn = button
+            .lines()
+            .nth(1)
+            .and_then(|l| l.split_whitespace().next())
+            .unwrap()
+            .to_owned();
+        run(
+            Op::Click,
+            Args {
+                reference: Some(r_btn),
+                ..Args::default()
+            },
+            &ctx,
+            &group,
+            &bridge,
+        )
+        .await
+        .unwrap();
+        let console = run(Op::Console, Args::default(), &ctx, &group, &bridge)
+            .await
+            .unwrap();
+        assert!(
+            console.content.contains("kor-e2e-click"),
+            "{}",
+            console.content
+        );
+        let network = run(Op::Network, Args::default(), &ctx, &group, &bridge)
+            .await
+            .unwrap();
         assert!(network.content.contains(&url), "{}", network.content);
-        let tabs = run(Op::Tabs, Args { action: Some("list".into()), ..Args::default() }, &ctx, &group, &bridge).await.unwrap();
+        let tabs = run(
+            Op::Tabs,
+            Args {
+                action: Some("list".into()),
+                ..Args::default()
+            },
+            &ctx,
+            &group,
+            &bridge,
+        )
+        .await
+        .unwrap();
         assert!(tabs.content.contains("Kor e2e"));
-        let shot = run(Op::Screenshot, Args::default(), &ctx, &group, &bridge).await.unwrap();
+        let shot = run(Op::Screenshot, Args::default(), &ctx, &group, &bridge)
+            .await
+            .unwrap();
         assert!(shot.image.is_some());
         // Tabs outside the task's group are refused.
         let foreign = bridge
-            .request(json!({"cmd": "snapshot", "task": {"key": "other", "title": "x"}, "tabId": 1}), Duration::from_secs(10))
+            .request(
+                json!({"cmd": "snapshot", "task": {"key": "other", "title": "x"}, "tabId": 1}),
+                Duration::from_secs(10),
+            )
             .await;
         assert!(foreign.unwrap_err().contains("grubunda değil"));
         drop(cdp);

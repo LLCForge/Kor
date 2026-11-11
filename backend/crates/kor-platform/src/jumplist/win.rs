@@ -8,15 +8,19 @@ use std::path::Path;
 
 use windows::Win32::Foundation::RPC_E_CHANGED_MODE;
 use windows::Win32::Storage::EnhancedStorage::PKEY_Title;
-use windows::Win32::System::Com::StructuredStorage::{PROPVARIANT, PROPVARIANT_0, PROPVARIANT_0_0, PROPVARIANT_0_0_0};
+use windows::Win32::System::Com::StructuredStorage::{
+    PROPVARIANT, PROPVARIANT_0, PROPVARIANT_0_0, PROPVARIANT_0_0_0,
+};
 use windows::Win32::System::Com::{
-    CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx, CoUninitialize,
+    CLSCTX_INPROC_SERVER, COINIT_APARTMENTTHREADED, CoCreateInstance, CoInitializeEx,
+    CoUninitialize,
 };
 use windows::Win32::System::Variant::VT_LPWSTR;
 use windows::Win32::UI::Shell::Common::{IObjectArray, IObjectCollection};
 use windows::Win32::UI::Shell::PropertiesSystem::IPropertyStore;
 use windows::Win32::UI::Shell::{
-    DestinationList, EnumerableObjectCollection, ICustomDestinationList, IShellLinkW, SHStrDupW, ShellLink,
+    DestinationList, EnumerableObjectCollection, ICustomDestinationList, IShellLinkW, SHStrDupW,
+    ShellLink,
 };
 use windows::core::{HSTRING, Interface as _};
 
@@ -79,7 +83,8 @@ fn link(exe: &Path, item: &Item) -> windows::core::Result<IShellLinkW> {
 fn collection(exe: &Path, items: &[Item]) -> windows::core::Result<IObjectArray> {
     // SAFETY: COM calls on owned interfaces.
     unsafe {
-        let col: IObjectCollection = CoCreateInstance(&EnumerableObjectCollection, None, CLSCTX_INPROC_SERVER)?;
+        let col: IObjectCollection =
+            CoCreateInstance(&EnumerableObjectCollection, None, CLSCTX_INPROC_SERVER)?;
         for it in items {
             col.AddObject(&link(exe, it)?)?;
         }
@@ -92,11 +97,15 @@ pub(super) fn apply(exe: &Path, list: &List) -> io::Result<()> {
     let run = || -> windows::core::Result<()> {
         // SAFETY: COM calls on owned interfaces; `slots` outlives BeginList.
         unsafe {
-            let dl: ICustomDestinationList = CoCreateInstance(&DestinationList, None, CLSCTX_INPROC_SERVER)?;
+            let dl: ICustomDestinationList =
+                CoCreateInstance(&DestinationList, None, CLSCTX_INPROC_SERVER)?;
             let mut slots = 0u32;
             let _removed: IObjectArray = dl.BeginList(&raw mut slots)?;
             if !list.recent.is_empty() {
-                dl.AppendCategory(&HSTRING::from(list.recent_title.as_str()), &collection(exe, &list.recent)?)?;
+                dl.AppendCategory(
+                    &HSTRING::from(list.recent_title.as_str()),
+                    &collection(exe, &list.recent)?,
+                )?;
             }
             if !list.tasks.is_empty() {
                 dl.AddUserTasks(&collection(exe, &list.tasks)?)?;

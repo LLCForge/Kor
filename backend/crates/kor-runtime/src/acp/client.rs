@@ -18,7 +18,9 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use serde_json::{Value, json};
 
-use super::rpc::{self, Handler, INVALID_PARAMS, METHOD_NOT_FOUND, RESOURCE_NOT_FOUND, Rpc, RpcError};
+use super::rpc::{
+    self, Handler, INVALID_PARAMS, METHOD_NOT_FOUND, RESOURCE_NOT_FOUND, Rpc, RpcError,
+};
 
 /// An ACP agent program (`[acp.agents.<name>]` in the config, or given on the command line).
 pub use kor_config::AcpAgent as AgentSpec;
@@ -71,7 +73,8 @@ impl Handler for ClientSide {
                     RpcError::new(RESOURCE_NOT_FOUND, "file not found")
                         .with_data(json!({ "path": path }))
                 })?;
-                let start = usize::try_from(p["line"].as_u64().unwrap_or(1).max(1) - 1).unwrap_or(0);
+                let start =
+                    usize::try_from(p["line"].as_u64().unwrap_or(1).max(1) - 1).unwrap_or(0);
                 let content = match p["limit"].as_u64() {
                     Some(n) => text
                         .lines()
@@ -92,7 +95,10 @@ impl Handler for ClientSide {
                     .is_some_and(|l| path.starts_with(l.auto_dir.join("team")))
                     && !kor_tools::scan_secrets(content).is_empty()
                 {
-                    return Err(RpcError::new(INVALID_PARAMS, "refused: the content looks like a secret"));
+                    return Err(RpcError::new(
+                        INVALID_PARAMS,
+                        "refused: the content looks like a secret",
+                    ));
                 }
                 if let Some(d) = path.parent() {
                     tokio::fs::create_dir_all(d)
@@ -104,7 +110,10 @@ impl Handler for ClientSide {
                     .map_err(|e| RpcError::new(rpc::INTERNAL_ERROR, e.to_string()))?;
                 Ok(json!({}))
             }
-            _ => Err(RpcError::new(METHOD_NOT_FOUND, format!("unknown method {method}"))),
+            _ => Err(RpcError::new(
+                METHOD_NOT_FOUND,
+                format!("unknown method {method}"),
+            )),
         }
     }
 
@@ -137,7 +146,12 @@ impl AcpClient {
     ///
     /// # Errors
     /// When the agent does not speak protocol v1 or refuses the session.
-    pub async fn over<R, W>(reader: R, writer: W, root: &Path, ui: Arc<dyn ClientUi>) -> Result<Self, String>
+    pub async fn over<R, W>(
+        reader: R,
+        writer: W,
+        root: &Path,
+        ui: Arc<dyn ClientUi>,
+    ) -> Result<Self, String>
     where
         R: tokio::io::AsyncRead + Unpin + Send + 'static,
         W: tokio::io::AsyncWrite + Unpin + Send + 'static,
@@ -168,7 +182,10 @@ impl AcpClient {
             .request("session/new", json!({ "cwd": root, "mcpServers": [] }))
             .await
             .map_err(|e| e.to_string())?;
-        let session = s["sessionId"].as_str().ok_or("the agent gave no session id")?.to_owned();
+        let session = s["sessionId"]
+            .as_str()
+            .ok_or("the agent gave no session id")?
+            .to_owned();
         Ok(Self {
             rpc,
             child: None,
@@ -182,7 +199,12 @@ impl AcpClient {
     ///
     /// # Errors
     /// When it cannot start or does not initialize.
-    pub async fn spawn(name: &str, spec: &AgentSpec, root: &Path, ui: Arc<dyn ClientUi>) -> Result<Self, String> {
+    pub async fn spawn(
+        name: &str,
+        spec: &AgentSpec,
+        root: &Path,
+        ui: Arc<dyn ClientUi>,
+    ) -> Result<Self, String> {
         if let Some(b) = kor_core::net::refusal(name) {
             return Err(b.message);
         }

@@ -565,7 +565,8 @@ fn project_repos(root: &Path) -> Vec<String> {
         &["remote", "get-url", "--all", "origin"][..],
         &["remote", "get-url", "--push", "--all", "origin"][..],
     ] {
-        if let Ok(o) = std::process::Command::new("git").no_window()
+        if let Ok(o) = std::process::Command::new("git")
+            .no_window()
             .args(args)
             .current_dir(root)
             .output()

@@ -48,7 +48,9 @@ pub struct Chrome {
 /// Never in a released build: a malformed `branding.toml` fails the `parses` test first.
 pub fn brand() -> &'static Brand {
     static BRAND: OnceLock<Brand> = OnceLock::new();
-    BRAND.get_or_init(|| toml::from_str(SOURCE).expect("branding.toml is checked by the brand::tests::parses test"))
+    BRAND.get_or_init(|| {
+        toml::from_str(SOURCE).expect("branding.toml is checked by the brand::tests::parses test")
+    })
 }
 
 #[cfg(test)]
@@ -57,9 +59,22 @@ mod tests {
     fn parses() {
         let b = super::brand();
         assert!(!b.product.name.is_empty() && !b.product.slug.is_empty());
-        assert!(b.product.slug.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'));
-        assert!(b.product.identifier.split('.').count() >= 3, "reverse-DNS bundle id");
+        assert!(
+            b.product
+                .slug
+                .chars()
+                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+        );
+        assert!(
+            b.product.identifier.split('.').count() >= 3,
+            "reverse-DNS bundle id"
+        );
         assert!(b.urls.repository.starts_with("https://"));
-        assert!(b.chrome.extension_ids.iter().all(|id| id.len() == 32 && id.chars().all(|c| ('a'..='p').contains(&c))));
+        assert!(
+            b.chrome
+                .extension_ids
+                .iter()
+                .all(|id| id.len() == 32 && id.chars().all(|c| ('a'..='p').contains(&c)))
+        );
     }
 }

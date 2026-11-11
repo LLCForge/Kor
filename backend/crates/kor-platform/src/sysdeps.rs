@@ -69,13 +69,18 @@ impl Prereq {
         match self {
             Self::Docker | Self::Podman => matches!(os, Os::Windows | Os::Mac | Os::Linux),
             Self::Wsl2 | Self::Webview2 => os == Os::Windows,
-            Self::XcodeClt | Self::Accessibility | Self::ScreenRecording | Self::Microphone => os == Os::Mac,
+            Self::XcodeClt | Self::Accessibility | Self::ScreenRecording | Self::Microphone => {
+                os == Os::Mac
+            }
         }
     }
 
     /// A permission (opened in System Settings) rather than a package.
     pub fn is_permission(self) -> bool {
-        matches!(self, Self::Accessibility | Self::ScreenRecording | Self::Microphone)
+        matches!(
+            self,
+            Self::Accessibility | Self::ScreenRecording | Self::Microphone
+        )
     }
 }
 
@@ -95,8 +100,17 @@ pub enum Manager {
 }
 
 impl Manager {
-    pub const ALL: [Self; 9] =
-        [Self::Winget, Self::Choco, Self::Brew, Self::Apt, Self::Dnf, Self::Pacman, Self::Zypper, Self::Apk, Self::Nix];
+    pub const ALL: [Self; 9] = [
+        Self::Winget,
+        Self::Choco,
+        Self::Brew,
+        Self::Apt,
+        Self::Dnf,
+        Self::Pacman,
+        Self::Zypper,
+        Self::Apk,
+        Self::Nix,
+    ];
 
     pub fn id(self) -> &'static str {
         match self {
@@ -152,15 +166,32 @@ impl Manager {
         match self {
             // winget asks for UAC by itself when the installer is machine-wide.
             Self::Winget => (
-                v(&["install", "--id", package, "--exact", "--source", "winget", "--accept-package-agreements", "--accept-source-agreements"]),
+                v(&[
+                    "install",
+                    "--id",
+                    package,
+                    "--exact",
+                    "--source",
+                    "winget",
+                    "--accept-package-agreements",
+                    "--accept-source-agreements",
+                ]),
                 Elevation::None,
             ),
             Self::Choco => (v(&["install", package, "-y"]), Elevation::Uac),
-            Self::Brew if p == Prereq::Docker => (v(&["install", "--cask", package]), Elevation::None),
+            Self::Brew if p == Prereq::Docker => {
+                (v(&["install", "--cask", package]), Elevation::None)
+            }
             Self::Brew => (v(&["install", package]), Elevation::None),
             Self::Apt | Self::Dnf => (v(&["install", "-y", package]), Elevation::Sudo),
-            Self::Pacman => (v(&["-S", "--needed", "--noconfirm", package]), Elevation::Sudo),
-            Self::Zypper => (v(&["--non-interactive", "install", package]), Elevation::Sudo),
+            Self::Pacman => (
+                v(&["-S", "--needed", "--noconfirm", package]),
+                Elevation::Sudo,
+            ),
+            Self::Zypper => (
+                v(&["--non-interactive", "install", package]),
+                Elevation::Sudo,
+            ),
             Self::Apk => (v(&["add", package]), Elevation::Sudo),
             Self::Nix => (v(&["profile", "install", package]), Elevation::None),
         }
@@ -212,13 +243,28 @@ impl Plan {
             }
             Elevation::Uac => {
                 let quote = |s: &str| format!("'{}'", s.replace('\'', "''"));
-                let list = self.args.iter().map(|a| quote(a)).collect::<Vec<_>>().join(",");
+                let list = self
+                    .args
+                    .iter()
+                    .map(|a| quote(a))
+                    .collect::<Vec<_>>()
+                    .join(",");
                 let script = format!(
                     "$p = Start-Process -FilePath {} -ArgumentList {} -Verb RunAs -Wait -PassThru; exit $p.ExitCode",
                     quote(&self.program),
-                    if list.is_empty() { "@()".to_owned() } else { list }
+                    if list.is_empty() {
+                        "@()".to_owned()
+                    } else {
+                        list
+                    }
                 );
-                vec!["powershell".into(), "-NoProfile".into(), "-NonInteractive".into(), "-Command".into(), script]
+                vec![
+                    "powershell".into(),
+                    "-NoProfile".into(),
+                    "-NonInteractive".into(),
+                    "-Command".into(),
+                    script,
+                ]
             }
         }
     }
@@ -227,7 +273,13 @@ impl Plan {
     pub fn command_line(&self, gui: bool) -> String {
         self.argv(gui)
             .iter()
-            .map(|a| if a.is_empty() || a.contains([' ', '"', '\'', '$', ';']) { format!("\"{}\"", a.replace('"', "\\\"")) } else { a.clone() })
+            .map(|a| {
+                if a.is_empty() || a.contains([' ', '"', '\'', '$', ';']) {
+                    format!("\"{}\"", a.replace('"', "\\\""))
+                } else {
+                    a.clone()
+                }
+            })
             .collect::<Vec<_>>()
             .join(" ")
     }
@@ -257,10 +309,19 @@ impl Host {
     /// The real machine: package managers on `PATH`, ordered by `/etc/os-release` on Linux.
     pub fn detect() -> Self {
         let os = crate::os();
-        let found = std::env::var_os("PATH").map(|p| crate::on_path::executables_on(&p)).unwrap_or_default();
+        let found = std::env::var_os("PATH")
+            .map(|p| crate::on_path::executables_on(&p))
+            .unwrap_or_default();
         let release = std::fs::read_to_string("/etc/os-release").unwrap_or_default();
-        let managers = preferred(os, &release).into_iter().filter(|m| found.contains_key(m.program())).collect();
-        Self { os, managers, root: is_root() }
+        let managers = preferred(os, &release)
+            .into_iter()
+            .filter(|m| found.contains_key(m.program()))
+            .collect();
+        Self {
+            os,
+            managers,
+            root: is_root(),
+        }
     }
 }
 
@@ -287,7 +348,14 @@ fn preferred(os: Os, os_release: &str) -> Vec<Manager> {
                 };
                 ids.iter().any(|id| family.contains(id))
             };
-            let all = [Manager::Apt, Manager::Dnf, Manager::Pacman, Manager::Zypper, Manager::Apk, Manager::Nix];
+            let all = [
+                Manager::Apt,
+                Manager::Dnf,
+                Manager::Pacman,
+                Manager::Zypper,
+                Manager::Apk,
+                Manager::Nix,
+            ];
             let mut out: Vec<Manager> = all.into_iter().filter(|m| native(*m)).collect();
             out.extend(all.into_iter().filter(|m| !native(*m)));
             out
@@ -298,8 +366,18 @@ fn preferred(os: Os, os_release: &str) -> Vec<Manager> {
 
 fn is_root() -> bool {
     match crate::os() {
-        Os::Windows => Command::new("net").no_window().arg("session").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok_and(|s| s.success()),
-        _ => Command::new("id").no_window().arg("-u").output().is_ok_and(|o| o.stdout.trim_ascii() == b"0"),
+        Os::Windows => Command::new("net")
+            .no_window()
+            .arg("session")
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|s| s.success()),
+        _ => Command::new("id")
+            .no_window()
+            .arg("-u")
+            .output()
+            .is_ok_and(|o| o.stdout.trim_ascii() == b"0"),
     }
 }
 
@@ -317,12 +395,33 @@ pub fn plan(p: Prereq, host: &Host, prefer: Option<Manager>) -> Result<Plan, NoP
         elevation,
     };
     let settings = |pane: &str| {
-        fixed("open", &[&format!("x-apple.systempreferences:com.apple.preference.security?{pane}")], Action::OpenSettings, Elevation::None)
+        fixed(
+            "open",
+            &[&format!(
+                "x-apple.systempreferences:com.apple.preference.security?{pane}"
+            )],
+            Action::OpenSettings,
+            Elevation::None,
+        )
     };
     match p {
-        Prereq::Wsl2 => return Ok(fixed("wsl", &["--install", "--no-distribution"], Action::Install, Elevation::Uac)),
+        Prereq::Wsl2 => {
+            return Ok(fixed(
+                "wsl",
+                &["--install", "--no-distribution"],
+                Action::Install,
+                Elevation::Uac,
+            ));
+        }
         // Apple's own installer dialog; no package manager carries it.
-        Prereq::XcodeClt => return Ok(fixed("xcode-select", &["--install"], Action::Install, Elevation::None)),
+        Prereq::XcodeClt => {
+            return Ok(fixed(
+                "xcode-select",
+                &["--install"],
+                Action::Install,
+                Elevation::None,
+            ));
+        }
         Prereq::Accessibility => return Ok(settings("Privacy_Accessibility")),
         Prereq::ScreenRecording => return Ok(settings("Privacy_ScreenCapture")),
         Prereq::Microphone => return Ok(settings("Privacy_Microphone")),
@@ -334,15 +433,33 @@ pub fn plan(p: Prereq, host: &Host, prefer: Option<Manager>) -> Result<Plan, NoP
         .find_map(|m| m.package(p).map(|pkg| (m, pkg)))
         .ok_or(NoPlan::NoManager)?;
     let (args, elevation) = manager.install(p, package);
-    let elevation = if host.root { Elevation::None } else { elevation };
-    Ok(Plan { prereq: p, manager: Some(manager), action: Action::Install, program: manager.program().to_owned(), args, elevation })
+    let elevation = if host.root {
+        Elevation::None
+    } else {
+        elevation
+    };
+    Ok(Plan {
+        prereq: p,
+        manager: Some(manager),
+        action: Action::Install,
+        program: manager.program().to_owned(),
+        args,
+        elevation,
+    })
 }
 
 /// Whether `p` is present: `Some(true/false)` when it can be probed, `None` for permissions
 /// (only the OS knows; it asks on first use).
 pub fn installed(p: Prereq) -> Option<bool> {
     let ok = |program: &str, args: &[&str]| {
-        Command::new(program).no_window().args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok_and(|s| s.success())
+        Command::new(program)
+            .no_window()
+            .args(args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .is_ok_and(|s| s.success())
     };
     match p {
         Prereq::Docker => Some(ok("docker", &["--version"])),
@@ -370,7 +487,11 @@ pub fn status(host: &Host) -> Vec<Status> {
     Prereq::ALL
         .into_iter()
         .filter(|p| p.applies(host.os))
-        .map(|p| Status { prereq: p, installed: installed(p), plan: plan(p, host, None) })
+        .map(|p| Status {
+            prereq: p,
+            installed: installed(p),
+            plan: plan(p, host, None),
+        })
         .collect()
 }
 
@@ -392,7 +513,11 @@ mod tests {
     use super::*;
 
     fn host(os: Os, managers: &[Manager]) -> Host {
-        Host { os, managers: managers.to_vec(), root: false }
+        Host {
+            os,
+            managers: managers.to_vec(),
+            root: false,
+        }
     }
 
     #[test]
@@ -418,43 +543,97 @@ mod tests {
         let c = plan(Prereq::Podman, &h, Some(Manager::Choco)).unwrap();
         assert_eq!(c.elevation, Elevation::Uac);
         let argv = c.argv(true);
-        assert_eq!(argv[..4], ["powershell", "-NoProfile", "-NonInteractive", "-Command"]);
-        assert_eq!(argv[4], "$p = Start-Process -FilePath 'choco' -ArgumentList 'install','podman-cli','-y' -Verb RunAs -Wait -PassThru; exit $p.ExitCode");
+        assert_eq!(
+            argv[..4],
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command"]
+        );
+        assert_eq!(
+            argv[4],
+            "$p = Start-Process -FilePath 'choco' -ArgumentList 'install','podman-cli','-y' -Verb RunAs -Wait -PassThru; exit $p.ExitCode"
+        );
         let w = plan(Prereq::Wsl2, &h, None).unwrap();
-        assert!(w.argv(false)[4].contains("-FilePath 'wsl' -ArgumentList '--install','--no-distribution' -Verb RunAs"));
-        assert_eq!(plan(Prereq::Webview2, &host(Os::Windows, &[]), None), Err(NoPlan::NoManager));
+        assert!(
+            w.argv(false)[4].contains(
+                "-FilePath 'wsl' -ArgumentList '--install','--no-distribution' -Verb RunAs"
+            )
+        );
+        assert_eq!(
+            plan(Prereq::Webview2, &host(Os::Windows, &[]), None),
+            Err(NoPlan::NoManager)
+        );
         assert_eq!(plan(Prereq::XcodeClt, &h, None), Err(NoPlan::NotNeeded));
     }
 
     #[test]
     fn mac_plans() {
         let h = host(Os::Mac, &[Manager::Brew]);
-        assert_eq!(plan(Prereq::Docker, &h, None).unwrap().command_line(true), "brew install --cask docker");
-        assert_eq!(plan(Prereq::Podman, &h, None).unwrap().command_line(true), "brew install podman");
-        assert_eq!(plan(Prereq::XcodeClt, &h, None).unwrap().command_line(true), "xcode-select --install");
+        assert_eq!(
+            plan(Prereq::Docker, &h, None).unwrap().command_line(true),
+            "brew install --cask docker"
+        );
+        assert_eq!(
+            plan(Prereq::Podman, &h, None).unwrap().command_line(true),
+            "brew install podman"
+        );
+        assert_eq!(
+            plan(Prereq::XcodeClt, &h, None).unwrap().command_line(true),
+            "xcode-select --install"
+        );
         let s = plan(Prereq::ScreenRecording, &host(Os::Mac, &[]), None).unwrap();
         assert_eq!(s.action, Action::OpenSettings);
-        assert_eq!(s.args, ["x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"]);
+        assert_eq!(
+            s.args,
+            ["x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"]
+        );
         assert_eq!(plan(Prereq::Wsl2, &h, None), Err(NoPlan::NotNeeded));
     }
 
     #[test]
     fn linux_plans_per_distribution() {
         let cases = [
-            (Manager::Apt, "sudo apt-get install -y docker.io", "pkexec apt-get install -y docker.io"),
-            (Manager::Dnf, "sudo dnf install -y moby-engine", "pkexec dnf install -y moby-engine"),
-            (Manager::Pacman, "sudo pacman -S --needed --noconfirm docker", "pkexec pacman -S --needed --noconfirm docker"),
-            (Manager::Zypper, "sudo zypper --non-interactive install docker", "pkexec zypper --non-interactive install docker"),
+            (
+                Manager::Apt,
+                "sudo apt-get install -y docker.io",
+                "pkexec apt-get install -y docker.io",
+            ),
+            (
+                Manager::Dnf,
+                "sudo dnf install -y moby-engine",
+                "pkexec dnf install -y moby-engine",
+            ),
+            (
+                Manager::Pacman,
+                "sudo pacman -S --needed --noconfirm docker",
+                "pkexec pacman -S --needed --noconfirm docker",
+            ),
+            (
+                Manager::Zypper,
+                "sudo zypper --non-interactive install docker",
+                "pkexec zypper --non-interactive install docker",
+            ),
             (Manager::Apk, "sudo apk add docker", "pkexec apk add docker"),
-            (Manager::Nix, "nix profile install nixpkgs#docker", "nix profile install nixpkgs#docker"),
+            (
+                Manager::Nix,
+                "nix profile install nixpkgs#docker",
+                "nix profile install nixpkgs#docker",
+            ),
         ];
         for (m, terminal, gui) in cases {
             let p = plan(Prereq::Docker, &host(Os::Linux, &[m]), None).unwrap();
             assert_eq!(p.command_line(false), terminal);
             assert_eq!(p.command_line(true), gui);
         }
-        let root = Host { os: Os::Linux, managers: vec![Manager::Dnf], root: true };
-        assert_eq!(plan(Prereq::Podman, &root, None).unwrap().command_line(false), "dnf install -y podman");
+        let root = Host {
+            os: Os::Linux,
+            managers: vec![Manager::Dnf],
+            root: true,
+        };
+        assert_eq!(
+            plan(Prereq::Podman, &root, None)
+                .unwrap()
+                .command_line(false),
+            "dnf install -y podman"
+        );
         assert_eq!(plan(Prereq::Webview2, &root, None), Err(NoPlan::NotNeeded));
     }
 
@@ -466,14 +645,33 @@ mod tests {
         assert_eq!(preferred(Os::Linux, mint)[0], Manager::Apt);
         assert_eq!(preferred(Os::Linux, "ID=alpine\n")[0], Manager::Apk);
         assert_eq!(preferred(Os::Linux, "ID=arch\n")[0], Manager::Pacman);
-        assert_eq!(preferred(Os::Linux, "ID=opensuse-tumbleweed\nID_LIKE=\"opensuse suse\"\n")[0], Manager::Zypper);
+        assert_eq!(
+            preferred(
+                Os::Linux,
+                "ID=opensuse-tumbleweed\nID_LIKE=\"opensuse suse\"\n"
+            )[0],
+            Manager::Zypper
+        );
         assert_eq!(preferred(Os::Linux, "").len(), 6);
         // With apt and nix both present on Ubuntu, apt is used; `prefer` overrides.
         let h = host(Os::Linux, &[Manager::Apt, Manager::Nix]);
-        assert_eq!(plan(Prereq::Podman, &h, None).unwrap().manager, Some(Manager::Apt));
-        assert_eq!(plan(Prereq::Podman, &h, Some(Manager::Nix)).unwrap().manager, Some(Manager::Nix));
+        assert_eq!(
+            plan(Prereq::Podman, &h, None).unwrap().manager,
+            Some(Manager::Apt)
+        );
+        assert_eq!(
+            plan(Prereq::Podman, &h, Some(Manager::Nix))
+                .unwrap()
+                .manager,
+            Some(Manager::Nix)
+        );
         // A preferred manager that is not installed is ignored.
-        assert_eq!(plan(Prereq::Podman, &h, Some(Manager::Dnf)).unwrap().manager, Some(Manager::Apt));
+        assert_eq!(
+            plan(Prereq::Podman, &h, Some(Manager::Dnf))
+                .unwrap()
+                .manager,
+            Some(Manager::Apt)
+        );
     }
 
     #[test]
@@ -486,7 +684,10 @@ mod tests {
             args: vec!["a b".into()],
             elevation: Elevation::Uac,
         };
-        assert!(p.argv(false)[4].starts_with("$p = Start-Process -FilePath 'it''s' -ArgumentList 'a b' "));
+        assert!(
+            p.argv(false)[4]
+                .starts_with("$p = Start-Process -FilePath 'it''s' -ArgumentList 'a b' ")
+        );
         let h = Host::detect();
         for s in status(&h) {
             assert!(s.prereq.applies(h.os));

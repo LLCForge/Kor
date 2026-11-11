@@ -87,7 +87,12 @@ impl Tool for MultiEdit {
             }
             text = apply_one(&text, &e.old_string, &e.new_string, e.replace_all).ok()?;
         }
-        Some(vec![super::review::proposal(ctx, &path, Some(file), Some(text))])
+        Some(vec![super::review::proposal(
+            ctx,
+            &path,
+            Some(file),
+            Some(text),
+        )])
     }
     async fn call(&self, input: Value, ctx: &ToolCtx) -> ToolOutput {
         let a: MultiEditIn = match parse(input) {

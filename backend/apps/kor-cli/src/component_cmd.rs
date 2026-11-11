@@ -186,24 +186,37 @@ fn remove(l: &Localizer, name: &str) -> bool {
 fn install_many(ctx: &Ctx, names: &[String], yes: bool) -> bool {
     let l = &ctx.l;
     let all = kor_components::list();
-    let todo: Vec<&kor_components::Status> = all.iter().filter(|s| names.contains(&s.name) && s.size.is_some()).collect();
+    let todo: Vec<&kor_components::Status> = all
+        .iter()
+        .filter(|s| names.contains(&s.name) && s.size.is_some())
+        .collect();
     if todo.is_empty() {
         println!("{}", l.t("component-nothing"));
         return true;
     }
     let total: u64 = todo.iter().filter_map(|s| s.size).sum();
     if !yes && std::io::stdin().is_terminal() {
-        print!("{} ", l.t_args("component-ask-many", &args!("count" => todo.len(), "size" => mb(total))));
+        print!(
+            "{} ",
+            l.t_args(
+                "component-ask-many",
+                &args!("count" => todo.len(), "size" => mb(total))
+            )
+        );
         let _ = std::io::stdout().flush();
         let mut line = String::new();
-        let a = std::io::stdin().read_line(&mut line).map(|_| line.trim().to_lowercase()).unwrap_or_default();
+        let a = std::io::stdin()
+            .read_line(&mut line)
+            .map(|_| line.trim().to_lowercase())
+            .unwrap_or_default();
         if !(a.is_empty() || ["y", "yes", "e", "evet", "o", "oui"].contains(&a.as_str())) {
             println!("{}", l.t("component-cancelled"));
             return false;
         }
     }
     // Already asked once for the total; each `add` below does not ask again.
-    todo.iter().fold(true, |ok, s| add(ctx, &s.name, None, true) && ok)
+    todo.iter()
+        .fold(true, |ok, s| add(ctx, &s.name, None, true) && ok)
 }
 
 fn verify(l: &Localizer, name: Option<&str>) -> bool {
@@ -212,20 +225,34 @@ fn verify(l: &Localizer, name: Option<&str>) -> bool {
             Some(s) => vec![s.name],
             None => return false,
         },
-        None => kor_components::list().into_iter().filter(|s| s.installed.is_some()).map(|s| s.name).collect(),
+        None => kor_components::list()
+            .into_iter()
+            .filter(|s| s.installed.is_some())
+            .map(|s| s.name)
+            .collect(),
     };
     let mut ok = true;
     for n in names {
         let line = match kor_components::verify(&n) {
-            Ok(kor_components::Health::Ok) => l.t_args("component-verify-ok", &args!("name" => n.clone())),
-            Ok(kor_components::Health::Missing) => l.t_args("component-not-installed", &args!("name" => n.clone())),
-            Ok(kor_components::Health::Outdated { installed }) => {
-                l.t_args("component-verify-outdated", &args!("name" => n.clone(), "version" => installed))
+            Ok(kor_components::Health::Ok) => {
+                l.t_args("component-verify-ok", &args!("name" => n.clone()))
             }
-            Ok(kor_components::Health::Unrecorded) => l.t_args("component-verify-unrecorded", &args!("name" => n.clone())),
+            Ok(kor_components::Health::Missing) => {
+                l.t_args("component-not-installed", &args!("name" => n.clone()))
+            }
+            Ok(kor_components::Health::Outdated { installed }) => l.t_args(
+                "component-verify-outdated",
+                &args!("name" => n.clone(), "version" => installed),
+            ),
+            Ok(kor_components::Health::Unrecorded) => {
+                l.t_args("component-verify-unrecorded", &args!("name" => n.clone()))
+            }
             Ok(kor_components::Health::Broken(files)) => {
                 ok = false;
-                l.t_args("component-verify-broken", &args!("name" => n.clone(), "files" => files.join(", ")))
+                l.t_args(
+                    "component-verify-broken",
+                    &args!("name" => n.clone(), "files" => files.join(", ")),
+                )
             }
             Err(e) => {
                 ok = false;
@@ -245,7 +272,11 @@ pub fn run(ctx: &Ctx, cmd: ComponentCmd) -> bool {
         }
         ComponentCmd::Remove { name } => remove(&ctx.l, kor_components::canonical(&name)),
         ComponentCmd::Install { yes, .. } => {
-            let names: Vec<String> = kor_components::list().into_iter().filter(|s| s.installed.is_none()).map(|s| s.name).collect();
+            let names: Vec<String> = kor_components::list()
+                .into_iter()
+                .filter(|s| s.installed.is_none())
+                .map(|s| s.name)
+                .collect();
             install_many(ctx, &names, yes)
         }
         ComponentCmd::Update { yes } => install_many(ctx, &kor_components::outdated(), yes),
@@ -264,8 +295,19 @@ mod tests {
             c: super::ComponentCmd,
         }
         assert!(T::try_parse_from(["kor", "install"]).is_err());
-        assert!(matches!(T::try_parse_from(["kor", "install", "--all", "-y"]).unwrap().c, super::ComponentCmd::Install { all: true, yes: true }));
-        assert!(matches!(T::try_parse_from(["kor", "verify"]).unwrap().c, super::ComponentCmd::Verify { name: None }));
+        assert!(matches!(
+            T::try_parse_from(["kor", "install", "--all", "-y"])
+                .unwrap()
+                .c,
+            super::ComponentCmd::Install {
+                all: true,
+                yes: true
+            }
+        ));
+        assert!(matches!(
+            T::try_parse_from(["kor", "verify"]).unwrap().c,
+            super::ComponentCmd::Verify { name: None }
+        ));
     }
 
     #[test]

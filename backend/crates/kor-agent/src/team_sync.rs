@@ -11,7 +11,8 @@ pub const SYNC_PATH: &str = "/team_memory";
 
 /// The configured sync server, if any.
 pub fn base_url() -> Option<String> {
-    crate::env_compat("KOR_TEAM_MEMORY_URL", "TEAM_MEMORY_SYNC_URL").filter(|s| !s.trim().is_empty())
+    crate::env_compat("KOR_TEAM_MEMORY_URL", "TEAM_MEMORY_SYNC_URL")
+        .filter(|s| !s.trim().is_empty())
 }
 
 pub fn endpoint(base: &str, repo: &str) -> String {
@@ -100,9 +101,6 @@ mod tests {
             .unwrap();
         assert!(text.contains("abc"), "{text}");
         let url = endpoint(&server.uri(), "acme/repo");
-        assert!(
-            url.contains("/team_memory?repo=acme%2Frepo"),
-            "{url}"
-        );
+        assert!(url.contains("/team_memory?repo=acme%2Frepo"), "{url}");
     }
 }

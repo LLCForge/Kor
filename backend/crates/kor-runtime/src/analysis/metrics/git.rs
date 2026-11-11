@@ -14,7 +14,8 @@ use serde::Serialize;
 /// # Errors
 /// git missing or a non-zero exit.
 pub fn git(root: &Path, args: &[&str]) -> Result<String, String> {
-    let out = Command::new("git").no_window()
+    let out = Command::new("git")
+        .no_window()
         .args(["-c", "core.quotepath=off"])
         .args(args)
         .current_dir(root)

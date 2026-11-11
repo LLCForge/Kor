@@ -492,7 +492,11 @@ mod tests {
 
     #[test]
     fn runs_that_ended_at_once_do_not_shrink_the_estimate() {
-        let mut quick = vec![run("fix typo in docs page", 1, 0, 40), run("fix typo in the config", 0, 0, 40), run("fix the typo here", 1, 0, 40)];
+        let mut quick = vec![
+            run("fix typo in docs page", 1, 0, 40),
+            run("fix typo in the config", 0, 0, 40),
+            run("fix the typo here", 1, 0, 40),
+        ];
         for r in &mut quick {
             r.turns = 0;
         }
@@ -500,8 +504,18 @@ mod tests {
         assert_eq!(e.method, Method::Prior, "instant runs are not history");
         assert_eq!(e.secs, 40);
         // Even real history never goes below one turn (1 s first token + 600/100 s output).
-        let fast: Vec<Run> = ["fix typo in docs page", "fix typo in the config", "fix the typo here"].iter().map(|t| run(t, 2, 0, 0)).collect();
-        assert_eq!(estimate("fix a typo in the config", "x/m1", 1_000, &prices(), &fast).secs, 7);
+        let fast: Vec<Run> = [
+            "fix typo in docs page",
+            "fix typo in the config",
+            "fix the typo here",
+        ]
+        .iter()
+        .map(|t| run(t, 2, 0, 0))
+        .collect();
+        assert_eq!(
+            estimate("fix a typo in the config", "x/m1", 1_000, &prices(), &fast).secs,
+            7
+        );
     }
 
     #[test]

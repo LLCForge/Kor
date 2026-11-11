@@ -515,7 +515,10 @@ pub(crate) fn tier(i: &Instruction) -> u8 {
         .file_name()
         .map(|n| n.to_string_lossy().to_ascii_uppercase())
         .unwrap_or_default();
-    if matches!(name.as_str(), "AGENTS.MD" | "AGENTS.OVERRIDE.MD" | "AGENT.MD") {
+    if matches!(
+        name.as_str(),
+        "AGENTS.MD" | "AGENTS.OVERRIDE.MD" | "AGENT.MD"
+    ) {
         1
     } else if i.source.eco == Eco::Kor {
         4

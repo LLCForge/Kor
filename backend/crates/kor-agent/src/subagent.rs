@@ -203,7 +203,9 @@ impl Tool for AgentTool {
             dream: false,
             // The child speaks the same protocol the provider supports; it still falls
             // back to text automatically if native tools are rejected.
-            tool_mode: crate::toolcall::ToolMode::for_provider(self.provider.manifest().tool_calling),
+            tool_mode: crate::toolcall::ToolMode::for_provider(
+                self.provider.manifest().tool_calling,
+            ),
             verify: crate::verify::Verify::default(),
             stats: crate::repair::ToolStats::default(),
             context: crate::context::Budget::default(),

@@ -127,17 +127,27 @@ pub fn default_kind() -> ShellKind {
 /// programs is on `PATH`; on Windows also Windows `PowerShell` 5.1 under `SystemRoot` and Git
 /// Bash under `Program Files` / the per-user Git folder (WSL's `bash.exe` is on `PATH`).
 pub fn present(k: ShellKind) -> bool {
-    if k.runner().iter().any(|(exe, _)| kor_platform::os_integration::on_path(exe)) {
+    if k.runner()
+        .iter()
+        .any(|(exe, _)| kor_platform::os_integration::on_path(exe))
+    {
         return true;
     }
     if kor_platform::os() != kor_platform::Os::Windows {
         return false;
     }
     let under = |var: &str, rest: &[&str]| {
-        std::env::var_os(var).is_some_and(|v| rest.iter().fold(PathBuf::from(v), |p, s| p.join(s)).is_file())
+        std::env::var_os(var).is_some_and(|v| {
+            rest.iter()
+                .fold(PathBuf::from(v), |p, s| p.join(s))
+                .is_file()
+        })
     };
     match k {
-        ShellKind::PowerShell => under("SystemRoot", &["System32", "WindowsPowerShell", "v1.0", "powershell.exe"]),
+        ShellKind::PowerShell => under(
+            "SystemRoot",
+            &["System32", "WindowsPowerShell", "v1.0", "powershell.exe"],
+        ),
         ShellKind::Bash => {
             under("ProgramFiles", &["Git", "bin", "bash.exe"])
                 || under("LOCALAPPDATA", &["Programs", "Git", "bin", "bash.exe"])

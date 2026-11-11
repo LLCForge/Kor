@@ -11,7 +11,8 @@ use crate::project::{Doc, ProjectMemory, parse_decisions};
 pub const REF: &str = "kor";
 
 fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
-    let out = Command::new("git").no_window()
+    let out = Command::new("git")
+        .no_window()
         .arg("-C")
         .arg(repo)
         .args(args)

@@ -154,7 +154,10 @@ pub fn on_path(program: &str) -> bool {
         &[""]
     };
     std::env::var_os("PATH").is_some_and(|p| {
-        std::env::split_paths(&p).any(|d| exts.iter().any(|x| d.join(format!("{program}{x}")).is_file()))
+        std::env::split_paths(&p).any(|d| {
+            exts.iter()
+                .any(|x| d.join(format!("{program}{x}")).is_file())
+        })
     })
 }
 
@@ -168,17 +171,32 @@ pub fn git_bash() -> Option<PathBuf> {
     let from_path = std::env::split_paths(&path)
         .filter(|d| d.join("git.exe").is_file())
         // `<git>\cmd`, `<git>\bin` or `<git>\mingw64\bin`.
-        .filter_map(|d| d.ancestors().take(3).map(|a| a.join("bin").join("bash.exe")).find(|b| b.is_file()));
+        .filter_map(|d| {
+            d.ancestors()
+                .take(3)
+                .map(|a| a.join("bin").join("bash.exe"))
+                .find(|b| b.is_file())
+        });
     let usual = ["ProgramFiles", "ProgramW6432", "LOCALAPPDATA"]
         .into_iter()
         .filter_map(std::env::var_os)
         .flat_map(|base| {
             let base = PathBuf::from(base);
-            [base.join("Git").join("bin").join("bash.exe"), base.join("Programs").join("Git").join("bin").join("bash.exe")]
+            [
+                base.join("Git").join("bin").join("bash.exe"),
+                base.join("Programs")
+                    .join("Git")
+                    .join("bin")
+                    .join("bash.exe"),
+            ]
         });
-    from_path
-        .chain(usual)
-        .find(|b| b.is_file() && !b.to_string_lossy().to_ascii_lowercase().contains("system32"))
+    from_path.chain(usual).find(|b| {
+        b.is_file()
+            && !b
+                .to_string_lossy()
+                .to_ascii_lowercase()
+                .contains("system32")
+    })
 }
 
 /// The desktop bundle's resource directory for a `kor` that came with the desktop app (next to
@@ -234,9 +252,14 @@ impl Env {
     ///
     /// # Errors
     /// When the home or data directory is unknown.
-    pub fn current(kor: PathBuf, resources: Option<PathBuf>, icon: Option<PathBuf>) -> io::Result<Self> {
+    pub fn current(
+        kor: PathBuf,
+        resources: Option<PathBuf>,
+        icon: Option<PathBuf>,
+    ) -> io::Result<Self> {
         let missing = || io::Error::new(io::ErrorKind::NotFound, "home directory not found");
-        let flatpak = std::env::var_os("FLATPAK_ID").is_some() || Path::new("/.flatpak-info").exists();
+        let flatpak =
+            std::env::var_os("FLATPAK_ID").is_some() || Path::new("/.flatpak-info").exists();
         Ok(Self {
             os: crate::os(),
             home: dirs::home_dir().ok_or_else(missing)?,
@@ -281,11 +304,17 @@ impl Env {
     }
 
     fn gnome_dir(&self) -> PathBuf {
-        self.local.join("gnome-shell").join("extensions").join(GNOME_UUID)
+        self.local
+            .join("gnome-shell")
+            .join("extensions")
+            .join(GNOME_UUID)
     }
 
     fn plasmoid_dir(&self) -> PathBuf {
-        self.local.join("plasma").join("plasmoids").join(PLASMOID_ID)
+        self.local
+            .join("plasma")
+            .join("plasmoids")
+            .join(PLASMOID_ID)
     }
 
     fn shortcuts_dir(&self) -> PathBuf {
@@ -396,8 +425,14 @@ fn availability(env: &Env, e: Entry) -> Result<(), &'static str> {
             }
         }
         "windows-terminal" => {
-            let wt = env.local.join("Microsoft").join("WindowsApps").join("wt.exe");
-            (wt.exists() || env.runner.has("wt")).then_some(()).ok_or("no-terminal")
+            let wt = env
+                .local
+                .join("Microsoft")
+                .join("WindowsApps")
+                .join("wt.exe");
+            (wt.exists() || env.runner.has("wt"))
+                .then_some(())
+                .ok_or("no-terminal")
         }
         "widgets" => env
             .resources
@@ -405,10 +440,26 @@ fn availability(env: &Env, e: Entry) -> Result<(), &'static str> {
             .is_some_and(|r| widgets_kind().msix(r).is_file())
             .then_some(())
             .ok_or("no-bundle"),
-        "shortcuts" => env.runner.has("shortcuts").then_some(()).ok_or("no-shortcuts"),
-        "gnome-shell" => env.runner.has("gnome-shell").then_some(()).ok_or("no-gnome"),
-        "plasmoid" => env.runner.has("plasmashell").then_some(()).ok_or("no-plasma"),
-        "systemd-user" => env.runner.has("systemctl").then_some(()).ok_or("no-systemd"),
+        "shortcuts" => env
+            .runner
+            .has("shortcuts")
+            .then_some(())
+            .ok_or("no-shortcuts"),
+        "gnome-shell" => env
+            .runner
+            .has("gnome-shell")
+            .then_some(())
+            .ok_or("no-gnome"),
+        "plasmoid" => env
+            .runner
+            .has("plasmashell")
+            .then_some(())
+            .ok_or("no-plasma"),
+        "systemd-user" => env
+            .runner
+            .has("systemctl")
+            .then_some(())
+            .ok_or("no-systemd"),
         _ => Ok(()),
     }
 }
@@ -425,7 +476,9 @@ pub fn status(env: &Env, e: Entry) -> Status {
         },
         // `kor://` for xdg-open is the same entry as the context menus (`shell_integration`).
         Kind::Delegated(_) if e.id == "xdg-scheme" => {
-            let on = env.os == Os::Linux && crate::os() == Os::Linux && crate::shell_integration::scheme_registered();
+            let on = env.os == Os::Linux
+                && crate::os() == Os::Linux
+                && crate::shell_integration::scheme_registered();
             (on, Some("delegated"))
         }
         Kind::Delegated(_) => (record.contains_key(e.id), Some("delegated")),
@@ -457,7 +510,10 @@ pub fn status(env: &Env, e: Entry) -> Status {
 
 /// States of every item of the current OS.
 pub fn status_all(env: &Env) -> Vec<Status> {
-    catalog(env.os).into_iter().map(|e| status(env, e)).collect()
+    catalog(env.os)
+        .into_iter()
+        .map(|e| status(env, e))
+        .collect()
 }
 
 /// Options some items take.
@@ -514,7 +570,10 @@ fn files(env: &Env, id: &str, opts: &Options) -> Result<Vec<(PathBuf, Vec<u8>)>,
         "gnome-shell" => {
             let d = env.gnome_dir();
             vec![
-                (d.join("metadata.json"), include_bytes!("os_integration/gnome/metadata.json").to_vec()),
+                (
+                    d.join("metadata.json"),
+                    include_bytes!("os_integration/gnome/metadata.json").to_vec(),
+                ),
                 (
                     d.join("extension.js"),
                     include_str!("os_integration/gnome/extension.js")
@@ -526,7 +585,10 @@ fn files(env: &Env, id: &str, opts: &Options) -> Result<Vec<(PathBuf, Vec<u8>)>,
         "plasmoid" => {
             let d = env.plasmoid_dir();
             vec![
-                (d.join("metadata.json"), include_bytes!("os_integration/plasmoid/metadata.json").to_vec()),
+                (
+                    d.join("metadata.json"),
+                    include_bytes!("os_integration/plasmoid/metadata.json").to_vec(),
+                ),
                 (
                     d.join("contents").join("ui").join("main.qml"),
                     include_str!("os_integration/plasmoid/main.qml")
@@ -536,18 +598,24 @@ fn files(env: &Env, id: &str, opts: &Options) -> Result<Vec<(PathBuf, Vec<u8>)>,
             ]
         }
         "powertoys-run" => {
-            let src = env.powertoys_build().ok_or(Error::Unavailable("no-bundle"))?;
+            let src = env
+                .powertoys_build()
+                .ok_or(Error::Unavailable("no-bundle"))?;
             let mut out = Vec::new();
             copy_list(&src, &env.powertoys_dir(), &mut out)?;
             // The plugin runs this `kor` (it has no PATH guarantee inside PowerToys).
-            out.push((env.powertoys_dir().join("kor-path.txt"), kor.as_bytes().to_vec()));
+            out.push((
+                env.powertoys_dir().join("kor-path.txt"),
+                kor.as_bytes().to_vec(),
+            ));
             out
         }
         "shortcuts" => shortcuts::ALL
             .iter()
             .map(|s| {
                 (
-                    env.shortcuts_dir().join(format!("{}.unsigned.shortcut", s.file)),
+                    env.shortcuts_dir()
+                        .join(format!("{}.unsigned.shortcut", s.file)),
                     shortcuts::workflow_with(*s, &kor, &opts.texts).into_bytes(),
                 )
             })
@@ -665,16 +733,23 @@ fn after_install(env: &mut Env, id: &str, opts: &Options, done: &mut Done) -> Re
         "widgets" => {
             // The package registers with the install folder as external location (needs the
             // build's signing certificate to be trusted; see ADR 0052).
-            let dir = env.resources.clone().ok_or(Error::Unavailable("no-bundle"))?;
+            let dir = env
+                .resources
+                .clone()
+                .ok_or(Error::Unavailable("no-bundle"))?;
             crate::shell_integration::sparse::register(&mut *env.sparse, widgets_kind(), &dir)?;
         }
         "shortcuts" => {
             for s in shortcuts::ALL {
-                let unsigned = env.shortcuts_dir().join(format!("{}.unsigned.shortcut", s.file));
+                let unsigned = env
+                    .shortcuts_dir()
+                    .join(format!("{}.unsigned.shortcut", s.file));
                 let signed = env.shortcuts_dir().join(format!("{}.shortcut", s.file));
                 let (u, sg) = (unsigned.to_string_lossy(), signed.to_string_lossy());
-                env.runner
-                    .run("shortcuts", &["sign", "--mode", "anyone", "--input", &u, "--output", &sg])?;
+                env.runner.run(
+                    "shortcuts",
+                    &["sign", "--mode", "anyone", "--input", &u, "--output", &sg],
+                )?;
                 if !done.files.contains(&signed) {
                     done.files.push(signed.clone());
                 }
@@ -720,7 +795,11 @@ pub fn uninstall(env: &mut Env, id: &str) -> Result<(Status, Option<&'static str
         return Ok((status(env, e), None));
     }
     if let Kind::Builtin | Kind::Delegated(_) = e.kind {
-        return Err(Error::NotManaged(if e.kind == Kind::Builtin { "builtin" } else { "delegated" }));
+        return Err(Error::NotManaged(if e.kind == Kind::Builtin {
+            "builtin"
+        } else {
+            "delegated"
+        }));
     }
     let mut record = load_record(env);
     let Some(done) = record.remove(id) else {
@@ -764,9 +843,16 @@ mod tests {
         match git_bash() {
             Some(b) => {
                 assert!(b.ends_with("bash.exe") && b.is_file(), "{}", b.display());
-                assert!(!b.to_string_lossy().to_ascii_lowercase().contains("system32"));
+                assert!(
+                    !b.to_string_lossy()
+                        .to_ascii_lowercase()
+                        .contains("system32")
+                );
             }
-            None => assert!(crate::os() != Os::Windows || !on_path("git"), "git is installed but its bash was not found"),
+            None => assert!(
+                crate::os() != Os::Windows || !on_path("git"),
+                "git is installed but its bash was not found"
+            ),
         }
     }
 
@@ -778,10 +864,16 @@ mod tests {
 
     impl Runner for Fake {
         fn run(&mut self, program: &str, args: &[&str]) -> io::Result<String> {
-            self.calls.lock().unwrap().push(format!("{program} {}", args.join(" ")));
+            self.calls
+                .lock()
+                .unwrap()
+                .push(format!("{program} {}", args.join(" ")));
             if program == "shortcuts" {
                 // `sign --input U --output S`: produce the signed file like the real tool.
-                let out = args.iter().position(|a| *a == "--output").map(|i| args[i + 1]);
+                let out = args
+                    .iter()
+                    .position(|a| *a == "--output")
+                    .map(|i| args[i + 1]);
                 if let Some(o) = out {
                     std::fs::write(o, b"signed")?;
                 }
@@ -799,7 +891,11 @@ mod tests {
     }
 
     impl crate::shell_integration::sparse::Runner for FakePs {
-        fn run(&mut self, program: &str, args: &[String]) -> io::Result<crate::shell_integration::sparse::Output> {
+        fn run(
+            &mut self,
+            program: &str,
+            args: &[String],
+        ) -> io::Result<crate::shell_integration::sparse::Output> {
             let line = format!("{program} {}", args.join(" "));
             let stdout = if line.contains("Version.Build") {
                 "22631".to_owned()
@@ -811,7 +907,11 @@ mod tests {
                 String::new()
             };
             self.calls.lock().unwrap().push(line);
-            Ok(crate::shell_integration::sparse::Output { code: 0, stdout, stderr: String::new() })
+            Ok(crate::shell_integration::sparse::Output {
+                code: 0,
+                stdout,
+                stderr: String::new(),
+            })
         }
     }
 
@@ -835,16 +935,37 @@ mod tests {
         let ids = |os| catalog(os).into_iter().map(|e| e.id).collect::<Vec<_>>();
         assert_eq!(
             ids(Os::Windows),
-            ["powertoys-run", "windows-terminal", "wsl", "start-search", "jump-list", "widgets"]
+            [
+                "powertoys-run",
+                "windows-terminal",
+                "wsl",
+                "start-search",
+                "jump-list",
+                "widgets"
+            ]
         );
         assert_eq!(entry("widgets").unwrap().kind, Kind::Install);
         assert_eq!(
             ids(Os::Mac),
-            ["shortcuts", "spotlight", "universal-clipboard", "handoff", "menu-bar", "dock-menu"]
+            [
+                "shortcuts",
+                "spotlight",
+                "universal-clipboard",
+                "handoff",
+                "menu-bar",
+                "dock-menu"
+            ]
         );
         assert_eq!(
             ids(Os::Linux),
-            ["gnome-shell", "plasmoid", "xdg-scheme", "portals", "systemd-user", "flatpak"]
+            [
+                "gnome-shell",
+                "plasmoid",
+                "xdg-scheme",
+                "portals",
+                "systemd-user",
+                "flatpak"
+            ]
         );
         assert!(catalog(Os::Other).is_empty());
         let unique: std::collections::BTreeSet<_> = CATALOG.iter().map(|e| e.id).collect();
@@ -854,7 +975,10 @@ mod tests {
     #[test]
     fn gnome_and_plasmoid_install_exactly_and_uninstall_cleanly() {
         let d = tempfile::tempdir().unwrap();
-        let fake = Fake { have: vec!["gnome-shell", "plasmashell"], ..Fake::default() };
+        let fake = Fake {
+            have: vec!["gnome-shell", "plasmashell"],
+            ..Fake::default()
+        };
         let mut env = env(d.path(), Os::Linux, &fake);
         // The user's own extension next to ours must survive.
         let other = env.local.join("gnome-shell").join("extensions").join("x@y");
@@ -867,16 +991,31 @@ mod tests {
         assert!(js.contains(r#"const KOR = "/opt/kor/bin/kor";"#), "{js}");
         assert!(!js.contains("@KOR_JSON@"));
         let meta: serde_json::Value =
-            serde_json::from_slice(&std::fs::read(env.gnome_dir().join("metadata.json")).unwrap()).unwrap();
+            serde_json::from_slice(&std::fs::read(env.gnome_dir().join("metadata.json")).unwrap())
+                .unwrap();
         assert_eq!(meta["uuid"], GNOME_UUID);
-        assert!(meta["shell-version"].as_array().unwrap().iter().any(|v| v == "47"));
-        assert!(fake.calls.lock().unwrap().iter().any(|c| c == "gnome-extensions enable kor@kor.dev"));
+        assert!(
+            meta["shell-version"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|v| v == "47")
+        );
+        assert!(
+            fake.calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|c| c == "gnome-extensions enable kor@kor.dev")
+        );
 
         install(&mut env, "plasmoid", &Options::default()).unwrap();
         let qml = std::fs::read_to_string(env.plasmoid_dir().join("contents/ui/main.qml")).unwrap();
         assert!(qml.contains(r#"readonly property string kor: "/opt/kor/bin/kor""#));
-        let pm: serde_json::Value =
-            serde_json::from_slice(&std::fs::read(env.plasmoid_dir().join("metadata.json")).unwrap()).unwrap();
+        let pm: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(env.plasmoid_dir().join("metadata.json")).unwrap(),
+        )
+        .unwrap();
         assert_eq!(pm["KPlugin"]["Id"], PLASMOID_ID);
         assert_eq!(pm["KPackageStructure"], "Plasma/Applet");
 
@@ -892,15 +1031,22 @@ mod tests {
     #[test]
     fn foreign_files_are_never_overwritten_and_unavailable_items_refuse() {
         let d = tempfile::tempdir().unwrap();
-        let fake = Fake { have: vec!["wt"], ..Fake::default() };
+        let fake = Fake {
+            have: vec!["wt"],
+            ..Fake::default()
+        };
         let mut env = env(d.path(), Os::Windows, &fake);
         let frag = env.terminal_fragment();
         std::fs::create_dir_all(frag.parent().unwrap()).unwrap();
         std::fs::write(&frag, "{}").unwrap();
-        assert!(matches!(install(&mut env, "windows-terminal", &Options::default()), Err(Error::Foreign(_))));
+        assert!(matches!(
+            install(&mut env, "windows-terminal", &Options::default()),
+            Err(Error::Foreign(_))
+        ));
         std::fs::remove_file(&frag).unwrap();
         install(&mut env, "windows-terminal", &Options::default()).unwrap();
-        let v: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(&frag).unwrap()).unwrap();
+        let v: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&frag).unwrap()).unwrap();
         let p = &v["profiles"][0];
         assert_eq!(p["name"], "Kor");
         assert_eq!(p["guid"], WT_GUID);
@@ -910,11 +1056,26 @@ mod tests {
         // The folder existed before the install (the test made it): it stays.
         assert!(frag.parent().unwrap().is_dir());
 
-        assert!(matches!(install(&mut env, "powertoys-run", &Options::default()), Err(Error::Unavailable("no-powertoys"))));
-        assert!(matches!(install(&mut env, "gnome-shell", &Options::default()), Err(Error::Unavailable("other-os"))));
-        assert!(matches!(install(&mut env, "wsl", &Options::default()), Err(Error::NotManaged("builtin"))));
-        assert!(matches!(install(&mut env, "jump-list", &Options::default()), Err(Error::NotManaged("delegated"))));
-        assert!(matches!(install(&mut env, "nope", &Options::default()), Err(Error::Unknown(_))));
+        assert!(matches!(
+            install(&mut env, "powertoys-run", &Options::default()),
+            Err(Error::Unavailable("no-powertoys"))
+        ));
+        assert!(matches!(
+            install(&mut env, "gnome-shell", &Options::default()),
+            Err(Error::Unavailable("other-os"))
+        ));
+        assert!(matches!(
+            install(&mut env, "wsl", &Options::default()),
+            Err(Error::NotManaged("builtin"))
+        ));
+        assert!(matches!(
+            install(&mut env, "jump-list", &Options::default()),
+            Err(Error::NotManaged("delegated"))
+        ));
+        assert!(matches!(
+            install(&mut env, "nope", &Options::default()),
+            Err(Error::Unknown(_))
+        ));
     }
 
     #[test]
@@ -923,32 +1084,60 @@ mod tests {
         let fake = Fake::default();
         let mut env = env(d.path(), Os::Windows, &fake);
         std::fs::create_dir_all(env.local.join("Microsoft").join("PowerToys")).unwrap();
-        assert_eq!(status(&env, entry("powertoys-run").unwrap()).reason, Some("no-bundle"));
+        assert_eq!(
+            status(&env, entry("powertoys-run").unwrap()).reason,
+            Some("no-bundle")
+        );
         let build = d.path().join("res").join("integrations").join("powertoys");
         std::fs::create_dir_all(build.join("Images")).unwrap();
         std::fs::write(build.join(POWERTOYS_DLL), b"dll").unwrap();
         std::fs::write(build.join("plugin.json"), b"{}").unwrap();
         std::fs::write(build.join("Images").join("kor.png"), b"png").unwrap();
         install(&mut env, "powertoys-run", &Options::default()).unwrap();
-        assert_eq!(std::fs::read(env.powertoys_dir().join(POWERTOYS_DLL)).unwrap(), b"dll");
+        assert_eq!(
+            std::fs::read(env.powertoys_dir().join(POWERTOYS_DLL)).unwrap(),
+            b"dll"
+        );
         assert!(env.powertoys_dir().join("Images").join("kor.png").is_file());
-        assert_eq!(std::fs::read_to_string(env.powertoys_dir().join("kor-path.txt")).unwrap(), "/opt/kor/bin/kor");
+        assert_eq!(
+            std::fs::read_to_string(env.powertoys_dir().join("kor-path.txt")).unwrap(),
+            "/opt/kor/bin/kor"
+        );
         uninstall(&mut env, "powertoys-run").unwrap();
         assert!(!env.powertoys_dir().exists());
-        assert!(!env.local.join("Microsoft").join("PowerToys").join("PowerToys Run").exists());
+        assert!(
+            !env.local
+                .join("Microsoft")
+                .join("PowerToys")
+                .join("PowerToys Run")
+                .exists()
+        );
     }
 
     #[test]
     fn shortcuts_are_generated_signed_and_imported() {
         let d = tempfile::tempdir().unwrap();
-        let fake = Fake { have: vec!["shortcuts"], ..Fake::default() };
+        let fake = Fake {
+            have: vec!["shortcuts"],
+            ..Fake::default()
+        };
         let mut env = env(d.path(), Os::Mac, &fake);
         install(&mut env, "shortcuts", &Options::default()).unwrap();
         let calls = fake.calls.lock().unwrap().clone();
-        assert_eq!(calls.iter().filter(|c| c.starts_with("shortcuts sign --mode anyone")).count(), 4);
+        assert_eq!(
+            calls
+                .iter()
+                .filter(|c| c.starts_with("shortcuts sign --mode anyone"))
+                .count(),
+            4
+        );
         assert_eq!(calls.iter().filter(|c| c.starts_with("open ")).count(), 4);
         for s in shortcuts::ALL {
-            assert!(env.shortcuts_dir().join(format!("{}.shortcut", s.file)).is_file());
+            assert!(
+                env.shortcuts_dir()
+                    .join(format!("{}.shortcut", s.file))
+                    .is_file()
+            );
         }
         let (st, left) = uninstall(&mut env, "shortcuts").unwrap();
         assert!(!st.installed);
@@ -962,18 +1151,33 @@ mod tests {
         let fake = Fake::default();
         let mut env = env(d.path(), Os::Mac, &fake);
         assert!(flag(&env, "handoff").is_none());
-        let bad = Options { handoff_url: Some("http://x".into()), ..Options::default() };
-        assert!(matches!(install(&mut env, "handoff", &bad), Err(Error::Unavailable("bad-url"))));
-        let opts = Options { handoff_url: Some("https://kor.example/s".into()), ..Options::default() };
+        let bad = Options {
+            handoff_url: Some("http://x".into()),
+            ..Options::default()
+        };
+        assert!(matches!(
+            install(&mut env, "handoff", &bad),
+            Err(Error::Unavailable("bad-url"))
+        ));
+        let opts = Options {
+            handoff_url: Some("https://kor.example/s".into()),
+            ..Options::default()
+        };
         assert!(install(&mut env, "handoff", &opts).unwrap().installed);
-        assert_eq!(flag(&env, "handoff").unwrap()["url"], "https://kor.example/s");
+        assert_eq!(
+            flag(&env, "handoff").unwrap()["url"],
+            "https://kor.example/s"
+        );
         install(&mut env, "spotlight", &Options::default()).unwrap();
         assert!(flag(&env, "spotlight").is_some());
         uninstall(&mut env, "spotlight").unwrap();
         assert!(flag(&env, "spotlight").is_none() && flag(&env, "handoff").is_some());
         let all = status_all(&env);
         assert_eq!(all.len(), 6);
-        assert!(all.iter().any(|s| s.id == "dock-menu" && s.kind == "delegated" && s.via == Some("desktop")));
+        assert!(
+            all.iter()
+                .any(|s| s.id == "dock-menu" && s.kind == "delegated" && s.via == Some("desktop"))
+        );
     }
 
     #[test]
@@ -985,7 +1189,10 @@ mod tests {
         assert_eq!(status(&env, fp).reason, Some("not-flatpak"));
         env.flatpak = true;
         assert!(status(&env, fp).installed);
-        assert_eq!(status(&env, entry("systemd-user").unwrap()).reason, Some("no-systemd"));
+        assert_eq!(
+            status(&env, entry("systemd-user").unwrap()).reason,
+            Some("no-systemd")
+        );
     }
 
     #[test]
@@ -995,14 +1202,33 @@ mod tests {
         let mut env = env(d.path(), Os::Windows, &fake);
         let ps = FakePs::default();
         env.sparse = Box::new(ps.clone());
-        assert_eq!(status(&env, entry("widgets").unwrap()).reason, Some("no-bundle"));
+        assert_eq!(
+            status(&env, entry("widgets").unwrap()).reason,
+            Some("no-bundle")
+        );
         let msix = widgets_kind().msix(&d.path().join("res"));
         std::fs::create_dir_all(msix.parent().unwrap()).unwrap();
         std::fs::write(&msix, b"msix").unwrap();
-        assert!(install(&mut env, "widgets", &Options::default()).unwrap().installed);
-        assert!(ps.calls.lock().unwrap().iter().any(|c| c.contains("Add-AppxPackage")));
+        assert!(
+            install(&mut env, "widgets", &Options::default())
+                .unwrap()
+                .installed
+        );
+        assert!(
+            ps.calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|c| c.contains("Add-AppxPackage"))
+        );
         uninstall(&mut env, "widgets").unwrap();
-        assert!(ps.calls.lock().unwrap().iter().any(|c| c.contains("Remove-AppxPackage")));
+        assert!(
+            ps.calls
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|c| c.contains("Remove-AppxPackage"))
+        );
         assert!(!status(&env, entry("widgets").unwrap()).installed);
     }
 }

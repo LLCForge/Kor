@@ -605,7 +605,8 @@ pub fn isolated_env_with(
 }
 
 fn git(dir: &Path, args: &[&str]) -> std::io::Result<()> {
-    let st = std::process::Command::new("git").no_window()
+    let st = std::process::Command::new("git")
+        .no_window()
         .args(args)
         .current_dir(dir)
         .stdin(std::process::Stdio::null())

@@ -97,7 +97,8 @@ fn external(root: &Path, report: &mut Report, l: &Localizer) {
         Some(bin) => {
             let out =
                 std::env::temp_dir().join(format!("kor-gitleaks-{}.json", std::process::id()));
-            let res = run(Command::new(bin).no_window()
+            let res = run(Command::new(bin)
+                .no_window()
                 .args([
                     "detect",
                     "--no-git",
@@ -143,7 +144,8 @@ fn external(root: &Path, report: &mut Report, l: &Localizer) {
         return;
     };
     let res = output(
-        Command::new(bin).no_window()
+        Command::new(bin)
+            .no_window()
             .args(["scan", "--json", "--quiet", "--metrics", "off", "--config"])
             .arg(&config)
             .arg(root),

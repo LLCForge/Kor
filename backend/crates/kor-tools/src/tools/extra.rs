@@ -179,7 +179,9 @@ impl Tool for ExitPlanMode {
             input["confirm"].as_bool().unwrap_or(false),
         );
         match saved {
-            Some(p) if !out.is_error => ToolOutput::ok(format!("{}; plan saved as {}", out.content, p.id)),
+            Some(p) if !out.is_error => {
+                ToolOutput::ok(format!("{}; plan saved as {}", out.content, p.id))
+            }
             _ => out,
         }
     }

@@ -52,7 +52,10 @@ fn red(s: &str) -> String {
 }
 
 fn step_line(l: &Localizer, s: &Step) -> String {
-    let line = l.t_args("deploy-step", &args!("id" => s.id, "cmd" => s.display.clone()));
+    let line = l.t_args(
+        "deploy-step",
+        &args!("id" => s.id, "cmd" => s.display.clone()),
+    );
     if s.destructive {
         red(&format!("{line}  [{}]", l.t("deploy-destructive")))
     } else {
@@ -71,24 +74,43 @@ pub fn run(ctx: &Ctx, a: &DeployArgs) -> anyhow::Result<bool> {
 }
 
 fn err(l: &Localizer, e: impl std::fmt::Display) -> bool {
-    eprintln!("{}", l.t_args("deploy-error", &args!("error" => e.to_string())));
+    eprintln!(
+        "{}",
+        l.t_args("deploy-error", &args!("error" => e.to_string()))
+    );
     false
 }
 
-fn deploy_env(l: &Localizer, root: &std::path::Path, env: &str, yes: bool, dry: bool) -> anyhow::Result<bool> {
+fn deploy_env(
+    l: &Localizer,
+    root: &std::path::Path,
+    env: &str,
+    yes: bool,
+    dry: bool,
+) -> anyhow::Result<bool> {
     let plan = match deploy::plan(root, env) {
         Ok(p) => p,
         Err(e) => return Ok(err(l, e)),
     };
-    let services = if plan.services.is_empty() { "-".to_owned() } else { plan.services.join(", ") };
+    let services = if plan.services.is_empty() {
+        "-".to_owned()
+    } else {
+        plan.services.join(", ")
+    };
     println!(
         "{}",
-        l.t_args("deploy-plan-head", &args!("env" => env, "target" => plan.target.clone(), "services" => services))
+        l.t_args(
+            "deploy-plan-head",
+            &args!("env" => env, "target" => plan.target.clone(), "services" => services)
+        )
     );
     match (&plan.since, &plan.changed_files) {
         (Some(c), Some(f)) => println!(
             "{}",
-            l.t_args("deploy-since", &args!("commit" => c[..c.len().min(12)].to_owned(), "count" => f.len()))
+            l.t_args(
+                "deploy-since",
+                &args!("commit" => c[..c.len().min(12)].to_owned(), "count" => f.len())
+            )
         ),
         _ => println!("{}", l.t_args("deploy-first", &args!("env" => env))),
     }
@@ -116,8 +138,13 @@ fn deploy_env(l: &Localizer, root: &std::path::Path, env: &str, yes: bool, dry: 
     let on = |e: &Event| match e {
         Event::Start { step } => println!("$ {}", step.display),
         Event::Output { line, .. } => println!("  {line}"),
-        Event::Done { ok: false, detail, .. } => eprintln!("  {}", red(detail)),
-        Event::Note { text } => println!("{}", l.t_args("deploy-note", &args!("text" => text.clone()))),
+        Event::Done {
+            ok: false, detail, ..
+        } => eprintln!("  {}", red(detail)),
+        Event::Note { text } => println!(
+            "{}",
+            l.t_args("deploy-note", &args!("text" => text.clone()))
+        ),
         _ => {}
     };
     let report = rt.block_on(deploy::run(root, &plan, &mut approve, &on));
@@ -130,7 +157,13 @@ fn deploy_env(l: &Localizer, root: &std::path::Path, env: &str, yes: bool, dry: 
     }
     if report.ok {
         let c = report.commit.clone().unwrap_or_default();
-        println!("{}", l.t_args("deploy-ok", &args!("env" => env, "commit" => c[..c.len().min(12)].to_owned())));
+        println!(
+            "{}",
+            l.t_args(
+                "deploy-ok",
+                &args!("env" => env, "commit" => c[..c.len().min(12)].to_owned())
+            )
+        );
     } else if report.cancelled {
         println!("{}", l.t("deploy-cancelled"));
     } else {
@@ -152,14 +185,24 @@ fn risk(l: &Localizer, root: &std::path::Path, env: &str) -> bool {
         println!("{}", l.t_args("deploy-risk-none", &args!("env" => env)));
         return true;
     }
-    println!("{}", l.t_args("deploy-risk-head", &args!("env" => env, "count" => r.risks.len())));
+    println!(
+        "{}",
+        l.t_args(
+            "deploy-risk-head",
+            &args!("env" => env, "count" => r.risks.len())
+        )
+    );
     for x in &r.risks {
         let tag = match x.level {
             Level::High => red("HIGH"),
             Level::Medium => "MEDIUM".to_owned(),
             Level::Info => "info".to_owned(),
         };
-        let file = x.file.as_deref().map(|f| format!(" ({f})")).unwrap_or_default();
+        let file = x
+            .file
+            .as_deref()
+            .map(|f| format!(" ({f})"))
+            .unwrap_or_default();
         println!("  [{tag}] {}{file}\n      {}", x.title, x.detail);
     }
     !r.risks.iter().any(|x| x.level == Level::High)
@@ -174,9 +217,17 @@ fn status(l: &Localizer, root: &std::path::Path) -> bool {
     for env in envs {
         match state.envs.get(&env) {
             Some(s) => {
-                let commit = s.commit.as_deref().map_or("-", |c| &c[..c.len().min(12)]).to_owned();
+                let commit = s
+                    .commit
+                    .as_deref()
+                    .map_or("-", |c| &c[..c.len().min(12)])
+                    .to_owned();
                 let when = chrono::DateTime::from_timestamp(i64::try_from(s.at).unwrap_or(0), 0)
-                    .map(|d| d.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M").to_string())
+                    .map(|d| {
+                        d.with_timezone(&chrono::Local)
+                            .format("%Y-%m-%d %H:%M")
+                            .to_string()
+                    })
                     .unwrap_or_default();
                 let result = match &s.last {
                     Some(r) if r.ok => "ok",
@@ -184,7 +235,13 @@ fn status(l: &Localizer, root: &std::path::Path) -> bool {
                     Some(_) => "failed",
                     None => "-",
                 };
-                println!("{}", l.t_args("deploy-status-line", &args!("env" => env, "commit" => commit, "when" => when, "result" => result)));
+                println!(
+                    "{}",
+                    l.t_args(
+                        "deploy-status-line",
+                        &args!("env" => env, "commit" => commit, "when" => when, "result" => result)
+                    )
+                );
             }
             None => println!("{}", l.t_args("deploy-status-never", &args!("env" => env))),
         }

@@ -203,15 +203,29 @@ pub struct Options<'a> {
 
 /// One file-changing tool call of a transcript.
 enum FileCall {
-    Write { path: String, content: String },
-    Edit { path: String, old: String, new: String, all: bool },
+    Write {
+        path: String,
+        content: String,
+    },
+    Edit {
+        path: String,
+        old: String,
+        new: String,
+        all: bool,
+    },
     /// A tool that changes files in a way that cannot be replayed (`apply_patch`, notebooks).
-    Other { paths: Vec<String> },
+    Other {
+        paths: Vec<String>,
+    },
     Shell,
 }
 
 fn file_calls(m: &Message) -> Vec<FileCall> {
-    let s = |v: &serde_json::Value, k: &str| v.get(k).and_then(serde_json::Value::as_str).map(str::to_owned);
+    let s = |v: &serde_json::Value, k: &str| {
+        v.get(k)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+    };
     m.parts
         .iter()
         .filter_map(|p| match p {
@@ -224,21 +238,43 @@ fn file_calls(m: &Message) -> Vec<FileCall> {
                     path: s(input, "file_path").or_else(|| s(input, "path"))?,
                     old: s(input, "old_string")?,
                     new: s(input, "new_string")?,
-                    all: input.get("replace_all").and_then(serde_json::Value::as_bool).unwrap_or(false),
+                    all: input
+                        .get("replace_all")
+                        .and_then(serde_json::Value::as_bool)
+                        .unwrap_or(false),
                 }),
-                "NotebookEdit" | "EditSymbol" | "MultiEdit" | "Delete" | "Move" => Some(FileCall::Other {
-                    paths: ["notebook_path", "file_path", "path", "from", "to", "source", "destination"].iter().filter_map(|k| s(input, k)).collect(),
-                }),
+                "NotebookEdit" | "EditSymbol" | "MultiEdit" | "Delete" | "Move" => {
+                    Some(FileCall::Other {
+                        paths: [
+                            "notebook_path",
+                            "file_path",
+                            "path",
+                            "from",
+                            "to",
+                            "source",
+                            "destination",
+                        ]
+                        .iter()
+                        .filter_map(|k| s(input, k))
+                        .collect(),
+                    })
+                }
                 "apply_patch" => Some(FileCall::Other {
                     paths: s(input, "patch")
                         .or_else(|| s(input, "input"))
                         .unwrap_or_default()
                         .lines()
                         .filter_map(|l| {
-                            ["*** Update File: ", "*** Add File: ", "*** Delete File: ", "+++ b/", "--- a/"]
-                                .iter()
-                                .find_map(|pre| l.strip_prefix(pre))
-                                .map(|p| p.trim().to_owned())
+                            [
+                                "*** Update File: ",
+                                "*** Add File: ",
+                                "*** Delete File: ",
+                                "+++ b/",
+                                "--- a/",
+                            ]
+                            .iter()
+                            .find_map(|pre| l.strip_prefix(pre))
+                            .map(|p| p.trim().to_owned())
                         })
                         .collect(),
                 }),
@@ -276,7 +312,13 @@ fn absolute(root: &Path, rel: &str) -> PathBuf {
 
 /// Put every file the parent changed after message `at` back to its state at that point, inside
 /// `worktree` (which mirrors `root`). Returns (rewound, unrestored, shell ran after the point).
-fn rewind_to(messages: &[Message], at: usize, journal: &Path, root: &Path, worktree: &Path) -> (Vec<String>, Vec<String>, bool) {
+fn rewind_to(
+    messages: &[Message],
+    at: usize,
+    journal: &Path,
+    root: &Path,
+    worktree: &Path,
+) -> (Vec<String>, Vec<String>, bool) {
     let before: Vec<FileCall> = messages[..at].iter().flat_map(file_calls).collect();
     let after: Vec<FileCall> = messages[at..].iter().flat_map(file_calls).collect();
     let shell_after = after.iter().any(|c| matches!(c, FileCall::Shell));
@@ -291,26 +333,46 @@ fn rewind_to(messages: &[Message], at: usize, journal: &Path, root: &Path, workt
     }
     let (mut rewound, mut unrestored) = (Vec::new(), Vec::new());
     for abs in touched {
-        let Ok(rel) = abs.strip_prefix(root) else { continue };
+        let Ok(rel) = abs.strip_prefix(root) else {
+            continue;
+        };
         let rel_s = rel.to_string_lossy().replace('\\', "/");
         let target = worktree.join(rel);
         // The file before the session first touched it, then the replayable calls up to `at`.
-        let mut state: Option<Option<String>> = kor_tools::undo::original(journal, &abs).map(|o| o.map(|b| String::from_utf8_lossy(&b).into_owned()));
-        for c in before.iter().filter(|c| path_of(c).iter().any(|p| absolute(root, p) == abs)) {
+        let mut state: Option<Option<String>> = kor_tools::undo::original(journal, &abs)
+            .map(|o| o.map(|b| String::from_utf8_lossy(&b).into_owned()));
+        for c in before
+            .iter()
+            .filter(|c| path_of(c).iter().any(|p| absolute(root, p) == abs))
+        {
             state = match (state, c) {
                 (_, FileCall::Write { content, .. }) => Some(Some(content.clone())),
-                (Some(Some(text)), FileCall::Edit { old, new, all, .. }) if !old.is_empty() && text.contains(old.as_str()) => {
-                    Some(Some(if *all { text.replace(old.as_str(), new) } else { text.replacen(old.as_str(), new, 1) }))
+                (Some(Some(text)), FileCall::Edit { old, new, all, .. })
+                    if !old.is_empty() && text.contains(old.as_str()) =>
+                {
+                    Some(Some(if *all {
+                        text.replace(old.as_str(), new)
+                    } else {
+                        text.replacen(old.as_str(), new, 1)
+                    }))
                 }
                 _ => None,
             };
         }
         let done = match state {
-            Some(Some(text)) => target.parent().map_or(Ok(()), std::fs::create_dir_all).and_then(|()| std::fs::write(&target, text)).is_ok(),
+            Some(Some(text)) => target
+                .parent()
+                .map_or(Ok(()), std::fs::create_dir_all)
+                .and_then(|()| std::fs::write(&target, text))
+                .is_ok(),
             Some(None) => !target.exists() || std::fs::remove_file(&target).is_ok(),
             None => false,
         };
-        if done { rewound.push(rel_s) } else { unrestored.push(rel_s) }
+        if done {
+            rewound.push(rel_s)
+        } else {
+            unrestored.push(rel_s)
+        }
     }
     (rewound, unrestored, shell_after)
 }
@@ -366,7 +428,8 @@ pub fn fork(
                 if at < messages.len()
                     && let (Some(undo), Some(wt)) = (opts.undo_base, &f.worktree)
                 {
-                    (f.rewound, f.unrestored, f.shell_after) = rewind_to(&messages, at, &undo.join(parent), root, wt);
+                    (f.rewound, f.unrestored, f.shell_after) =
+                        rewind_to(&messages, at, &undo.join(parent), root, wt);
                 }
             }
             Err(e) => {
@@ -995,7 +1058,11 @@ mod tests {
     fn tool(name: &str, input: serde_json::Value) -> Message {
         Message {
             role: Role::Assistant,
-            parts: vec![kor_core::ContentPart::ToolUse { id: "t".into(), name: name.into(), input }],
+            parts: vec![kor_core::ContentPart::ToolUse {
+                id: "t".into(),
+                name: name.into(),
+                input,
+            }],
         }
     }
 
@@ -1011,26 +1078,53 @@ mod tests {
         git_ok(&repo, &["init", "-q"]);
         std::fs::write(repo.join("keep.txt"), "base\n").unwrap();
         git_ok(&repo, &["add", "."]);
-        git_ok(&repo, &["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init"]);
+        git_ok(
+            &repo,
+            &[
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "commit",
+                "-qm",
+                "init",
+            ],
+        );
         let repo = git::repo_root(&repo).unwrap();
         // The parent: message 2 writes a.txt; message 4 edits it, writes b.txt and runs a shell command.
         let a = repo.join("a.txt").to_string_lossy().into_owned();
         let parent = vec![
             Message::text(Role::User, "write a"),
-            tool("Write", serde_json::json!({ "file_path": a, "content": "v1\n" })),
+            tool(
+                "Write",
+                serde_json::json!({ "file_path": a, "content": "v1\n" }),
+            ),
             Message::text(Role::User, "now change it"),
             Message {
                 role: Role::Assistant,
                 parts: vec![
-                    kor_core::ContentPart::ToolUse { id: "e".into(), name: "Edit".into(), input: serde_json::json!({ "file_path": "a.txt", "old_string": "v1", "new_string": "v2" }) },
-                    kor_core::ContentPart::ToolUse { id: "w".into(), name: "Write".into(), input: serde_json::json!({ "file_path": "b.txt", "content": "new\n" }) },
-                    kor_core::ContentPart::ToolUse { id: "s".into(), name: "Bash".into(), input: serde_json::json!({ "command": "npm i" }) },
+                    kor_core::ContentPart::ToolUse {
+                        id: "e".into(),
+                        name: "Edit".into(),
+                        input: serde_json::json!({ "file_path": "a.txt", "old_string": "v1", "new_string": "v2" }),
+                    },
+                    kor_core::ContentPart::ToolUse {
+                        id: "w".into(),
+                        name: "Write".into(),
+                        input: serde_json::json!({ "file_path": "b.txt", "content": "new\n" }),
+                    },
+                    kor_core::ContentPart::ToolUse {
+                        id: "s".into(),
+                        name: "Bash".into(),
+                        input: serde_json::json!({ "command": "npm i" }),
+                    },
                 ],
             },
         ];
         // The session's undo journal, recorded before the first change (both files were new).
         let undo = d.path().join("undo");
-        let mut j = kor_tools::undo::Journal::open(&undo, "p-2", std::slice::from_ref(&repo)).unwrap();
+        let mut j =
+            kor_tools::undo::Journal::open(&undo, "p-2", std::slice::from_ref(&repo)).unwrap();
         j.record(&repo, "a.txt").unwrap();
         j.record(&repo, "b.txt").unwrap();
         // The files as the parent left them.
@@ -1039,11 +1133,18 @@ mod tests {
         let (sessions, store) = (d.path().join("s"), d.path().join("forks.json"));
         std::fs::create_dir_all(&sessions).unwrap();
         kor_agent::session::save(&sessions.join("p-2.jsonl"), &parent).unwrap();
-        let opts = Options { root: Some(&repo), undo_base: Some(&undo), ..Default::default() };
+        let opts = Options {
+            root: Some(&repo),
+            undo_base: Some(&undo),
+            ..Default::default()
+        };
         let f = fork(&sessions, &store, "p-2", 2, &opts).unwrap();
         let wt = f.worktree.clone().unwrap();
         assert_eq!(text(&wt.join("a.txt")), "v1\n");
-        assert!(!wt.join("b.txt").exists(), "b.txt came after the fork point");
+        assert!(
+            !wt.join("b.txt").exists(),
+            "b.txt came after the fork point"
+        );
         assert_eq!(text(&wt.join("keep.txt")), "base\n");
         let mut r = f.rewound.clone();
         r.sort();

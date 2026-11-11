@@ -9,9 +9,9 @@
 
 use std::fmt::Write as _;
 
+use crate::Result;
 use crate::model::{Confidence, EdgeKind, NodeKind};
 use crate::resolve::Derived;
-use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -92,7 +92,12 @@ pub(crate) fn layer(d: &mut Derived, snaps: &[DocSnapshot]) {
         let name = if s.title.is_empty() { &s.url } else { &s.title };
         d.node(&id, NodeKind::Doc, name, None, None, &text);
         if let Some(m) = manifest.as_deref().filter(|_| !s.library.is_empty()) {
-            d.edge(m, &id, EdgeKind::DocumentedBy, Confidence::Inferred { score: 0.7 });
+            d.edge(
+                m,
+                &id,
+                EdgeKind::DocumentedBy,
+                Confidence::Inferred { score: 0.7 },
+            );
         }
     }
 }
@@ -126,7 +131,10 @@ mod tests {
     fn doc_pages_become_nodes_linked_to_the_manifest() -> Result<()> {
         let dir = tempfile::tempdir()?;
         let root = dir.path();
-        std::fs::write(root.join("Cargo.toml"), "[package]\nname = \"app\"\n[dependencies]\nserde = \"1\"\n")?;
+        std::fs::write(
+            root.join("Cargo.toml"),
+            "[package]\nname = \"app\"\n[dependencies]\nserde = \"1\"\n",
+        )?;
         std::fs::create_dir_all(root.join("src"))?;
         std::fs::write(root.join("src/main.rs"), "fn main() {}\n")?;
         let snap = DocSnapshot {
@@ -147,7 +155,10 @@ mod tests {
             && e.kind == EdgeKind::DocumentedBy));
         assert_eq!(g.web_docs().len(), 1);
         // Unsafe ids are refused.
-        let bad = DocSnapshot { id: "../x".into(), ..DocSnapshot::default() };
+        let bad = DocSnapshot {
+            id: "../x".into(),
+            ..DocSnapshot::default()
+        };
         assert!(save(root, &bad).is_err());
         Ok(())
     }

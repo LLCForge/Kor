@@ -80,7 +80,9 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
         .mut_arg("agents", |a| a.help(l.t("arg-task-agents")))
         .mut_arg("model_per_role", |a| a.help(l.t("arg-task-model-per-role")))
         .mut_arg("budget_usd", |a| a.help(l.t("arg-task-budget")))
-        .mut_arg("orchestrator_model", |a| a.help(l.t("arg-task-orchestrator")))
+        .mut_arg("orchestrator_model", |a| {
+            a.help(l.t("arg-task-orchestrator"))
+        })
         .mut_arg("test", |a| a.help(l.t("arg-task-test")))
         .mut_arg("parallel", |a| a.help(l.t("arg-task-parallel")))
         .mut_arg("on", |a| a.help(l.t("arg-task-on")))
@@ -132,7 +134,13 @@ pub fn run(ctx: &Ctx, a: TaskArgs) -> anyhow::Result<bool> {
                 ResolveAction::Replan => Resolution::Replan,
                 ResolveAction::Drop => Resolution::Drop,
             };
-            drive(ctx, &root, &mut st, None, Step::Resolve(part.saturating_sub(1), how))
+            drive(
+                ctx,
+                &root,
+                &mut st,
+                None,
+                Step::Resolve(part.saturating_sub(1), how),
+            )
         }
         None => {
             let goal = a.goal.join(" ");
@@ -268,13 +276,24 @@ fn printer(lang: kor_i18n::Lang) -> task::Progress {
                     SubStatus::Pending => RowState::Waiting,
                     SubStatus::Running => RowState::Running,
                     SubStatus::Approved | SubStatus::Merged => RowState::Done,
-                    SubStatus::Rejected | SubStatus::Failed | SubStatus::Conflict | SubStatus::Dropped | SubStatus::Cancelled => RowState::Failed,
+                    SubStatus::Rejected
+                    | SubStatus::Failed
+                    | SubStatus::Conflict
+                    | SubStatus::Dropped
+                    | SubStatus::Cancelled => RowState::Failed,
                 };
-                live.set(s.index, &s.role, &l.t(&format!("task-sub-{}", sub_key(s.status))), state);
+                live.set(
+                    s.index,
+                    &s.role,
+                    &l.t(&format!("task-sub-{}", sub_key(s.status))),
+                    state,
+                );
             }
             return;
         }
-        let mut seen = seen.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut seen = seen
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         for s in &st.subtasks {
             if seen.insert(s.index, s.status) != Some(s.status) {
                 eprintln!(
@@ -420,14 +439,21 @@ fn print_status(l: &Localizer, st: &TaskState) {
         }
     }
     if let Some(t) = &st.test {
-        let key = if t.ok { "task-test-ok" } else { "task-test-failed" };
+        let key = if t.ok {
+            "task-test-ok"
+        } else {
+            "task-test-failed"
+        };
         println!("{}", l.t(key));
         if !t.ok {
             println!("{}", t.output);
         }
     }
     if let Some(e) = &st.error {
-        eprintln!("{}", l.t_args("error-generic", &args!("error" => e.clone())));
+        eprintln!(
+            "{}",
+            l.t_args("error-generic", &args!("error" => e.clone()))
+        );
     }
     for c in &st.conflicts {
         println!(
@@ -467,7 +493,10 @@ fn print_conflict(l: &Localizer, c: &task::Conflict) {
 
 /// `r` re-plan, `d` drop, anything else keeps it for later (`kor task resolve`).
 fn ask_resolution(l: &Localizer, id: &str, index: usize) -> Option<Resolution> {
-    let hint = l.t_args("task-conflict-hint", &args!("id" => id.to_owned(), "n" => index + 1));
+    let hint = l.t_args(
+        "task-conflict-hint",
+        &args!("id" => id.to_owned(), "n" => index + 1),
+    );
     if !std::io::stdin().is_terminal() {
         println!("{hint}");
         return None;
@@ -530,9 +559,16 @@ mod tests {
         assert!(matches!(parse(&["list"]).command, Some(TaskCmd::List)));
         assert!(matches!(
             parse(&["resolve", "3", "2", "replan"]).command,
-            Some(TaskCmd::Resolve { part: 2, action: ResolveAction::Replan, .. })
+            Some(TaskCmd::Resolve {
+                part: 2,
+                action: ResolveAction::Replan,
+                ..
+            })
         ));
-        assert!(matches!(parse(&["resume", "7"]).command, Some(TaskCmd::Resume { .. })));
+        assert!(matches!(
+            parse(&["resume", "7"]).command,
+            Some(TaskCmd::Resume { .. })
+        ));
         assert!(Cli::try_parse_from(["kor", "task", "x", "--agents", "40"]).is_err());
     }
 

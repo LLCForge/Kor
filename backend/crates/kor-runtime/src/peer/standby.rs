@@ -118,7 +118,9 @@ pub fn serve(node: &Node, peer: &PeerEntry, open: &Value) -> Result<Value, Strin
     lease.expires = super::now_ms() + lease_ms;
     lease.unfinished = open["unfinished"].as_bool().unwrap_or(false);
     write_lease(&d, &lease)?;
-    Ok(json!({ "type": "lease", "takenOver": null, "needBundle": need_bundle, "expires": lease.expires }))
+    Ok(
+        json!({ "type": "lease", "takenOver": null, "needBundle": need_bundle, "expires": lease.expires }),
+    )
 }
 
 /// Continue every expired, unfinished mirror as a task. Returns the new task ids.
@@ -132,7 +134,9 @@ pub fn scan(node: &Node) -> Vec<String> {
         let base = node.dir.join("standby").join(&p.name);
         for e in std::fs::read_dir(&base).into_iter().flatten().flatten() {
             let d = e.path();
-            let Some(mut lease) = read_lease(&d) else { continue };
+            let Some(mut lease) = read_lease(&d) else {
+                continue;
+            };
             if lease.taken_over.is_some() || lease.expires > now || !lease.unfinished {
                 continue;
             }
@@ -143,7 +147,11 @@ pub fn scan(node: &Node) -> Vec<String> {
                     out.push(id);
                 }
                 Err(err) => {
-                    super::audit("handoff-failed", &p.name, json!({ "session": lease.session, "error": err }));
+                    super::audit(
+                        "handoff-failed",
+                        &p.name,
+                        json!({ "session": lease.session, "error": err }),
+                    );
                     // Do not retry every scan: mark it as not continuable.
                     lease.unfinished = false;
                     let _ = write_lease(&d, &lease);
@@ -196,7 +204,11 @@ fn takeover(node: &Node, peer: &PeerEntry, d: &Path, lease: &Lease) -> Result<St
         },
     )?;
     (node.spawn)(&peer.name, &id)?;
-    super::audit("handoff", &peer.name, json!({ "session": lease.session, "task": id }));
+    super::audit(
+        "handoff",
+        &peer.name,
+        json!({ "session": lease.session, "task": id }),
+    );
     Ok(id)
 }
 
@@ -263,9 +275,15 @@ pub async fn renew(node: &Node, peer: &PeerEntry, m: &mut Mirror) -> Result<Rene
 ///
 /// # Errors
 /// When the peer cannot be reached.
-pub async fn release(node: &Node, peer: &PeerEntry, session: &str) -> Result<Option<String>, String> {
+pub async fn release(
+    node: &Node,
+    peer: &PeerEntry,
+    session: &str,
+) -> Result<Option<String>, String> {
     let (mut link, _) = dial(node, peer).await?;
-    link.send(json!({ "type": "open", "channel": "standby", "session": session, "release": true }))?;
+    link.send(
+        json!({ "type": "open", "channel": "standby", "session": session, "release": true }),
+    )?;
     let v = link.recv_within(Duration::from_secs(30)).await?;
     Ok(v["takenOver"].as_str().map(str::to_owned))
 }

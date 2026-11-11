@@ -40,14 +40,22 @@ pub fn idle_ms() -> Option<u64> {
 /// Executable name of the app owning the foreground window, lower case, without `.exe`
 /// (`chrome`, `code`, `windowsterminal`, `safari`).
 pub fn foreground_app() -> Option<String> {
-    imp::foreground_app().map(|n| app_name(&n)).filter(|n| !n.is_empty())
+    imp::foreground_app()
+        .map(|n| app_name(&n))
+        .filter(|n| !n.is_empty())
 }
 
 /// Graphics adapters (empty when unknown).
 pub fn gpus() -> Vec<Gpu> {
-    let nvidia = run("nvidia-smi", &["--query-gpu=name,memory.total", "--format=csv,noheader,nounits"])
-        .map(|o| parse_nvidia_smi(&o))
-        .unwrap_or_default();
+    let nvidia = run(
+        "nvidia-smi",
+        &[
+            "--query-gpu=name,memory.total",
+            "--format=csv,noheader,nounits",
+        ],
+    )
+    .map(|o| parse_nvidia_smi(&o))
+    .unwrap_or_default();
     let mut all = imp::gpus();
     // nvidia-smi's VRAM is exact; the OS list adds integrated / other vendors' adapters.
     for g in nvidia {
@@ -133,7 +141,9 @@ fn parse_pmset(out: &str) -> Option<Battery> {
     let pct = line.split_whitespace().find_map(|w| w.strip_suffix("%;"))?;
     Some(Battery {
         percent: pct.parse().ok()?,
-        charging: line.contains("; charging") || line.contains("; charged") || line.contains("AC attached"),
+        charging: line.contains("; charging")
+            || line.contains("; charged")
+            || line.contains("AC attached"),
     })
 }
 
@@ -148,12 +158,18 @@ fn parse_system_profiler(out: &str) -> Vec<Gpu> {
         .into_iter()
         .flatten()
         .filter_map(|g| {
-            let name = g["sppci_model"].as_str().or_else(|| g["_name"].as_str())?.to_owned();
+            let name = g["sppci_model"]
+                .as_str()
+                .or_else(|| g["_name"].as_str())?
+                .to_owned();
             let vram = ["spdisplays_vram", "spdisplays_vram_shared"]
                 .iter()
                 .find_map(|k| g[*k].as_str())
                 .and_then(parse_size_mb);
-            Some(Gpu { name, vram_mb: vram })
+            Some(Gpu {
+                name,
+                vram_mb: vram,
+            })
         })
         .collect()
 }
@@ -175,7 +191,9 @@ fn parse_size_mb(s: &str) -> Option<u64> {
 fn parse_lspci(out: &str) -> Vec<Gpu> {
     out.lines()
         .filter(|l| {
-            l.contains("VGA compatible controller") || l.contains("3D controller") || l.contains("Display controller")
+            l.contains("VGA compatible controller")
+                || l.contains("3D controller")
+                || l.contains("Display controller")
         })
         .filter_map(|l| {
             let name = l.split_once("controller: ")?.1;
@@ -218,12 +236,15 @@ mod imp {
     use windows_sys::Win32::System::Power::{GetSystemPowerStatus, SYSTEM_POWER_STATUS};
     use windows_sys::Win32::System::SystemInformation::GetTickCount;
     use windows_sys::Win32::System::Threading::{
-        OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION, QueryFullProcessImageNameW,
+        OpenProcess, PROCESS_NAME_WIN32, PROCESS_QUERY_LIMITED_INFORMATION,
+        QueryFullProcessImageNameW,
     };
     use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
         GetKeyboardLayoutNameW, GetLastInputInfo, LASTINPUTINFO,
     };
-    use windows_sys::Win32::UI::WindowsAndMessaging::{GetForegroundWindow, GetWindowThreadProcessId};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        GetForegroundWindow, GetWindowThreadProcessId,
+    };
 
     pub fn idle_ms() -> Option<u64> {
         let mut info = LASTINPUTINFO {
@@ -259,7 +280,9 @@ mod imp {
         let mut buf = [0u16; 1024];
         let mut len = u32::try_from(buf.len()).unwrap_or(0);
         // SAFETY: `buf` holds `len` u16s; `len` is updated to the written length.
-        let ok = unsafe { QueryFullProcessImageNameW(h, PROCESS_NAME_WIN32, buf.as_mut_ptr(), &raw mut len) };
+        let ok = unsafe {
+            QueryFullProcessImageNameW(h, PROCESS_NAME_WIN32, buf.as_mut_ptr(), &raw mut len)
+        };
         // SAFETY: `h` is an open process handle owned here.
         unsafe { CloseHandle(h) };
         (ok != 0).then(|| String::from_utf16_lossy(&buf[..len as usize]))
@@ -294,26 +317,29 @@ mod imp {
 
     pub fn gpus() -> Vec<Gpu> {
         let script = "Get-CimInstance Win32_VideoController | ForEach-Object { \"$($_.Name)|$($_.AdapterRAM)\" }";
-        run("powershell", &["-NoProfile", "-NonInteractive", "-Command", script])
-            .map(|o| {
-                o.lines()
-                    .filter_map(|l| {
-                        let (name, ram) = l.trim().rsplit_once('|')?;
-                        // AdapterRAM is a 32-bit field: values at 4 GB are capped, so unknown.
-                        let vram = ram
-                            .trim()
-                            .parse::<u64>()
-                            .ok()
-                            .filter(|b| *b > 0 && *b < 0xFFF0_0000)
-                            .map(|b| b / (1024 * 1024));
-                        (!name.trim().is_empty()).then(|| Gpu {
-                            name: name.trim().to_owned(),
-                            vram_mb: vram,
-                        })
+        run(
+            "powershell",
+            &["-NoProfile", "-NonInteractive", "-Command", script],
+        )
+        .map(|o| {
+            o.lines()
+                .filter_map(|l| {
+                    let (name, ram) = l.trim().rsplit_once('|')?;
+                    // AdapterRAM is a 32-bit field: values at 4 GB are capped, so unknown.
+                    let vram = ram
+                        .trim()
+                        .parse::<u64>()
+                        .ok()
+                        .filter(|b| *b > 0 && *b < 0xFFF0_0000)
+                        .map(|b| b / (1024 * 1024));
+                    (!name.trim().is_empty()).then(|| Gpu {
+                        name: name.trim().to_owned(),
+                        vram_mb: vram,
                     })
-                    .collect()
-            })
-            .unwrap_or_default()
+                })
+                .collect()
+        })
+        .unwrap_or_default()
     }
 }
 
@@ -328,14 +354,24 @@ mod imp {
     pub fn foreground_app() -> Option<String> {
         let out = run(
             "osascript",
-            &["-e", "tell application \"System Events\" to get name of first process whose frontmost is true"],
+            &[
+                "-e",
+                "tell application \"System Events\" to get name of first process whose frontmost is true",
+            ],
         )?;
         let name = out.trim();
         (!name.is_empty()).then(|| name.to_owned())
     }
 
     pub fn keyboard_layout() -> Option<String> {
-        let out = run("defaults", &["read", "com.apple.HIToolbox", "AppleCurrentKeyboardLayoutInputSourceID"])?;
+        let out = run(
+            "defaults",
+            &[
+                "read",
+                "com.apple.HIToolbox",
+                "AppleCurrentKeyboardLayoutInputSourceID",
+            ],
+        )?;
         let id = out.trim();
         (!id.is_empty()).then(|| id.to_owned())
     }
@@ -377,7 +413,11 @@ mod imp {
         for e in dir.flatten() {
             let p = e.path();
             if std::fs::read_to_string(p.join("type")).is_ok_and(|t| t.trim() == "Battery") {
-                let percent = std::fs::read_to_string(p.join("capacity")).ok()?.trim().parse().ok()?;
+                let percent = std::fs::read_to_string(p.join("capacity"))
+                    .ok()?
+                    .trim()
+                    .parse()
+                    .ok()?;
                 let status = std::fs::read_to_string(p.join("status")).unwrap_or_default();
                 return Some(Battery {
                     percent,
@@ -389,7 +429,9 @@ mod imp {
     }
 
     pub fn gpus() -> Vec<Gpu> {
-        let mut list = run("lspci", &[]).map(|o| parse_lspci(&o)).unwrap_or_default();
+        let mut list = run("lspci", &[])
+            .map(|o| parse_lspci(&o))
+            .unwrap_or_default();
         // AMD (amdgpu) exposes VRAM size in bytes; attach it to the AMD adapter.
         if let Ok(rd) = std::fs::read_dir("/sys/class/drm") {
             for e in rd.flatten() {
@@ -398,9 +440,9 @@ mod imp {
                     .ok()
                     .and_then(|s| s.trim().parse::<u64>().ok())
                     .map(|b| b / (1024 * 1024))
-                    && let Some(g) = list
-                        .iter_mut()
-                        .find(|g| g.vram_mb.is_none() && (g.name.contains("AMD") || g.name.contains("ATI")))
+                    && let Some(g) = list.iter_mut().find(|g| {
+                        g.vram_mb.is_none() && (g.name.contains("AMD") || g.name.contains("ATI"))
+                    })
                 {
                     g.vram_mb = Some(mb);
                 }
@@ -437,7 +479,10 @@ mod tests {
 
     #[test]
     fn app_names_are_normalised() {
-        assert_eq!(app_name(r"C:\Program Files\Google\Chrome\Application\chrome.exe"), "chrome");
+        assert_eq!(
+            app_name(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
+            "chrome"
+        );
         assert_eq!(app_name("/usr/bin/gnome-terminal"), "gnome-terminal");
         assert_eq!(app_name("Safari"), "safari");
         assert_eq!(app_name("WindowsTerminal.EXE"), "windowsterminal");
@@ -447,16 +492,39 @@ mod tests {
     #[test]
     fn tool_outputs_parse() {
         let n = parse_nvidia_smi("NVIDIA GeForce RTX 4070, 12282\nbad line\n");
-        assert_eq!(n, [Gpu { name: "NVIDIA GeForce RTX 4070".into(), vram_mb: Some(12282) }]);
+        assert_eq!(
+            n,
+            [Gpu {
+                name: "NVIDIA GeForce RTX 4070".into(),
+                vram_mb: Some(12282)
+            }]
+        );
         assert!(same_gpu("NVIDIA GeForce RTX 4070", "GeForce RTX 4070 "));
 
-        assert_eq!(parse_hid_idle("  |   \"HIDIdleTime\" = 2500000000\n"), Some(2500));
+        assert_eq!(
+            parse_hid_idle("  |   \"HIDIdleTime\" = 2500000000\n"),
+            Some(2500)
+        );
         assert_eq!(parse_hid_idle("nothing"), None);
 
-        let b = parse_pmset("Now drawing from 'AC Power'\n -InternalBattery-0 (id=1234)\t87%; charging; 1:02 remaining present: true");
-        assert_eq!(b, Some(Battery { percent: 87, charging: true }));
+        let b = parse_pmset(
+            "Now drawing from 'AC Power'\n -InternalBattery-0 (id=1234)\t87%; charging; 1:02 remaining present: true",
+        );
+        assert_eq!(
+            b,
+            Some(Battery {
+                percent: 87,
+                charging: true
+            })
+        );
         let b = parse_pmset(" -InternalBattery-0 (id=1)\t12%; discharging; 0:30 remaining");
-        assert_eq!(b, Some(Battery { percent: 12, charging: false }));
+        assert_eq!(
+            b,
+            Some(Battery {
+                percent: 12,
+                charging: false
+            })
+        );
         assert_eq!(parse_pmset("Now drawing from 'AC Power'"), None);
 
         let sp = r#"{"SPDisplaysDataType":[{"_name":"kHW","sppci_model":"Apple M2 Pro","spdisplays_vram_shared":"16 GB"},{"sppci_model":"AMD Radeon Pro 5500M","spdisplays_vram":"8 GB"}]}"#;
@@ -465,12 +533,17 @@ mod tests {
         assert_eq!(g[1].name, "AMD Radeon Pro 5500M");
         assert_eq!(parse_size_mb("1536 MB"), Some(1536));
 
-        let l = parse_lspci("00:02.0 VGA compatible controller: Intel Corporation UHD Graphics 620 (rev 07)\n01:00.0 3D controller: NVIDIA Corporation GP108M [GeForce MX150] (rev a1)\n00:1f.3 Audio device: Intel");
+        let l = parse_lspci(
+            "00:02.0 VGA compatible controller: Intel Corporation UHD Graphics 620 (rev 07)\n01:00.0 3D controller: NVIDIA Corporation GP108M [GeForce MX150] (rev a1)\n00:1f.3 Audio device: Intel",
+        );
         assert_eq!(l.len(), 2);
         assert_eq!(l[0].name, "Intel Corporation UHD Graphics 620");
 
         assert_eq!(
-            parse_setxkbmap("rules:      evdev\nmodel:      pc105\nlayout:     tr,us\nvariant:    f,\n").as_deref(),
+            parse_setxkbmap(
+                "rules:      evdev\nmodel:      pc105\nlayout:     tr,us\nvariant:    f,\n"
+            )
+            .as_deref(),
             Some("tr:f")
         );
         assert_eq!(parse_setxkbmap("layout:     us\n").as_deref(), Some("us"));

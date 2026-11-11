@@ -63,7 +63,6 @@ impl Style {
     }
 }
 
-
 /// §17.2 (ADR 0061): this surface's core event stream into the IPC trace (`KOR_IPC_TRACE`), in the
 /// desktop's `kor:event` wire shape, so CLI, TUI and desktop runs can be compared item by item.
 fn trace_ev(surface: kor_core::ipc_trace::Surface, ev: &AgentEvent) {
@@ -85,7 +84,9 @@ fn trace_item(surface: kor_core::ipc_trace::Surface, mut v: serde_json::Value) {
 pub(crate) fn tui_ev(ev: AgentEvent) -> Option<Ev> {
     Some(match ev {
         AgentEvent::Text(t) | AgentEvent::Thinking(t) => Ev::Text(t),
-        AgentEvent::ToolProgress { message: Some(m), .. } => Ev::Progress(m),
+        AgentEvent::ToolProgress {
+            message: Some(m), ..
+        } => Ev::Progress(m),
         AgentEvent::ToolProgress { .. } => return None,
         AgentEvent::Usage(u) => Ev::Usage(u.input, u.output),
         AgentEvent::Notice(n) => Ev::Notice(n),
@@ -131,7 +132,10 @@ impl Approver for TerminalApprover<'_> {
         // Let the renderer flush events queued before this request.
         tokio::task::yield_now().await;
         crate::brand::PAUSED.store(true, std::sync::atomic::Ordering::Relaxed);
-        trace_item(kor_core::ipc_trace::Surface::Cli, kor_agent::remote::wire::confirm_json(req));
+        trace_item(
+            kor_core::ipc_trace::Surface::Cli,
+            kor_agent::remote::wire::confirm_json(req),
+        );
         crate::status_cmd::call_me(self.ctx, &req.tool, &req.summary);
         eprint!("\r\x1b[2K");
         for f in &req.files {
@@ -145,9 +149,16 @@ impl Approver for TerminalApprover<'_> {
             }
         }
         if let Some(key) = &req.destructive {
-            eprintln!("\n{}", self.style.red(&tui::review::destructive(self.l, key)));
+            eprintln!(
+                "\n{}",
+                self.style.red(&tui::review::destructive(self.l, key))
+            );
         }
-        let key = if req.files.is_empty() { "perm-prompt" } else { "perm-review" };
+        let key = if req.files.is_empty() {
+            "perm-prompt"
+        } else {
+            "perm-review"
+        };
         eprint!(
             "\n{} ",
             self.style.ember(&self.l.t_args(
@@ -163,7 +174,8 @@ impl Approver for TerminalApprover<'_> {
             Some("a" | "A") => reply(PermissionReply::AllowAlways),
             Some("e" | "E") if req.files.len() == 1 => {
                 let mut r = reply(PermissionReply::Allow);
-                r.files.insert(req.files[0].path.clone(), self.edit(&req.files[0]).await);
+                r.files
+                    .insert(req.files[0].path.clone(), self.edit(&req.files[0]).await);
                 r
             }
             Some("f" | "F") if !req.files.is_empty() => {
@@ -171,7 +183,8 @@ impl Approver for TerminalApprover<'_> {
                 for f in &req.files {
                     eprint!(
                         "{} ",
-                        self.style.ember(&self.l.t_args("perm-file", &args!("path" => f.path.clone())))
+                        self.style
+                            .ember(&self.l.t_args("perm-file", &args!("path" => f.path.clone())))
                     );
                     let _ = std::io::stderr().flush();
                     let d = match read_line().await.as_deref().map(str::trim) {
@@ -201,7 +214,14 @@ impl Approver for TerminalApprover<'_> {
             let mark = if i == q.default { "*" } else { " " };
             eprintln!("  {mark}{} {o}", i + 1);
         }
-        eprint!("{} ", self.style.ember(&self.l.t_args("ask-choose", &args!("default" => q.default + 1))));
+        eprint!(
+            "{} ",
+            self.style.ember(
+                &self
+                    .l
+                    .t_args("ask-choose", &args!("default" => q.default + 1))
+            )
+        );
         let _ = std::io::stderr().flush();
         let answer = read_line().await;
         crate::brand::PAUSED.store(false, std::sync::atomic::Ordering::Relaxed);
@@ -218,10 +238,21 @@ impl Approver for TerminalApprover<'_> {
 
     /// §28.1 what an automatic summary replaces; with `compact_confirm` the user keeps items by
     /// number or cancels.
-    async fn compact(&self, items: &[kor_agent::ask::CompactItem], confirm: bool) -> kor_agent::ask::CompactChoice {
+    async fn compact(
+        &self,
+        items: &[kor_agent::ask::CompactItem],
+        confirm: bool,
+    ) -> kor_agent::ask::CompactChoice {
         use kor_agent::ask::CompactChoice;
         let (indices, labels) = compact_labels(items);
-        eprintln!("\n{}", self.style.ember(&self.l.t_args("compact-preview", &args!("count" => items.len()))));
+        eprintln!(
+            "\n{}",
+            self.style.ember(
+                &self
+                    .l
+                    .t_args("compact-preview", &args!("count" => items.len()))
+            )
+        );
         for (n, label) in labels.iter().enumerate() {
             eprintln!("  {} {label}", n + 1);
         }
@@ -251,11 +282,19 @@ impl TerminalApprover<'_> {
     /// the file is rejected (nothing the user did not see is written).
     async fn edit(&self, f: &kor_agent::Proposal) -> kor_agent::FileDecision {
         let (path, text) = (f.path.clone(), f.after.clone().unwrap_or_default());
-        let r = tokio::task::spawn_blocking(move || tui::review::edit_in_editor(&path, &text)).await;
+        let r =
+            tokio::task::spawn_blocking(move || tui::review::edit_in_editor(&path, &text)).await;
         match r.unwrap_or_else(|e| Err(e.to_string())) {
             Ok(content) => kor_agent::FileDecision::Edit(content),
             Err(error) => {
-                eprintln!("{}", self.style.red(&self.l.t_args("perm-editor-failed", &args!("error" => error))));
+                eprintln!(
+                    "{}",
+                    self.style.red(
+                        &self
+                            .l
+                            .t_args("perm-editor-failed", &args!("error" => error))
+                    )
+                );
                 kor_agent::FileDecision::Reject
             }
         }
@@ -281,9 +320,14 @@ async fn render(
 ) {
     let mut out = std::io::stdout();
     // The ember spinner runs while Kor waits for the model, and stops at its first output.
-    let animate = style.color && !print_mode && std::io::stderr().is_terminal() && !tui::term::still();
+    let animate =
+        style.color && !print_mode && std::io::stderr().is_terminal() && !tui::term::still();
     // §28.9 `ui.wrap` / `ui.wrap_width`: model text wraps at word boundaries.
-    let mut wrap = tui::term::Wrapper::new(if print_mode { 0 } else { tui::term::wrap_width() });
+    let mut wrap = tui::term::Wrapper::new(if print_mode {
+        0
+    } else {
+        tui::term::wrap_width()
+    });
     let mut spin = crate::brand::Spinner::new();
     let mut waiting = true;
     let mut tick = tokio::time::interval(std::time::Duration::from_millis(80));
@@ -346,7 +390,10 @@ async fn render(
             AgentEvent::Context(b) => {
                 // §5.3 status line per request, plus the one-time "summarize?" offer.
                 let l = kor_i18n::Localizer::new(lang);
-                eprintln!("{}", style.dim(&format!("  · {}", kor_runtime::context::status(&l, &b))));
+                eprintln!(
+                    "{}",
+                    style.dim(&format!("  · {}", kor_runtime::context::status(&l, &b)))
+                );
                 if let Some(w) = kor_runtime::context::warning(&l, &b) {
                     eprintln!("{}", style.ember(&w));
                 }
@@ -360,17 +407,39 @@ async fn render(
             }
             AgentEvent::ToolEnd {
                 output, is_error, ..
-            } if tui::term::verbosity() != kor_config::Verbosity::Normal || tui::term::images().is_some() => {
+            } if tui::term::verbosity() != kor_config::Verbosity::Normal
+                || tui::term::images().is_some() =>
+            {
                 let v = tui::term::verbosity();
                 if v == kor_config::Verbosity::Verbose {
                     for line in output.lines().take(200) {
                         let line = format!("  │ {line}");
-                        println!("{}", if is_error { style.red(&line) } else { style.dim(&line) });
+                        println!(
+                            "{}",
+                            if is_error {
+                                style.red(&line)
+                            } else {
+                                style.dim(&line)
+                            }
+                        );
                     }
                 } else if is_error || v == kor_config::Verbosity::Normal {
-                    let first: String = output.lines().next().unwrap_or_default().chars().take(120).collect();
+                    let first: String = output
+                        .lines()
+                        .next()
+                        .unwrap_or_default()
+                        .chars()
+                        .take(120)
+                        .collect();
                     let line = format!("  ⎿ {first}");
-                    println!("{}", if is_error { style.red(&line) } else { style.dim(&line) });
+                    println!(
+                        "{}",
+                        if is_error {
+                            style.red(&line)
+                        } else {
+                            style.dim(&line)
+                        }
+                    );
                 }
                 // §28.11: generated images inline in kitty / sixel terminals; the path otherwise.
                 for p in tui::term::image_paths(&output) {
@@ -583,7 +652,10 @@ async fn turn(
         }
         Err(e) => {
             let msg = provider_error(l, &e);
-            trace_item(kor_core::ipc_trace::Surface::Cli, json!({ "type": "error", "message": msg }));
+            trace_item(
+                kor_core::ipc_trace::Surface::Cli,
+                json!({ "type": "error", "message": msg }),
+            );
             eprintln!("{}", style.red(&msg));
             false
         }
@@ -652,10 +724,15 @@ async fn slash(s: &mut Session, line: &str, ctx: &Ctx) -> anyhow::Result<Slash> 
             match kor_tools::plans::latest_draft(&root, session.as_deref()) {
                 Some(p) => {
                     let p = kor_tools::plans::approve(&root, &p.id)?;
-                    if s.agent.permissions.mode == PermissionMode::Plan && s.agent.ctx.plan_gate.refresh(&root) {
+                    if s.agent.permissions.mode == PermissionMode::Plan
+                        && s.agent.ctx.plan_gate.refresh(&root)
+                    {
                         s.agent.permissions.mode = PermissionMode::Default;
                     }
-                    println!("{}", l.t_args("plan-approved", &args!("id" => p.id, "title" => p.title)));
+                    println!(
+                        "{}",
+                        l.t_args("plan-approved", &args!("id" => p.id, "title" => p.title))
+                    );
                 }
                 None => eprintln!("{}", l.t("plan-none-draft")),
             }
@@ -664,7 +741,10 @@ async fn slash(s: &mut Session, line: &str, ctx: &Ctx) -> anyhow::Result<Slash> 
         "/verbosity" => match tui::term::parse_verbosity(arg) {
             Some(v) => {
                 tui::term::set_verbosity(v);
-                println!("{}", l.t_args("verbosity-set", &args!("level" => arg.to_owned())));
+                println!(
+                    "{}",
+                    l.t_args("verbosity-set", &args!("level" => arg.to_owned()))
+                );
             }
             None => eprintln!("{}", l.t("verbosity-usage")),
         },
@@ -751,7 +831,10 @@ async fn slash(s: &mut Session, line: &str, ctx: &Ctx) -> anyhow::Result<Slash> 
         // through the next summary.
         "/context" if arg == "items" || arg.starts_with("drop ") || arg.starts_with("pin ") => {
             let items = kor_agent::ask::compact_items(&s.agent.messages);
-            let n = arg.split_whitespace().nth(1).and_then(|n| n.parse::<usize>().ok());
+            let n = arg
+                .split_whitespace()
+                .nth(1)
+                .and_then(|n| n.parse::<usize>().ok());
             match (arg.split_whitespace().next(), n) {
                 (Some("drop"), Some(i)) if kor_agent::ask::drop_item(&mut s.agent.messages, i) => {
                     if let Some(p) = &s.path {
@@ -768,8 +851,15 @@ async fn slash(s: &mut Session, line: &str, ctx: &Ctx) -> anyhow::Result<Slash> 
                 (Some("drop" | "pin"), _) => eprintln!("{}", l.t("context-item-usage")),
                 _ => {
                     for it in &items {
-                        let pin = if s.agent.context.pinned.contains(&it.index) { "*" } else { " " };
-                        println!("{pin}{:>4}  {:<9} ≈{:>6}  {}", it.index, it.kind, it.tokens, it.label);
+                        let pin = if s.agent.context.pinned.contains(&it.index) {
+                            "*"
+                        } else {
+                            " "
+                        };
+                        println!(
+                            "{pin}{:>4}  {:<9} ≈{:>6}  {}",
+                            it.index, it.kind, it.tokens, it.label
+                        );
                     }
                     println!("{}", l.t("context-item-usage"));
                 }
@@ -779,7 +869,11 @@ async fn slash(s: &mut Session, line: &str, ctx: &Ctx) -> anyhow::Result<Slash> 
             if let Some(b) = &s.agent.context.last {
                 print!("{}", kor_runtime::context::render(l, b));
             } else {
-                let cfg = ctx.config.as_ref().map(|c| c.config.context.clone()).unwrap_or_default();
+                let cfg = ctx
+                    .config
+                    .as_ref()
+                    .map(|c| c.config.context.clone())
+                    .unwrap_or_default();
                 print!("{}", kor_runtime::context::report(l, &cfg, 1));
             }
         }
@@ -868,7 +962,8 @@ async fn slash(s: &mut Session, line: &str, ctx: &Ctx) -> anyhow::Result<Slash> 
                 language: None,
                 yes: false,
             };
-            let heard = std::thread::scope(|t| t.spawn(|| crate::voice_cmd::listen(ctx, &a)).join());
+            let heard =
+                std::thread::scope(|t| t.spawn(|| crate::voice_cmd::listen(ctx, &a)).join());
             if let Ok(Some(text)) = heard {
                 println!("{text}");
                 return Ok(Slash::Prompt(text));
@@ -937,7 +1032,11 @@ async fn expand_custom(
     }
     s.agent.ctx.cancel = CancellationToken::new();
     let (tx, rx) = unbounded_channel();
-    let approver_t = TerminalApprover { l: &ctx.l, style, ctx };
+    let approver_t = TerminalApprover {
+        l: &ctx.l,
+        style,
+        ctx,
+    };
     let approver: &dyn Approver = if print_mode { &DenyAll } else { &approver_t };
     let mut out = String::new();
     for part in exp.parts {
@@ -993,23 +1092,47 @@ async fn session_start(s: &mut Session, style: &Style) {
 /// `kor sessions suggest <id> --apply`.
 fn suggest_at_end(ctx: &Ctx, s: &Session, style: &Style) {
     use kor_runtime::session_tree as tree;
-    if !ctx.config.as_ref().is_ok_and(|c| c.config.auto.session_suggest) || s.agent.messages.len() < 2 {
+    if !ctx
+        .config
+        .as_ref()
+        .is_ok_and(|c| c.config.auto.session_suggest)
+        || s.agent.messages.len() < 2
+    {
         return;
     }
-    let (Some(path), Some(meta)) = (&s.path, tree::meta_path()) else { return };
-    let (Some(id), Some(dir)) = (path.file_stem().and_then(|x| x.to_str()), path.parent()) else { return };
-    let tagged = tree::list(dir, &meta, &tree::Filter { archived: true, ..tree::Filter::default() })
-        .ok()
-        .and_then(|all| all.into_iter().find(|e| e.id == id))
-        .is_none_or(|e| !e.tags.is_empty());
+    let (Some(path), Some(meta)) = (&s.path, tree::meta_path()) else {
+        return;
+    };
+    let (Some(id), Some(dir)) = (path.file_stem().and_then(|x| x.to_str()), path.parent()) else {
+        return;
+    };
+    let tagged = tree::list(
+        dir,
+        &meta,
+        &tree::Filter {
+            archived: true,
+            ..tree::Filter::default()
+        },
+    )
+    .ok()
+    .and_then(|all| all.into_iter().find(|e| e.id == id))
+    .is_none_or(|e| !e.tags.is_empty());
     let sug = tree::suggest(&s.agent.messages);
     if tagged || sug.tags.is_empty() {
         return;
     }
-    let tags = sug.tags.iter().map(|t| format!("#{t}")).collect::<Vec<_>>().join(" ");
+    let tags = sug
+        .tags
+        .iter()
+        .map(|t| format!("#{t}"))
+        .collect::<Vec<_>>()
+        .join(" ");
     eprintln!(
         "{}",
-        style.dim(&ctx.l.t_args("sessions-suggest-end", &args!("id" => id.to_owned(), "title" => sug.title, "tags" => tags)))
+        style.dim(&ctx.l.t_args(
+            "sessions-suggest-end",
+            &args!("id" => id.to_owned(), "title" => sug.title, "tags" => tags)
+        ))
     );
 }
 
@@ -1031,7 +1154,9 @@ async fn one_shot(
     let text = match p.strip_prefix('/') {
         Some(rest) => {
             let (name, args) = rest.split_once(' ').unwrap_or((rest, ""));
-            if let Some(e) = crate::compat::expand(&s.compat, name, args.trim()).and_then(|x| x.error) {
+            if let Some(e) =
+                crate::compat::expand(&s.compat, name, args.trim()).and_then(|x| x.error)
+            {
                 eprintln!("{}", crate::compat::input_error(&ctx.l, name, &e));
                 return false;
             }
@@ -1045,7 +1170,9 @@ async fn one_shot(
             let model = Some((s.agent.provider.clone(), s.agent.model.clone()));
             let interactive = std::io::stdin().is_terminal();
             let actions = crate::intent_cmd::route_line(ctx, p, model, interactive).await;
-            return run_intent(s, actions, ctx, style, busy).await.is_ok_and(|(_, ok)| ok);
+            return run_intent(s, actions, ctx, style, busy)
+                .await
+                .is_ok_and(|(_, ok)| ok);
         }
         None => p.to_owned(),
     };
@@ -1057,7 +1184,11 @@ pub fn run(ctx: &Ctx, a: &RunArgs) -> anyhow::Result<bool> {
 }
 
 /// `kor tui`: the full-screen interface whatever `ui.default_tui` says.
-pub fn run_tui(ctx: &Ctx, model: Option<String>, mode: Option<PermissionMode>) -> anyhow::Result<bool> {
+pub fn run_tui(
+    ctx: &Ctx,
+    model: Option<String>,
+    mode: Option<PermissionMode>,
+) -> anyhow::Result<bool> {
     let a = RunArgs {
         model,
         mode,
@@ -1161,7 +1292,10 @@ enum AskKind {
     #[default]
     Permission,
     /// §28.13: options and the recommended one.
-    Choice { options: Vec<String>, default: usize },
+    Choice {
+        options: Vec<String>,
+        default: usize,
+    },
     /// §28.1: labels shown (largest items) and their conversation indices.
     Compact { indices: Vec<usize> },
 }
@@ -1175,7 +1309,8 @@ const KEEP_KEY: &str = "#keep";
 fn answer_review(reply: PermissionReply, fields: &[(&str, String)]) -> kor_agent::Review {
     let mut r = kor_agent::Review::from(reply);
     for (k, v) in fields {
-        r.files.insert((*k).to_owned(), kor_agent::FileDecision::Edit(v.clone()));
+        r.files
+            .insert((*k).to_owned(), kor_agent::FileDecision::Edit(v.clone()));
     }
     r
 }
@@ -1195,7 +1330,9 @@ fn compact_labels(items: &[kor_agent::ask::CompactItem]) -> (Vec<usize>, Vec<Str
     big.sort_by_key(|i| i.index);
     (
         big.iter().map(|i| i.index).collect(),
-        big.iter().map(|i| format!("{} {} ≈{}", i.kind, i.label, i.tokens)).collect(),
+        big.iter()
+            .map(|i| format!("{} {} ≈{}", i.kind, i.label, i.tokens))
+            .collect(),
     )
 }
 
@@ -1217,18 +1354,27 @@ impl Approver for ChanApprover {
             files: Vec::new(),
             destructive: None,
             texts: Vec::new(),
-            kind: AskKind::Choice { options: q.options.clone(), default: q.default },
+            kind: AskKind::Choice {
+                options: q.options.clone(),
+                default: q.default,
+            },
             reply,
         };
         self.tx.send(ask).ok()?;
         let r = rx.await.ok()?;
         Some(kor_agent::ask::Choice {
-            index: review_field(&r, CHOICE_KEY).and_then(|v| v.parse().ok()).unwrap_or(q.default),
+            index: review_field(&r, CHOICE_KEY)
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(q.default),
             remember: review_field(&r, REMEMBER_KEY).is_some(),
         })
     }
 
-    async fn compact(&self, items: &[kor_agent::ask::CompactItem], confirm: bool) -> kor_agent::ask::CompactChoice {
+    async fn compact(
+        &self,
+        items: &[kor_agent::ask::CompactItem],
+        confirm: bool,
+    ) -> kor_agent::ask::CompactChoice {
         use kor_agent::ask::CompactChoice;
         if !confirm {
             return CompactChoice::default();
@@ -1260,7 +1406,10 @@ impl Approver for ChanApprover {
     }
 
     async fn review(&self, req: &PermissionRequest) -> kor_agent::Review {
-        trace_item(kor_core::ipc_trace::Surface::Tui, kor_agent::remote::wire::confirm_json(req));
+        trace_item(
+            kor_core::ipc_trace::Surface::Tui,
+            kor_agent::remote::wire::confirm_json(req),
+        );
         let (reply, rx) = tokio::sync::oneshot::channel();
         if self
             .tx
@@ -1269,7 +1418,11 @@ impl Approver for ChanApprover {
                 summary: req.summary.clone(),
                 files: req.files.iter().map(|f| f.path.clone()).collect(),
                 destructive: req.destructive.clone(),
-                texts: req.files.iter().map(|f| f.after.clone().unwrap_or_default()).collect(),
+                texts: req
+                    .files
+                    .iter()
+                    .map(|f| f.after.clone().unwrap_or_default())
+                    .collect(),
                 kind: AskKind::Permission,
                 reply,
             })
@@ -1382,7 +1535,13 @@ async fn tui_turn(
     if let Ok(mut b) = busy.lock() {
         *b = Some(cancel.clone());
     }
-    let task: String = text.lines().next().unwrap_or_default().chars().take(80).collect();
+    let task: String = text
+        .lines()
+        .next()
+        .unwrap_or_default()
+        .chars()
+        .take(80)
+        .collect();
     tui::reduce(screen, l, Ev::Busy(Some(task)));
     let (ev_tx, mut ev_rx) = unbounded_channel();
     let (ask_tx, mut ask_rx) = tokio::sync::mpsc::unbounded_channel();
@@ -1400,7 +1559,12 @@ async fn tui_turn(
         anim.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         loop {
             // §32.3: frames over 50 ms go to perf.log when `[perf] log` is on.
-            crate::bench_cmd::draw_logged(terminal, screen, l, ctx.config.as_ref().ok().map(|c| &c.config))?;
+            crate::bench_cmd::draw_logged(
+                terminal,
+                screen,
+                l,
+                ctx.config.as_ref().ok().map(|c| &c.config),
+            )?;
             let out = tokio::select! {
                 biased;
                 _ = anim.tick(), if !crate::tui::term::still() => continue,
@@ -1482,8 +1646,17 @@ async fn tui_turn(
                                 answer_review(d, &[(KEEP_KEY, keep.join(","))])
                             }
                             AskKind::Permission => {
-                                let mut r = tui::review::from_marks(d, &screen.perm_files, &screen.perm_rejected);
-                                tui::review::apply_edits(&mut r, &screen.perm_files, &screen.perm_rejected, &screen.perm_edited);
+                                let mut r = tui::review::from_marks(
+                                    d,
+                                    &screen.perm_files,
+                                    &screen.perm_rejected,
+                                );
+                                tui::review::apply_edits(
+                                    &mut r,
+                                    &screen.perm_files,
+                                    &screen.perm_rejected,
+                                    &screen.perm_edited,
+                                );
                                 r
                             }
                         };
@@ -1512,7 +1685,10 @@ async fn tui_turn(
                     leave_screen(&t);
                     let path = screen.perm_files.get(i).cloned().unwrap_or_default();
                     let text = screen.perm_texts.get(i).cloned().unwrap_or_default();
-                    let edited = tokio::task::spawn_blocking(move || tui::review::edit_in_editor(&path, &text)).await;
+                    let edited = tokio::task::spawn_blocking(move || {
+                        tui::review::edit_in_editor(&path, &text)
+                    })
+                    .await;
                     enter_screen(&t)?;
                     terminal.clear()?;
                     match edited {
@@ -1524,15 +1700,24 @@ async fn tui_turn(
                                 *off = false;
                             }
                         }
-                        Ok(Err(e)) => screen.notice(l.t_args("error-generic", &args!("error" => e))),
-                        Err(e) => screen.notice(l.t_args("error-generic", &args!("error" => e.to_string()))),
+                        Ok(Err(e)) => {
+                            screen.notice(l.t_args("error-generic", &args!("error" => e)))
+                        }
+                        Err(e) => screen
+                            .notice(l.t_args("error-generic", &args!("error" => e.to_string()))),
                     }
                     reader = tokio::task::spawn_blocking(read_event);
                 }
                 Step::Submit(line) => {
-                    if let Some(v) = line.strip_prefix("/verbosity ").and_then(tui::term::parse_verbosity) {
+                    if let Some(v) = line
+                        .strip_prefix("/verbosity ")
+                        .and_then(tui::term::parse_verbosity)
+                    {
                         tui::term::set_verbosity(v);
-                        screen.notice(l.t_args("verbosity-set", &args!("level" => line[11..].trim().to_owned())));
+                        screen.notice(l.t_args(
+                            "verbosity-set",
+                            &args!("level" => line[11..].trim().to_owned()),
+                        ));
                     } else {
                         queued = Some(line);
                     }
@@ -1591,7 +1776,10 @@ async fn tui_session(
 }
 
 fn tui_config(ctx: &Ctx) -> kor_config::Tui {
-    ctx.config.as_ref().map(|c| c.config.tui.clone()).unwrap_or_default()
+    ctx.config
+        .as_ref()
+        .map(|c| c.config.tui.clone())
+        .unwrap_or_default()
 }
 
 /// §28.11: raw mode, plus the alternate screen and mouse capture only when configured; the
@@ -1633,7 +1821,9 @@ fn new_terminal(t: &kor_config::Tui) -> std::io::Result<Term> {
     let rows = crossterm::terminal::size().map_or(24, |(_, h)| h.max(10));
     ratatui::Terminal::with_options(
         backend,
-        ratatui::TerminalOptions { viewport: ratatui::Viewport::Inline(rows) },
+        ratatui::TerminalOptions {
+            viewport: ratatui::Viewport::Inline(rows),
+        },
     )
 }
 
@@ -1644,7 +1834,10 @@ async fn tui_main(s: &mut Session, ctx: &Ctx, style: &Style, busy: &Busy) -> any
     // §28.10: `[keys] mode` / `ui.tui_keys`, then `keymap.toml` (mode and per-key overrides).
     let keymap = kor_runtime::prefs::load_keymap(&s.agent.ctx.root);
     let keys = keymap.mode.unwrap_or_else(|| {
-        ctx.config.as_ref().map(|c| c.config.key_mode()).unwrap_or_default()
+        ctx.config
+            .as_ref()
+            .map(|c| c.config.key_mode())
+            .unwrap_or_default()
     });
     let mut screen = tui::Screen::new(s.agent.permissions.mode.as_str(), s.agent.model.clone())
         .with_keys(keys)
@@ -1662,10 +1855,19 @@ async fn tui_main(s: &mut Session, ctx: &Ctx, style: &Style, busy: &Busy) -> any
         let line = if let Some(q) = queued.take().or_else(|| steps.pop_front()) {
             q
         } else {
-            crate::bench_cmd::draw_logged(&mut terminal, &screen, l, ctx.config.as_ref().ok().map(|c| &c.config))?;
-            let Some(e) = poll_event().await? else { continue };
+            crate::bench_cmd::draw_logged(
+                &mut terminal,
+                &screen,
+                l,
+                ctx.config.as_ref().ok().map(|c| &c.config),
+            )?;
+            let Some(e) = poll_event().await? else {
+                continue;
+            };
             let area = term_area(&terminal)?;
-            let Some(ev) = tui::input_ev(&mut screen, l, area, &e) else { continue };
+            let Some(ev) = tui::input_ev(&mut screen, l, area, &e) else {
+                continue;
+            };
             let out = tui::reduce(&mut screen, l, ev);
             match tui_apply(out, &sources(s), ctx, &mut screen).await {
                 Step::Submit(line) => line,
@@ -1703,7 +1905,9 @@ async fn tui_main(s: &mut Session, ctx: &Ctx, style: &Style, busy: &Busy) -> any
             let out = slash(s, &line, ctx).await;
             let quit = matches!(out, Ok(Slash::Quit));
             let custom = match &out {
-                Ok(Slash::Custom(name, args)) => expand_custom(s, name, args, ctx, style, false).await,
+                Ok(Slash::Custom(name, args)) => {
+                    expand_custom(s, name, args, ctx, style, false).await
+                }
                 Ok(Slash::Prompt(text)) => Some(text.clone()),
                 _ => None,
             };
@@ -1765,7 +1969,9 @@ async fn dispatch_line(
         // §30: free text that names a Kor command goes there (read-only at once, the rest confirmed).
         let model = Some((s.agent.provider.clone(), s.agent.model.clone()));
         let actions = crate::intent_cmd::route_line(ctx, line, model, true).await;
-        return run_intent(s, actions, ctx, style, busy).await.map(|(quit, _)| quit);
+        return run_intent(s, actions, ctx, style, busy)
+            .await
+            .map(|(quit, _)| quit);
     } else {
         turn(s, line.to_owned(), ctx, style, false, busy).await;
     }
@@ -1788,7 +1994,9 @@ async fn run_intent(
             crate::intent_cmd::Action::Slash(cmd) => match slash(s, &cmd, ctx).await? {
                 Slash::Quit => return Ok((true, ok)),
                 Slash::Done => None,
-                Slash::Custom(name, args) => expand_custom(s, &name, &args, ctx, style, false).await,
+                Slash::Custom(name, args) => {
+                    expand_custom(s, &name, &args, ctx, style, false).await
+                }
                 Slash::Prompt(text) => Some(text),
             },
         };
@@ -1798,4 +2006,3 @@ async fn run_intent(
     }
     Ok((false, ok))
 }
-

@@ -9,7 +9,9 @@ use super::{DIFFS, Layout, MEDIA, Manifest, SESSIONS, SyncReport, hash, rel, wri
 
 /// Largest transcript rendered; larger ones keep their last part.
 const MAX_VIEW: usize = 512 * 1024;
-const MEDIA_EXT: [&str; 12] = ["png", "jpg", "jpeg", "webp", "gif", "svg", "mp4", "webm", "mov", "mp3", "wav", "ogg"];
+const MEDIA_EXT: [&str; 12] = [
+    "png", "jpg", "jpeg", "webp", "gif", "svg", "mp4", "webm", "mov", "mp3", "wav", "ogg",
+];
 
 fn desktop_json(l: &Layout) -> PathBuf {
     l.home.join("desktop.json")
@@ -52,7 +54,11 @@ fn yaml_str(s: &str) -> String {
 /// Split `---\n<yaml>\n---\n<body>`.
 pub(super) fn split_front(text: &str) -> (Option<serde_yaml::Value>, &str) {
     let t = text.trim_start_matches('\u{feff}');
-    let Some(rest) = t.strip_prefix("---").map(|r| r.trim_start_matches('\r')).and_then(|r| r.strip_prefix('\n')) else {
+    let Some(rest) = t
+        .strip_prefix("---")
+        .map(|r| r.trim_start_matches('\r'))
+        .and_then(|r| r.strip_prefix('\n'))
+    else {
         return (None, t);
     };
     let end = rest.find("\n---").map(|i| (i, i + 4));
@@ -65,7 +71,11 @@ pub(super) fn split_front(text: &str) -> (Option<serde_yaml::Value>, &str) {
 
 fn front_of(v: &serde_yaml::Value) -> Front {
     Front {
-        title: v["title"].as_str().map(str::trim).filter(|s| !s.is_empty()).map(str::to_owned),
+        title: v["title"]
+            .as_str()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned),
         pinned: v["pinned"].as_bool().unwrap_or(false),
         archived: v["archived"].as_bool().unwrap_or(false),
     }
@@ -74,7 +84,15 @@ fn front_of(v: &serde_yaml::Value) -> Front {
 fn first_user_text(msgs: &[Message]) -> String {
     msgs.iter()
         .find(|m| m.role == Role::User)
-        .map(|m| m.plain_text().lines().next().unwrap_or("").chars().take(80).collect())
+        .map(|m| {
+            m.plain_text()
+                .lines()
+                .next()
+                .unwrap_or("")
+                .chars()
+                .take(80)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -97,11 +115,18 @@ pub(super) fn render_session(id: &str, msgs: &[Message], meta: &Value) -> String
     );
     for k in ["root", "model"] {
         if let Some(v) = meta[k].as_str() {
-            out.push_str(&format!("{}: {}\n", if k == "root" { "project" } else { k }, yaml_str(v)));
+            out.push_str(&format!(
+                "{}: {}\n",
+                if k == "root" { "project" } else { k },
+                yaml_str(v)
+            ));
         }
     }
     out.push_str("---\n\n");
-    out.push_str(&format!("# {}\n", if title.is_empty() { id } else { &title }));
+    out.push_str(&format!(
+        "# {}\n",
+        if title.is_empty() { id } else { &title }
+    ));
     let mut attachments = Vec::new();
     for m in msgs {
         let who = match m.role {
@@ -125,7 +150,10 @@ pub(super) fn render_session(id: &str, msgs: &[Message], meta: &Value) -> String
                 }
                 ContentPart::File { path, .. } => {
                     attachments.push(path.clone());
-                    section.push_str(&format!("{}: [{path}](<{path}>)\n\n", l.t("korfolder-view-attachment")));
+                    section.push_str(&format!(
+                        "{}: [{path}](<{path}>)\n\n",
+                        l.t("korfolder-view-attachment")
+                    ));
                 }
                 ContentPart::Image { .. } => {
                     section.push_str(&format!("({})\n\n", l.t("korfolder-view-image")));
@@ -145,7 +173,9 @@ pub(super) fn render_session(id: &str, msgs: &[Message], meta: &Value) -> String
     }
     if out.len() > MAX_VIEW {
         let cut = out.len() - MAX_VIEW;
-        let cut = (cut..out.len()).find(|i| out.is_char_boundary(*i)).unwrap_or(out.len());
+        let cut = (cut..out.len())
+            .find(|i| out.is_char_boundary(*i))
+            .unwrap_or(out.len());
         out = format!("…\n{}", &out[cut..]);
     }
     out
@@ -192,7 +222,10 @@ pub(super) fn apply_front(l: &Layout, id: &str, f: &Front) -> std::io::Result<bo
         return Ok(false);
     }
     let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, serde_json::to_vec_pretty(&d).map_err(std::io::Error::other)?)?;
+    std::fs::write(
+        &tmp,
+        serde_json::to_vec_pretty(&d).map_err(std::io::Error::other)?,
+    )?;
     std::fs::rename(tmp, path)?;
     Ok(true)
 }
@@ -213,7 +246,9 @@ pub(super) fn sessions(l: &Layout, m: &mut Manifest, r: &mut SyncReport) {
         let key = rel(l, &view);
         // The way back: a view the user edited since Kor wrote it.
         if let Ok(cur) = std::fs::read_to_string(&view)
-            && m.generated.get(&key).is_some_and(|h| *h != hash(cur.as_bytes()))
+            && m.generated
+                .get(&key)
+                .is_some_and(|h| *h != hash(cur.as_bytes()))
         {
             if let (Some(y), _) = split_front(&cur) {
                 match apply_front(l, &id, &front_of(&y)) {
@@ -261,16 +296,19 @@ pub(super) fn diffs(l: &Layout, m: &mut Manifest, r: &mut SyncReport) {
     let base = l.home.join("undo");
     let mut live = Vec::new();
     for j in kor_tools::undo::list(&base) {
-        let entries: Vec<kor_tools::undo::Entry> = std::fs::read_to_string(j.dir.join("manifest.jsonl"))
-            .unwrap_or_default()
-            .lines()
-            .filter_map(|x| serde_json::from_str(x).ok())
-            .collect();
+        let entries: Vec<kor_tools::undo::Entry> =
+            std::fs::read_to_string(j.dir.join("manifest.jsonl"))
+                .unwrap_or_default()
+                .lines()
+                .filter_map(|x| serde_json::from_str(x).ok())
+                .collect();
         let mut out = String::new();
         for e in entries {
             let shown = e.path.display().to_string();
             if e.skipped {
-                out.push_str(&format!("# {shown}: (büyük dosya ya da klasör, fark yok)\n"));
+                out.push_str(&format!(
+                    "# {shown}: (büyük dosya ya da klasör, fark yok)\n"
+                ));
                 continue;
             }
             let old = e
@@ -308,15 +346,20 @@ pub(super) fn gallery(l: &Layout, m: &mut Manifest, r: &mut SyncReport) {
             .flatten()
             .map(|e| e.path())
             .filter(|f| {
-                f.extension()
-                    .is_some_and(|x| MEDIA_EXT.contains(&x.to_string_lossy().to_lowercase().as_str()))
+                f.extension().is_some_and(|x| {
+                    MEDIA_EXT.contains(&x.to_string_lossy().to_lowercase().as_str())
+                })
             })
             .map(|f| {
                 let md = std::fs::metadata(&f).ok();
                 let size = md.as_ref().map_or(0, std::fs::Metadata::len);
                 let date = md
                     .and_then(|m| m.modified().ok())
-                    .map(|t| chrono::DateTime::<chrono::Local>::from(t).format("%Y-%m-%d %H:%M").to_string())
+                    .map(|t| {
+                        chrono::DateTime::<chrono::Local>::from(t)
+                            .format("%Y-%m-%d %H:%M")
+                            .to_string()
+                    })
                     .unwrap_or_default();
                 (f, size, date)
             })
@@ -326,13 +369,19 @@ pub(super) fn gallery(l: &Layout, m: &mut Manifest, r: &mut SyncReport) {
         }
         files.sort_by(|a, b| b.2.cmp(&a.2));
         let name = super::project_name(m, p);
-        out.push_str(&format!("\n## {name}\n\n| Dosya | Boyut | Tarih |\n| --- | ---: | --- |\n"));
+        out.push_str(&format!(
+            "\n## {name}\n\n| Dosya | Boyut | Tarih |\n| --- | ---: | --- |\n"
+        ));
         for (f, size, date) in files {
-            let file = f.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-            out.push_str(&format!("| [{file}](<{name}/{file}>) | {size} B | {date} |\n"));
+            let file = f
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            out.push_str(&format!(
+                "| [{file}](<{name}/{file}>) | {size} B | {date} |\n"
+            ));
         }
     }
     let view = l.dir(MEDIA).join("Galeri.md");
     write_generated(l, m, r, &view, &out);
 }
-

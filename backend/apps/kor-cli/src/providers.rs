@@ -137,7 +137,10 @@ pub fn list_models(
     let now = catalog::now();
 
     let privacy = ctx.config.as_ref().is_ok_and(|c| c.config.privacy.mode);
-    let no_auto = ctx.config.as_ref().is_ok_and(|c| !c.config.auto.catalog_refresh);
+    let no_auto = ctx
+        .config
+        .as_ref()
+        .is_ok_and(|c| !c.config.auto.catalog_refresh);
     let mut skipped = Vec::new();
     let mut to_fetch = Vec::new();
     let mut shown: Vec<(&ProviderManifest, Vec<ModelInfo>)> = Vec::new();

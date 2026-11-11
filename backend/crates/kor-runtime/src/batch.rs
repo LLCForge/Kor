@@ -143,7 +143,9 @@ pub struct ProviderPlanner {
 
 impl std::fmt::Debug for ProviderPlanner {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ProviderPlanner").field("model", &self.model).finish_non_exhaustive()
+        f.debug_struct("ProviderPlanner")
+            .field("model", &self.model)
+            .finish_non_exhaustive()
     }
 }
 
@@ -164,7 +166,11 @@ pub fn expand(patterns: &[String], cwd: &Path) -> Result<Vec<PathBuf>, String> {
     let mut out = BTreeSet::new();
     for pat in patterns {
         let p = Path::new(pat);
-        let abs = if p.is_absolute() { p.to_path_buf() } else { cwd.join(p) };
+        let abs = if p.is_absolute() {
+            p.to_path_buf()
+        } else {
+            cwd.join(p)
+        };
         if abs.is_file() {
             out.insert(abs);
             continue;
@@ -176,9 +182,15 @@ pub fn expand(patterns: &[String], cwd: &Path) -> Result<Vec<PathBuf>, String> {
         let norm = pat.replace('\\', "/");
         let cut = norm.find(['*', '?', '[', '{']).unwrap_or(0);
         let base_rel = norm[..cut].rsplit_once('/').map_or("", |(b, _)| b);
-        let base = if Path::new(base_rel).is_absolute() { PathBuf::from(base_rel) } else { cwd.join(base_rel) };
+        let base = if Path::new(base_rel).is_absolute() {
+            PathBuf::from(base_rel)
+        } else {
+            cwd.join(base_rel)
+        };
         let glob_rel = norm[cut..].to_owned();
-        let tail = norm[..cut].rsplit_once('/').map_or(&norm[..cut], |(_, t)| t);
+        let tail = norm[..cut]
+            .rsplit_once('/')
+            .map_or(&norm[..cut], |(_, t)| t);
         let m = globset::Glob::new(&format!("{tail}{glob_rel}"))
             .map_err(|e| format!("{pat}: {e}"))?
             .compile_matcher();
@@ -197,7 +209,10 @@ pub fn expand(patterns: &[String], cwd: &Path) -> Result<Vec<PathBuf>, String> {
         }
     }
     if out.len() > MAX_FILES {
-        return Err(format!("too many files ({}; at most {MAX_FILES})", out.len()));
+        return Err(format!(
+            "too many files ({}; at most {MAX_FILES})",
+            out.len()
+        ));
     }
     Ok(out.into_iter().collect())
 }
@@ -232,8 +247,13 @@ pub fn prompt(files: &[PathBuf], instruction: &str) -> String {
 /// # Errors
 /// No JSON array of known operations.
 pub fn parse_ops(answer: &str) -> Result<Vec<Op>, String> {
-    let start = answer.find('[').ok_or("the model did not answer with a JSON list")?;
-    let end = answer.rfind(']').filter(|e| *e > start).ok_or("the model did not answer with a JSON list")?;
+    let start = answer
+        .find('[')
+        .ok_or("the model did not answer with a JSON list")?;
+    let end = answer
+        .rfind(']')
+        .filter(|e| *e > start)
+        .ok_or("the model did not answer with a JSON list")?;
     let raw: Vec<serde_json::Value> =
         serde_json::from_str(&answer[start..=end]).map_err(|e| format!("invalid JSON: {e}"))?;
     let mut ops = Vec::new();
@@ -249,8 +269,14 @@ pub fn unique_path(path: &Path, taken: &[PathBuf]) -> PathBuf {
     if free(path) {
         return path.to_path_buf();
     }
-    let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
-    let ext = path.extension().map(|e| format!(".{}", e.to_string_lossy())).unwrap_or_default();
+    let stem = path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let ext = path
+        .extension()
+        .map(|e| format!(".{}", e.to_string_lossy()))
+        .unwrap_or_default();
     (2..)
         .map(|n| path.with_file_name(format!("{stem} ({n}){ext}")))
         .find(|p| free(p))
@@ -283,7 +309,9 @@ fn target(dir: &Path, to: &str, allowed: &[PathBuf]) -> Result<PathBuf, String> 
 }
 
 fn ext_lower(p: &Path) -> String {
-    p.extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default()
+    p.extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default()
 }
 
 const IMAGE_OUT: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff"];
@@ -291,7 +319,10 @@ const IMAGE_OUT: [&str; 7] = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "tiff"
 /// Check the model's operations against the selection. Invalid ones become warnings.
 pub fn validate(files: &[PathBuf], ops: Vec<Op>) -> Plan {
     let allowed: Vec<PathBuf> = {
-        let mut v: Vec<PathBuf> = files.iter().filter_map(|f| f.parent().map(Path::to_path_buf)).collect();
+        let mut v: Vec<PathBuf> = files
+            .iter()
+            .filter_map(|f| f.parent().map(Path::to_path_buf))
+            .collect();
         v.sort();
         v.dedup();
         v
@@ -300,11 +331,20 @@ pub fn validate(files: &[PathBuf], ops: Vec<Op>) -> Plan {
         let p = Path::new(name);
         files
             .iter()
-            .find(|f| same(f, p) || (!p.is_absolute() && f.file_name() == p.file_name() && p.components().count() == 1))
+            .find(|f| {
+                same(f, p)
+                    || (!p.is_absolute()
+                        && f.file_name() == p.file_name()
+                        && p.components().count() == 1)
+            })
             .cloned()
             .ok_or_else(|| format!("`{name}` is not one of the selected files"))
     };
-    let mut plan = Plan { steps: Vec::new(), rows: Vec::new(), warnings: Vec::new() };
+    let mut plan = Plan {
+        steps: Vec::new(),
+        rows: Vec::new(),
+        warnings: Vec::new(),
+    };
     let mut taken: Vec<PathBuf> = Vec::new();
     // A renamed source cannot be used by a later step.
     let mut moved: Vec<PathBuf> = Vec::new();
@@ -317,30 +357,62 @@ pub fn validate(files: &[PathBuf], ops: Vec<Op>) -> Plan {
                     if same(&t, &src) {
                         return Err(format!("`{from}`: same name"));
                     }
-                    Ok(Step { sources: vec![src], target: t, creates: true, op: op.clone() })
+                    Ok(Step {
+                        sources: vec![src],
+                        target: t,
+                        creates: true,
+                        op: op.clone(),
+                    })
                 }
-                Op::ConvertImage { from, to, width, height } => {
+                Op::ConvertImage {
+                    from,
+                    to,
+                    width,
+                    height,
+                } => {
                     let src = find(from)?;
                     let t = target(src.parent().unwrap_or(Path::new("")), to, &allowed)?;
                     if !IMAGE_OUT.contains(&ext_lower(&t).as_str()) {
                         return Err(format!("`{to}`: unsupported image type"));
                     }
-                    if width.is_some_and(|w| w == 0 || w > 20_000) || height.is_some_and(|h| h == 0 || h > 20_000) {
+                    if width.is_some_and(|w| w == 0 || w > 20_000)
+                        || height.is_some_and(|h| h == 0 || h > 20_000)
+                    {
                         return Err("size must be 1-20000 px".into());
                     }
-                    Ok(Step { sources: vec![src], target: t, creates: true, op: op.clone() })
+                    Ok(Step {
+                        sources: vec![src],
+                        target: t,
+                        creates: true,
+                        op: op.clone(),
+                    })
                 }
                 Op::StripMetadata { from, to } => {
                     let src = find(from)?;
                     match to {
                         Some(to) => {
                             let t = target(src.parent().unwrap_or(Path::new("")), to, &allowed)?;
-                            Ok(Step { sources: vec![src], target: t, creates: true, op: op.clone() })
+                            Ok(Step {
+                                sources: vec![src],
+                                target: t,
+                                creates: true,
+                                op: op.clone(),
+                            })
                         }
-                        None => Ok(Step { sources: vec![src.clone()], target: src, creates: false, op: op.clone() }),
+                        None => Ok(Step {
+                            sources: vec![src.clone()],
+                            target: src,
+                            creates: false,
+                            op: op.clone(),
+                        }),
                     }
                 }
-                Op::Replace { file, find: needle, regex, .. } => {
+                Op::Replace {
+                    file,
+                    find: needle,
+                    regex,
+                    ..
+                } => {
                     let src = find(file)?;
                     if needle.is_empty() {
                         return Err("empty search text".into());
@@ -348,15 +420,30 @@ pub fn validate(files: &[PathBuf], ops: Vec<Op>) -> Plan {
                     if *regex {
                         regex::Regex::new(needle).map_err(|e| e.to_string())?;
                     }
-                    Ok(Step { sources: vec![src.clone()], target: src, creates: false, op: op.clone() })
+                    Ok(Step {
+                        sources: vec![src.clone()],
+                        target: src,
+                        creates: false,
+                        op: op.clone(),
+                    })
                 }
                 Op::Reencode { file, encoding } => {
                     let src = find(file)?;
                     encoding_rs::Encoding::for_label(encoding.as_bytes())
                         .ok_or_else(|| format!("unknown encoding `{encoding}`"))?;
-                    Ok(Step { sources: vec![src.clone()], target: src, creates: false, op: op.clone() })
+                    Ok(Step {
+                        sources: vec![src.clone()],
+                        target: src,
+                        creates: false,
+                        op: op.clone(),
+                    })
                 }
-                Op::CsvClean { file, to, delimiter, .. } => {
+                Op::CsvClean {
+                    file,
+                    to,
+                    delimiter,
+                    ..
+                } => {
                     let src = find(file)?;
                     if let Some(d) = delimiter
                         && csv_delim(d).is_none()
@@ -366,16 +453,29 @@ pub fn validate(files: &[PathBuf], ops: Vec<Op>) -> Plan {
                     match to {
                         Some(to) => {
                             let t = target(src.parent().unwrap_or(Path::new("")), to, &allowed)?;
-                            Ok(Step { sources: vec![src], target: t, creates: true, op: op.clone() })
+                            Ok(Step {
+                                sources: vec![src],
+                                target: t,
+                                creates: true,
+                                op: op.clone(),
+                            })
                         }
-                        None => Ok(Step { sources: vec![src.clone()], target: src, creates: false, op: op.clone() }),
+                        None => Ok(Step {
+                            sources: vec![src.clone()],
+                            target: src,
+                            creates: false,
+                            op: op.clone(),
+                        }),
                     }
                 }
                 Op::PdfMerge { files: list, to } => {
                     if list.len() < 2 {
                         return Err("merge needs at least two PDFs".into());
                     }
-                    let srcs = list.iter().map(|f| find(f)).collect::<Result<Vec<_>, _>>()?;
+                    let srcs = list
+                        .iter()
+                        .map(|f| find(f))
+                        .collect::<Result<Vec<_>, _>>()?;
                     if srcs.iter().any(|s| ext_lower(s) != "pdf") {
                         return Err("only PDF files can be merged".into());
                     }
@@ -383,24 +483,45 @@ pub fn validate(files: &[PathBuf], ops: Vec<Op>) -> Plan {
                     if ext_lower(&t) != "pdf" {
                         return Err(format!("`{to}` must end in .pdf"));
                     }
-                    Ok(Step { sources: srcs, target: t, creates: true, op: op.clone() })
+                    Ok(Step {
+                        sources: srcs,
+                        target: t,
+                        creates: true,
+                        op: op.clone(),
+                    })
                 }
-                Op::Media { from, to, start_s, duration_s, .. } => {
+                Op::Media {
+                    from,
+                    to,
+                    start_s,
+                    duration_s,
+                    ..
+                } => {
                     let src = find(from)?;
                     let t = target(src.parent().unwrap_or(Path::new("")), to, &allowed)?;
                     if ext_lower(&t).is_empty() {
                         return Err(format!("`{to}` needs a file extension"));
                     }
-                    if start_s.is_some_and(|s| !s.is_finite() || s < 0.0) || duration_s.is_some_and(|s| !s.is_finite() || s <= 0.0) {
+                    if start_s.is_some_and(|s| !s.is_finite() || s < 0.0)
+                        || duration_s.is_some_and(|s| !s.is_finite() || s <= 0.0)
+                    {
                         return Err("invalid time range".into());
                     }
-                    Ok(Step { sources: vec![src], target: t, creates: true, op: op.clone() })
+                    Ok(Step {
+                        sources: vec![src],
+                        target: t,
+                        creates: true,
+                        op: op.clone(),
+                    })
                 }
             }
         })();
         let checked = checked.and_then(|st| {
             if st.sources.iter().any(|x| moved.iter().any(|m| same(m, x))) {
-                Err(format!("{}: the file is already renamed by an earlier step", op_code(&op)))
+                Err(format!(
+                    "{}: the file is already renamed by an earlier step",
+                    op_code(&op)
+                ))
             } else {
                 Ok(st)
             }
@@ -437,25 +558,55 @@ fn op_code(op: &Op) -> &'static str {
 }
 
 fn row(s: &Step) -> Row {
-    let from = s.sources.iter().map(|p| p.display().to_string()).collect::<Vec<_>>().join(", ");
+    let from = s
+        .sources
+        .iter()
+        .map(|p| p.display().to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
     let detail = match &s.op {
-        Op::ConvertImage { width, height, .. } | Op::Media { width, height, .. } => match (width, height) {
-            (None, None) => String::new(),
-            (w, h) => format!("{}x{}", w.map_or("?".into(), |v| v.to_string()), h.map_or("?".into(), |v| v.to_string())),
-        },
-        Op::Replace { find, replace, regex, .. } => {
+        Op::ConvertImage { width, height, .. } | Op::Media { width, height, .. } => {
+            match (width, height) {
+                (None, None) => String::new(),
+                (w, h) => format!(
+                    "{}x{}",
+                    w.map_or("?".into(), |v| v.to_string()),
+                    h.map_or("?".into(), |v| v.to_string())
+                ),
+            }
+        }
+        Op::Replace {
+            find,
+            replace,
+            regex,
+            ..
+        } => {
             format!("{}{find} → {replace}", if *regex { "regex " } else { "" })
         }
         Op::Reencode { encoding, .. } => format!("{encoding} → UTF-8"),
-        Op::CsvClean { trim, drop_empty, dedupe, .. } => [("trim", *trim), ("drop_empty", *drop_empty), ("dedupe", *dedupe)]
-            .iter()
-            .filter(|(_, on)| *on)
-            .map(|(n, _)| *n)
-            .collect::<Vec<_>>()
-            .join(", "),
+        Op::CsvClean {
+            trim,
+            drop_empty,
+            dedupe,
+            ..
+        } => [
+            ("trim", *trim),
+            ("drop_empty", *drop_empty),
+            ("dedupe", *dedupe),
+        ]
+        .iter()
+        .filter(|(_, on)| *on)
+        .map(|(n, _)| *n)
+        .collect::<Vec<_>>()
+        .join(", "),
         _ => String::new(),
     };
-    Row { op: op_code(&s.op).into(), from, to: s.target.display().to_string(), detail }
+    Row {
+        op: op_code(&s.op).into(),
+        from,
+        to: s.target.display().to_string(),
+        detail,
+    }
 }
 
 /// What [`apply`] did.
@@ -493,7 +644,9 @@ pub fn apply(plan: &Plan, undo_base: Option<&Path>) -> Applied {
                 .chain([&s.target])
                 .try_for_each(|p| j.record(Path::new(""), &p.to_string_lossy()))
         });
-        let result = recorded.map_err(|e| format!("undo journal: {e}")).and_then(|()| run_step(s));
+        let result = recorded
+            .map_err(|e| format!("undo journal: {e}"))
+            .and_then(|()| run_step(s));
         match result {
             Ok(()) => out.done.push(r),
             Err(e) => out.failed.push((r, e)),
@@ -527,7 +680,11 @@ fn write_new(p: &Path, bytes: &[u8]) -> Result<(), String> {
 }
 
 fn write_out(s: &Step, bytes: &[u8]) -> Result<(), String> {
-    if s.creates { write_new(&s.target, bytes) } else { std::fs::write(&s.target, bytes).map_err(|e| e.to_string()) }
+    if s.creates {
+        write_new(&s.target, bytes)
+    } else {
+        std::fs::write(&s.target, bytes).map_err(|e| e.to_string())
+    }
 }
 
 fn run_step(s: &Step) -> Result<(), String> {
@@ -558,7 +715,11 @@ fn run_step(s: &Step) -> Result<(), String> {
                 }
             };
             let fmt = image::ImageFormat::from_path(&s.target).map_err(|e| e.to_string())?;
-            let img = if matches!(fmt, image::ImageFormat::Jpeg) { image::DynamicImage::ImageRgb8(img.to_rgb8()) } else { img };
+            let img = if matches!(fmt, image::ImageFormat::Jpeg) {
+                image::DynamicImage::ImageRgb8(img.to_rgb8())
+            } else {
+                img
+            };
             let mut buf = std::io::Cursor::new(Vec::new());
             img.write_to(&mut buf, fmt).map_err(|e| e.to_string())?;
             write_out(s, buf.get_ref())
@@ -579,17 +740,26 @@ fn run_step(s: &Step) -> Result<(), String> {
             };
             write_out(s, &clean)
         }
-        Op::Replace { find, replace, regex, .. } => {
+        Op::Replace {
+            find,
+            replace,
+            regex,
+            ..
+        } => {
             let text = read_text(src)?;
             let new = if *regex {
-                regex::Regex::new(find).map_err(|e| e.to_string())?.replace_all(&text, replace.as_str()).into_owned()
+                regex::Regex::new(find)
+                    .map_err(|e| e.to_string())?
+                    .replace_all(&text, replace.as_str())
+                    .into_owned()
             } else {
                 text.replace(find.as_str(), replace)
             };
             write_out(s, new.as_bytes())
         }
         Op::Reencode { encoding, .. } => {
-            let enc = encoding_rs::Encoding::for_label(encoding.as_bytes()).ok_or("unknown encoding")?;
+            let enc =
+                encoding_rs::Encoding::for_label(encoding.as_bytes()).ok_or("unknown encoding")?;
             let bytes = std::fs::read(src).map_err(|e| e.to_string())?;
             let (text, _, bad) = enc.decode(&bytes);
             if bad {
@@ -597,16 +767,36 @@ fn run_step(s: &Step) -> Result<(), String> {
             }
             write_out(s, text.as_bytes())
         }
-        Op::CsvClean { trim, drop_empty, dedupe, delimiter, .. } => {
+        Op::CsvClean {
+            trim,
+            drop_empty,
+            dedupe,
+            delimiter,
+            ..
+        } => {
             let text = read_text(src)?;
-            let delim = delimiter.as_deref().and_then(csv_delim).unwrap_or_else(|| sniff_delim(&text));
-            write_out(s, csv_clean(&text, delim, *trim, *drop_empty, *dedupe).as_bytes())
+            let delim = delimiter
+                .as_deref()
+                .and_then(csv_delim)
+                .unwrap_or_else(|| sniff_delim(&text));
+            write_out(
+                s,
+                csv_clean(&text, delim, *trim, *drop_empty, *dedupe).as_bytes(),
+            )
         }
         Op::PdfMerge { .. } => {
             let bytes = pdf_merge(&s.sources)?;
             write_out(s, &bytes)
         }
-        Op::Media { width, height, audio_bitrate_k, video_bitrate_k, start_s, duration_s, .. } => {
+        Op::Media {
+            width,
+            height,
+            audio_bitrate_k,
+            video_bitrate_k,
+            start_s,
+            duration_s,
+            ..
+        } => {
             let mut args: Vec<String> = vec!["-hide_banner".into(), "-nostdin".into(), "-n".into()];
             if let Some(v) = start_s {
                 args.extend(["-ss".into(), format!("{v}")]);
@@ -619,7 +809,11 @@ fn run_step(s: &Step) -> Result<(), String> {
                 (None, None) => {}
                 (w, h) => args.extend([
                     "-vf".into(),
-                    format!("scale={}:{}", w.map_or(-2, i64::from), h.map_or(-2, i64::from)),
+                    format!(
+                        "scale={}:{}",
+                        w.map_or(-2, i64::from),
+                        h.map_or(-2, i64::from)
+                    ),
                 ]),
             }
             if let Some(v) = audio_bitrate_k {
@@ -640,7 +834,10 @@ fn run_step(s: &Step) -> Result<(), String> {
                 Ok(())
             } else {
                 let err = String::from_utf8_lossy(&out.stderr);
-                Err(format!("ffmpeg: {}", err.lines().last().unwrap_or("failed")))
+                Err(format!(
+                    "ffmpeg: {}",
+                    err.lines().last().unwrap_or("failed")
+                ))
             }
         }
     }
@@ -689,13 +886,17 @@ fn strip_png(b: &[u8]) -> Result<Vec<u8>, String> {
     let mut out = SIG.to_vec();
     let mut i = 8;
     while i + 12 <= b.len() {
-        let len = usize::try_from(u32::from_be_bytes([b[i], b[i + 1], b[i + 2], b[i + 3]])).map_err(|e| e.to_string())?;
+        let len = usize::try_from(u32::from_be_bytes([b[i], b[i + 1], b[i + 2], b[i + 3]]))
+            .map_err(|e| e.to_string())?;
         let end = i + 12 + len;
         if end > b.len() {
             return Err("damaged PNG".into());
         }
         let kind = &b[i + 4..i + 8];
-        if ![b"eXIf", b"tEXt", b"zTXt", b"iTXt", b"tIME"].iter().any(|k| kind == *k) {
+        if ![b"eXIf", b"tEXt", b"zTXt", b"iTXt", b"tIME"]
+            .iter()
+            .any(|k| kind == *k)
+        {
             out.extend_from_slice(&b[i..end]);
         }
         i = end;
@@ -718,7 +919,10 @@ fn csv_delim(s: &str) -> Option<char> {
 
 fn sniff_delim(text: &str) -> char {
     let head = text.lines().next().unwrap_or("");
-    [',', ';', '\t', '|'].into_iter().max_by_key(|d| head.matches(*d).count()).unwrap_or(',')
+    [',', ';', '\t', '|']
+        .into_iter()
+        .max_by_key(|d| head.matches(*d).count())
+        .unwrap_or(',')
 }
 
 /// RFC 4180 records (quoted fields, doubled quotes, newlines in quotes).
@@ -840,7 +1044,13 @@ fn pdf_merge(files: &[PathBuf]) -> Result<Vec<u8>, String> {
     }
     let mut pd = pages_obj.as_dict().map_err(|e| e.to_string())?.clone();
     pd.set("Count", i64::try_from(pages.len()).unwrap_or(i64::MAX));
-    pd.set("Kids", pages.iter().map(|(id, _)| Object::Reference(*id)).collect::<Vec<_>>());
+    pd.set(
+        "Kids",
+        pages
+            .iter()
+            .map(|(id, _)| Object::Reference(*id))
+            .collect::<Vec<_>>(),
+    );
     out.objects.insert(pages_id, Object::Dictionary(pd));
     let mut cd = catalog_obj.as_dict().map_err(|e| e.to_string())?.clone();
     cd.set("Pages", pages_id);
@@ -859,10 +1069,16 @@ fn pdf_merge(files: &[PathBuf]) -> Result<Vec<u8>, String> {
 ///
 /// # Errors
 /// Empty instruction or selection, or an unusable answer.
-pub async fn plan(planner: &dyn Planner, files: &[PathBuf], instruction: &str) -> Result<Plan, String> {
+pub async fn plan(
+    planner: &dyn Planner,
+    files: &[PathBuf],
+    instruction: &str,
+) -> Result<Plan, String> {
     let instruction = instruction.trim();
     if instruction.is_empty() || instruction.len() > MAX_INSTRUCTION {
-        return Err(format!("instruction must be 1-{MAX_INSTRUCTION} characters"));
+        return Err(format!(
+            "instruction must be 1-{MAX_INSTRUCTION} characters"
+        ));
     }
     if files.is_empty() || files.len() > MAX_FILES {
         return Err(format!("select 1-{MAX_FILES} files"));

@@ -23,11 +23,15 @@ thread_local! {
 
 static INSTALL: Once = Once::new();
 
-extern "C-unwind" fn dock_menu(_this: *mut AnyObject, _sel: Sel, _app: *mut AnyObject) -> *mut AnyObject {
+extern "C-unwind" fn dock_menu(
+    _this: *mut AnyObject,
+    _sel: Sel,
+    _app: *mut AnyObject,
+) -> *mut AnyObject {
     MENU.with(|m| {
-        m.borrow()
-            .as_ref()
-            .map_or(std::ptr::null_mut(), |menu| Retained::as_ptr(menu).cast_mut().cast())
+        m.borrow().as_ref().map_or(std::ptr::null_mut(), |menu| {
+            Retained::as_ptr(menu).cast_mut().cast()
+        })
     })
 }
 
@@ -61,7 +65,10 @@ fn install(mtm: MainThreadMarker) -> io::Result<()> {
                 extern "C-unwind" fn(*mut AnyObject, Sel, *mut AnyObject) -> *mut AnyObject,
                 Imp,
             >(dock_menu);
-            let item: Imp = std::mem::transmute::<extern "C-unwind" fn(*mut AnyObject, Sel, *mut AnyObject), Imp>(dock_item);
+            let item: Imp = std::mem::transmute::<
+                extern "C-unwind" fn(*mut AnyObject, Sel, *mut AnyObject),
+                Imp,
+            >(dock_item);
             objc2::ffi::class_addMethod(class, sel!(applicationDockMenu:), menu, c"@@:@".as_ptr());
             objc2::ffi::class_addMethod(class, sel!(korDockItem:), item, c"v@:@".as_ptr());
         }
@@ -70,10 +77,14 @@ fn install(mtm: MainThreadMarker) -> io::Result<()> {
 }
 
 pub(super) fn apply(list: &List) -> io::Result<()> {
-    let mtm = MainThreadMarker::new().ok_or_else(|| io::Error::other("Dock menu: not on the main thread"))?;
+    let mtm = MainThreadMarker::new()
+        .ok_or_else(|| io::Error::other("Dock menu: not on the main thread"))?;
     install(mtm)?;
     let menu = NSMenu::new(mtm);
-    let groups = [(Some(list.recent_title.as_str()), &list.recent), (None, &list.tasks)];
+    let groups = [
+        (Some(list.recent_title.as_str()), &list.recent),
+        (None, &list.tasks),
+    ];
     for (title, items) in groups {
         if items.is_empty() {
             continue;
@@ -88,7 +99,11 @@ pub(super) fn apply(list: &List) -> io::Result<()> {
             menu.addItem(&header);
         }
         for it in items {
-            let Some(url) = it.args.first().and_then(|u| NSURL::URLWithString(&NSString::from_str(u))) else {
+            let Some(url) = it
+                .args
+                .first()
+                .and_then(|u| NSURL::URLWithString(&NSString::from_str(u)))
+            else {
                 continue;
             };
             // SAFETY: `korDockItem:` was added to the delegate class in `install`.

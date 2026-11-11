@@ -173,8 +173,12 @@ impl std::fmt::Debug for Gateway {
 
 fn pool_of(mut settings: config::Settings, sources: &Sources) -> (routing::Pool, Vec<String>) {
     let local = sources.is_local.clone();
-    let (mut creds, mut errors) = routing::credentials(&settings, &sources.registry, &move |m| local(m));
-    let dir = settings.auth_dir.clone().unwrap_or_else(oauth::default_auth_dir);
+    let (mut creds, mut errors) =
+        routing::credentials(&settings, &sources.registry, &move |m| local(m));
+    let dir = settings
+        .auth_dir
+        .clone()
+        .unwrap_or_else(oauth::default_auth_dir);
     errors.extend(oauth::load_subscriptions(&dir, &mut settings, &mut creds));
     (routing::Pool::new(settings, creds), errors)
 }

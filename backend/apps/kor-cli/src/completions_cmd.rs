@@ -9,8 +9,8 @@ use clap::Args;
 use kor_i18n::{Localizer, args};
 use kor_platform::completions::{self as comp, Shell};
 
-pub use crate::doctor::completions::{detected, install_one, script};
 use crate::Ctx;
+pub use crate::doctor::completions::{detected, install_one, script};
 
 #[derive(Debug, Args)]
 pub struct CompletionsArgs {
@@ -61,12 +61,23 @@ pub fn run(ctx: &Ctx, cmd: clap::Command, a: &CompletionsArgs) -> anyhow::Result
         if a.install {
             ok &= install_one(l, cmd.clone(), shell, a.yes);
         } else {
-            let Some(d) = comp::Dirs::current() else { return Ok(false) };
+            let Some(d) = comp::Dirs::current() else {
+                return Ok(false);
+            };
             match comp::remove(&comp::plan(shell, &d)) {
-                Ok(()) => println!("{}", l.t_args("completions-removed", &args!("shell" => shell.name()))),
+                Ok(()) => println!(
+                    "{}",
+                    l.t_args("completions-removed", &args!("shell" => shell.name()))
+                ),
                 Err(e) => {
                     ok = false;
-                    eprintln!("{}", l.t_args("completions-failed", &args!("shell" => shell.name(), "error" => e.to_string())));
+                    eprintln!(
+                        "{}",
+                        l.t_args(
+                            "completions-failed",
+                            &args!("shell" => shell.name(), "error" => e.to_string())
+                        )
+                    );
                 }
             }
         }
@@ -100,14 +111,30 @@ mod tests {
 
     #[test]
     fn parses_and_generates_every_shell() {
-        let Top::Completions(a) = Cli::try_parse_from(["kor", "completions", "fish"]).unwrap().cmd else { panic!() };
+        let Top::Completions(a) = Cli::try_parse_from(["kor", "completions", "fish"])
+            .unwrap()
+            .cmd
+        else {
+            panic!()
+        };
         assert_eq!(a.shell, Some(Shell::Fish));
         assert!(Cli::try_parse_from(["kor", "completions", "tcsh"]).is_err());
         assert!(Cli::try_parse_from(["kor", "completions", "--install", "--uninstall"]).is_err());
-        let Top::Completions(a) = Cli::try_parse_from(["kor", "completions", "--install", "-y"]).unwrap().cmd else { panic!() };
+        let Top::Completions(a) = Cli::try_parse_from(["kor", "completions", "--install", "-y"])
+            .unwrap()
+            .cmd
+        else {
+            panic!()
+        };
         assert!(a.install && a.yes && a.shell.is_none());
         let l = Localizer::new(kor_i18n::Lang::En);
-        let _ = localize(Cli::command().find_subcommand("completions").unwrap().clone(), &l);
+        let _ = localize(
+            Cli::command()
+                .find_subcommand("completions")
+                .unwrap()
+                .clone(),
+            &l,
+        );
         for shell in Shell::ALL {
             let s = script(Cli::command(), shell);
             assert!(s.contains("kor"), "{shell:?}");
@@ -116,7 +143,10 @@ mod tests {
         let nu = script(Cli::command(), Shell::Nushell);
         assert!(nu.contains("export extern \"kor sessions\""), "{nu}");
         assert!(nu.contains("--tag: string"), "{nu}");
-        assert!(nu.contains("def \"nu-complete kor lang\" [] { [\"tr\" \"en\"] }"), "{nu}");
+        assert!(
+            nu.contains("def \"nu-complete kor lang\" [] { [\"tr\" \"en\"] }"),
+            "{nu}"
+        );
     }
 
     use clap::CommandFactory;

@@ -181,7 +181,13 @@ pub fn discover(
     let mut disabled = HashSet::new();
     if let Some(home) = src.home {
         for (label, servers) in crate::mcp_config::other_tools_for(home) {
-            parse_servers(Some(&Value::Object(servers)), label, env, &mut found, &mut disabled);
+            parse_servers(
+                Some(&Value::Object(servers)),
+                label,
+                env,
+                &mut found,
+                &mut disabled,
+            );
         }
         let p = home.join(".claude.json");
         if let Some(v) = read_json(&p) {
@@ -365,7 +371,9 @@ impl McpClient {
     /// # Errors
     /// The server was not started from a command, or the new process fails to start.
     pub async fn restart(&self) -> Result<(), String> {
-        let (spec, cwd) = lock(&self.spawn).clone().ok_or("this MCP server was not started by Kor")?;
+        let (spec, cwd) = lock(&self.spawn)
+            .clone()
+            .ok_or("this MCP server was not started by Kor")?;
         if let Some(mut old) = lock(&self._child).take() {
             let _ = old.start_kill();
         }
@@ -834,7 +842,10 @@ impl Tool for McpRestart {
         input["server"].as_str().map(str::to_owned)
     }
     fn summary(&self, input: &Value) -> String {
-        format!("restart MCP server {}", input["server"].as_str().unwrap_or("?"))
+        format!(
+            "restart MCP server {}",
+            input["server"].as_str().unwrap_or("?")
+        )
     }
     async fn call(&self, input: Value, _ctx: &ToolCtx) -> ToolOutput {
         let name = input["server"].as_str().unwrap_or_default();
@@ -847,7 +858,9 @@ impl Tool for McpRestart {
                     "MCP server `{name}` restarted; it offers {} tools. Tools whose schema changed take effect for calls from now on; new tools appear in the next session.",
                     t.len()
                 )),
-                Err(e) => ToolOutput::err(format!("`{name}` restarted but listing its tools failed: {e}")),
+                Err(e) => ToolOutput::err(format!(
+                    "`{name}` restarted but listing its tools failed: {e}"
+                )),
             },
             Err(e) => ToolOutput::err(format!("MCP server `{name}` could not restart: {e}")),
         }
@@ -1083,13 +1096,27 @@ mod tests {
         let (r, w) = tokio::io::split(a);
         let client = McpClient::from_streams("fake", r, w, None);
         client.handshake().await.unwrap();
-        assert!(client.restart().await.unwrap_err().contains("not started by Kor"));
+        assert!(
+            client
+                .restart()
+                .await
+                .unwrap_err()
+                .contains("not started by Kor")
+        );
         let tool = McpRestart::new(vec![client]);
-        assert_eq!(tool.spec().input_schema["properties"]["server"]["enum"], json!(["fake"]));
+        assert_eq!(
+            tool.spec().input_schema["properties"]["server"]["enum"],
+            json!(["fake"])
+        );
         assert_eq!(tool.kind(), ToolKind::Execute);
         let ctx = ToolCtx::new(&std::env::temp_dir()).unwrap();
         assert!(tool.call(json!({"server": "other"}), &ctx).await.is_error);
-        assert!(tool.call(json!({"server": "fake"}), &ctx).await.content.contains("could not restart"));
+        assert!(
+            tool.call(json!({"server": "fake"}), &ctx)
+                .await
+                .content
+                .contains("could not restart")
+        );
     }
 
     #[tokio::test]

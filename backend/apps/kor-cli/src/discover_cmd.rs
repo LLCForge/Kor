@@ -124,7 +124,10 @@ pub async fn scan(
     for offer in &found.sudo_offered {
         println!(
             "{}",
-            l.t_args("discover-sudo-skipped", &args!("step" => offer.step.clone()))
+            l.t_args(
+                "discover-sudo-skipped",
+                &args!("step" => offer.step.clone())
+            )
         );
     }
     Some(found)

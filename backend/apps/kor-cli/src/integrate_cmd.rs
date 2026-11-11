@@ -64,14 +64,23 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
                 .mut_arg("no_extended", |a| a.help(l.t("arg-integrate-no-extended")))
                 .mut_arg("yes", |a| a.help(l.t("arg-integrate-yes")))
         })
-        .mut_subcommand("uninstall", |s| s.about(l.t("cmd-integrate-uninstall")).mut_arg("yes", |a| a.help(l.t("arg-integrate-yes"))))
-        .mut_subcommand("status", |s| s.about(l.t("cmd-integrate-status")).mut_arg("json", |a| a.help(l.t("arg-integrate-json"))))
+        .mut_subcommand("uninstall", |s| {
+            s.about(l.t("cmd-integrate-uninstall"))
+                .mut_arg("yes", |a| a.help(l.t("arg-integrate-yes")))
+        })
+        .mut_subcommand("status", |s| {
+            s.about(l.t("cmd-integrate-status"))
+                .mut_arg("json", |a| a.help(l.t("arg-integrate-json")))
+        })
         .mut_subcommand("open-terminal", |s| {
             s.about(l.t("cmd-integrate-open-terminal"))
                 .mut_arg("task", |a| a.help(l.t("arg-integrate-task")))
                 .mut_arg("paths", |a| a.help(l.t("arg-integrate-paths")))
         })
-        .mut_subcommand("edit", |s| s.about(l.t("cmd-integrate-edit")).mut_arg("paths", |a| a.help(l.t("arg-integrate-paths"))))
+        .mut_subcommand("edit", |s| {
+            s.about(l.t("cmd-integrate-edit"))
+                .mut_arg("paths", |a| a.help(l.t("arg-integrate-paths")))
+        })
 }
 
 fn apps() -> Apps {
@@ -90,13 +99,19 @@ pub fn first_run(ctx: &Ctx) {
     let (Some(data), Some(cfg)) = (kor_platform::data_dir(), config(ctx)) else {
         return;
     };
-    let shell = Some(kor_runtime::shell::default_kind()).filter(|k| kor_runtime::shell::present(*k));
+    let shell =
+        Some(kor_runtime::shell::default_kind()).filter(|k| kor_runtime::shell::present(*k));
     let items = auto::plan(&cfg.integrations, shell, &[]);
     let l = &ctx.l;
     let out = auto::run_once(&data, blocked, &items, |it| match it {
         Item::ContextMenu => {
-            let opts = Options { extended: cfg.shell.context_menu.extended, lang: l.lang().code().to_owned() };
-            si::install(&apps(), &opts).map(drop).map_err(|e| e.to_string())
+            let opts = Options {
+                extended: cfg.shell.context_menu.extended,
+                lang: l.lang().code().to_owned(),
+            };
+            si::install(&apps(), &opts)
+                .map(drop)
+                .map_err(|e| e.to_string())
         }
         Item::Shell(k) => kor_runtime::shell::plan_install(*k)
             .map_err(|e| format!("{e:?}"))
@@ -107,7 +122,13 @@ pub fn first_run(ctx: &Ctx) {
     if let Ok(Outcome::Ran(m)) = out
         && !m.installed.is_empty()
     {
-        eprintln!("{}", l.t_args("autoint-notice-body", &args!("list" => auto::names(l, &m.installed))));
+        eprintln!(
+            "{}",
+            l.t_args(
+                "autoint-notice-body",
+                &args!("list" => auto::names(l, &m.installed))
+            )
+        );
     }
 }
 
@@ -129,7 +150,11 @@ fn print_status(l: &Localizer, s: &Status) {
         println!("{}: {}", l.t("integrate-finder-sync"), yes_no(f));
     }
     if !s.file_managers.is_empty() {
-        println!("{}: {}", l.t("integrate-file-managers"), s.file_managers.join(", "));
+        println!(
+            "{}: {}",
+            l.t("integrate-file-managers"),
+            s.file_managers.join(", ")
+        );
     }
     for e in &s.entries {
         println!("  {e}");
@@ -148,23 +173,42 @@ pub fn run(ctx: &Ctx, a: &IntegrateArgs) -> anyhow::Result<bool> {
                 println!("{}", serde_json::to_string_pretty(&s)?);
             } else {
                 print_status(l, &s);
-                println!("{}", kor_runtime::autointegrate::status_line(l, &config(ctx).map(|c| c.integrations.clone()).unwrap_or_default()));
+                println!(
+                    "{}",
+                    kor_runtime::autointegrate::status_line(
+                        l,
+                        &config(ctx)
+                            .map(|c| c.integrations.clone())
+                            .unwrap_or_default()
+                    )
+                );
             }
             Ok(true)
         }
-        IntegrateCmd::Install { extended, no_extended, yes } => {
+        IntegrateCmd::Install {
+            extended,
+            no_extended,
+            yes,
+        } => {
             let apps = apps();
-            let extended = *extended || (!*no_extended && config(ctx).is_some_and(|c| c.shell.context_menu.extended));
+            let extended = *extended
+                || (!*no_extended && config(ctx).is_some_and(|c| c.shell.context_menu.extended));
             let what = match (&apps.desktop, &apps.cli) {
                 (Some(d), _) => d.display().to_string(),
                 (None, Some(c)) => c.display().to_string(),
                 (None, None) => String::new(),
             };
-            println!("{}", l.t_args("integrate-install-plan", &args!("app" => what)));
+            println!(
+                "{}",
+                l.t_args("integrate-install-plan", &args!("app" => what))
+            );
             if !crate::shell_cmd::confirm(l, &l.t("integrate-install-ask"), *yes) {
                 return Ok(true);
             }
-            let opts = Options { extended, lang: l.lang().code().to_owned() };
+            let opts = Options {
+                extended,
+                lang: l.lang().code().to_owned(),
+            };
             match si::install(&apps, &opts) {
                 Ok(s) => {
                     println!("{}", l.t("integrate-installed-ok"));
@@ -172,7 +216,10 @@ pub fn run(ctx: &Ctx, a: &IntegrateArgs) -> anyhow::Result<bool> {
                     Ok(true)
                 }
                 Err(e) => {
-                    eprintln!("{}", l.t_args("integrate-failed", &args!("error" => e.to_string())));
+                    eprintln!(
+                        "{}",
+                        l.t_args("integrate-failed", &args!("error" => e.to_string()))
+                    );
                     Ok(false)
                 }
             }
@@ -187,22 +234,41 @@ pub fn run(ctx: &Ctx, a: &IntegrateArgs) -> anyhow::Result<bool> {
                     Ok(true)
                 }
                 Err(e) => {
-                    eprintln!("{}", l.t_args("integrate-failed", &args!("error" => e.to_string())));
+                    eprintln!(
+                        "{}",
+                        l.t_args("integrate-failed", &args!("error" => e.to_string()))
+                    );
                     Ok(false)
                 }
             }
         }
-        IntegrateCmd::OpenTerminal { task, paths } => open_terminal(ctx, task.as_deref(), paths, &[]),
+        IntegrateCmd::OpenTerminal { task, paths } => {
+            open_terminal(ctx, task.as_deref(), paths, &[])
+        }
         IntegrateCmd::Edit { paths } => edit(ctx, paths),
     }
 }
 
 fn absolute(paths: &[PathBuf]) -> Vec<PathBuf> {
     let cwd = std::env::current_dir().unwrap_or_default();
-    paths.iter().map(|p| if p.is_absolute() { p.clone() } else { cwd.join(p) }).collect()
+    paths
+        .iter()
+        .map(|p| {
+            if p.is_absolute() {
+                p.clone()
+            } else {
+                cwd.join(p)
+            }
+        })
+        .collect()
 }
 
-fn open_terminal(ctx: &Ctx, task: Option<&str>, paths: &[PathBuf], extra: &[String]) -> anyhow::Result<bool> {
+fn open_terminal(
+    ctx: &Ctx,
+    task: Option<&str>,
+    paths: &[PathBuf],
+    extra: &[String],
+) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let paths = absolute(paths);
     let Some((root, files)) = osint::resolve(&paths) else {
@@ -217,7 +283,13 @@ fn open_terminal(ctx: &Ctx, task: Option<&str>, paths: &[PathBuf], extra: &[Stri
     match kor_platform::terminal::open(&root, preferred.as_deref(), &kor, &args) {
         Ok(()) => Ok(true),
         Err(e) => {
-            eprintln!("{}", l.t_args("integrate-terminal-failed", &args!("error" => e.to_string())));
+            eprintln!(
+                "{}",
+                l.t_args(
+                    "integrate-terminal-failed",
+                    &args!("error" => e.to_string())
+                )
+            );
             Ok(false)
         }
     }
@@ -225,7 +297,9 @@ fn open_terminal(ctx: &Ctx, task: Option<&str>, paths: &[PathBuf], extra: &[Stri
 
 /// Spool directory where parallel `kor integrate edit` calls leave their paths.
 fn spool() -> anyhow::Result<PathBuf> {
-    let d = kor_platform::data_dir().ok_or_else(|| anyhow::anyhow!("no data directory"))?.join("edit-spool");
+    let d = kor_platform::data_dir()
+        .ok_or_else(|| anyhow::anyhow!("no data directory"))?
+        .join("edit-spool");
     std::fs::create_dir_all(&d)?;
     Ok(d)
 }
@@ -244,7 +318,12 @@ pub(crate) fn drain(dir: &Path, quiet: Duration, max_wait: Duration) -> Vec<Path
         seen = now;
     }
     let mut out: Vec<PathBuf> = Vec::new();
-    let mut files: Vec<PathBuf> = std::fs::read_dir(dir).into_iter().flatten().flatten().map(|e| e.path()).collect();
+    let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .map(|e| e.path())
+        .collect();
     files.sort();
     for f in files {
         if let Ok(text) = std::fs::read_to_string(&f) {
@@ -262,8 +341,17 @@ pub(crate) fn drain(dir: &Path, quiet: Duration, max_wait: Duration) -> Vec<Path
 
 fn edit(ctx: &Ctx, paths: &[PathBuf]) -> anyhow::Result<bool> {
     let dir = spool()?;
-    let mine = dir.join(format!("{}-{}.txt", std::process::id(), SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?.as_nanos()));
-    let body: String = absolute(paths).iter().map(|p| format!("{}\n", p.display())).collect();
+    let mine = dir.join(format!(
+        "{}-{}.txt",
+        std::process::id(),
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)?
+            .as_nanos()
+    ));
+    let body: String = absolute(paths)
+        .iter()
+        .map(|p| format!("{}\n", p.display()))
+        .collect();
     std::fs::write(&mine, body)?;
     let lock_path = dir.with_extension("lock");
     // Explorer starts one process per selected file: the first one collects, the others leave.
@@ -301,13 +389,31 @@ mod tests {
     #[test]
     fn parses_and_localizes() {
         let t = T::try_parse_from(["integrate", "install", "--extended", "--yes"]).unwrap();
-        assert!(matches!(t.a.command, IntegrateCmd::Install { extended: true, yes: true, .. }));
-        assert!(T::try_parse_from(["integrate", "install", "--extended", "--no-extended"]).is_err());
-        let t = T::try_parse_from(["integrate", "open-terminal", "--task", "bugs", "/a", "/b"]).unwrap();
-        assert!(matches!(t.a.command, IntegrateCmd::OpenTerminal { task: Some(ref x), ref paths } if x == "bugs" && paths.len() == 2));
+        assert!(matches!(
+            t.a.command,
+            IntegrateCmd::Install {
+                extended: true,
+                yes: true,
+                ..
+            }
+        ));
+        assert!(
+            T::try_parse_from(["integrate", "install", "--extended", "--no-extended"]).is_err()
+        );
+        let t = T::try_parse_from(["integrate", "open-terminal", "--task", "bugs", "/a", "/b"])
+            .unwrap();
+        assert!(
+            matches!(t.a.command, IntegrateCmd::OpenTerminal { task: Some(ref x), ref paths } if x == "bugs" && paths.len() == 2)
+        );
         assert!(T::try_parse_from(["integrate", "open-terminal", "--task", "rm", "/a"]).is_err());
         assert!(T::try_parse_from(["integrate", "edit"]).is_err());
-        assert!(matches!(T::try_parse_from(["integrate", "status", "--json"]).unwrap().a.command, IntegrateCmd::Status { json: true }));
+        assert!(matches!(
+            T::try_parse_from(["integrate", "status", "--json"])
+                .unwrap()
+                .a
+                .command,
+            IntegrateCmd::Status { json: true }
+        ));
         for lang in [kor_i18n::Lang::En, kor_i18n::Lang::Tr, kor_i18n::Lang::Fr] {
             localize(T::command(), &Localizer::new(lang)).debug_assert();
         }
@@ -319,7 +425,14 @@ mod tests {
         std::fs::write(d.path().join("1.txt"), "/a\n/b\n").unwrap();
         std::fs::write(d.path().join("2.txt"), "/b\n/c\n").unwrap();
         let got = drain(d.path(), Duration::from_millis(10), Duration::from_secs(1));
-        assert_eq!(got, vec![PathBuf::from("/a"), PathBuf::from("/b"), PathBuf::from("/c")]);
+        assert_eq!(
+            got,
+            vec![
+                PathBuf::from("/a"),
+                PathBuf::from("/b"),
+                PathBuf::from("/c")
+            ]
+        );
         assert_eq!(std::fs::read_dir(d.path()).unwrap().count(), 0);
     }
 }

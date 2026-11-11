@@ -52,10 +52,11 @@ pub(crate) fn now_ms() -> u64 {
 
 pub fn hex(b: &[u8]) -> String {
     use std::fmt::Write as _;
-    b.iter().fold(String::with_capacity(b.len() * 2), |mut s, x| {
-        let _ = write!(s, "{x:02x}");
-        s
-    })
+    b.iter()
+        .fold(String::with_capacity(b.len() * 2), |mut s, x| {
+            let _ = write!(s, "{x:02x}");
+            s
+        })
 }
 
 pub fn unhex(s: &str) -> Option<Vec<u8>> {
@@ -207,8 +208,7 @@ pub struct Book {
 /// Peer names: what a user types (`kor peer run server …`), safe as a directory name.
 pub fn valid_name(n: &str) -> bool {
     (1..=64).contains(&n.len())
-        && n
-            .bytes()
+        && n.bytes()
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
         && !n.starts_with('.')
 }
@@ -236,7 +236,11 @@ fn host_name() -> String {
         .take(64)
         .collect();
     let clean = clean.trim_matches('-').to_owned();
-    if clean.is_empty() { "kor".into() } else { clean }
+    if clean.is_empty() {
+        "kor".into()
+    } else {
+        clean
+    }
 }
 
 impl Book {
@@ -297,7 +301,11 @@ impl Book {
             self.peers[i] = e;
             return self.peers[i].name.clone();
         }
-        let base = if valid_name(&e.name) { e.name.clone() } else { "peer".into() };
+        let base = if valid_name(&e.name) {
+            e.name.clone()
+        } else {
+            "peer".into()
+        };
         let mut name = base.clone();
         let mut n = 2;
         while self.get(&name).is_some() {

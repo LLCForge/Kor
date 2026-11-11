@@ -29,7 +29,11 @@ fn scenarios() -> Vec<Scenario> {
 }
 
 fn runtime() -> tokio::runtime::Runtime {
-    tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build().expect("runtime")
+    tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .expect("runtime")
 }
 
 struct Env {
@@ -40,9 +44,16 @@ struct Env {
 
 fn setup(rt: &tokio::runtime::Runtime, s: &Scenario, surface: &str) -> Env {
     let dir = tempfile::tempdir().expect("tempdir");
-    let mock = rt.block_on(MockServer::start(s.mock.clone())).expect("mock provider");
-    let env = e2e::isolated_env_with(dir.path(), s, &mock.url, surface, Some(Path::new(KOR))).expect("isolated env");
-    Env { env, mock, _dir: dir }
+    let mock = rt
+        .block_on(MockServer::start(s.mock.clone()))
+        .expect("mock provider");
+    let env = e2e::isolated_env_with(dir.path(), s, &mock.url, surface, Some(Path::new(KOR)))
+        .expect("isolated env");
+    Env {
+        env,
+        mock,
+        _dir: dir,
+    }
 }
 
 fn command(env: &IsolatedEnv) -> Command {
@@ -65,8 +76,17 @@ fn kor_args(cli: &str, args: &[String]) -> Vec<String> {
 /// A parity command run as its own process; its output is part of the surface's output.
 fn run_command(env: &IsolatedEnv, st: &Step) -> String {
     let cli = st.command.as_deref().unwrap_or_default();
-    let out = command(env).arg("--lang").arg("en").args(kor_args(cli, &st.args)).output().expect("run kor");
-    format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr))
+    let out = command(env)
+        .arg("--lang")
+        .arg("en")
+        .args(kor_args(cli, &st.args))
+        .output()
+        .expect("run kor");
+    format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    )
 }
 
 /// Some Windows builds' ConPTY never hands a child's output to `expectrl` (not even
@@ -75,13 +95,19 @@ fn pty_works() -> bool {
     static OK: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *OK.get_or_init(|| {
         let windows = std::env::consts::OS == "windows";
-        let mut c = if windows { Command::new("cmd") } else { Command::new("sh") };
+        let mut c = if windows {
+            Command::new("cmd")
+        } else {
+            Command::new("sh")
+        };
         if windows {
             c.args(["/c", "echo kor-pty-probe"]);
         } else {
             c.args(["-c", "echo kor-pty-probe"]);
         }
-        let Ok(mut p) = Session::spawn(c) else { return false };
+        let Ok(mut p) = Session::spawn(c) else {
+            return false;
+        };
         p.set_expect_timeout(Some(Duration::from_secs(10)));
         p.expect("kor-pty-probe").is_ok()
     })
@@ -91,7 +117,9 @@ fn skip_without_pty(test: &str) -> bool {
     if pty_works() {
         return false;
     }
-    eprintln!("{test}: skipped, this machine's pseudo-terminal does not pass a child's output through");
+    eprintln!(
+        "{test}: skipped, this machine's pseudo-terminal does not pass a child's output through"
+    );
     true
 }
 
@@ -102,7 +130,8 @@ fn pty(cmd: Command) -> Session {
 }
 
 fn text(captures: &expectrl::Captures) -> String {
-    String::from_utf8_lossy(captures.before()).into_owned() + &String::from_utf8_lossy(captures.as_bytes())
+    String::from_utf8_lossy(captures.before()).into_owned()
+        + &String::from_utf8_lossy(captures.as_bytes())
 }
 
 /// Consecutive prompt / approve steps: one REPL session in a PTY, answered like a user.
@@ -119,7 +148,10 @@ fn cli_session(env: &IsolatedEnv, steps: &[&Step], out: &mut String) {
             // The turn ends at the next prompt, or stops at an approval card first.
             let next = steps.iter().skip_while(|s| !std::ptr::eq(**s, *st)).nth(1);
             if next.is_some_and(|n| n.approve.is_some()) {
-                out.push_str(&text(&p.expect(Regex(r"\[n\] (no|reject all)")).expect("approval card")));
+                out.push_str(&text(
+                    &p.expect(Regex(r"\[n\] (no|reject all)"))
+                        .expect("approval card"),
+                ));
             } else {
                 out.push_str(&text(&p.expect("✶ ").expect("turn end")));
             }
@@ -159,7 +191,9 @@ fn run_cli(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
 
 /// The parity manifest's TUI slash command for a CLI command (`kor undo` → `/undo`).
 fn tui_command(cli: &str) -> String {
-    let text = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../parity.toml")).expect("parity.toml");
+    let text =
+        std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../parity.toml"))
+            .expect("parity.toml");
     let doc: toml::Table = text.parse().expect("parity.toml parses");
     doc["feature"]
         .as_array()
@@ -199,7 +233,11 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
             p.send(&line).expect("type command");
             p.send("\r").expect("submit");
         }
-        let until = if next_is_approval { Regex(r"\[d\] deny") } else { Regex("Idle") };
+        let until = if next_is_approval {
+            Regex(r"\[d\] deny")
+        } else {
+            Regex("Idle")
+        };
         out.push_str(&text(&p.expect(until).expect("TUI step")));
     }
     p.send("\x1b").expect("Esc quits");
@@ -296,11 +334,21 @@ fn pty_repl_shows_banner_and_quits() {
 /// `kor -p --json`: the desktop wire shape, one JSON object per line (§28.1), snapshot (§16.4).
 #[test]
 fn print_json_output_snapshot() {
-    let s = scenarios().into_iter().find(|s| s.name == "cost-update").expect("cost-update scenario");
+    let s = scenarios()
+        .into_iter()
+        .find(|s| s.name == "cost-update")
+        .expect("cost-update scenario");
     let rt = runtime();
     let e = setup(&rt, &s, "cli");
-    let out = command(&e.env).args(["--lang", "en", "-p", "--json", "merhaba"]).output().expect("kor -p --json");
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    let out = command(&e.env)
+        .args(["--lang", "en", "-p", "--json", "merhaba"])
+        .output()
+        .expect("kor -p --json");
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let mut lines: Vec<Value> = String::from_utf8_lossy(&out.stdout)
         .lines()
         .map(|l| serde_json::from_str(l).unwrap_or_else(|e| panic!("not JSON ({e}): {l}")))
@@ -318,7 +366,10 @@ fn print_json_output_snapshot() {
         "[].percent" => "[percent]",
     });
     // Every line is valid against the IPC schema (`kor:event` items) where it is one.
-    for v in lines.iter().filter(|v| !matches!(v["type"].as_str(), Some("usage" | "context.usage"))) {
+    for v in lines
+        .iter()
+        .filter(|v| !matches!(v["type"].as_str(), Some("usage" | "context.usage")))
+    {
         let mut item = v.clone();
         item["sessionId"] = Value::from("cli");
         let errors = kor_core::ipc::check_event("kor:event", &item);
@@ -329,13 +380,30 @@ fn print_json_output_snapshot() {
 /// `--json` of a listing command, in an isolated home with one finished session.
 #[test]
 fn sessions_json_snapshot() {
-    let s = scenarios().into_iter().find(|s| s.name == "cost-update").expect("cost-update scenario");
+    let s = scenarios()
+        .into_iter()
+        .find(|s| s.name == "cost-update")
+        .expect("cost-update scenario");
     let rt = runtime();
     let e = setup(&rt, &s, "cli");
-    let run = command(&e.env).args(["--lang", "en", "-p", "merhaba"]).output().expect("kor -p");
-    assert!(run.status.success(), "{}", String::from_utf8_lossy(&run.stderr));
-    let out = command(&e.env).args(["--lang", "en", "sessions", "--json"]).output().expect("kor sessions --json");
-    assert!(out.status.success(), "{}", String::from_utf8_lossy(&out.stderr));
+    let run = command(&e.env)
+        .args(["--lang", "en", "-p", "merhaba"])
+        .output()
+        .expect("kor -p");
+    assert!(
+        run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&run.stderr)
+    );
+    let out = command(&e.env)
+        .args(["--lang", "en", "sessions", "--json"])
+        .output()
+        .expect("kor sessions --json");
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let v: Value = serde_json::from_slice(&out.stdout).expect("JSON");
     insta::assert_json_snapshot!("sessions_json", v, {
         "[].id" => "[id]",

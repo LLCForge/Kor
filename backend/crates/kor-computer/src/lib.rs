@@ -56,7 +56,8 @@ fn guard() -> MutexGuard<'static, Option<Guard>> {
 
 fn with_guard<R>(f: impl FnOnce(&mut Guard) -> R) -> R {
     let mut g = guard();
-    f(g.as_mut().unwrap_or_else(|| unreachable!("guard() fills the slot")))
+    f(g.as_mut()
+        .unwrap_or_else(|| unreachable!("guard() fills the slot")))
 }
 
 /// Replace the input watcher (tests use a fake one).
@@ -108,13 +109,22 @@ impl Ticket {
 
 /// Before a desktop tool acts: the app's tier allows it and the user has not taken over.
 /// `Err` is the message for the model (already audited).
-pub fn begin(tool: &str, action: Action, app: Option<String>, destructive: bool) -> Result<Ticket, String> {
-    if let Verdict::Refuse(m) = policy::verdict(&policy::current(), app.as_deref(), action, destructive) {
+pub fn begin(
+    tool: &str,
+    action: Action,
+    app: Option<String>,
+    destructive: bool,
+) -> Result<Ticket, String> {
+    if let Verdict::Refuse(m) =
+        policy::verdict(&policy::current(), app.as_deref(), action, destructive)
+    {
         audit(json!({"tool": tool, "app": app, "action": action.key(), "decision": "refused"}));
         return Err(m);
     }
     if let Err(i) = with_guard(Guard::check) {
-        audit(json!({"tool": tool, "app": app, "action": action.key(), "decision": "paused", "by": i.key()}));
+        audit(
+            json!({"tool": tool, "app": app, "action": action.key(), "decision": "paused", "by": i.key()}),
+        );
         indicator::emit(Activity {
             active: false,
             tool: tool.to_owned(),
@@ -141,7 +151,8 @@ pub fn begin(tool: &str, action: Action, app: Option<String>, destructive: bool)
 /// The permission engine may run this action without asking: `full` tier, not destructive, and
 /// Kor is not paused by the user.
 pub fn auto_allowed(action: Action, app: Option<&str>, destructive: bool) -> bool {
-    paused().is_none() && policy::verdict(&policy::current(), app, action, destructive) == Verdict::Allow
+    paused().is_none()
+        && policy::verdict(&policy::current(), app, action, destructive) == Verdict::Allow
 }
 
 /// Kor is paused by the user (the next desktop action asks, in every permission mode).
@@ -200,7 +211,9 @@ mod tests {
         assert!(auto_allowed(Action::Type, Some("mspaint"), false));
         assert!(!auto_allowed(Action::Type, Some("mspaint"), true));
 
-        begin("type", Action::Type, Some("mspaint".into()), false).unwrap().finish(true);
+        begin("type", Action::Type, Some("mspaint".into()), false)
+            .unwrap()
+            .finish(true);
         f.advance(3_000);
         f.key();
         f.advance(1_000);
@@ -208,10 +221,15 @@ mod tests {
         assert!(err.starts_with("Paused"), "{err}");
         assert!(paused().is_some() && !auto_allowed(Action::Type, Some("mspaint"), false));
         approved();
-        begin("left_click", Action::Click, Some("mspaint".into()), false).unwrap().finish(false);
+        begin("left_click", Action::Click, Some("mspaint".into()), false)
+            .unwrap()
+            .finish(false);
 
         let log = log.lock().unwrap();
-        let decisions: Vec<&str> = log.iter().map(|v| v["decision"].as_str().unwrap()).collect();
+        let decisions: Vec<&str> = log
+            .iter()
+            .map(|v| v["decision"].as_str().unwrap())
+            .collect();
         assert_eq!(decisions, ["refused", "refused", "run", "paused", "run"]);
         assert_eq!(log[2]["app"], "mspaint");
         assert_eq!(log[4]["ok"], false);

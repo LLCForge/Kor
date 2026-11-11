@@ -413,9 +413,8 @@ pub fn text_protocol_prompt(specs: &[ToolSpec]) -> String {
 }
 
 // Anything up to the closing tag (or the end of the reply), so broken JSON reaches repair.
-static TOOL_CALL: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?s)<tool_call>\s*(.*?)\s*(?:</tool_call>|$)").expect("static")
-});
+static TOOL_CALL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?s)<tool_call>\s*(.*?)\s*(?:</tool_call>|$)").expect("static"));
 static FUNCTION_TAG: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?s)<function=([\w.\-]+)>\s*(\{.*?\})\s*</function>").expect("static")
 });
@@ -454,7 +453,9 @@ pub type TextCall = (String, Result<Value, String>);
 
 /// A broken whole-call block (`{"name": .., "arguments": ..}` text) after local repair.
 pub fn call_from_text(raw: &str) -> Option<(String, Value)> {
-    crate::repair::lenient(raw).as_ref().and_then(call_from_object)
+    crate::repair::lenient(raw)
+        .as_ref()
+        .and_then(call_from_object)
 }
 
 /// Tool calls written as text. Fenced JSON only counts when it names a known tool, so
@@ -466,7 +467,11 @@ pub fn parse_text_calls(text: &str, specs: &[ToolSpec]) -> Vec<TextCall> {
         if raw.is_empty() {
             continue;
         }
-        match serde_json::from_str(raw).ok().as_ref().and_then(call_from_object) {
+        match serde_json::from_str(raw)
+            .ok()
+            .as_ref()
+            .and_then(call_from_object)
+        {
             Some((name, args)) => calls.push((name, Ok(args))),
             None => calls.push((String::new(), Err(raw.to_owned()))),
         }

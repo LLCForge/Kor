@@ -32,7 +32,10 @@ fn plain(p: &Path) -> PathBuf {
 
 pub fn is_trusted(store: &Path, root: &Path) -> bool {
     let root = plain(root);
-    load(store).trusted.iter().any(|t| root.starts_with(plain(t)))
+    load(store)
+        .trusted
+        .iter()
+        .any(|t| root.starts_with(plain(t)))
 }
 
 /// Trust or untrust `root` (an exact entry). Returns whether the store changed.
@@ -76,7 +79,10 @@ mod tests {
         // The verbatim form of the same folder (what `canonicalize` returns on Windows) matches too.
         let verbatim = PathBuf::from(format!(r"\\?\{}", proj.display()));
         assert!(is_trusted(&store, &verbatim));
-        assert!(!set(&store, &verbatim, true).unwrap(), "same folder, already trusted");
+        assert!(
+            !set(&store, &verbatim, true).unwrap(),
+            "same folder, already trusted"
+        );
         assert!(!is_trusted(&store, dir.path()));
         assert!(set(&store, &proj, false).unwrap());
         assert!(!is_trusted(&store, &proj));

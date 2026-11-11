@@ -12,7 +12,11 @@ pub const TASK_REPLAN_V1: &str = include_str!("../schemas/task-replan.v1.json");
 mod tests {
     #[test]
     fn schemas_are_json_objects() {
-        for s in [super::TASK_PLAN_V1, super::TASK_REVIEW_V1, super::TASK_REPLAN_V1] {
+        for s in [
+            super::TASK_PLAN_V1,
+            super::TASK_REVIEW_V1,
+            super::TASK_REPLAN_V1,
+        ] {
             let v: serde_json::Value = serde_json::from_str(s).unwrap();
             assert_eq!(v["type"], "object");
         }

@@ -265,7 +265,10 @@ impl ProviderManifest {
         let Some(var) = &self.base_url_env else {
             return Ok(std::borrow::Cow::Borrowed(self));
         };
-        match env(var).map(|v| v.trim().to_owned()).filter(|v| !v.is_empty()) {
+        match env(var)
+            .map(|v| v.trim().to_owned())
+            .filter(|v| !v.is_empty())
+        {
             Some(url) => {
                 let mut m = self.clone();
                 m.base_url = url;
@@ -511,7 +514,11 @@ retention = "unknown"
             match e.status.as_deref() {
                 None => assert!(src.is_file(), "{}: no adapter {}", e.id, src.display()),
                 Some("not_yet" | "retired") => {
-                    assert!(crate::build(m, None).is_err(), "{} must refuse to build", e.id);
+                    assert!(
+                        crate::build(m, None).is_err(),
+                        "{} must refuse to build",
+                        e.id
+                    );
                 }
                 Some(s) => panic!("{}: unknown status {s}", e.id),
             }
@@ -529,7 +536,10 @@ retention = "unknown"
             .resolved(|_| Some("https://real.example.org/openai/v1".into()))
             .unwrap();
         assert_eq!(r.base_url, "https://real.example.org/openai/v1");
-        assert!(m.resolved(|_| Some("http://evil.example.org".into())).is_err());
+        assert!(
+            m.resolved(|_| Some("http://evil.example.org".into()))
+                .is_err()
+        );
         // `.invalid` without base_url_env is rejected at parse time.
         let bad = base().replace("https://example.com/v1", "https://x.invalid/v1");
         assert!(ProviderManifest::parse(&bad, "t").is_err());

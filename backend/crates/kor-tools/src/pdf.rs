@@ -59,7 +59,8 @@ pub fn pdftoppm_args(pdf: &Path, prefix: &Path, range: Option<(u32, u32)>) -> Ve
 }
 
 pub fn pdftoppm_on_path() -> bool {
-    Command::new("pdftoppm").no_window()
+    Command::new("pdftoppm")
+        .no_window()
         .arg("-v")
         .output()
         .is_ok_and(|o| o.status.success() || !o.stderr.is_empty())
@@ -120,7 +121,8 @@ pub async fn render(pdf: &Path, out: &Path, range: Option<(u32, u32)>) -> Result
     std::fs::create_dir_all(out).map_err(|e| e.to_string())?;
     if pdftoppm_on_path() {
         let args = pdftoppm_args(pdf, &out.join("page"), range);
-        let o = tokio::process::Command::new("pdftoppm").no_window()
+        let o = tokio::process::Command::new("pdftoppm")
+            .no_window()
             .args(&args)
             .output()
             .await

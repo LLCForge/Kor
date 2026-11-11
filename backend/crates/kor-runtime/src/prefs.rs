@@ -43,12 +43,20 @@ pub fn auto_rows(loaded: &Loaded) -> Vec<AutoRow> {
             AutoRow {
                 key: (*k).to_owned(),
                 value: loaded.config.auto.get(k).unwrap_or(true),
-                source: s.map_or_else(|| "default".into(), |s| match s.layer {
-                    Layer::Default => "default".into(),
-                    Layer::Env | Layer::Cli | Layer::System | Layer::User | Layer::Project => s.origin.clone(),
-                }),
+                source: s.map_or_else(
+                    || "default".into(),
+                    |s| match s.layer {
+                        Layer::Default => "default".into(),
+                        Layer::Env | Layer::Cli | Layer::System | Layer::User | Layer::Project => {
+                            s.origin.clone()
+                        }
+                    },
+                ),
                 from_default: s.is_none_or(|s| s.layer == Layer::Default),
-                related: related.iter().map(|r| ((*r).to_owned(), setting_value(loaded, r))).collect(),
+                related: related
+                    .iter()
+                    .map(|r| ((*r).to_owned(), setting_value(loaded, r)))
+                    .collect(),
             }
         })
         .collect()
@@ -71,15 +79,43 @@ pub fn log_config_change(key: &str, value: &str, file: &Path) {
 
 /// Actions a TUI key can be bound to (`[tui]` table).
 pub const TUI_ACTIONS: &[&str] = &[
-    "submit", "backspace", "focus_next", "focus_prev", "up", "down", "page_up", "page_down", "accept",
-    "reject", "refresh", "to_input", "command", "interrupt", "quit",
+    "submit",
+    "backspace",
+    "focus_next",
+    "focus_prev",
+    "up",
+    "down",
+    "page_up",
+    "page_down",
+    "accept",
+    "reject",
+    "refresh",
+    "to_input",
+    "command",
+    "interrupt",
+    "quit",
 ];
 
 /// Actions a desktop composer key can be bound to (`[composer]` table).
 pub const COMPOSER_ACTIONS: &[&str] = &[
-    "submit", "submit_now", "newline", "cancel", "mode_cycle", "keys_cycle", "line_start", "line_end",
-    "char_back", "char_forward", "word_back", "word_forward", "line_up", "line_down", "kill_line",
-    "delete_char", "delete_word_back", "yank",
+    "submit",
+    "submit_now",
+    "newline",
+    "cancel",
+    "mode_cycle",
+    "keys_cycle",
+    "line_start",
+    "line_end",
+    "char_back",
+    "char_forward",
+    "word_back",
+    "word_forward",
+    "line_up",
+    "line_down",
+    "kill_line",
+    "delete_char",
+    "delete_word_back",
+    "yank",
 ];
 
 /// Built-in TUI keys that work in every layout; rebinding one is reported.
@@ -119,8 +155,22 @@ pub struct Keymap {
 
 const MODS: &[&str] = &["ctrl", "alt", "shift", "meta"];
 const NAMED: &[&str] = &[
-    "enter", "escape", "esc", "tab", "backspace", "delete", "up", "down", "left", "right", "home", "end",
-    "pageup", "pagedown", "space", "insert",
+    "enter",
+    "escape",
+    "esc",
+    "tab",
+    "backspace",
+    "delete",
+    "up",
+    "down",
+    "left",
+    "right",
+    "home",
+    "end",
+    "pageup",
+    "pagedown",
+    "space",
+    "insert",
 ];
 
 /// `Ctrl+Shift+K` → `ctrl+shift+k`; `None` when it is not a key.
@@ -141,11 +191,21 @@ pub fn normalize_key(spec: &str) -> Option<String> {
         ms.push(m);
     }
     ms.sort_by_key(|m| MODS.iter().position(|x| x == m));
-    let key = if key == "esc" { "escape".to_owned() } else { key.clone() };
+    let key = if key == "esc" {
+        "escape".to_owned()
+    } else {
+        key.clone()
+    };
     let ok = key.chars().count() == 1
         || NAMED.contains(&key.as_str())
         || (key.starts_with('f') && key[1..].parse::<u8>().is_ok_and(|n| (1..=24).contains(&n)));
-    ok.then(|| ms.iter().map(|m| (*m).to_owned()).chain(std::iter::once(key)).collect::<Vec<_>>().join("+"))
+    ok.then(|| {
+        ms.iter()
+            .map(|m| (*m).to_owned())
+            .chain(std::iter::once(key))
+            .collect::<Vec<_>>()
+            .join("+")
+    })
 }
 
 /// User `keymap.toml` (next to `config.toml`) then the project's `.kor/keymap.toml`.
@@ -164,7 +224,9 @@ pub fn load_keymap(root: &Path) -> Keymap {
 pub fn load_keymap_from(files: &[PathBuf]) -> Keymap {
     let mut km = Keymap::default();
     for f in files {
-        let Ok(text) = std::fs::read_to_string(f) else { continue };
+        let Ok(text) = std::fs::read_to_string(f) else {
+            continue;
+        };
         km.files.push(f.clone());
         let origin = f.display().to_string();
         let table: toml::Table = match text.parse() {
@@ -180,7 +242,9 @@ pub fn load_keymap_from(files: &[PathBuf]) -> Keymap {
                     "default" => km.mode = Some(TuiKeys::Default),
                     "vim" | "vi" => km.mode = Some(TuiKeys::Vim),
                     "emacs" => km.mode = Some(TuiKeys::Emacs),
-                    _ => km.warnings.push(format!("{origin}: mode `{m}` (default, vim, emacs)")),
+                    _ => km
+                        .warnings
+                        .push(format!("{origin}: mode `{m}` (default, vim, emacs)")),
                 },
                 ("tui" | "composer", toml::Value::Table(t)) => {
                     let (actions, builtin, map) = if k == "tui" {
@@ -190,31 +254,42 @@ pub fn load_keymap_from(files: &[PathBuf]) -> Keymap {
                     };
                     for (key, action) in t {
                         let Some(action) = action.as_str() else {
-                            km.warnings.push(format!("{origin}: [{k}] `{key}` must be an action name"));
+                            km.warnings
+                                .push(format!("{origin}: [{k}] `{key}` must be an action name"));
                             continue;
                         };
                         let Some(nk) = normalize_key(key) else {
-                            km.warnings.push(format!("{origin}: [{k}] `{key}` is not a key"));
+                            km.warnings
+                                .push(format!("{origin}: [{k}] `{key}` is not a key"));
                             continue;
                         };
                         if !actions.contains(&action) {
-                            km.warnings.push(format!("{origin}: [{k}] unknown action `{action}` ({})", actions.join(", ")));
+                            km.warnings.push(format!(
+                                "{origin}: [{k}] unknown action `{action}` ({})",
+                                actions.join(", ")
+                            ));
                             continue;
                         }
                         if let Some(prev) = map.get(&nk)
                             && prev != action
                         {
-                            km.warnings.push(format!("{origin}: [{k}] `{nk}` was `{prev}`, now `{action}`"));
+                            km.warnings.push(format!(
+                                "{origin}: [{k}] `{nk}` was `{prev}`, now `{action}`"
+                            ));
                         }
                         if let Some((_, b)) = builtin.iter().find(|(bk, _)| *bk == nk)
                             && *b != action
                         {
-                            km.warnings.push(format!("{origin}: [{k}] `{nk}` replaces the built-in `{b}`"));
+                            km.warnings.push(format!(
+                                "{origin}: [{k}] `{nk}` replaces the built-in `{b}`"
+                            ));
                         }
                         map.insert(nk, action.to_owned());
                     }
                 }
-                _ => km.warnings.push(format!("{origin}: unknown key `{k}` (mode, [tui], [composer])")),
+                _ => km.warnings.push(format!(
+                    "{origin}: unknown key `{k}` (mode, [tui], [composer])"
+                )),
             }
         }
     }
@@ -333,10 +408,14 @@ impl Issue {
 
 /// Kor's own folders: user config, Kor home, sessions.
 pub fn own_dirs() -> Vec<PathBuf> {
-    [kor_config::user_dir(), crate::kor_home(), crate::sessions_dir()]
-        .into_iter()
-        .flatten()
-        .collect()
+    [
+        kor_config::user_dir(),
+        crate::kor_home(),
+        crate::sessions_dir(),
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 /// Issues in `dirs` (missing ones, and stale locks / temp files directly inside them).
@@ -352,8 +431,13 @@ pub fn find_issues(dirs: &[PathBuf], max_tmp_age: std::time::Duration) -> Vec<Is
             if !p.is_file() {
                 continue;
             }
-            let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-            let ext = Path::new(&name).extension().map(std::ffi::OsStr::to_ascii_lowercase);
+            let name = p
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let ext = Path::new(&name)
+                .extension()
+                .map(std::ffi::OsStr::to_ascii_lowercase);
             if ext.as_deref() == Some(std::ffi::OsStr::new("lock")) {
                 // We can take it: no process holds it. (Release at once; the file is removed by `fix`.)
                 if matches!(kor_platform::try_lock_file(&p), Ok(Some(_))) {
@@ -383,7 +467,11 @@ pub fn fix(issue: &Issue) -> std::io::Result<()> {
         Issue::StaleLock { path } => {
             // Still nobody holds it (checked again right before removing).
             let free = kor_platform::try_lock_file(path)?.is_some();
-            if free { std::fs::remove_file(path) } else { Ok(()) }
+            if free {
+                std::fs::remove_file(path)
+            } else {
+                Ok(())
+            }
         }
         Issue::StaleTemp { path } => std::fs::remove_file(path),
     }
@@ -403,14 +491,20 @@ mod tests {
         let km = load_keymap_from(&[user, project, t.path().join("missing.toml")]);
         assert_eq!(km.mode, Some(TuiKeys::Vim));
         assert_eq!(km.tui.get("ctrl+g").map(String::as_str), Some("quit"));
-        assert_eq!(km.composer.get("ctrl+j").map(String::as_str), Some("submit"));
+        assert_eq!(
+            km.composer.get("ctrl+j").map(String::as_str),
+            Some("submit")
+        );
         assert_eq!(km.files.len(), 2);
         let w = km.warnings.join("\n");
         assert!(w.contains("unknown action `fly`"), "{w}");
         assert!(w.contains("`ctrl+g` was `to_input`, now `quit`"), "{w}");
         assert!(w.contains("replaces the built-in `interrupt`"), "{w}");
         assert!(w.contains("is not a key"), "{w}");
-        assert_eq!(normalize_key("Shift+Ctrl+K").as_deref(), Some("ctrl+shift+k"));
+        assert_eq!(
+            normalize_key("Shift+Ctrl+K").as_deref(),
+            Some("ctrl+shift+k")
+        );
         assert_eq!(normalize_key("F12").as_deref(), Some("f12"));
         assert_eq!(normalize_key("hyper+k"), None);
         assert_eq!(normalize_key("ctrl+ctrl+k"), None);
@@ -421,7 +515,11 @@ mod tests {
         let t = tempfile::tempdir().unwrap();
         let f = t.path().join("config.toml");
         std::fs::write(&f, "[auto]\ncompact = false\n").unwrap();
-        let paths = kor_config::Paths { system: None, user: Some(f.clone()), project: None };
+        let paths = kor_config::Paths {
+            system: None,
+            user: Some(f.clone()),
+            project: None,
+        };
         let loaded = kor_config::load(&paths, std::iter::empty(), &[]).unwrap();
         let rows = auto_rows(&loaded);
         assert_eq!(rows.len(), AUTO_KEYS.len());
@@ -453,14 +551,25 @@ mod tests {
         std::fs::write(home.join("keep.json"), "{}").unwrap();
         let held = kor_platform::lock_file(&home.join("busy.lock")).unwrap();
         let issues = find_issues(&[home.clone(), missing.clone()], std::time::Duration::ZERO);
-        assert!(issues.contains(&Issue::MissingDir { path: missing.clone() }));
-        assert!(issues.contains(&Issue::StaleLock { path: home.join("audit.lock") }));
+        assert!(issues.contains(&Issue::MissingDir {
+            path: missing.clone()
+        }));
+        assert!(issues.contains(&Issue::StaleLock {
+            path: home.join("audit.lock")
+        }));
         assert!(issues.iter().any(|i| matches!(i, Issue::StaleTemp { .. })));
-        assert!(!issues.iter().any(|i| i.path().ends_with("busy.lock")), "a held lock is not stale");
+        assert!(
+            !issues.iter().any(|i| i.path().ends_with("busy.lock")),
+            "a held lock is not stale"
+        );
         for i in &issues {
             fix(i).unwrap();
         }
-        assert!(missing.is_dir() && !home.join("audit.lock").exists() && home.join("keep.json").exists());
+        assert!(
+            missing.is_dir()
+                && !home.join("audit.lock").exists()
+                && home.join("keep.json").exists()
+        );
         drop(held);
         let fresh = find_issues(&[home], std::time::Duration::from_secs(3600));
         assert!(fresh.iter().all(|i| !matches!(i, Issue::StaleTemp { .. })));

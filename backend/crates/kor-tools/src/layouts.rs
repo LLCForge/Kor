@@ -32,7 +32,11 @@ pub fn monitors() -> Vec<Monitor> {
 }
 
 fn window(v: &Value) -> Option<Window> {
-    let i = |k: &str| v[k].as_i64().and_then(|n| i32::try_from(n).ok()).unwrap_or(0);
+    let i = |k: &str| {
+        v[k].as_i64()
+            .and_then(|n| i32::try_from(n).ok())
+            .unwrap_or(0)
+    };
     Some(Window {
         hwnd: v["hwnd"].as_i64()?,
         title: v["title"].as_str().unwrap_or_default().to_owned(),
@@ -52,9 +56,16 @@ fn now() -> u64 {
 }
 
 /// Save the current arrangement as `name`; with `project`, link it to that project.
-pub async fn save(store: &Store, name: &str, root: &Path, project: Option<&Path>) -> Result<Layout, String> {
+pub async fn save(
+    store: &Store,
+    name: &str,
+    root: &Path,
+    project: Option<&Path>,
+) -> Result<Layout, String> {
     if !layout::valid_name(name) {
-        return Err(format!("invalid layout name `{name}` (letters, digits, - _ . only)"));
+        return Err(format!(
+            "invalid layout name `{name}` (letters, digits, - _ . only)"
+        ));
     }
     let wc = WindowControl::new(root)?;
     let windows: Vec<Window> = wc.list().await?.iter().filter_map(window).collect();
@@ -72,7 +83,12 @@ pub async fn save(store: &Store, name: &str, root: &Path, project: Option<&Path>
 
 /// Bring layout `name` back. `dry_run` only plans. Windows that fail to move are reported in
 /// `missing` with the reason.
-pub async fn restore(store: &Store, name: &str, root: &Path, dry_run: bool) -> Result<Plan, String> {
+pub async fn restore(
+    store: &Store,
+    name: &str,
+    root: &Path,
+    dry_run: bool,
+) -> Result<Plan, String> {
     let l = store.load(name)?;
     let wc = WindowControl::new(root)?;
     let windows: Vec<Window> = wc.list().await?.iter().filter_map(window).collect();
@@ -98,7 +114,10 @@ mod tests {
     #[test]
     fn script_rows_become_windows() {
         let w = window(&json!({"hwnd": 42, "title": "a", "process": "code", "x": -8, "y": 0, "w": 900, "h": 700, "state": "maximized"})).unwrap();
-        assert_eq!((w.hwnd, w.x, w.w, w.state.as_str()), (42, -8, 900, "maximized"));
+        assert_eq!(
+            (w.hwnd, w.x, w.w, w.state.as_str()),
+            (42, -8, 900, "maximized")
+        );
         assert!(window(&json!({"title": "no handle"})).is_none());
     }
 }

@@ -41,8 +41,8 @@ impl std::fmt::Debug for PeerTurns {
 
 impl PeerTurns {
     fn prepare(&mut self, events: &mpsc::UnboundedSender<AgentEvent>) -> Result<(), String> {
-        let exists = crate::sessions_dir()
-            .is_some_and(|d| d.join(format!("{}.jsonl", self.id)).is_file());
+        let exists =
+            crate::sessions_dir().is_some_and(|d| d.join(format!("{}.jsonl", self.id)).is_file());
         let opts = crate::Options {
             root: self.meta.root.clone(),
             model: None,

@@ -13,7 +13,11 @@ fn main() {
         if line.starts_with('[') {
             in_section = line == "[workspace.package]";
         } else if in_section && let Some(v) = line.strip_prefix("version") {
-            let v = v.trim_start().trim_start_matches('=').trim().trim_matches('"');
+            let v = v
+                .trim_start()
+                .trim_start_matches('=')
+                .trim()
+                .trim_matches('"');
             println!("cargo:rustc-env=KOR_VERSION={v}");
             return;
         }

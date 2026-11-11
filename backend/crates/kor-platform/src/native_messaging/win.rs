@@ -24,9 +24,20 @@ pub(super) fn set_default(key: &str, value: &str) -> io::Result<()> {
     let size = u32::try_from(data.len() * 2).map_err(|_| io::ErrorKind::InvalidInput)?;
     // SAFETY: NUL-terminated strings that outlive the call; a null value name is the default value.
     let rc = unsafe {
-        RegSetKeyValueW(HKEY_CURRENT_USER, k.as_ptr(), null(), REG_SZ, data.as_ptr().cast(), size)
+        RegSetKeyValueW(
+            HKEY_CURRENT_USER,
+            k.as_ptr(),
+            null(),
+            REG_SZ,
+            data.as_ptr().cast(),
+            size,
+        )
     };
-    if rc == ERROR_SUCCESS { Ok(()) } else { Err(os_error(rc)) }
+    if rc == ERROR_SUCCESS {
+        Ok(())
+    } else {
+        Err(os_error(rc))
+    }
 }
 
 pub(super) fn get_default(key: &str) -> io::Result<Option<String>> {

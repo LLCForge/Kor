@@ -356,12 +356,18 @@ async fn artifact_file_for_a_bundle_is_verified_and_cached() {
         manifest(&format!("{}/tool", server.uri()), &body, "zip", "bin/tool"),
     );
     let cache = dir.path().join("cache");
-    let p = store.artifact_file("tool", T, &cache, &quiet).await.unwrap();
+    let p = store
+        .artifact_file("tool", T, &cache, &quiet)
+        .await
+        .unwrap();
     assert_eq!(std::fs::read(&p).unwrap(), body);
     assert!(store.path_for("tool", T).is_none(), "not installed");
     // A cached, verified file is reused without a request.
     drop(server);
-    let again = store.artifact_file("tool", T, &cache, &quiet).await.unwrap();
+    let again = store
+        .artifact_file("tool", T, &cache, &quiet)
+        .await
+        .unwrap();
     assert_eq!(again, p);
     // A damaged cache file is not used (and with privacy on, not re-downloaded either).
     std::fs::write(&p, b"x").unwrap();
@@ -389,7 +395,10 @@ async fn real_offline_runtime_and_model_install_verified() {
 #[tokio::test]
 async fn broken_install_is_found_deleted_and_downloaded_again() {
     use kor_components::Health;
-    let archive = xz(&tar_entries(&[("pkg/bin/tool", b"hello"), ("pkg/lib/data", b"0123456789")]));
+    let archive = xz(&tar_entries(&[
+        ("pkg/bin/tool", b"hello"),
+        ("pkg/lib/data", b"0123456789"),
+    ]));
     let server = MockServer::start().await;
     Mock::given(method("GET"))
         .and(path("/tool"))
@@ -398,22 +407,42 @@ async fn broken_install_is_found_deleted_and_downloaded_again() {
         .mount(&server)
         .await;
     let dir = tempfile::tempdir().unwrap();
-    let store = Store::new(dir.path(), manifest(&format!("{}/tool", server.uri()), &archive, "tar.xz", "pkg/bin/tool"));
+    let store = Store::new(
+        dir.path(),
+        manifest(
+            &format!("{}/tool", server.uri()),
+            &archive,
+            "tar.xz",
+            "pkg/bin/tool",
+        ),
+    );
     assert_eq!(store.health("tool", T, true), Health::Missing);
     let exe = store.ensure_for("tool", T, &quiet).await.unwrap();
     assert_eq!(store.health("tool", T, true), Health::Ok);
-    let data = dir.path().join("tool").join("1.0+1").join("pkg").join("lib").join("data");
+    let data = dir
+        .path()
+        .join("tool")
+        .join("1.0+1")
+        .join("pkg")
+        .join("lib")
+        .join("data");
 
     // Cut short: the cheap check on use sees it and downloads again (request 2).
     std::fs::write(&data, b"0123").unwrap();
-    assert_eq!(store.health("tool", T, false), Health::Broken(vec!["pkg/lib/data".into()]));
+    assert_eq!(
+        store.health("tool", T, false),
+        Health::Broken(vec!["pkg/lib/data".into()])
+    );
     assert_eq!(store.ensure_for("tool", T, &quiet).await.unwrap(), exe);
     assert_eq!(installed_text(&data), "0123456789");
 
     // Same size, other bytes: only the deep check sees it; verify deletes the copy.
     std::fs::write(&data, b"abcdefghij").unwrap();
     assert_eq!(store.health("tool", T, false), Health::Ok);
-    assert_eq!(store.verify("tool", T).unwrap(), Health::Broken(vec!["pkg/lib/data".into()]));
+    assert_eq!(
+        store.verify("tool", T).unwrap(),
+        Health::Broken(vec!["pkg/lib/data".into()])
+    );
     assert!(store.path_for("tool", T).is_none());
     store.ensure_for("tool", T, &quiet).await.unwrap(); // request 3
     assert_eq!(store.verify("tool", T).unwrap(), Health::Ok);
@@ -423,12 +452,25 @@ async fn broken_install_is_found_deleted_and_downloaded_again() {
 fn an_older_installed_version_is_outdated() {
     use kor_components::Health;
     let dir = tempfile::tempdir().unwrap();
-    let store = Store::new(dir.path(), manifest("http://127.0.0.1:9/tool", b"x", "tar.xz", "pkg/bin/tool"));
+    let store = Store::new(
+        dir.path(),
+        manifest("http://127.0.0.1:9/tool", b"x", "tar.xz", "pkg/bin/tool"),
+    );
     std::fs::create_dir_all(dir.path().join("tool").join("0.9").join("pkg")).unwrap();
-    assert_eq!(store.health("tool", T, false), Health::Outdated { installed: "0.9".into() });
+    assert_eq!(
+        store.health("tool", T, false),
+        Health::Outdated {
+            installed: "0.9".into()
+        }
+    );
     assert_eq!(store.outdated(T), ["tool"]);
     // An install from before the receipt existed is still usable, just not checkable.
-    let v = dir.path().join("tool").join("1.0+1").join("pkg").join("bin");
+    let v = dir
+        .path()
+        .join("tool")
+        .join("1.0+1")
+        .join("pkg")
+        .join("bin");
     std::fs::create_dir_all(&v).unwrap();
     std::fs::write(v.join("tool"), b"old").unwrap();
     assert_eq!(store.health("tool", T, true), Health::Unrecorded);

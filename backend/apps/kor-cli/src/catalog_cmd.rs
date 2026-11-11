@@ -20,7 +20,10 @@ pub fn run(ctx: &Ctx, query: Option<&str>, refresh: bool, offline: bool) -> anyh
     let cache = cache_path();
     // `[auto] catalog_refresh = false`: a stale cache is used as is until `--refresh` (§28.14).
     let no_auto = !refresh
-        && ctx.config.as_ref().is_ok_and(|c| !c.config.auto.catalog_refresh)
+        && ctx
+            .config
+            .as_ref()
+            .is_ok_and(|c| !c.config.auto.catalog_refresh)
         && cache.as_deref().is_some_and(std::path::Path::is_file);
     let opts = Options {
         offline: offline || privacy || no_auto,

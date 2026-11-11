@@ -437,12 +437,23 @@ impl DesktopTool {
             Op::UiaSnapshot => (Action::Observe, self.app_of(a.hwnd), false),
             Op::ListWindows | Op::ClipboardRead => (Action::Observe, None, false),
             Op::UiaInvoke => {
-                let hwnd = a.reference.as_deref().and_then(|r| lock(&self.refs.elems).get(r).map(|b| b.hwnd));
-                let action = if a.action.as_deref() == Some("set_value") { Action::Type } else { Action::Click };
+                let hwnd = a
+                    .reference
+                    .as_deref()
+                    .and_then(|r| lock(&self.refs.elems).get(r).map(|b| b.hwnd));
+                let action = if a.action.as_deref() == Some("set_value") {
+                    Action::Type
+                } else {
+                    Action::Click
+                };
                 (action, self.app_of(hwnd), false)
             }
             Op::FocusWindow => (Action::Click, self.app_of(a.hwnd), false),
-            Op::WindowState => (Action::Window, self.app_of(a.hwnd), a.state.as_deref() == Some("close")),
+            Op::WindowState => (
+                Action::Window,
+                self.app_of(a.hwnd),
+                a.state.as_deref() == Some("close"),
+            ),
             Op::MoveWindow => (Action::Window, self.app_of(a.hwnd), false),
             Op::LaunchApp => (Action::Launch, a.target.clone(), false),
             Op::ClipboardWrite => (Action::Type, None, false),
@@ -500,7 +511,10 @@ impl DesktopTool {
                 *lock(&self.refs.windows) = list
                     .iter()
                     .filter_map(|w| {
-                        Some((w["hwnd"].as_i64()?, (s(w, "title").to_owned(), s(w, "process").to_owned())))
+                        Some((
+                            w["hwnd"].as_i64()?,
+                            (s(w, "title").to_owned(), s(w, "process").to_owned()),
+                        ))
                     })
                     .collect();
                 Ok(format_windows(&list))
@@ -644,7 +658,10 @@ impl WindowControl {
             return Err("window control is not available on this operating system".into());
         }
         Ok(Self {
-            list: DesktopTool { op: Op::ListWindows, refs: Arc::new(Refs::default()) },
+            list: DesktopTool {
+                op: Op::ListWindows,
+                refs: Arc::new(Refs::default()),
+            },
             ctx: ToolCtx::new(root).map_err(|e| e.to_string())?,
         })
     }
@@ -656,27 +673,54 @@ impl WindowControl {
         let list = json_list(&raw)?;
         *lock(&self.list.refs.windows) = list
             .iter()
-            .filter_map(|w| Some((w["hwnd"].as_i64()?, (s(w, "title").to_owned(), s(w, "process").to_owned()))))
+            .filter_map(|w| {
+                Some((
+                    w["hwnd"].as_i64()?,
+                    (s(w, "title").to_owned(), s(w, "process").to_owned()),
+                ))
+            })
             .collect();
         Ok(list)
     }
 
     /// Restore, move and resize a window listed by [`WindowControl::list`], then maximize it when
     /// `state` is `maximized`.
-    pub async fn place(&self, hwnd: i64, rect: (i32, i32, i32, i32), state: &str) -> Result<(), String> {
+    pub async fn place(
+        &self,
+        hwnd: i64,
+        rect: (i32, i32, i32, i32),
+        state: &str,
+    ) -> Result<(), String> {
         let h = hwnd.to_string();
         let title = self.list.title_of(Some(hwnd));
         let base = [("KOR_HWND", h.as_str()), ("KOR_TITLE", title.as_str())];
         let with = |extra: &[(&'static str, &str)]| -> Vec<(&'static str, String)> {
-            base.iter().chain(extra).map(|(k, v)| (*k, (*v).to_owned())).collect()
+            base.iter()
+                .chain(extra)
+                .map(|(k, v)| (*k, (*v).to_owned()))
+                .collect()
         };
         let run = |env: Vec<(&'static str, String)>, action: &'static str| async move {
             let env: Vec<(&str, &str)> = env.iter().map(|(k, v)| (*k, v.as_str())).collect();
             self.list.desk(action, &env, &self.ctx).await
         };
         run(with(&[("KOR_STATE", "restore")]), "state").await?;
-        let (x, y, w, hh) = (rect.0.to_string(), rect.1.to_string(), rect.2.max(100).to_string(), rect.3.max(50).to_string());
-        run(with(&[("KOR_X", x.as_str()), ("KOR_Y", y.as_str()), ("KOR_W", w.as_str()), ("KOR_H", hh.as_str())]), "move").await?;
+        let (x, y, w, hh) = (
+            rect.0.to_string(),
+            rect.1.to_string(),
+            rect.2.max(100).to_string(),
+            rect.3.max(50).to_string(),
+        );
+        run(
+            with(&[
+                ("KOR_X", x.as_str()),
+                ("KOR_Y", y.as_str()),
+                ("KOR_W", w.as_str()),
+                ("KOR_H", hh.as_str()),
+            ]),
+            "move",
+        )
+        .await?;
         if state == "maximized" {
             run(with(&[("KOR_STATE", "maximize")]), "state").await?;
         }
@@ -732,7 +776,16 @@ impl Tool for DesktopTool {
         let ticket = match self.gate(&a) {
             Some((action, app, destructive)) => {
                 let name = self.name();
-                match tokio::task::spawn_blocking(move || kor_computer::begin(name, action, kor_computer::target_app(app.as_deref()), destructive)).await {
+                match tokio::task::spawn_blocking(move || {
+                    kor_computer::begin(
+                        name,
+                        action,
+                        kor_computer::target_app(app.as_deref()),
+                        destructive,
+                    )
+                })
+                .await
+                {
                     Ok(Ok(t)) => Some(t),
                     Ok(Err(e)) => return ToolOutput::err(e),
                     Err(e) => return ToolOutput::err(e.to_string()),

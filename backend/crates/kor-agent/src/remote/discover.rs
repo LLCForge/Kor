@@ -306,31 +306,54 @@ fn profile(os_text: &str, snap: &InfraSnapshot) -> kor_health::system::Profile {
     };
     let ostree = !field("ostree").is_empty();
     let distro = hs::parse_os_release(os_text, ostree);
-    let kernel_name = snap.kernel.split(' ').next().unwrap_or_default().to_ascii_lowercase();
+    let kernel_name = snap
+        .kernel
+        .split(' ')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
     let mut network: Vec<hs::NetIf> = Vec::new();
     for l in os_text.lines().filter_map(|l| l.strip_prefix("netif=")) {
         let mut w = l.split_whitespace();
-        let (Some(name), Some(addr)) = (w.next(), w.next()) else { continue };
+        let (Some(name), Some(addr)) = (w.next(), w.next()) else {
+            continue;
+        };
         if name == "lo" {
             continue;
         }
         match network.iter_mut().find(|n| n.name == name) {
             Some(n) => n.addrs.push(addr.to_owned()),
-            None => network.push(hs::NetIf { name: name.to_owned(), addrs: vec![addr.to_owned()] }),
+            None => network.push(hs::NetIf {
+                name: name.to_owned(),
+                addrs: vec![addr.to_owned()],
+            }),
         }
     }
     hs::Profile {
         collected_at: snap.taken_at,
         os: hs::OsInfo {
-            family: if kernel_name == "darwin" { "macos".into() } else { kernel_name },
-            name: distro.as_ref().map_or_else(|| snap.os.clone(), |d| d.name.clone()),
-            version: distro.as_ref().map(|d| d.version.clone()).unwrap_or_default(),
+            family: if kernel_name == "darwin" {
+                "macos".into()
+            } else {
+                kernel_name
+            },
+            name: distro
+                .as_ref()
+                .map_or_else(|| snap.os.clone(), |d| d.name.clone()),
+            version: distro
+                .as_ref()
+                .map(|d| d.version.clone())
+                .unwrap_or_default(),
             long_name: snap.os.clone(),
             kernel: snap.kernel.clone(),
             arch: snap.arch.clone(),
             hostname: snap.hostname.clone(),
             distro,
-            package_managers: os_text.lines().filter_map(|l| l.strip_prefix("pm=")).map(|s| s.trim().to_owned()).collect(),
+            package_managers: os_text
+                .lines()
+                .filter_map(|l| l.strip_prefix("pm="))
+                .map(|s| s.trim().to_owned())
+                .collect(),
             desktop: None,
         },
         cpu: hs::Cpu {
@@ -338,12 +361,15 @@ fn profile(os_text: &str, snap: &InfraSnapshot) -> kor_health::system::Profile {
             cores: field("cpu_cores").parse().ok(),
             threads: field("cpu_threads").parse().unwrap_or(0),
         },
-        memory: snap.memory.as_ref().map_or_else(hs::Memory::default, |m| hs::Memory {
-            total_mb: m.total_mb,
-            available_mb: m.available_mb,
-            swap_total_mb: m.swap_total_mb,
-            swap_used_mb: m.swap_used_mb,
-        }),
+        memory: snap
+            .memory
+            .as_ref()
+            .map_or_else(hs::Memory::default, |m| hs::Memory {
+                total_mb: m.total_mb,
+                available_mb: m.available_mb,
+                swap_total_mb: m.swap_total_mb,
+                swap_used_mb: m.swap_used_mb,
+            }),
         disks: snap
             .disks
             .iter()
@@ -360,7 +386,16 @@ fn profile(os_text: &str, snap: &InfraSnapshot) -> kor_health::system::Profile {
         toolchains: snap
             .languages
             .iter()
-            .map(|l| (if l.name == "python3" { "python".to_owned() } else { l.name.clone() }, l.version.clone()))
+            .map(|l| {
+                (
+                    if l.name == "python3" {
+                        "python".to_owned()
+                    } else {
+                        l.name.clone()
+                    },
+                    l.version.clone(),
+                )
+            })
             .collect(),
         shell: Some(field("login_shell")).filter(|s| !s.is_empty()),
         ..hs::Profile::default()
@@ -1223,16 +1258,39 @@ pub(crate) mod tests {
         assert_eq!(s.os, "Debian GNU/Linux 12 (bookworm)");
         // Same schema as the local `system.json`.
         let p = &d.system;
-        assert_eq!((p.os.family.as_str(), p.os.name.as_str(), p.os.version.as_str()), ("linux", "Debian GNU/Linux", "12"));
-        assert_eq!(p.os.distro.as_ref().map(|x| x.family.as_str()), Some("debian"));
+        assert_eq!(
+            (
+                p.os.family.as_str(),
+                p.os.name.as_str(),
+                p.os.version.as_str()
+            ),
+            ("linux", "Debian GNU/Linux", "12")
+        );
+        assert_eq!(
+            p.os.distro.as_ref().map(|x| x.family.as_str()),
+            Some("debian")
+        );
         assert_eq!(p.os.package_managers, ["apt", "snap"]);
-        assert_eq!((p.cpu.model.as_str(), p.cpu.cores, p.cpu.threads), ("Intel(R) Xeon(R) CPU E5-2680 v4", Some(2), 4));
+        assert_eq!(
+            (p.cpu.model.as_str(), p.cpu.cores, p.cpu.threads),
+            ("Intel(R) Xeon(R) CPU E5-2680 v4", Some(2), 4)
+        );
         assert_eq!((p.memory.total_mb, p.memory.available_mb), (7951, 4870));
         assert_eq!(p.disks.len(), 1);
-        assert_eq!((p.disks[0].mount.as_str(), p.disks[0].total_mb, p.disks[0].free_mb), ("/", 79 * 1024, 45 * 1024));
+        assert_eq!(
+            (
+                p.disks[0].mount.as_str(),
+                p.disks[0].total_mb,
+                p.disks[0].free_mb
+            ),
+            ("/", 79 * 1024, 45 * 1024)
+        );
         assert_eq!(p.network.len(), 1);
         assert_eq!(p.network[0].addrs, ["10.0.0.5/24", "fe80::1/64"]);
-        assert_eq!(p.toolchains.get("python").map(String::as_str), Some("3.11.2"));
+        assert_eq!(
+            p.toolchains.get("python").map(String::as_str),
+            Some("3.11.2")
+        );
         assert_eq!(p.shell.as_deref(), Some("/bin/bash"));
         assert_eq!((s.arch.as_str(), s.hostname.as_str()), ("x86_64", "web1"));
         let svc = |n: &str| s.services.iter().find(|x| x.name == n).expect(n);

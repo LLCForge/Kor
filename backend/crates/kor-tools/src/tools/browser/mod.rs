@@ -1394,9 +1394,7 @@ fn mime_of(path: &std::path::Path) -> &'static str {
         Some("json") => "application/json",
         Some("zip") => "application/zip",
         Some("doc") => "application/msword",
-        Some("docx") => {
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        }
+        Some("docx") => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         _ => "application/octet-stream",
     }
 }
@@ -1411,7 +1409,8 @@ fn save_gif(ctx: &ToolCtx, frames: &[Vec<u8>], interval_ms: u64) -> Result<ToolO
     let mut gif = Vec::new();
     {
         let mut enc = GifEncoder::new_with_speed(&mut gif, 10);
-        enc.set_repeat(Repeat::Infinite).map_err(|e| e.to_string())?;
+        enc.set_repeat(Repeat::Infinite)
+            .map_err(|e| e.to_string())?;
         for bytes in frames {
             let img = image::load_from_memory(bytes).map_err(|e| e.to_string())?;
             let img = if img.width() > 800 {
@@ -1448,7 +1447,6 @@ fn save_gif(ctx: &ToolCtx, frames: &[Vec<u8>], interval_ms: u64) -> Result<ToolO
     });
     Ok(out)
 }
-
 
 // ---------------------------------------------------------------------------------------------
 // Lab measurements and PDF printing for `kor seo` (spec §29.5, ADR 0055)
@@ -1559,8 +1557,11 @@ pub async fn html_screenshot(html: &str, width: u32, height: u32) -> Result<Vec<
         .as_str()
         .ok_or("no frame")?
         .to_owned();
-    s.call("Page.setDocumentContent", json!({"frameId": id, "html": html}))
-        .await?;
+    s.call(
+        "Page.setDocumentContent",
+        json!({"frameId": id, "html": html}),
+    )
+    .await?;
     s.wait_load(LOAD_TIMEOUT).await;
     let r = s
         .call("Page.captureScreenshot", json!({"format": "png"}))

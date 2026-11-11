@@ -130,7 +130,9 @@ impl HostProfile {
             let mut u = url::Url::parse(url).map_err(|e| format!("invalid URL {url}: {e}"))?;
             let local = u.host_str().is_some_and(kor_core::net::is_loopback_host);
             if u.scheme() != "https" && !local {
-                return Err("the panel URL must use https (credentials are sent with every request)".into());
+                return Err(
+                    "the panel URL must use https (credentials are sent with every request)".into(),
+                );
             }
             if u.port().is_none()
                 && let Some(p) = kind.default_port()
@@ -140,7 +142,10 @@ impl HostProfile {
             u.set_path("");
             self.url = Some(u.as_str().trim_end_matches('/').to_owned());
             if self.secret.is_none() {
-                return Err(format!("{} needs --secret (a vault entry name)", kind.as_str()));
+                return Err(format!(
+                    "{} needs --secret (a vault entry name)",
+                    kind.as_str()
+                ));
             }
         }
         if matches!(kind, Kind::Cyberpanel | Kind::Ssh) && self.ssh.is_none() {
@@ -299,26 +304,81 @@ fn valid_php(v: &str) -> bool {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "task", rename_all = "kebab-case")]
 pub enum Task {
-    Ssl { domain: String },
-    Subdomain { sub: String, domain: String, dir: Option<String> },
-    Database { name: String, user: String },
-    Email { address: String, quota_mb: u32 },
-    Backup { domain: Option<String> },
-    Restore { archive: String, domain: String },
+    Ssl {
+        domain: String,
+    },
+    Subdomain {
+        sub: String,
+        domain: String,
+        dir: Option<String>,
+    },
+    Database {
+        name: String,
+        user: String,
+    },
+    Email {
+        address: String,
+        quota_mb: u32,
+    },
+    Backup {
+        domain: Option<String>,
+    },
+    Restore {
+        archive: String,
+        domain: String,
+    },
     /// Empty `paths`: list candidates only. Otherwise delete those candidates.
-    Clean { paths: Vec<String> },
-    Cron { schedule: String, command: String },
-    Php { domain: String, version: String },
-    PhpIni { domain: String, key: String, value: String },
-    Perms { path: String },
-    Sftp { user: String, path: String, domain: Option<String> },
-    RemoveSubdomain { sub: String, domain: String },
-    RemoveDatabase { name: String, user: String },
-    RemoveEmail { address: String },
-    RemoveCron { id: String },
-    RemoveSftp { user: String, domain: Option<String> },
-    RestoreModes { path: String, list: String },
-    RestoreFile { path: String, backup: String, reload: Option<String> },
+    Clean {
+        paths: Vec<String>,
+    },
+    Cron {
+        schedule: String,
+        command: String,
+    },
+    Php {
+        domain: String,
+        version: String,
+    },
+    PhpIni {
+        domain: String,
+        key: String,
+        value: String,
+    },
+    Perms {
+        path: String,
+    },
+    Sftp {
+        user: String,
+        path: String,
+        domain: Option<String>,
+    },
+    RemoveSubdomain {
+        sub: String,
+        domain: String,
+    },
+    RemoveDatabase {
+        name: String,
+        user: String,
+    },
+    RemoveEmail {
+        address: String,
+    },
+    RemoveCron {
+        id: String,
+    },
+    RemoveSftp {
+        user: String,
+        domain: Option<String>,
+    },
+    RestoreModes {
+        path: String,
+        list: String,
+    },
+    RestoreFile {
+        path: String,
+        backup: String,
+        reload: Option<String>,
+    },
 }
 
 impl Task {
@@ -365,10 +425,17 @@ impl Task {
                 && !s.starts_with('-')
                 && s.bytes()
                     .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.'));
-            if ok { Ok(()) } else { Err(format!("invalid {what} `{s}`")) }
+            if ok {
+                Ok(())
+            } else {
+                Err(format!("invalid {what} `{s}`"))
+            }
         };
         match self {
-            Task::Ssl { domain } | Task::Backup { domain: Some(domain) } => check_domain(domain),
+            Task::Ssl { domain }
+            | Task::Backup {
+                domain: Some(domain),
+            } => check_domain(domain),
             Task::Subdomain { sub, domain, dir } => {
                 word(sub, "subdomain")?;
                 check_domain(domain)?;
@@ -393,7 +460,11 @@ impl Task {
             Task::Cron { schedule, command } => shell::check_cron(schedule, command),
             Task::Php { domain, version } => {
                 check_domain(domain)?;
-                if valid_php(version) { Ok(()) } else { Err(format!("invalid PHP version `{version}` (use 8.3)")) }
+                if valid_php(version) {
+                    Ok(())
+                } else {
+                    Err(format!("invalid PHP version `{version}` (use 8.3)"))
+                }
             }
             Task::PhpIni { domain, key, value } => {
                 check_domain(domain)?;
@@ -411,7 +482,10 @@ impl Task {
 
     /// Whether Kor can undo the change by itself.
     pub fn reversible(&self) -> bool {
-        !matches!(self, Task::Clean { .. } | Task::Ssl { .. } | Task::Backup { .. })
+        !matches!(
+            self,
+            Task::Clean { .. } | Task::Ssl { .. } | Task::Backup { .. }
+        )
     }
 }
 
@@ -454,21 +528,45 @@ pub fn open(
     let http = Http::new()?;
     let url = p.url.clone().unwrap_or_default();
     let user = p.user.clone().unwrap_or_default();
-    let need = || secret.map(str::to_owned).ok_or_else(|| format!("{name}: no API secret"));
-    let sh = || ssh.clone().ok_or_else(|| format!("{name}: no SSH connection"));
+    let need = || {
+        secret
+            .map(str::to_owned)
+            .ok_or_else(|| format!("{name}: no API secret"))
+    };
+    let sh = || {
+        ssh.clone()
+            .ok_or_else(|| format!("{name}: no SSH connection"))
+    };
     Ok(match p.kind() {
-        Kind::Cpanel => Box::new(cpanel::Cpanel::new(name, http, url, &user, &need()?, None, ssh)),
+        Kind::Cpanel => Box::new(cpanel::Cpanel::new(
+            name,
+            http,
+            url,
+            &user,
+            &need()?,
+            None,
+            ssh,
+        )),
         Kind::Whm => Box::new(cpanel::Cpanel::new(
             name,
             http,
             url,
             &user,
             &need()?,
-            account.or_else(|| p.account.clone()).or(Some(String::new())),
+            account
+                .or_else(|| p.account.clone())
+                .or(Some(String::new())),
             ssh,
         )),
         Kind::Plesk => Box::new(plesk::Plesk::new(name, http, url, need()?, ssh)),
-        Kind::Directadmin => Box::new(directadmin::DirectAdmin::new(name, http, url, &user, &need()?, ssh)),
+        Kind::Directadmin => Box::new(directadmin::DirectAdmin::new(
+            name,
+            http,
+            url,
+            &user,
+            &need()?,
+            ssh,
+        )),
         Kind::Hestia => Box::new(hestia::Hestia::new(name, http, url, user, need()?, ssh)),
         Kind::Cyberpanel => Box::new(cyberpanel::CyberPanel::new(name, sh()?)),
         Kind::Ssh => Box::new(shell::Plain::new(name, sh()?)),
@@ -477,7 +575,9 @@ pub fn open(
 
 /// The SSH shell for a profile's `ssh` setting.
 pub fn ssh_shell(p: &HostProfile) -> Result<Option<Arc<dyn Shell>>> {
-    let Some(target) = &p.ssh else { return Ok(None) };
+    let Some(target) = &p.ssh else {
+        return Ok(None);
+    };
     let file = kor_config::user_dir().map(|d| d.join("connections.toml"));
     let h = kor_agent::remote::resolve_target(target, file.as_deref())?;
     Ok(Some(Arc::new(kor_agent::remote::SshShell::new(&h))))
@@ -511,7 +611,8 @@ pub async fn inventory(panel: &dyn Panel) -> Result<Inventory> {
         .take(60)
         .collect();
     for chunk in missing.chunks(8) {
-        let found = futures::future::join_all(chunk.iter().map(|d| super::tls::probe(d, 443))).await;
+        let found =
+            futures::future::join_all(chunk.iter().map(|d| super::tls::probe(d, 443))).await;
         for (d, r) in chunk.iter().zip(found) {
             inv.certs.push(match r {
                 Ok(c) => Cert {
@@ -561,7 +662,10 @@ pub fn plan(l: &Localizer, task: &Task, inv: &Inventory, warnings: &[String]) ->
             rows.push(row(
                 "web-step-php",
                 domain.clone(),
-                l.t_args("web-impact-php", &args!("from" => from, "to" => version.clone())),
+                l.t_args(
+                    "web-impact-php",
+                    &args!("from" => from, "to" => version.clone()),
+                ),
             ));
             if !inv.php_installed.is_empty() && !inv.php_installed.iter().any(|v| v == version) {
                 rows.push(row(
@@ -580,7 +684,10 @@ pub fn plan(l: &Localizer, task: &Task, inv: &Inventory, warnings: &[String]) ->
                 .iter()
                 .find(|c| &c.domain == domain)
                 .and_then(|c| c.not_after)
-                .map_or_else(|| l.t("web-none"), |t| (t - super::now()).div_euclid(86_400).to_string());
+                .map_or_else(
+                    || l.t("web-none"),
+                    |t| (t - super::now()).div_euclid(86_400).to_string(),
+                );
             rows.push(row(
                 "web-step-ssl",
                 domain.clone(),
@@ -597,14 +704,20 @@ pub fn plan(l: &Localizer, task: &Task, inv: &Inventory, warnings: &[String]) ->
                 rows.push(row("web-step-clean", p.clone(), l.t("web-impact-delete")));
             }
         }
-        Task::Perms { path } => rows.push(row(
-            "web-step-perms",
-            path.clone(),
-            l.t("web-impact-perms"),
-        )),
+        Task::Perms { path } => {
+            rows.push(row("web-step-perms", path.clone(), l.t("web-impact-perms")))
+        }
         Task::Restore { archive, domain } => {
-            rows.push(row("web-step-backup", domain.clone(), l.t("web-impact-none")));
-            rows.push(row("web-step-restore", archive.clone(), l.t("web-impact-overwrite")));
+            rows.push(row(
+                "web-step-backup",
+                domain.clone(),
+                l.t("web-impact-none"),
+            ));
+            rows.push(row(
+                "web-step-restore",
+                archive.clone(),
+                l.t("web-impact-overwrite"),
+            ));
         }
         other => rows.push(row(
             &format!("web-step-{}", other.id()),
@@ -626,19 +739,26 @@ pub fn plan(l: &Localizer, task: &Task, inv: &Inventory, warnings: &[String]) ->
 /// Short target text for plan rows and logs (never a password).
 pub fn describe(t: &Task) -> String {
     match t {
-        Task::Ssl { domain } | Task::Backup { domain: Some(domain) } => domain.clone(),
+        Task::Ssl { domain }
+        | Task::Backup {
+            domain: Some(domain),
+        } => domain.clone(),
         Task::Backup { domain: None } => "*".into(),
         Task::Subdomain { sub, domain, .. } | Task::RemoveSubdomain { sub, domain } => {
             format!("{sub}.{domain}")
         }
-        Task::Database { name, user } | Task::RemoveDatabase { name, user } => format!("{name} ({user})"),
+        Task::Database { name, user } | Task::RemoveDatabase { name, user } => {
+            format!("{name} ({user})")
+        }
         Task::Email { address, .. } | Task::RemoveEmail { address } => address.clone(),
         Task::Restore { archive, .. } => archive.clone(),
         Task::Clean { paths } => paths.join(", "),
         Task::Cron { schedule, command } => format!("{schedule} {command}"),
         Task::Php { domain, version } => format!("{domain} → PHP {version}"),
         Task::PhpIni { domain, key, value } => format!("{domain}: {key}={value}"),
-        Task::Perms { path } | Task::RestoreModes { path, .. } | Task::RestoreFile { path, .. } => path.clone(),
+        Task::Perms { path } | Task::RestoreModes { path, .. } | Task::RestoreFile { path, .. } => {
+            path.clone()
+        }
         Task::Sftp { user, path, .. } => format!("{user} → {path}"),
         Task::RemoveCron { id } => id.clone(),
         Task::RemoveSftp { user, .. } => user.clone(),
@@ -660,9 +780,15 @@ pub struct Verify {
 }
 
 pub(crate) fn fatal_text(body: &str) -> bool {
-    ["Fatal error</b>", "PHP Fatal error", "There has been a critical error", "Parse error</b>", "Error establishing a database connection"]
-        .iter()
-        .any(|m| body.contains(m))
+    [
+        "Fatal error</b>",
+        "PHP Fatal error",
+        "There has been a critical error",
+        "Parse error</b>",
+        "Error establishing a database connection",
+    ]
+    .iter()
+    .any(|m| body.contains(m))
 }
 
 /// The site answers below 500 and shows no fatal error page.
@@ -694,7 +820,10 @@ async fn fatal_count(sh: &dyn Shell, docroot: &str) -> Option<u64> {
         "tail -n 400 {}/error_log 2>/dev/null | grep -c 'PHP Fatal' || true",
         kor_agent::remote::sh_quote(docroot)
     );
-    let out = sh.run(&cmd, None, std::time::Duration::from_secs(30)).await.ok()?;
+    let out = sh
+        .run(&cmd, None, std::time::Duration::from_secs(30))
+        .await
+        .ok()?;
     out.text().trim().parse().ok()
 }
 
@@ -755,7 +884,9 @@ pub async fn run(
     }
     // A generated password goes to the vault before the account exists, so it is never lost.
     let cred = match &task {
-        Task::Database { name, .. } => Some(super::credential_name("db", &format!("{host}_{name}"))),
+        Task::Database { name, .. } => {
+            Some(super::credential_name("db", &format!("{host}_{name}")))
+        }
         Task::Email { address, .. } => Some(super::credential_name("mail", address)),
         Task::Sftp { user, .. } => Some(super::credential_name("sftp", &format!("{host}_{user}"))),
         _ => None,
@@ -773,7 +904,9 @@ pub async fn run(
                 rep.error = Some(l.t("web-needs-vault"));
                 return rep;
             };
-            if let Err(e) = kor_secrets::vault::add(st, name, &kor_secrets::SecretString::from(pw.clone())) {
+            if let Err(e) =
+                kor_secrets::vault::add(st, name, &kor_secrets::SecretString::from(pw.clone()))
+            {
                 rep.error = Some(e.to_string());
                 return rep;
             }
@@ -846,7 +979,11 @@ pub async fn run(
 pub fn inventory_markdown(l: &Localizer, inv: &Inventory, now: i64) -> String {
     use std::fmt::Write as _;
     let cell = super::cell;
-    let mut o = format!("# {} ({})\n\n", cell(&inv.host), inv.kind.map_or("?", Kind::as_str));
+    let mut o = format!(
+        "# {} ({})\n\n",
+        cell(&inv.host),
+        inv.kind.map_or("?", Kind::as_str)
+    );
     let _ = writeln!(
         o,
         "| {} | {} | {} | {} | {} |\n|---|---|---|---|---|",
@@ -860,7 +997,10 @@ pub fn inventory_markdown(l: &Localizer, inv: &Inventory, now: i64) -> String {
         let ssl = inv.certs.iter().find(|c| c.domain == d.name).map_or_else(
             || "—".to_owned(),
             |c| match (c.not_after, &c.error) {
-                (Some(t), _) => l.t_args("web-days-left", &args!("days" => (t - now).div_euclid(86_400))),
+                (Some(t), _) => l.t_args(
+                    "web-days-left",
+                    &args!("days" => (t - now).div_euclid(86_400)),
+                ),
                 (None, Some(e)) => cell(e),
                 _ => "—".into(),
             },
@@ -879,9 +1019,17 @@ pub fn inventory_markdown(l: &Localizer, inv: &Inventory, now: i64) -> String {
         o,
         "\n- {}: {}\n- {}: {}",
         l.t("web-col-databases"),
-        if inv.databases.is_empty() { "—".into() } else { inv.databases.join(", ") },
+        if inv.databases.is_empty() {
+            "—".into()
+        } else {
+            inv.databases.join(", ")
+        },
         l.t("web-col-php-installed"),
-        if inv.php_installed.is_empty() { "—".into() } else { inv.php_installed.join(", ") }
+        if inv.php_installed.is_empty() {
+            "—".into()
+        } else {
+            inv.php_installed.join(", ")
+        }
     );
     if let Some(d) = &inv.disk {
         let _ = writeln!(
@@ -889,14 +1037,21 @@ pub fn inventory_markdown(l: &Localizer, inv: &Inventory, now: i64) -> String {
             "- {}: {:.0} MB{}",
             l.t("web-col-disk"),
             d.used_mb,
-            d.limit_mb.map(|x| format!(" / {x:.0} MB")).unwrap_or_default()
+            d.limit_mb
+                .map(|x| format!(" / {x:.0} MB"))
+                .unwrap_or_default()
         );
     }
     if let Some(n) = inv.email_accounts {
         let _ = writeln!(o, "- {}: {n}", l.t("web-col-mail"));
     }
     if !inv.accounts.is_empty() {
-        let _ = writeln!(o, "- {}: {}", l.t("web-col-accounts"), inv.accounts.join(", "));
+        let _ = writeln!(
+            o,
+            "- {}: {}",
+            l.t("web-col-accounts"),
+            inv.accounts.join(", ")
+        );
     }
     for n in &inv.notes {
         let _ = writeln!(o, "- {n}");
@@ -944,13 +1099,25 @@ pub(crate) mod tests {
 
     impl FakeShell {
         pub(crate) fn commands(&self) -> Vec<String> {
-            self.log.lock().unwrap().iter().map(|(c, _)| c.clone()).collect()
+            self.log
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|(c, _)| c.clone())
+                .collect()
         }
     }
 
     #[test]
     fn php_versions_from_every_panel() {
-        for (s, v) in [("ea-php83", "8.3"), ("PHP-8_2", "8.2"), ("plesk-php74-fastcgi", "7.4"), ("php8.1", "8.1"), ("8.3", "8.3"), ("alt-php56", "5.6")] {
+        for (s, v) in [
+            ("ea-php83", "8.3"),
+            ("PHP-8_2", "8.2"),
+            ("plesk-php74-fastcgi", "7.4"),
+            ("php8.1", "8.1"),
+            ("8.3", "8.3"),
+            ("alt-php56", "5.6"),
+        ] {
             assert_eq!(php_version(s).as_deref(), Some(v), "{s}");
         }
         assert!(php_version("none").is_none());
@@ -972,9 +1139,15 @@ pub(crate) mod tests {
         save(dir.path(), "acme", &p).unwrap();
         assert_eq!(load(dir.path(), "acme").unwrap(), p);
         assert_eq!(list(dir.path()).len(), 1);
-        let mut bad = HostProfile { url: Some("http://srv.example.com".into()), ..p.clone() };
+        let mut bad = HostProfile {
+            url: Some("http://srv.example.com".into()),
+            ..p.clone()
+        };
         assert!(bad.validate().is_err());
-        let mut no_ssh = HostProfile { kind: Some(Kind::Ssh), ..HostProfile::default() };
+        let mut no_ssh = HostProfile {
+            kind: Some(Kind::Ssh),
+            ..HostProfile::default()
+        };
         assert!(no_ssh.validate().is_err());
         assert!(remove(dir.path(), "acme").unwrap());
         assert!(load(dir.path(), "../x").is_err());
@@ -982,11 +1155,45 @@ pub(crate) mod tests {
 
     #[test]
     fn tasks_refuse_shell_tricks() {
-        assert!(Task::Database { name: "shop".into(), user: "u;rm".into() }.validate().is_err());
-        assert!(Task::Cron { schedule: "* * * * *".into(), command: "a\nb".into() }.validate().is_err());
-        assert!(Task::Php { domain: "a.com".into(), version: "8.3".into() }.validate().is_ok());
-        assert!(Task::Perms { path: "../etc".into() }.validate().is_err());
-        assert!(Task::Email { address: "info@a.com".into(), quota_mb: 100 }.validate().is_ok());
+        assert!(
+            Task::Database {
+                name: "shop".into(),
+                user: "u;rm".into()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Task::Cron {
+                schedule: "* * * * *".into(),
+                command: "a\nb".into()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Task::Php {
+                domain: "a.com".into(),
+                version: "8.3".into()
+            }
+            .validate()
+            .is_ok()
+        );
+        assert!(
+            Task::Perms {
+                path: "../etc".into()
+            }
+            .validate()
+            .is_err()
+        );
+        assert!(
+            Task::Email {
+                address: "info@a.com".into(),
+                quota_mb: 100
+            }
+            .validate()
+            .is_ok()
+        );
     }
 
     struct Fake {
@@ -1003,7 +1210,10 @@ pub(crate) mod tests {
             self.applied.lock().unwrap().push(task.clone());
             Ok(Applied {
                 summary: "ok".into(),
-                undo: Some(Task::Php { domain: "127.0.0.1.nip.io".into(), version: "7.4".into() }),
+                undo: Some(Task::Php {
+                    domain: "127.0.0.1.nip.io".into(),
+                    version: "7.4".into(),
+                }),
                 ..Applied::default()
             })
         }
@@ -1015,9 +1225,18 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn refused_plans_change_nothing() {
         let l = Localizer::new(kor_i18n::Lang::En);
-        let f = Fake { inv: Inventory::default(), applied: Mutex::default() };
-        let t = Task::Php { domain: "example.com".into(), version: "8.3".into() };
-        let r = run(&l, "h", &HostProfile::default(), &f, t, &[], None, &|_| false).await;
+        let f = Fake {
+            inv: Inventory::default(),
+            applied: Mutex::default(),
+        };
+        let t = Task::Php {
+            domain: "example.com".into(),
+            version: "8.3".into(),
+        };
+        let r = run(&l, "h", &HostProfile::default(), &f, t, &[], None, &|_| {
+            false
+        })
+        .await;
         assert!(!r.approved && r.applied.is_none());
         assert!(f.applied.lock().unwrap().is_empty());
         assert_eq!(r.plan.len(), 1);
@@ -1029,13 +1248,23 @@ pub(crate) mod tests {
         // Nothing listens on this name's port 443 locally; verification fails and the undo runs.
         let f = Fake {
             inv: Inventory {
-                domains: vec![Domain { name: "localhost.invalid".into(), kind: "main".into(), ..Domain::default() }],
+                domains: vec![Domain {
+                    name: "localhost.invalid".into(),
+                    kind: "main".into(),
+                    ..Domain::default()
+                }],
                 ..Inventory::default()
             },
             applied: Mutex::default(),
         };
-        let t = Task::Php { domain: "localhost.invalid".into(), version: "8.3".into() };
-        let r = run(&l, "h", &HostProfile::default(), &f, t, &[], None, &|_| true).await;
+        let t = Task::Php {
+            domain: "localhost.invalid".into(),
+            version: "8.3".into(),
+        };
+        let r = run(&l, "h", &HostProfile::default(), &f, t, &[], None, &|_| {
+            true
+        })
+        .await;
         assert!(r.approved && r.applied.is_some());
         assert!(!r.verify.as_ref().unwrap().ok);
         assert!(r.rolled_back, "{r:?}");
@@ -1045,7 +1274,9 @@ pub(crate) mod tests {
     #[test]
     fn fatal_pages_are_detected() {
         assert!(fatal_text("<b>Fatal error</b>: Uncaught Error"));
-        assert!(fatal_text("There has been a critical error on this website."));
+        assert!(fatal_text(
+            "There has been a critical error on this website."
+        ));
         assert!(!fatal_text("<html>Hoş geldiniz</html>"));
     }
 }

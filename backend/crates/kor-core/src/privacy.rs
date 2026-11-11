@@ -134,7 +134,10 @@ impl FromStr for PrivacyRequirement {
             .find(|t| t.as_str() == s.trim())
             .ok_or_else(|| {
                 let known: Vec<&str> = Self::ALL.iter().map(|r| r.as_str()).collect();
-                format!("unknown privacy requirement `{s}` (known: {})", known.join(", "))
+                format!(
+                    "unknown privacy requirement `{s}` (known: {})",
+                    known.join(", ")
+                )
             })
     }
 }

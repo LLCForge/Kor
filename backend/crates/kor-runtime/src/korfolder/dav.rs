@@ -111,9 +111,19 @@ impl Tree {
     /// `PROPFIND` body for `path` (depth 0: itself; 1: and its children).
     pub fn propfind(&self, path: &Path, segs: &[String], depth: u8) -> Option<String> {
         let meta = std::fs::metadata(path).ok()?;
-        let href = format!("{}{}", self.prefix().trim_end_matches('/'), encode(&format!("/{}", segs.join("/"))));
-        let mut out = String::from("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n");
-        out.push_str(&entry(&href, &meta, segs.last().map_or("Kor", String::as_str)));
+        let href = format!(
+            "{}{}",
+            self.prefix().trim_end_matches('/'),
+            encode(&format!("/{}", segs.join("/")))
+        );
+        let mut out = String::from(
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:multistatus xmlns:D=\"DAV:\">\n",
+        );
+        out.push_str(&entry(
+            &href,
+            &meta,
+            segs.last().map_or("Kor", String::as_str),
+        ));
         if depth > 0 && meta.is_dir() {
             let mut kids: Vec<_> = std::fs::read_dir(path).ok()?.flatten().collect();
             kids.sort_by_key(std::fs::DirEntry::file_name);
@@ -122,7 +132,9 @@ impl Tree {
                 if name.starts_with('.') {
                     continue;
                 }
-                let Ok(m) = std::fs::metadata(k.path()) else { continue };
+                let Ok(m) = std::fs::metadata(k.path()) else {
+                    continue;
+                };
                 let child = format!("{}/{}", href.trim_end_matches('/'), encode(&name));
                 out.push_str(&entry(&child, &m, &name));
             }
@@ -133,7 +145,10 @@ impl Tree {
 }
 
 fn xml(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 fn http_date(t: std::time::SystemTime) -> String {
@@ -144,10 +159,22 @@ fn http_date(t: std::time::SystemTime) -> String {
 
 fn entry(href: &str, m: &std::fs::Metadata, name: &str) -> String {
     let dir = m.is_dir();
-    let href = if dir && !href.ends_with('/') { format!("{href}/") } else { href.to_owned() };
+    let href = if dir && !href.ends_with('/') {
+        format!("{href}/")
+    } else {
+        href.to_owned()
+    };
     let modified = m.modified().map(http_date).unwrap_or_default();
-    let kind = if dir { "<D:resourcetype><D:collection/></D:resourcetype>" } else { "<D:resourcetype/>" };
-    let len = if dir { String::new() } else { format!("<D:getcontentlength>{}</D:getcontentlength>", m.len()) };
+    let kind = if dir {
+        "<D:resourcetype><D:collection/></D:resourcetype>"
+    } else {
+        "<D:resourcetype/>"
+    };
+    let len = if dir {
+        String::new()
+    } else {
+        format!("<D:getcontentlength>{}</D:getcontentlength>", m.len())
+    };
     format!(
         "<D:response><D:href>{}</D:href><D:propstat><D:prop><D:displayname>{}</D:displayname>{kind}{len}\
          <D:getlastmodified>{modified}</D:getlastmodified></D:prop><D:status>HTTP/1.1 200 OK</D:status>\
@@ -164,7 +191,11 @@ fn status(code: StatusCode) -> Resp {
 }
 
 fn content_type(p: &Path) -> &'static str {
-    match p.extension().map(|e| e.to_string_lossy().to_lowercase()).as_deref() {
+    match p
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .as_deref()
+    {
         Some("md") => "text/markdown; charset=utf-8",
         Some("diff" | "txt" | "jsonl" | "cast") => "text/plain; charset=utf-8",
         Some("json") => "application/json",
@@ -197,7 +228,9 @@ pub async fn handle(tree: &Tree, req: Request<Incoming>) -> Resp {
             h.insert("DAV", "1, 2".parse().expect("static header"));
             h.insert(
                 "Allow",
-                "OPTIONS, GET, HEAD, PROPFIND, PUT, MKCOL, LOCK, UNLOCK, PROPPATCH".parse().expect("static header"),
+                "OPTIONS, GET, HEAD, PROPFIND, PUT, MKCOL, LOCK, UNLOCK, PROPPATCH"
+                    .parse()
+                    .expect("static header"),
             );
             h.insert("MS-Author-Via", "DAV".parse().expect("static header"));
             r
@@ -206,7 +239,12 @@ pub async fn handle(tree: &Tree, req: Request<Incoming>) -> Resp {
             Some(body) => {
                 let mut r = Response::new(Full::new(Bytes::from(body)));
                 *r.status_mut() = StatusCode::MULTI_STATUS;
-                r.headers_mut().insert("Content-Type", "application/xml; charset=utf-8".parse().expect("static header"));
+                r.headers_mut().insert(
+                    "Content-Type",
+                    "application/xml; charset=utf-8"
+                        .parse()
+                        .expect("static header"),
+                );
                 r
             }
             None => status(StatusCode::NOT_FOUND),
@@ -218,10 +256,17 @@ pub async fn handle(tree: &Tree, req: Request<Incoming>) -> Resp {
             match tokio::fs::read(&path).await {
                 Ok(b) => {
                     let len = b.len();
-                    let body = if method == Method::HEAD { Bytes::new() } else { Bytes::from(b) };
+                    let body = if method == Method::HEAD {
+                        Bytes::new()
+                    } else {
+                        Bytes::from(b)
+                    };
                     let mut r = Response::new(Full::new(body));
                     let h = r.headers_mut();
-                    h.insert("Content-Type", content_type(&path).parse().expect("static header"));
+                    h.insert(
+                        "Content-Type",
+                        content_type(&path).parse().expect("static header"),
+                    );
                     h.insert("Content-Length", len.into());
                     r
                 }
@@ -239,7 +284,11 @@ pub async fn handle(tree: &Tree, req: Request<Incoming>) -> Resp {
             }
             match Limited::new(req.into_body(), MAX_PUT).collect().await {
                 Ok(c) => match tokio::fs::write(&path, c.to_bytes()).await {
-                    Ok(()) => status(if existed { StatusCode::NO_CONTENT } else { StatusCode::CREATED }),
+                    Ok(()) => status(if existed {
+                        StatusCode::NO_CONTENT
+                    } else {
+                        StatusCode::CREATED
+                    }),
                     Err(_) => status(StatusCode::CONFLICT),
                 },
                 Err(_) => status(StatusCode::PAYLOAD_TOO_LARGE),
@@ -256,7 +305,10 @@ pub async fn handle(tree: &Tree, req: Request<Incoming>) -> Resp {
         }
         // Windows and macOS lock before writing; a lock is only a token here (one user, one host).
         "LOCK" => {
-            let token = format!("opaquelocktoken:kor-{}", crate::korfolder::hash(req.uri().path().as_bytes()));
+            let token = format!(
+                "opaquelocktoken:kor-{}",
+                crate::korfolder::hash(req.uri().path().as_bytes())
+            );
             let body = format!(
                 "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<D:prop xmlns:D=\"DAV:\"><D:lockdiscovery><D:activelock>\
                  <D:locktype><D:write/></D:locktype><D:lockscope><D:exclusive/></D:lockscope><D:depth>0</D:depth>\
@@ -264,8 +316,16 @@ pub async fn handle(tree: &Tree, req: Request<Incoming>) -> Resp {
                  </D:activelock></D:lockdiscovery></D:prop>\n"
             );
             let mut r = Response::new(Full::new(Bytes::from(body)));
-            r.headers_mut().insert("Lock-Token", format!("<{token}>").parse().expect("ascii token"));
-            r.headers_mut().insert("Content-Type", "application/xml; charset=utf-8".parse().expect("static header"));
+            r.headers_mut().insert(
+                "Lock-Token",
+                format!("<{token}>").parse().expect("ascii token"),
+            );
+            r.headers_mut().insert(
+                "Content-Type",
+                "application/xml; charset=utf-8"
+                    .parse()
+                    .expect("static header"),
+            );
             r
         }
         "UNLOCK" => status(StatusCode::NO_CONTENT),
@@ -309,7 +369,10 @@ fn random_token() -> std::io::Result<String> {
 pub async fn serve(root: PathBuf) -> std::io::Result<Server> {
     let listener = TcpListener::bind(("127.0.0.1", 0)).await?;
     let port = listener.local_addr()?.port();
-    let tree = Arc::new(Tree { root, token: random_token()? });
+    let tree = Arc::new(Tree {
+        root,
+        token: random_token()?,
+    });
     let url = format!("http://127.0.0.1:{port}{}", tree.prefix());
     let (stop, mut rx) = watch::channel(false);
     let hosts = [format!("127.0.0.1:{port}"), format!("localhost:{port}")];

@@ -203,7 +203,10 @@ fn body(screen: &Screen, l: &Localizer, panel: Panel, inner: Rect) -> Vec<Line<'
                 })
                 .collect();
             out.push(Line::from(""));
-            out.push(Line::styled(l.t("repl-hint"), Style::default().add_modifier(Modifier::DIM)));
+            out.push(Line::styled(
+                l.t("repl-hint"),
+                Style::default().add_modifier(Modifier::DIM),
+            ));
             out.truncate(h);
             out
         }
@@ -425,17 +428,28 @@ pub fn draw(frame: &mut Frame<'_>, screen: &Screen, l: &Localizer) {
                 let _ = write!(opts, " {sel}{} {o}", i + 1);
             }
             let always = if screen.perm_remember { " [!]" } else { "" };
-            l.t_args("tui-choose", &args!("ask" => format!("{ask}{opts}{always}")))
+            l.t_args(
+                "tui-choose",
+                &args!("ask" => format!("{ask}{opts}{always}")),
+            )
         }
         Some(ask) if screen.perm_compact => {
             let mut items = String::new();
-            for (i, (p, keep)) in screen.perm_files.iter().zip(&screen.perm_rejected).enumerate() {
+            for (i, (p, keep)) in screen
+                .perm_files
+                .iter()
+                .zip(&screen.perm_rejected)
+                .enumerate()
+            {
                 let _ = write!(items, " · {} {p}{}", i + 1, if *keep { " [+]" } else { "" });
             }
             l.t_args("tui-compact", &args!("ask" => format!("{ask}{items}")))
         }
         Some(ask) => {
-            let ask = format!("{ask}{}", super::review::marks(&screen.perm_files, &screen.perm_rejected));
+            let ask = format!(
+                "{ask}{}",
+                super::review::marks(&screen.perm_files, &screen.perm_rejected)
+            );
             l.t_args("tui-perm", &args!("ask" => ask))
         }
         None => format!("> {}", screen.input),
@@ -453,7 +467,10 @@ pub fn draw(frame: &mut Frame<'_>, screen: &Screen, l: &Localizer) {
     } else {
         Style::default()
     };
-    frame.render_widget(Paragraph::new(shown).style(text_style).block(block), areas.input);
+    frame.render_widget(
+        Paragraph::new(shown).style(text_style).block(block),
+        areas.input,
+    );
     if typing && screen.perm.is_none() {
         frame.set_cursor_position((
             cursor_x.min(inner.x + inner.width.saturating_sub(1)),

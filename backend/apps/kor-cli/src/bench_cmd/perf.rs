@@ -186,7 +186,9 @@ fn cli(ctx: &Ctx, r: &mut Results, notes: &mut Vec<String>) -> anyhow::Result<()
     put(
         r,
         "cli.binary",
-        std::fs::metadata(&exe).ok().map(|m| Stat::single(mb(m.len()))),
+        std::fs::metadata(&exe)
+            .ok()
+            .map(|m| Stat::single(mb(m.len()))),
     );
 
     phase(l, "token path");
@@ -223,7 +225,10 @@ impl Drop for TempDir {
 }
 
 fn phase(l: &Localizer, what: &str) {
-    eprintln!("{}", l.t_args("pbench-phase", &args!("what" => what.to_owned())));
+    eprintln!(
+        "{}",
+        l.t_args("pbench-phase", &args!("what" => what.to_owned()))
+    );
 }
 
 /// A loopback OpenAI-compatible server streaming `tokens` deltas 4 ms apart; returns its address
@@ -576,11 +581,7 @@ pub fn run(ctx: &Ctx, o: &Opts) -> anyhow::Result<bool> {
         passed = v.passed() && notes.is_empty();
         println!(
             "{}",
-            l.t(if passed {
-                "pbench-pass"
-            } else {
-                "pbench-fail"
-            })
+            l.t(if passed { "pbench-pass" } else { "pbench-fail" })
         );
         if o.update_baseline {
             history.set_baseline(&run);

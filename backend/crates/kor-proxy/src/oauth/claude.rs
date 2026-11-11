@@ -201,7 +201,11 @@ async fn control_post(net: &Net, url: &str, body: &impl Serialize) -> Result<(u1
     }
 }
 
-async fn control_get(net: &Net, url: &str, headers: &[(&str, &str)]) -> Result<(u16, String), Error> {
+async fn control_get(
+    net: &Net,
+    url: &str,
+    headers: &[(&str, &str)],
+) -> Result<(u16, String), Error> {
     let full = net.endpoint(url);
     if full.starts_with("https://") {
         super::fingerprint::get(&full, headers).await

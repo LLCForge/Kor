@@ -10,7 +10,8 @@ use serde_json::{Value, json};
 use crate::{Tool, ToolCtx, ToolKind, ToolOutput, lock};
 
 fn git(ctx: &ToolCtx, args: &[&str]) -> Result<String, String> {
-    let out = Command::new("git").no_window()
+    let out = Command::new("git")
+        .no_window()
         .args(args)
         .current_dir(&ctx.root)
         .output()

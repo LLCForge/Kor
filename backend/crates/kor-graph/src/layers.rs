@@ -238,7 +238,10 @@ mod tests {
         assert!(g.node("pkg:app").is_some());
         // Cheap ranking straight from SQLite (repository map); no package or decision rows.
         let ranked = crate::ranked_files(dir.path(), 10).expect("stored graph");
-        assert!(ranked.iter().any(|f| f == "crates/core/src/lib.rs"), "{ranked:?}");
+        assert!(
+            ranked.iter().any(|f| f == "crates/core/src/lib.rs"),
+            "{ranked:?}"
+        );
         assert!(ranked.iter().all(|f| !f.starts_with("pkg:")));
         assert!(crate::ranked_files(&dir.path().join("crates"), 10).is_none());
         Ok(())
@@ -313,14 +316,26 @@ mod tests {
             item("cat-big.png", &["cat.png"]),
         ])?;
         assert!(s.changed);
-        assert_eq!(g.node("media:cat.png").map(|n| n.kind), Some(NodeKind::Media));
+        assert_eq!(
+            g.node("media:cat.png").map(|n| n.kind),
+            Some(NodeKind::Media)
+        );
         let has = |s: &str, t: &str| {
             g.edges()
                 .any(|e| e.source == s && e.target == t && e.kind == EdgeKind::DerivedFrom)
         };
         assert!(has("media:cat-big.png", "media:cat.png"));
-        assert!(has("media:cat.png", "crates/core/src/lib.rs"), "a project file used as reference");
-        assert!(!g.set_media_items(vec![item("cat.png", &["crates/core/src/lib.rs"]), item("cat-big.png", &["cat.png"])])?.changed);
+        assert!(
+            has("media:cat.png", "crates/core/src/lib.rs"),
+            "a project file used as reference"
+        );
+        assert!(
+            !g.set_media_items(vec![
+                item("cat.png", &["crates/core/src/lib.rs"]),
+                item("cat-big.png", &["cat.png"])
+            ])?
+            .changed
+        );
         Ok(())
     }
 

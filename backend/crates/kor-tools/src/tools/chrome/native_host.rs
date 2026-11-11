@@ -49,7 +49,10 @@ async fn read_frame<R: AsyncRead + Unpin>(r: &mut R) -> io::Result<Option<String
     }
     let len = u32::from_le_bytes(header);
     if len == 0 || len > MAX_IN {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "bad native message length"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "bad native message length",
+        ));
     }
     let mut body = vec![0u8; len as usize];
     r.read_exact(&mut body).await?;
@@ -88,7 +91,12 @@ type Sink = futures::stream::SplitSink<
     Message,
 >;
 
-async fn connect(port: u16, origin: &str, out: &mpsc::UnboundedSender<String>, closed: &mpsc::UnboundedSender<()>) -> Result<Sink, String> {
+async fn connect(
+    port: u16,
+    origin: &str,
+    out: &mpsc::UnboundedSender<String>,
+    closed: &mpsc::UnboundedSender<()>,
+) -> Result<Sink, String> {
     let mut req = format!("ws://127.0.0.1:{port}")
         .into_client_request()
         .map_err(|e| e.to_string())?;
@@ -131,7 +139,9 @@ where
     let (out_tx, mut out_rx) = mpsc::unbounded_channel::<String>();
     let writer = tokio::spawn(async move {
         while let Some(s) = out_rx.recv().await {
-            if output.write_all(&frame(s.as_bytes())).await.is_err() || output.flush().await.is_err() {
+            if output.write_all(&frame(s.as_bytes())).await.is_err()
+                || output.flush().await.is_err()
+            {
                 break;
             }
         }
@@ -217,7 +227,11 @@ mod tests {
     use std::time::Duration;
 
     async fn next_frame<R: AsyncRead + Unpin>(r: &mut R) -> Value {
-        let s = tokio::time::timeout(Duration::from_secs(5), read_frame(r)).await.unwrap().unwrap().unwrap();
+        let s = tokio::time::timeout(Duration::from_secs(5), read_frame(r))
+            .await
+            .unwrap()
+            .unwrap()
+            .unwrap();
         serde_json::from_str(&s).unwrap()
     }
 
@@ -227,47 +241,113 @@ mod tests {
 
     #[test]
     fn origins_and_oversized_messages() {
-        assert_eq!(origin_from_args(&["chrome-extension://abc/".into(), "--parent-window=0".into()]), "chrome-extension://abc");
-        assert_eq!(origin_from_args(&["/x/dev.kor.chrome_host.json".into(), "kor@kor.dev".into()]), "moz-extension://kor");
-        let big = json!({"type": "clientReply", "rid": 4, "result": "x".repeat(MAX_OUT)}).to_string();
+        assert_eq!(
+            origin_from_args(&["chrome-extension://abc/".into(), "--parent-window=0".into()]),
+            "chrome-extension://abc"
+        );
+        assert_eq!(
+            origin_from_args(&["/x/dev.kor.chrome_host.json".into(), "kor@kor.dev".into()]),
+            "moz-extension://kor"
+        );
+        let big =
+            json!({"type": "clientReply", "rid": 4, "result": "x".repeat(MAX_OUT)}).to_string();
         let v: Value = serde_json::from_str(&fit(big)).unwrap();
-        assert_eq!((v["rid"].as_u64(), v["result"]["error"].is_string()), (Some(4), true));
+        assert_eq!(
+            (v["rid"].as_u64(), v["result"]["error"].is_string()),
+            (Some(4), true)
+        );
     }
 
     #[tokio::test]
     async fn relays_pairing_and_commands_and_reports_a_missing_core() {
         let dir = tempfile::tempdir().unwrap();
-        let auth = Auth { dir: dir.path().to_path_buf(), store: Arc::new(kor_secrets::MemoryStore::default()) };
+        let auth = Auth {
+            dir: dir.path().to_path_buf(),
+            store: Arc::new(kor_secrets::MemoryStore::default()),
+        };
         let bridge = Bridge::bind(0, auth).await.unwrap();
         let (code, _) = pairing::new_code(dir.path()).unwrap();
         let (mut browser, host_io) = tokio::io::duplex(1 << 20);
         let (host_in, host_out) = tokio::io::split(host_io);
         let port = bridge.port();
-        let task = tokio::spawn(relay(host_in, host_out, port, "chrome-extension://abc".into(), no_launch));
-        browser.write_all(&frame(json!({"type": "host", "op": "status"}).to_string().as_bytes())).await.unwrap();
+        let task = tokio::spawn(relay(
+            host_in,
+            host_out,
+            port,
+            "chrome-extension://abc".into(),
+            no_launch,
+        ));
+        browser
+            .write_all(&frame(
+                json!({"type": "host", "op": "status"})
+                    .to_string()
+                    .as_bytes(),
+            ))
+            .await
+            .unwrap();
         assert_eq!(next_frame(&mut browser).await["core"], true);
-        browser.write_all(&frame(json!({"type": "pair", "code": code}).to_string().as_bytes())).await.unwrap();
+        browser
+            .write_all(&frame(
+                json!({"type": "pair", "code": code}).to_string().as_bytes(),
+            ))
+            .await
+            .unwrap();
         assert_eq!(next_frame(&mut browser).await["type"], "paired");
         // A tool command from Kor reaches the browser through the host and the answer comes back.
         let b2 = bridge.clone();
-        let ask = tokio::spawn(async move { b2.request(json!({"cmd": "tabs.list"}), Duration::from_secs(5)).await });
+        let ask = tokio::spawn(async move {
+            b2.request(json!({"cmd": "tabs.list"}), Duration::from_secs(5))
+                .await
+        });
         let cmd = next_frame(&mut browser).await;
         assert_eq!(cmd["cmd"], "tabs.list");
-        browser.write_all(&frame(json!({"id": cmd["id"], "ok": true, "result": []}).to_string().as_bytes())).await.unwrap();
+        browser
+            .write_all(&frame(
+                json!({"id": cmd["id"], "ok": true, "result": []})
+                    .to_string()
+                    .as_bytes(),
+            ))
+            .await
+            .unwrap();
         assert_eq!(ask.await.unwrap().unwrap(), json!([]));
-        browser.write_all(&frame(json!({"type": "host", "op": "launch"}).to_string().as_bytes())).await.unwrap();
+        browser
+            .write_all(&frame(
+                json!({"type": "host", "op": "launch"})
+                    .to_string()
+                    .as_bytes(),
+            ))
+            .await
+            .unwrap();
         assert_eq!(next_frame(&mut browser).await["launched"], false);
         drop(browser);
         task.await.unwrap().unwrap();
 
         // No Kor on the port: the host answers `core: false` instead of hanging.
-        let free = std::net::TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap().port();
+        let free = std::net::TcpListener::bind("127.0.0.1:0")
+            .unwrap()
+            .local_addr()
+            .unwrap()
+            .port();
         let (mut browser, host_io) = tokio::io::duplex(1 << 16);
         let (host_in, host_out) = tokio::io::split(host_io);
-        let task = tokio::spawn(relay(host_in, host_out, free, "chrome-extension://abc".into(), no_launch));
-        browser.write_all(&frame(json!({"type": "pair", "key": "k"}).to_string().as_bytes())).await.unwrap();
+        let task = tokio::spawn(relay(
+            host_in,
+            host_out,
+            free,
+            "chrome-extension://abc".into(),
+            no_launch,
+        ));
+        browser
+            .write_all(&frame(
+                json!({"type": "pair", "key": "k"}).to_string().as_bytes(),
+            ))
+            .await
+            .unwrap();
         let v = next_frame(&mut browser).await;
-        assert_eq!((v["type"].as_str(), v["core"].as_bool()), (Some("host"), Some(false)));
+        assert_eq!(
+            (v["type"].as_str(), v["core"].as_bool()),
+            (Some("host"), Some(false))
+        );
         drop(browser);
         task.await.unwrap().unwrap();
     }

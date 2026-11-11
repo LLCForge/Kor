@@ -30,7 +30,12 @@ pub fn normalize(raw: &str) -> Result<String, String> {
     let s = s.split_once("://").map_or(s.as_str(), |(_, r)| r);
     let s = s.split(['/', '?', '#']).next().unwrap_or("");
     let s = s.rsplit_once('@').map_or(s, |(_, h)| h);
-    let s = s.split(':').next().unwrap_or("").trim_start_matches("*.").trim_end_matches('.');
+    let s = s
+        .split(':')
+        .next()
+        .unwrap_or("")
+        .trim_start_matches("*.")
+        .trim_end_matches('.');
     let ok = !s.is_empty()
         && s.len() <= 253
         && s.split('.').all(|l| {
@@ -67,8 +72,11 @@ impl Domains {
             std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
         }
         let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, serde_json::to_vec_pretty(self).map_err(|e| e.to_string())?)
-            .map_err(|e| e.to_string())?;
+        std::fs::write(
+            &tmp,
+            serde_json::to_vec_pretty(self).map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| e.to_string())?;
         std::fs::rename(&tmp, path).map_err(|e| e.to_string())
     }
 
@@ -123,7 +131,9 @@ impl Domains {
         }
         let host = normalize(url)?;
         if let Some(d) = self.deny.iter().find(|d| covers(d, &host)) {
-            return Err(format!("{host} is blocked by the Kor domain list (`kor chrome deny {d}`)"));
+            return Err(format!(
+                "{host} is blocked by the Kor domain list (`kor chrome deny {d}`)"
+            ));
         }
         if !self.allow.is_empty() && !self.allow.iter().any(|d| covers(d, &host)) {
             return Err(format!(
@@ -145,14 +155,27 @@ mod tests {
 
     #[test]
     fn domains_normalize_and_match_subdomains() {
-        assert_eq!(normalize("https://User@Docs.Example.com:8443/a?b").unwrap(), "docs.example.com");
+        assert_eq!(
+            normalize("https://User@Docs.Example.com:8443/a?b").unwrap(),
+            "docs.example.com"
+        );
         assert_eq!(normalize("*.example.com.").unwrap(), "example.com");
-        assert!(normalize("exa mple.com").is_err() && normalize("").is_err() && normalize("-x.com").is_err());
+        assert!(
+            normalize("exa mple.com").is_err()
+                && normalize("").is_err()
+                && normalize("-x.com").is_err()
+        );
         let mut d = Domains::default();
-        assert!(d.check("https://any.site/").is_ok(), "empty lists allow everything");
+        assert!(
+            d.check("https://any.site/").is_ok(),
+            "empty lists allow everything"
+        );
         d.deny("evil.com").unwrap();
         assert!(d.check("https://shop.evil.com/x").is_err());
-        assert!(d.check("https://notevil.com/").is_ok(), "suffix must be a whole label");
+        assert!(
+            d.check("https://notevil.com/").is_ok(),
+            "suffix must be a whole label"
+        );
         d.allow("example.com").unwrap();
         assert!(d.check("https://www.example.com/").is_ok());
         assert!(d.check("https://other.org/").is_err());

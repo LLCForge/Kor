@@ -10,7 +10,12 @@
 
 // Every public function returns the localized error text itself; must_use / errors-doc and
 // short parser-local names are noise here.
-#![allow(clippy::must_use_candidate, clippy::missing_errors_doc, clippy::many_single_char_names, clippy::similar_names)]
+#![allow(
+    clippy::must_use_candidate,
+    clippy::missing_errors_doc,
+    clippy::many_single_char_names,
+    clippy::similar_names
+)]
 
 pub mod flame;
 pub mod load;
@@ -24,7 +29,9 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-pub use run::{Options, Plan, Report, compare, execute, list, load_report, optimize_prompt, plan, report_file};
+pub use run::{
+    Options, Plan, Report, compare, execute, list, load_report, optimize_prompt, plan, report_file,
+};
 
 /// One stack frame. `line` is the function's first line when the format gives it, else the
 /// sampled line.
@@ -165,8 +172,16 @@ impl Profile {
             })
             .collect();
         v.sort_by(|a, b| {
-            (b.self_weight, b.total_weight, &self.frames[a.frame as usize].name)
-                .cmp(&(a.self_weight, a.total_weight, &self.frames[b.frame as usize].name))
+            (
+                b.self_weight,
+                b.total_weight,
+                &self.frames[a.frame as usize].name,
+            )
+                .cmp(&(
+                    a.self_weight,
+                    a.total_weight,
+                    &self.frames[b.frame as usize].name,
+                ))
         });
         v.truncate(n);
         v
@@ -179,7 +194,10 @@ impl Profile {
             .stacks
             .iter()
             .map(|(s, w)| {
-                let frames: Vec<String> = s.iter().map(|&i| frame_text(&self.frames[i as usize])).collect();
+                let frames: Vec<String> = s
+                    .iter()
+                    .map(|&i| frame_text(&self.frames[i as usize]))
+                    .collect();
                 format!("{} {w}", frames.join(";"))
             })
             .collect();
@@ -220,7 +238,11 @@ pub fn frame_text(f: &Frame) -> String {
 pub fn relative_to(root: &Path, file: &str) -> Option<String> {
     let f = file.strip_prefix("file://").unwrap_or(file);
     // file:///C:/x → /C:/x
-    let f = if f.len() > 3 && f.starts_with('/') && f.as_bytes()[2] == b':' { &f[1..] } else { f };
+    let f = if f.len() > 3 && f.starts_with('/') && f.as_bytes()[2] == b':' {
+        &f[1..]
+    } else {
+        f
+    };
     let f = f.replace('\\', "/");
     let r = root.to_string_lossy().replace('\\', "/");
     let r = r.trim_end_matches('/');
@@ -229,14 +251,21 @@ pub fn relative_to(root: &Path, file: &str) -> Option<String> {
     }
     let windows_like = r.as_bytes().get(1) == Some(&b':');
     let head = f.get(..r.len())?;
-    let same = if windows_like { head.eq_ignore_ascii_case(r) } else { head == r };
+    let same = if windows_like {
+        head.eq_ignore_ascii_case(r)
+    } else {
+        head == r
+    };
     if same && f.as_bytes().get(r.len()) == Some(&b'/') {
         return Some(f[r.len() + 1..].to_owned());
     }
     // Already relative (e.g. `src/main.rs`) and present in the project.
     let rel = f.trim_start_matches("./");
-    (!rel.starts_with('/') && !rel.contains(':') && !rel.starts_with("..") && root.join(rel).is_file())
-        .then(|| rel.to_owned())
+    (!rel.starts_with('/')
+        && !rel.contains(':')
+        && !rel.starts_with("..")
+        && root.join(rel).is_file())
+    .then(|| rel.to_owned())
 }
 
 /// Function name without module path, receiver, generics or Rust's legacy hash suffix:
@@ -258,11 +287,15 @@ pub fn short_name(name: &str) -> &str {
             n = &n[..i];
         }
     }
-    let cut = [n.rfind("::").map(|i| i + 2), n.rfind('.').map(|i| i + 1), n.rfind('/').map(|i| i + 1)]
-        .into_iter()
-        .flatten()
-        .max()
-        .unwrap_or(0);
+    let cut = [
+        n.rfind("::").map(|i| i + 2),
+        n.rfind('.').map(|i| i + 1),
+        n.rfind('/').map(|i| i + 1),
+    ]
+    .into_iter()
+    .flatten()
+    .max()
+    .unwrap_or(0);
     let s = &n[cut..];
     if s.is_empty() { n } else { s }
 }
@@ -285,10 +318,19 @@ mod tests {
         p.add(vec![], 9);
         assert_eq!(p.total(), 10);
         let top = p.top(5);
-        assert_eq!((top[0].frame, top[0].self_weight, top[0].total_weight), (hot, 8, 8));
-        assert_eq!((top[1].frame, top[1].self_weight, top[1].total_weight), (main, 2, 10));
+        assert_eq!(
+            (top[0].frame, top[0].self_weight, top[0].total_weight),
+            (hot, 8, 8)
+        );
+        assert_eq!(
+            (top[1].frame, top[1].self_weight, top[1].total_weight),
+            (main, 2, 10)
+        );
         let c = p.to_collapsed();
-        assert!(c.contains("main (src/main.rs:10);hot (src/main.rs:25) 7\n"), "{c}");
+        assert!(
+            c.contains("main (src/main.rs:10);hot (src/main.rs:25) 7\n"),
+            "{c}"
+        );
         let back = parse::collapsed(&c);
         assert_eq!(back.total(), 10);
     }
@@ -298,13 +340,25 @@ mod tests {
         assert_eq!(short_name("kor::perf::top::h0123456789abcdef"), "top");
         assert_eq!(short_name("main.(*Server).handle"), "handle");
         assert_eq!(short_name("Vec<T>::push"), "push");
-        assert_eq!(short_name("core::ptr::drop_in_place<alloc::vec::Vec<u8>>"), "drop_in_place");
+        assert_eq!(
+            short_name("core::ptr::drop_in_place<alloc::vec::Vec<u8>>"),
+            "drop_in_place"
+        );
         assert_eq!(short_name("fib"), "fib");
         let root = Path::new("C:\\Proj");
-        assert_eq!(relative_to(root, "file:///c:/Proj/src/a.js").as_deref(), Some("src/a.js"));
-        assert_eq!(relative_to(root, "C:\\Proj\\x\\y.py").as_deref(), Some("x/y.py"));
+        assert_eq!(
+            relative_to(root, "file:///c:/Proj/src/a.js").as_deref(),
+            Some("src/a.js")
+        );
+        assert_eq!(
+            relative_to(root, "C:\\Proj\\x\\y.py").as_deref(),
+            Some("x/y.py")
+        );
         assert_eq!(relative_to(root, "C:\\Other\\y.py"), None);
-        assert_eq!(relative_to(Path::new("/home/u/p"), "/home/u/p/src/m.rs").as_deref(), Some("src/m.rs"));
+        assert_eq!(
+            relative_to(Path::new("/home/u/p"), "/home/u/p/src/m.rs").as_deref(),
+            Some("src/m.rs")
+        );
         assert_eq!(relative_to(Path::new("/home/u/p"), "/home/u/px/m.rs"), None);
     }
 }

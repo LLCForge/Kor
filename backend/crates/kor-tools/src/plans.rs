@@ -189,7 +189,9 @@ fn parse(path: &Path, text: &str) -> Option<Plan> {
         body: body.trim().to_owned(),
     };
     for line in head.lines() {
-        let Some((k, v)) = line.split_once(':') else { continue };
+        let Some((k, v)) = line.split_once(':') else {
+            continue;
+        };
         let v = v.trim();
         match k.trim() {
             "title" => v.clone_into(&mut plan.title),
@@ -271,7 +273,8 @@ pub fn find(root: &Path, id: &str) -> Option<Plan> {
 /// # Errors
 /// `NotFound` for an unknown id, or the write error.
 pub fn approve(root: &Path, id: &str) -> io::Result<Plan> {
-    let mut p = find(root, id).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, id.to_owned()))?;
+    let mut p =
+        find(root, id).ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, id.to_owned()))?;
     p.status = Status::Approved;
     std::fs::write(&p.path, render(&p))?;
     Ok(p)
@@ -279,22 +282,30 @@ pub fn approve(root: &Path, id: &str) -> io::Result<Plan> {
 
 /// The newest draft of a session (what `/go` approves).
 pub fn latest_draft(root: &Path, session: Option<&str>) -> Option<Plan> {
-    list(root)
-        .into_iter()
-        .find(|p| p.status == Status::Draft && (session.is_none() || p.session.as_deref() == session))
+    list(root).into_iter().find(|p| {
+        p.status == Status::Draft && (session.is_none() || p.session.as_deref() == session)
+    })
 }
 
 /// Project paths a plan names: words with a `/` or a file extension, without backticks.
 pub fn files_in(body: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
-    for w in body.split(|c: char| c.is_whitespace() || matches!(c, '`' | '(' | ')' | ',' | ';' | '"' | '\'')) {
+    for w in body
+        .split(|c: char| c.is_whitespace() || matches!(c, '`' | '(' | ')' | ',' | ';' | '"' | '\''))
+    {
         let w = w.trim_end_matches([':', '.']).trim_start_matches("./");
         let ext = Path::new(w)
             .extension()
             .and_then(|e| e.to_str())
-            .is_some_and(|e| (1..=6).contains(&e.len()) && e.chars().all(|c| c.is_ascii_alphanumeric()));
+            .is_some_and(|e| {
+                (1..=6).contains(&e.len()) && e.chars().all(|c| c.is_ascii_alphanumeric())
+            });
         let looks = (w.contains('/') && !w.starts_with("http")) || ext;
-        if looks && w.len() < 200 && !w.chars().all(|c| c.is_ascii_digit() || c == '.') && !out.iter().any(|o| o == w) {
+        if looks
+            && w.len() < 200
+            && !w.chars().all(|c| c.is_ascii_digit() || c == '.')
+            && !out.iter().any(|o| o == w)
+        {
             out.push(w.to_owned());
         }
     }
@@ -346,7 +357,13 @@ mod tests {
     fn save_list_find_approve_and_gate() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path();
-        let p = save(root, "Giriş sayfası ekle", "1. `src/login.rs` yaz\n2. update docs/auth.md", Some("s1")).unwrap();
+        let p = save(
+            root,
+            "Giriş sayfası ekle",
+            "1. `src/login.rs` yaz\n2. update docs/auth.md",
+            Some("s1"),
+        )
+        .unwrap();
         assert!(p.id.ends_with("-giris-sayfasi-ekle"), "{}", p.id);
         assert!(p.path.starts_with(root.join(".kor/plans")));
         let q = save(root, "Giriş sayfası ekle", "again", Some("s1")).unwrap();
@@ -355,7 +372,11 @@ mod tests {
         assert!(find(root, "20").is_none(), "ambiguous prefix");
         assert_eq!(latest_draft(root, Some("s1")).unwrap().id, q.id);
 
-        let gate = Gate { lock: true, session: Some("s1".into()), ..Gate::default() };
+        let gate = Gate {
+            lock: true,
+            session: Some("s1".into()),
+            ..Gate::default()
+        };
         assert!(!gate.refresh(root));
         assert!(!gate.outside_plan("anything.rs"), "nothing approved yet");
         approve(root, &p.id).unwrap();
@@ -364,11 +385,25 @@ mod tests {
         assert!(!gate.outside_plan("src/login.rs"));
         assert!(!gate.outside_plan("./docs/auth.md"));
         assert!(gate.outside_plan("src/other.rs"));
-        let other = Gate { lock: true, session: Some("s2".into()), ..Gate::default() };
-        assert!(!other.refresh(root), "another session's plan does not unlock");
-        let later = Gate { lock: true, session: Some("s1".into()), ..Gate::default() };
+        let other = Gate {
+            lock: true,
+            session: Some("s2".into()),
+            ..Gate::default()
+        };
+        assert!(
+            !other.refresh(root),
+            "another session's plan does not unlock"
+        );
+        let later = Gate {
+            lock: true,
+            session: Some("s1".into()),
+            ..Gate::default()
+        };
         later.since.store(u64::MAX, Ordering::Relaxed);
-        assert!(!later.refresh(root), "an approval from before plan mode was entered does not count");
+        assert!(
+            !later.refresh(root),
+            "an approval from before plan mode was entered does not count"
+        );
         assert!(approve(root, "missing").is_err());
     }
 
@@ -383,6 +418,9 @@ mod tests {
         assert_eq!(slug("!!!"), "plan");
         assert_eq!(date(0), "1970-01-01");
         assert_eq!(date(1_731_196_800), "2024-11-10");
-        assert_eq!(files_in("edit `a/b.rs` and README.md, see https://x.y/z"), ["a/b.rs", "README.md"]);
+        assert_eq!(
+            files_in("edit `a/b.rs` and README.md, see https://x.y/z"),
+            ["a/b.rs", "README.md"]
+        );
     }
 }

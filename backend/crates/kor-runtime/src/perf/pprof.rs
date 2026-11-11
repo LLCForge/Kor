@@ -169,10 +169,19 @@ pub(super) fn parse(b: &[u8]) -> Result<(Profile, bool), String> {
     if types.is_empty() && samples.is_empty() {
         return Err("pprof: no sample types or samples".into());
     }
-    let s = |i: u64| usize::try_from(i).ok().and_then(|i| strings.get(i)).map_or("", String::as_str);
+    let s = |i: u64| {
+        usize::try_from(i)
+            .ok()
+            .and_then(|i| strings.get(i))
+            .map_or("", String::as_str)
+    };
     let idx = |name: &str| types.iter().position(|t| s(t.0) == name);
     let (memory, value, count) = match idx("alloc_space").or_else(|| idx("inuse_space")) {
-        Some(space) => (true, space, idx("alloc_objects").or_else(|| idx("inuse_objects"))),
+        Some(space) => (
+            true,
+            space,
+            idx("alloc_objects").or_else(|| idx("inuse_objects")),
+        ),
         None => (false, idx("samples").unwrap_or(0), None),
     };
     let unit = if memory {
@@ -197,7 +206,11 @@ pub(super) fn parse(b: &[u8]) -> Result<(Profile, bool), String> {
             for &(fid, line) in locations.get(l).map_or(&[][..], Vec::as_slice) {
                 let Some(fu) = funcs.get(&fid) else { continue };
                 let line = if fu.start > 0 { fu.start } else { line };
-                let f = p.frame(s(fu.name), Some(s(fu.file)), u32::try_from(line).ok().filter(|l| *l > 0));
+                let f = p.frame(
+                    s(fu.name),
+                    Some(s(fu.file)),
+                    u32::try_from(line).ok().filter(|l| *l > 0),
+                );
                 stack.push(f);
             }
         }

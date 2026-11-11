@@ -20,7 +20,10 @@ pub struct Counts {
 }
 
 fn basic(user: &str, pass: &str) -> String {
-    format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!("{user}:{pass}")))
+    format!(
+        "Basic {}",
+        base64::engine::general_purpose::STANDARD.encode(format!("{user}:{pass}"))
+    )
 }
 
 fn digits(s: &str) -> Result<()> {
@@ -32,13 +35,32 @@ fn digits(s: &str) -> Result<()> {
 }
 
 /// Trendyol: product and order totals (`totalElements`). The API wants the seller id in the user agent.
-pub async fn trendyol(http: &Http, base: &str, seller: &str, key: &str, secret: &str) -> Result<Counts> {
+pub async fn trendyol(
+    http: &Http,
+    base: &str,
+    seller: &str,
+    key: &str,
+    secret: &str,
+) -> Result<Counts> {
     digits(seller)?;
-    let h = [("authorization", basic(key, secret)), ("user-agent", format!("{seller} - SelfIntegration"))];
+    let h = [
+        ("authorization", basic(key, secret)),
+        ("user-agent", format!("{seller} - SelfIntegration")),
+    ];
     Ok(Counts {
         market: "Trendyol".into(),
-        products: trendyol_total(http, &format!("{base}/integration/product/sellers/{seller}/products?page=0&size=1"), &h).await?,
-        orders: trendyol_total(http, &format!("{base}/integration/order/sellers/{seller}/orders?page=0&size=1"), &h).await?,
+        products: trendyol_total(
+            http,
+            &format!("{base}/integration/product/sellers/{seller}/products?page=0&size=1"),
+            &h,
+        )
+        .await?,
+        orders: trendyol_total(
+            http,
+            &format!("{base}/integration/order/sellers/{seller}/orders?page=0&size=1"),
+            &h,
+        )
+        .await?,
     })
 }
 
@@ -51,18 +73,35 @@ async fn trendyol_total(http: &Http, url: &str, h: &[(&str, String)]) -> Result<
 }
 
 /// Hepsiburada: listing total (`totalCount`).
-pub async fn hepsiburada(http: &Http, base: &str, merchant: &str, user: &str, pass: &str) -> Result<Counts> {
-    let ok = !merchant.is_empty() && merchant.len() <= 64 && merchant.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-');
+pub async fn hepsiburada(
+    http: &Http,
+    base: &str,
+    merchant: &str,
+    user: &str,
+    pass: &str,
+) -> Result<Counts> {
+    let ok = !merchant.is_empty()
+        && merchant.len() <= 64
+        && merchant
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-');
     if !ok {
         return Err(format!("invalid merchant id `{merchant}`"));
     }
     let r = http
-        .get_with(&format!("{base}/listings/merchantid/{merchant}?offset=0&limit=1"), &[("authorization", basic(user, pass))])
+        .get_with(
+            &format!("{base}/listings/merchantid/{merchant}?offset=0&limit=1"),
+            &[("authorization", basic(user, pass))],
+        )
         .await?;
     if !r.ok() {
         return Err(format!("Hepsiburada: HTTP {}", r.status));
     }
-    Ok(Counts { market: "Hepsiburada".into(), products: r.json()?["totalCount"].as_u64(), orders: None })
+    Ok(Counts {
+        market: "Hepsiburada".into(),
+        products: r.json()?["totalCount"].as_u64(),
+        orders: None,
+    })
 }
 
 #[cfg(test)]
@@ -75,16 +114,29 @@ mod tests {
     #[tokio::test]
     async fn counts_from_mock_apis() {
         let s = MockServer::start().await;
-        Mock::given(path("/integration/product/sellers/123/products")).and(header("user-agent", "123 - SelfIntegration"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"totalElements": 42}))).mount(&s).await;
+        Mock::given(path("/integration/product/sellers/123/products"))
+            .and(header("user-agent", "123 - SelfIntegration"))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"totalElements": 42})))
+            .mount(&s)
+            .await;
         Mock::given(path("/integration/order/sellers/123/orders"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"totalElements": 7}))).mount(&s).await;
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"totalElements": 7})))
+            .mount(&s)
+            .await;
         Mock::given(path("/listings/merchantid/m-1"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"totalCount": 9}))).mount(&s).await;
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({"totalCount": 9})))
+            .mount(&s)
+            .await;
         let http = Http::new().unwrap();
         let t = trendyol(&http, &s.uri(), "123", "k", "s").await.unwrap();
         assert_eq!((t.products, t.orders), (Some(42), Some(7)));
-        assert_eq!(hepsiburada(&http, &s.uri(), "m-1", "u", "p").await.unwrap().products, Some(9));
+        assert_eq!(
+            hepsiburada(&http, &s.uri(), "m-1", "u", "p")
+                .await
+                .unwrap()
+                .products,
+            Some(9)
+        );
         assert!(trendyol(&http, &s.uri(), "12/3", "k", "s").await.is_err());
     }
 }

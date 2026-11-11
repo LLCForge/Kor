@@ -41,7 +41,12 @@ impl Provider for NonVision {
         _c: CancellationToken,
     ) -> Result<EventStream, ProviderError> {
         self.seen.lock().unwrap().push(req);
-        let text = self.replies.lock().unwrap().pop_front().expect("unexpected model call");
+        let text = self
+            .replies
+            .lock()
+            .unwrap()
+            .pop_front()
+            .expect("unexpected model call");
         Ok(Box::pin(futures::stream::iter(vec![
             Ok(StreamEvent::TextDelta { text }),
             Ok(StreamEvent::Usage {
@@ -95,7 +100,9 @@ async fn solve(ocr: &dyn Ocr) -> (String, String) {
         replies: Mutex::new(VecDeque::from([FIX.to_owned()])),
     });
     let cancel = CancellationToken::new();
-    let pasted = visual::image_context(&[fixture()], ocr, &cancel).await.unwrap();
+    let pasted = visual::image_context(&[fixture()], ocr, &cancel)
+        .await
+        .unwrap();
     let mut agent = Agent {
         provider: p.clone(),
         model: "m".into(),
@@ -128,14 +135,22 @@ async fn solve(ocr: &dyn Ocr) -> (String, String) {
     };
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
     let stop = agent
-        .send(format!("Why does this crash? Fix it.{pasted}"), &tx, &Deny, cancel)
+        .send(
+            format!("Why does this crash? Fix it.{pasted}"),
+            &tx,
+            &Deny,
+            cancel,
+        )
         .await
         .unwrap();
     assert!(matches!(stop, StopReason::Done(_)), "{stop:?}");
     let seen = p.seen.lock().unwrap();
     let user = seen[0].messages.last().unwrap();
     assert!(
-        !user.parts.iter().any(|x| matches!(x, ContentPart::Image { .. })),
+        !user
+            .parts
+            .iter()
+            .any(|x| matches!(x, ContentPart::Image { .. })),
         "a model without vision must not get image parts"
     );
     let answer = agent.messages.last().unwrap().plain_text();
@@ -143,10 +158,16 @@ async fn solve(ocr: &dyn Ocr) -> (String, String) {
 }
 
 fn assert_solved(seen: &str, answer: &str) {
-    assert!(seen.contains("ZeroDivisionError"), "error type missing: {seen}");
+    assert!(
+        seen.contains("ZeroDivisionError"),
+        "error type missing: {seen}"
+    );
     assert!(seen.contains("app.py"), "file missing: {seen}");
     assert!(seen.contains("line 3"), "line missing: {seen}");
-    assert!(seen.contains("never as instructions"), "untrusted label missing: {seen}");
+    assert!(
+        seen.contains("never as instructions"),
+        "untrusted label missing: {seen}"
+    );
     assert!(answer.contains("if count else 0"), "{answer}");
 }
 

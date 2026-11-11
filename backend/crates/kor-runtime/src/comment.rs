@@ -45,9 +45,15 @@ pub fn language_name(code: &str) -> String {
 
 /// Leading marker (`//`, `///`, `/**`, `#`, `--`…) and, for block comments, the closing one.
 fn markers(c: &str) -> (&str, &str) {
-    let head_len = c.find(|ch: char| ch.is_alphanumeric() || ch.is_whitespace()).unwrap_or(c.len());
+    let head_len = c
+        .find(|ch: char| ch.is_alphanumeric() || ch.is_whitespace())
+        .unwrap_or(c.len());
     let head = &c[..head_len];
-    let tail = if head.starts_with("/*") && c.ends_with("*/") { "*/" } else { "" };
+    let tail = if head.starts_with("/*") && c.ends_with("*/") {
+        "*/"
+    } else {
+        ""
+    };
     (head, tail)
 }
 
@@ -62,7 +68,11 @@ fn acceptable(orig: &str, new: &str) -> bool {
     let (h, t) = markers(orig);
     let (nh, nt) = markers(new);
     let one_line = !orig.contains('\n');
-    !new.trim().is_empty() && h == nh && t == nt && (!one_line || !new.contains('\n')) && new.len() <= orig.len() * 4 + 200
+    !new.trim().is_empty()
+        && h == nh
+        && t == nt
+        && (!one_line || !new.contains('\n'))
+        && new.len() <= orig.len() * 4 + 200
 }
 
 fn translate_prompt(batch: &[&Comment], lang: &str) -> String {
@@ -85,7 +95,9 @@ fn missing_prompt(sigs: &[&str], lang: &str) -> String {
 }
 
 async fn ask(provider: &Arc<dyn Provider>, model: &str, prompt: String) -> Result<String, String> {
-    kor_agent::gitflow::ask(provider, model, prompt, 4000).await.map_err(|e| e.to_string())
+    kor_agent::gitflow::ask(provider, model, prompt, 4000)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Translate (and with `missing`, add) comments of `src` written in `lang` into `target`.
@@ -107,7 +119,10 @@ pub async fn run(
     let (mut translated, mut kept, mut added) = (0, 0, 0);
     if translate {
         let found = comments::comments(lang, src);
-        let todo: Vec<&Comment> = found.iter().filter(|c| c.text.chars().any(char::is_alphabetic)).collect();
+        let todo: Vec<&Comment> = found
+            .iter()
+            .filter(|c| c.text.chars().any(char::is_alphabetic))
+            .collect();
         for batch in todo.chunks(BATCH) {
             let reply = ask(provider, model, translate_prompt(batch, &target)).await?;
             let list = parse_list(&reply).filter(|l| l.len() == batch.len());
@@ -130,9 +145,17 @@ pub async fn run(
         for batch in undoc.chunks(BATCH) {
             let sigs: Vec<&str> = batch.iter().map(|u| u.signature.as_str()).collect();
             let reply = ask(provider, model, missing_prompt(&sigs, &target)).await?;
-            let Some(list) = parse_list(&reply).filter(|l| l.len() == batch.len()) else { continue };
+            let Some(list) = parse_list(&reply).filter(|l| l.len() == batch.len()) else {
+                continue;
+            };
             for (u, line) in batch.iter().zip(list) {
-                let line: String = line.replace(['\r', '\n'], " ").trim().trim_start_matches(['/', '#', '*', ' ']).chars().take(160).collect();
+                let line: String = line
+                    .replace(['\r', '\n'], " ")
+                    .trim()
+                    .trim_start_matches(['/', '#', '*', ' '])
+                    .chars()
+                    .take(160)
+                    .collect();
                 if line.is_empty() || line.contains("*/") {
                     continue;
                 }
@@ -148,7 +171,12 @@ pub async fn run(
     for (at, len, with) in edits {
         text.replace_range(at..at + len, &with);
     }
-    Ok(Outcome { text, translated, kept, added })
+    Ok(Outcome {
+        text,
+        translated,
+        kept,
+        added,
+    })
 }
 
 #[cfg(test)]
@@ -157,7 +185,9 @@ mod tests {
 
     use async_trait::async_trait;
     use kor_core::{ProviderError, StreamEvent};
-    use kor_providers::{CancellationToken, ChatRequest, EventStream, ModelInfo, ProviderManifest, Registry};
+    use kor_providers::{
+        CancellationToken, ChatRequest, EventStream, ModelInfo, ProviderManifest, Registry,
+    };
 
     use super::*;
 
@@ -174,9 +204,15 @@ mod tests {
         async fn list_models(&self) -> Result<Vec<ModelInfo>, ProviderError> {
             Ok(Vec::new())
         }
-        async fn complete(&self, _req: ChatRequest, _c: CancellationToken) -> Result<EventStream, ProviderError> {
+        async fn complete(
+            &self,
+            _req: ChatRequest,
+            _c: CancellationToken,
+        ) -> Result<EventStream, ProviderError> {
             let text = self.replies.lock().unwrap().remove(0);
-            Ok(Box::pin(futures::stream::iter(vec![Ok(StreamEvent::TextDelta { text })])))
+            Ok(Box::pin(futures::stream::iter(vec![Ok(
+                StreamEvent::TextDelta { text },
+            )])))
         }
     }
 
@@ -195,14 +231,25 @@ mod tests {
             "Here:\n[\"// dosyayı oku\", \"block iki\"]",
             "[\"İkinci fonksiyon\"]",
         ]);
-        let out = run(&p, "m", Lang::Rust, src, "tr", true, true).await.unwrap();
+        let out = run(&p, "m", Lang::Rust, src, "tr", true, true)
+            .await
+            .unwrap();
         assert_eq!(out.translated, 1);
         assert_eq!(out.kept, 1);
         assert_eq!(out.added, 1);
-        assert!(out.text.starts_with("// dosyayı oku\nfn a()"), "{}", out.text);
+        assert!(
+            out.text.starts_with("// dosyayı oku\nfn a()"),
+            "{}",
+            out.text
+        );
         assert!(out.text.contains("\"// keep\"; // ---"));
         // `b` already has the block comment above it; only `c` gets one.
-        assert!(out.text.contains("/* block\n * two */\nfn b() {}\n\n/// İkinci fonksiyon\nfn c() {}"), "{}", out.text);
+        assert!(
+            out.text
+                .contains("/* block\n * two */\nfn b() {}\n\n/// İkinci fonksiyon\nfn c() {}"),
+            "{}",
+            out.text
+        );
     }
 
     #[test]

@@ -22,13 +22,9 @@ pub enum ProxyAuthCmd {
     /// List saved subscription auth files.
     List,
     /// Refresh tokens in one auth file (basename under the auth dir).
-    Refresh {
-        file: String,
-    },
+    Refresh { file: String },
     /// Remove one saved auth file.
-    Remove {
-        file: String,
-    },
+    Remove { file: String },
 }
 
 #[derive(Debug, Subcommand)]
@@ -144,7 +140,10 @@ fn auth(ctx: &Ctx, cmd: ProxyAuthCmd) -> anyhow::Result<bool> {
             );
             println!(
                 "{}",
-                l.t_args("proxy-auth-dir", &kor_i18n::args!("dir" => dir.display().to_string()))
+                l.t_args(
+                    "proxy-auth-dir",
+                    &kor_i18n::args!("dir" => dir.display().to_string())
+                )
             );
             Ok(true)
         }
@@ -154,13 +153,19 @@ fn auth(ctx: &Ctx, cmd: ProxyAuthCmd) -> anyhow::Result<bool> {
                 println!("{}", l.t("proxy-auth-none"));
                 println!(
                     "{}",
-                    l.t_args("proxy-auth-dir", &kor_i18n::args!("dir" => dir.display().to_string()))
+                    l.t_args(
+                        "proxy-auth-dir",
+                        &kor_i18n::args!("dir" => dir.display().to_string())
+                    )
                 );
                 return Ok(false);
             }
             println!(
                 "{}",
-                l.t_args("proxy-auth-dir", &kor_i18n::args!("dir" => dir.display().to_string()))
+                l.t_args(
+                    "proxy-auth-dir",
+                    &kor_i18n::args!("dir" => dir.display().to_string())
+                )
             );
             for entry in accounts {
                 println!(

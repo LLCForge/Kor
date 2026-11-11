@@ -272,7 +272,9 @@ impl Tool for ApplyPatch {
         })
     }
     async fn propose(&self, input: &Value, ctx: &ToolCtx) -> Option<Vec<super::review::Proposal>> {
-        let (writes, _) = plan(&parse(input["patch"].as_str()?).ok()?, ctx).await.ok()?;
+        let (writes, _) = plan(&parse(input["patch"].as_str()?).ok()?, ctx)
+            .await
+            .ok()?;
         let mut out = Vec::new();
         for (p, after) in writes {
             let before = tokio::fs::read_to_string(&p).await.ok();

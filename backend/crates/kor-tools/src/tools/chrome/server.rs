@@ -76,7 +76,9 @@ pub struct Auth {
 
 impl std::fmt::Debug for Auth {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Auth").field("dir", &self.dir).finish_non_exhaustive()
+        f.debug_struct("Auth")
+            .field("dir", &self.dir)
+            .finish_non_exhaustive()
     }
 }
 
@@ -181,7 +183,8 @@ impl Bridge {
             return Ok(None);
         }
         if let Some(code) = first["code"].as_str() {
-            return super::pairing::redeem(&self.auth.dir, code, self.auth.store.as_ref()).map(Some);
+            return super::pairing::redeem(&self.auth.dir, code, self.auth.store.as_ref())
+                .map(Some);
         }
         Err("this browser is not paired with Kor; run `kor chrome pair` and enter the code".into())
     }
@@ -199,13 +202,17 @@ impl Bridge {
         let (mut sink, mut source) = ws.split();
 
         let first = match tokio::time::timeout(PAIR_TIMEOUT, source.next()).await {
-            Ok(Some(Ok(Message::Text(t)))) => serde_json::from_str::<Value>(t.as_str()).unwrap_or(Value::Null),
+            Ok(Some(Ok(Message::Text(t)))) => {
+                serde_json::from_str::<Value>(t.as_str()).unwrap_or(Value::Null)
+            }
             _ => Value::Null,
         };
         let issued = match self.pair(&first) {
             Ok(issued) => issued,
             Err(error) => {
-                let _ = sink.send(text(&json!({"type": "unpaired", "error": error}))).await;
+                let _ = sink
+                    .send(text(&json!({"type": "unpaired", "error": error})))
+                    .await;
                 let _ = sink.close().await;
                 return;
             }
@@ -267,18 +274,25 @@ impl Bridge {
         let rid = v["rid"].clone();
         let tx = tx.clone();
         if kind == "client" && v["op"] == "policy" {
-            let _ = tx.send(text(&json!({"type": reply_type, "rid": rid, "result": super::policy::current()})));
+            let _ = tx.send(text(
+                &json!({"type": reply_type, "rid": rid, "result": super::policy::current()}),
+            ));
             return;
         }
         let Some(handler) = handler else {
-            let error = "Kor masaüstü uygulaması çalışmıyor; yan panel sohbeti için masaüstünü açın.";
-            let _ = tx.send(text(&json!({"type": reply_type, "rid": rid, "result": {"error": error}})));
+            let error =
+                "Kor masaüstü uygulaması çalışmıyor; yan panel sohbeti için masaüstünü açın.";
+            let _ = tx.send(text(
+                &json!({"type": reply_type, "rid": rid, "result": {"error": error}}),
+            ));
             return;
         };
         let fut = handler(v);
         tokio::spawn(async move {
             let result = fut.await;
-            let _ = tx.send(text(&json!({"type": reply_type, "rid": rid, "result": result})));
+            let _ = tx.send(text(
+                &json!({"type": reply_type, "rid": rid, "result": result}),
+            ));
         });
     }
 
@@ -334,7 +348,9 @@ pub(crate) mod tests {
     }
 
     pub(crate) async fn recv(ws: &mut Ws) -> Value {
-        let Some(Ok(Message::Text(t))) = ws.next().await else { panic!("no message") };
+        let Some(Ok(Message::Text(t))) = ws.next().await else {
+            panic!("no message")
+        };
         serde_json::from_str(t.as_str()).unwrap()
     }
 
@@ -345,7 +361,10 @@ pub(crate) mod tests {
     /// A bridge on a free port and an extension paired with a fresh code.
     pub(crate) async fn paired() -> (Arc<Bridge>, Ws, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();
-        let auth = Auth { dir: dir.path().to_path_buf(), store: Arc::new(MemoryStore::default()) };
+        let auth = Auth {
+            dir: dir.path().to_path_buf(),
+            store: Arc::new(MemoryStore::default()),
+        };
         let b = Bridge::bind(0, auth).await.unwrap();
         let (code, _) = super::super::pairing::new_code(dir.path()).unwrap();
         let mut ws = client(b.port()).await;
@@ -385,7 +404,11 @@ pub(crate) mod tests {
         assert!(!matches!(bad.next().await, Some(Ok(Message::Text(_)))));
         // Unpaired traffic is never dispatched.
         let mut silent = client(b.port()).await;
-        send(&mut silent, json!({"type": "client", "rid": 1, "op": "policy"})).await;
+        send(
+            &mut silent,
+            json!({"type": "client", "rid": 1, "op": "policy"}),
+        )
+        .await;
         assert_eq!(recv(&mut silent).await["type"], "unpaired");
         // Broadcast reaches paired connections.
         b.broadcast(&json!({"type": "event", "event": {"type": "done"}}));
@@ -401,9 +424,19 @@ pub(crate) mod tests {
         set_client_handler(echo);
         let (_b, mut ws, _dir) = paired().await;
         send(&mut ws, json!({"type": "panel", "rid": 7, "op": "detect"})).await;
-        assert_eq!(recv(&mut ws).await, json!({"type": "panelReply", "rid": 7, "result": {"op": "detect"}}));
-        send(&mut ws, json!({"type": "client", "rid": 8, "op": "sessions"})).await;
-        assert_eq!(recv(&mut ws).await, json!({"type": "clientReply", "rid": 8, "result": {"op": "sessions"}}));
+        assert_eq!(
+            recv(&mut ws).await,
+            json!({"type": "panelReply", "rid": 7, "result": {"op": "detect"}})
+        );
+        send(
+            &mut ws,
+            json!({"type": "client", "rid": 8, "op": "sessions"}),
+        )
+        .await;
+        assert_eq!(
+            recv(&mut ws).await,
+            json!({"type": "clientReply", "rid": 8, "result": {"op": "sessions"}})
+        );
         send(&mut ws, json!({"type": "client", "rid": 9, "op": "policy"})).await;
         assert_eq!(recv(&mut ws).await["type"], "clientReply");
     }
@@ -411,7 +444,10 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn web_pages_cannot_connect() {
         let dir = tempfile::tempdir().unwrap();
-        let auth = Auth { dir: dir.path().to_path_buf(), store: Arc::new(MemoryStore::default()) };
+        let auth = Auth {
+            dir: dir.path().to_path_buf(),
+            store: Arc::new(MemoryStore::default()),
+        };
         let b = Bridge::bind(0, auth).await.unwrap();
         let mut req = format!("ws://127.0.0.1:{}", b.port())
             .into_client_request()

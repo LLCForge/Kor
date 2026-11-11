@@ -84,7 +84,10 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
                 .mut_arg("limit", |a| a.help(l.t("arg-osx-limit")))
         })
         .mut_subcommand("last-reply", |s| s.about(l.t("cmd-osx-last-reply")))
-        .mut_subcommand("approve", |s| s.about(l.t("cmd-osx-approve")).mut_arg("id", |a| a.help(l.t("arg-osx-id"))))
+        .mut_subcommand("approve", |s| {
+            s.about(l.t("cmd-osx-approve"))
+                .mut_arg("id", |a| a.help(l.t("arg-osx-id")))
+        })
 }
 
 /// The environment for the running `kor`: integrations point at this executable; a desktop
@@ -101,7 +104,9 @@ pub fn env() -> anyhow::Result<Env> {
 pub fn options(l: &Localizer, handoff_url: Option<String>) -> Options {
     Options {
         handoff_url,
-        texts: osx::shortcuts::Texts { ask: l.t("osx-shortcut-ask") },
+        texts: osx::shortcuts::Texts {
+            ask: l.t("osx-shortcut-ask"),
+        },
     }
 }
 
@@ -126,7 +131,13 @@ fn print_status(l: &Localizer, env: &Env, json_out: bool, distros: bool) {
         return;
     }
     for s in &all {
-        let mark = if s.installed { "✓" } else if s.available { "·" } else { "–" };
+        let mark = if s.installed {
+            "✓"
+        } else if s.available {
+            "·"
+        } else {
+            "–"
+        };
         let label = l.t(&format!("osx-item-{}", s.id));
         let note = match (s.via, s.reason) {
             (Some(via), _) => format!(" ({})", l.t_args("osx-via", &args!("via" => via))),
@@ -138,7 +149,10 @@ fn print_status(l: &Localizer, env: &Env, json_out: bool, distros: bool) {
     if distros && env.os == kor_platform::Os::Windows {
         let d = kor_platform::wsl::distros();
         if !d.is_empty() {
-            println!("\n{}", l.t_args("osx-wsl-distros", &args!("list" => d.join(", "))));
+            println!(
+                "\n{}",
+                l.t_args("osx-wsl-distros", &args!("list" => d.join(", ")))
+            );
         }
     }
 }
@@ -151,7 +165,13 @@ fn targets(env: &Env, ids: &[String], all: bool, installed_only: bool) -> Vec<St
     osx::status_all(env)
         .into_iter()
         .filter(|s| matches!(s.kind, "install" | "desktop"))
-        .filter(|s| if installed_only { s.installed } else { s.available })
+        .filter(|s| {
+            if installed_only {
+                s.installed
+            } else {
+                s.available
+            }
+        })
         .map(|s| s.id.to_owned())
         .collect()
 }
@@ -162,12 +182,21 @@ pub fn run(ctx: &Ctx, a: &OsIntegrationArgs) -> anyhow::Result<bool> {
         OsCmd::List { json } | OsCmd::Status { json } => {
             print_status(l, &env()?, *json, matches!(a.command, OsCmd::Status { .. }));
             if !*json {
-                let cfg = ctx.config.as_ref().map(|c| c.config.integrations.clone()).unwrap_or_default();
+                let cfg = ctx
+                    .config
+                    .as_ref()
+                    .map(|c| c.config.integrations.clone())
+                    .unwrap_or_default();
                 println!("\n{}", kor_runtime::autointegrate::status_line(l, &cfg));
             }
             Ok(true)
         }
-        OsCmd::Install { ids, all, handoff_url, yes } => {
+        OsCmd::Install {
+            ids,
+            all,
+            handoff_url,
+            yes,
+        } => {
             let mut env = env()?;
             let list = targets(&env, ids, *all, false);
             if list.is_empty() {
@@ -175,7 +204,11 @@ pub fn run(ctx: &Ctx, a: &OsIntegrationArgs) -> anyhow::Result<bool> {
                 return Ok(false);
             }
             let names: Vec<String> = list.iter().map(|i| l.t(&format!("osx-item-{i}"))).collect();
-            if !crate::shell_cmd::confirm(l, &l.t_args("osx-confirm", &args!("list" => names.join(", "))), *yes) {
+            if !crate::shell_cmd::confirm(
+                l,
+                &l.t_args("osx-confirm", &args!("list" => names.join(", "))),
+                *yes,
+            ) {
                 return Ok(false);
             }
             let opts = options(l, handoff_url.clone());
@@ -219,7 +252,13 @@ pub fn run(ctx: &Ctx, a: &OsIntegrationArgs) -> anyhow::Result<bool> {
         }
         OsCmd::Feed { query, limit } => {
             let waiting = waiting();
-            let v = feed(l, &Sources::current(), query.as_deref(), (*limit).clamp(1, 50), &waiting);
+            let v = feed(
+                l,
+                &Sources::current(),
+                query.as_deref(),
+                (*limit).clamp(1, 50),
+                &waiting,
+            );
             println!("{v}");
             Ok(true)
         }
@@ -274,29 +313,57 @@ fn waiting() -> Vec<(String, String)> {
         .as_array()
         .into_iter()
         .flatten()
-        .filter_map(|w| Some((w["id"].as_str()?.to_owned(), w["summary"].as_str().unwrap_or_default().to_owned())))
+        .filter_map(|w| {
+            Some((
+                w["id"].as_str()?.to_owned(),
+                w["summary"].as_str().unwrap_or_default().to_owned(),
+            ))
+        })
         .collect()
 }
 
 fn first_line(s: &str, n: usize) -> String {
-    s.lines().find(|l| !l.trim().is_empty()).unwrap_or_default().chars().take(n).collect()
+    s.lines()
+        .find(|l| !l.trim().is_empty())
+        .unwrap_or_default()
+        .chars()
+        .take(n)
+        .collect()
 }
 
 /// The feed JSON (see module docs).
-pub fn feed(l: &Localizer, src: &Sources, query: Option<&str>, limit: usize, waiting: &[(String, String)]) -> Value {
-    let q = query.map(|q| q.trim().to_lowercase()).filter(|q| !q.is_empty());
-    let hit = |s: &str| q.as_ref().is_none_or(|q| s.to_lowercase().contains(q.as_str()));
+pub fn feed(
+    l: &Localizer,
+    src: &Sources,
+    query: Option<&str>,
+    limit: usize,
+    waiting: &[(String, String)],
+) -> Value {
+    let q = query
+        .map(|q| q.trim().to_lowercase())
+        .filter(|q| !q.is_empty());
+    let hit = |s: &str| {
+        q.as_ref()
+            .is_none_or(|q| s.to_lowercase().contains(q.as_str()))
+    };
     let meta: Value = src
         .desktop
         .as_ref()
         .and_then(|p| std::fs::read_to_string(p).ok())
         .and_then(|t| serde_json::from_str(&t).ok())
         .unwrap_or(Value::Null);
-    let files = src.sessions.as_deref().map(kor_agent::session::list).unwrap_or_default();
+    let files = src
+        .sessions
+        .as_deref()
+        .map(kor_agent::session::list)
+        .unwrap_or_default();
     let mut sessions = Vec::new();
     let mut projects: Vec<PathBuf> = Vec::new();
     for p in &files {
-        let id = p.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let id = p
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let m = &meta["sessions"][&id];
         if let Some(root) = m["root"].as_str() {
             let root = PathBuf::from(root);
@@ -314,7 +381,9 @@ pub fn feed(l: &Localizer, src: &Sources, query: Option<&str>, limit: usize, wai
                     .map(|m| first_line(&m.plain_text(), 70))
             })
         });
-        let title = title.filter(|t| !t.is_empty()).unwrap_or_else(|| id.clone());
+        let title = title
+            .filter(|t| !t.is_empty())
+            .unwrap_or_else(|| id.clone());
         if hit(&title) {
             sessions.push(json!({ "id": id, "title": title, "url": format!("kor://resume?id={}", kor_runtime::osint::encode(&id)) }));
         }
@@ -327,12 +396,23 @@ pub fn feed(l: &Localizer, src: &Sources, query: Option<&str>, limit: usize, wai
     let projects: Vec<Value> = projects
         .iter()
         .filter(|p| p.is_dir())
-        .map(|p| (p, p.file_name().map_or_else(|| p.display().to_string(), |n| n.to_string_lossy().into_owned())))
+        .map(|p| {
+            (
+                p,
+                p.file_name().map_or_else(
+                    || p.display().to_string(),
+                    |n| n.to_string_lossy().into_owned(),
+                ),
+            )
+        })
         .filter(|(p, n)| hit(n) || hit(&p.to_string_lossy()))
         .take(limit)
         .map(|(p, n)| json!({ "name": n, "path": p, "url": kor_runtime::osint::open_url(p) }))
         .collect();
-    let waiting: Vec<Value> = waiting.iter().map(|(id, s)| json!({ "id": id, "summary": s })).collect();
+    let waiting: Vec<Value> = waiting
+        .iter()
+        .map(|(id, s)| json!({ "id": id, "summary": s }))
+        .collect();
     let status = if waiting.is_empty() {
         l.t("osx-feed-idle")
     } else {
@@ -386,7 +466,14 @@ fn approve(l: &Localizer, id: Option<String>) -> anyhow::Result<bool> {
         ))
         .map_err(|e| anyhow::anyhow!(e))?;
     let ok = v["ok"] == true;
-    println!("{}", l.t(if ok { "triggers-answered" } else { "triggers-no-pending" }));
+    println!(
+        "{}",
+        l.t(if ok {
+            "triggers-answered"
+        } else {
+            "triggers-no-pending"
+        })
+    );
     Ok(ok)
 }
 
@@ -405,14 +492,52 @@ mod tests {
     #[test]
     fn parses_and_localizes() {
         let t = T::try_parse_from(["x", "install", "--all", "--yes"]).unwrap();
-        assert!(matches!(t.a.command, OsCmd::Install { all: true, yes: true, .. }));
-        let t = T::try_parse_from(["x", "install", "shortcuts", "handoff", "--handoff-url", "https://k"]).unwrap();
-        assert!(matches!(&t.a.command, OsCmd::Install { ids, handoff_url: Some(_), .. } if ids.len() == 2));
+        assert!(matches!(
+            t.a.command,
+            OsCmd::Install {
+                all: true,
+                yes: true,
+                ..
+            }
+        ));
+        let t = T::try_parse_from([
+            "x",
+            "install",
+            "shortcuts",
+            "handoff",
+            "--handoff-url",
+            "https://k",
+        ])
+        .unwrap();
+        assert!(
+            matches!(&t.a.command, OsCmd::Install { ids, handoff_url: Some(_), .. } if ids.len() == 2)
+        );
         assert!(T::try_parse_from(["x", "install", "a", "--all"]).is_err());
-        assert!(matches!(T::try_parse_from(["x", "feed", "--query", "api"]).unwrap().a.command, OsCmd::Feed { limit: 5, .. }));
-        assert!(matches!(T::try_parse_from(["x", "approve", "--id", "ab"]).unwrap().a.command, OsCmd::Approve { id: Some(_) }));
-        assert!(matches!(T::try_parse_from(["x", "last-reply"]).unwrap().a.command, OsCmd::LastReply));
-        assert!(matches!(T::try_parse_from(["x", "uninstall", "--all"]).unwrap().a.command, OsCmd::Uninstall { all: true, .. }));
+        assert!(matches!(
+            T::try_parse_from(["x", "feed", "--query", "api"])
+                .unwrap()
+                .a
+                .command,
+            OsCmd::Feed { limit: 5, .. }
+        ));
+        assert!(matches!(
+            T::try_parse_from(["x", "approve", "--id", "ab"])
+                .unwrap()
+                .a
+                .command,
+            OsCmd::Approve { id: Some(_) }
+        ));
+        assert!(matches!(
+            T::try_parse_from(["x", "last-reply"]).unwrap().a.command,
+            OsCmd::LastReply
+        ));
+        assert!(matches!(
+            T::try_parse_from(["x", "uninstall", "--all"])
+                .unwrap()
+                .a
+                .command,
+            OsCmd::Uninstall { all: true, .. }
+        ));
         for lang in [kor_i18n::Lang::En, kor_i18n::Lang::Tr, kor_i18n::Lang::Fr] {
             localize(T::command(), &Localizer::new(lang)).debug_assert();
         }
@@ -427,24 +552,58 @@ mod tests {
         std::fs::create_dir_all(&proj).unwrap();
         let other = d.path().join("web");
         std::fs::create_dir_all(&other).unwrap();
-        let write = |id: &str, msgs: &[Message]| kor_agent::session::save(&sessions.join(format!("{id}.jsonl")), msgs).unwrap();
-        write("20260101-000000-1", &[Message::text(Role::User, "fix the login bug"), Message::text(Role::Assistant, "Done: login fixed.")]);
-        write("20260102-000000-2", &[Message::text(Role::User, "write docs")]);
+        let write = |id: &str, msgs: &[Message]| {
+            kor_agent::session::save(&sessions.join(format!("{id}.jsonl")), msgs).unwrap()
+        };
+        write(
+            "20260101-000000-1",
+            &[
+                Message::text(Role::User, "fix the login bug"),
+                Message::text(Role::Assistant, "Done: login fixed."),
+            ],
+        );
+        write(
+            "20260102-000000-2",
+            &[Message::text(Role::User, "write docs")],
+        );
         let desktop = d.path().join("desktop.json");
         std::fs::write(
             &desktop,
             serde_json::to_string(&json!({ "sessions": { "20260101-000000-1": { "root": proj, "customTitle": "Login" } } })).unwrap(),
         )
         .unwrap();
-        let src = Sources { sessions: Some(sessions), desktop: Some(desktop), projects: vec![other.clone()] };
+        let src = Sources {
+            sessions: Some(sessions),
+            desktop: Some(desktop),
+            projects: vec![other.clone()],
+        };
         let l = Localizer::new(kor_i18n::Lang::En);
         let v = feed(&l, &src, None, 5, &[("w1".into(), "deploy?".into())]);
-        let titles: Vec<&str> = v["sessions"].as_array().unwrap().iter().map(|s| s["title"].as_str().unwrap()).collect();
-        assert_eq!(titles, ["write docs", "Login"], "newest first, custom title wins");
+        let titles: Vec<&str> = v["sessions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|s| s["title"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            titles,
+            ["write docs", "Login"],
+            "newest first, custom title wins"
+        );
         assert_eq!(v["sessions"][1]["url"], "kor://resume?id=20260101-000000-1");
-        let names: Vec<&str> = v["projects"].as_array().unwrap().iter().map(|p| p["name"].as_str().unwrap()).collect();
+        let names: Vec<&str> = v["projects"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|p| p["name"].as_str().unwrap())
+            .collect();
         assert_eq!(names, ["api-server", "web"]);
-        assert!(v["projects"][0]["url"].as_str().unwrap().starts_with("kor://open?path="));
+        assert!(
+            v["projects"][0]["url"]
+                .as_str()
+                .unwrap()
+                .starts_with("kor://open?path=")
+        );
         assert_eq!(v["waiting"][0]["id"], "w1");
         assert!(v["ask"].is_null());
         let v = feed(&l, &src, Some("login fix"), 5, &[]);

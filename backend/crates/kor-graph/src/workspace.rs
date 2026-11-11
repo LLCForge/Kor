@@ -387,7 +387,8 @@ pub fn changed_files(root: &Path, base: Option<&str>) -> Result<Vec<PathBuf>, St
 }
 
 fn git(root: &Path, args: &[&str]) -> Result<Vec<String>, String> {
-    let o = std::process::Command::new("git").no_window()
+    let o = std::process::Command::new("git")
+        .no_window()
         .args(args)
         .current_dir(root)
         .output()

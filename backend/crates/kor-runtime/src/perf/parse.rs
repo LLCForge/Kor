@@ -62,7 +62,10 @@ fn gunzip(bytes: &[u8]) -> Result<Vec<u8>, String> {
 
 /// Guess the format from the content.
 pub fn detect(bytes: &[u8]) -> Option<Format> {
-    let start = bytes.iter().position(|b| !b.is_ascii_whitespace()).unwrap_or(0);
+    let start = bytes
+        .iter()
+        .position(|b| !b.is_ascii_whitespace())
+        .unwrap_or(0);
     let head = &bytes[start..];
     if head.first() == Some(&b'{') {
         let v: Value = serde_json::from_slice(bytes).ok()?;
@@ -95,16 +98,24 @@ pub fn detect(bytes: &[u8]) -> Option<Format> {
 pub fn parse_file(path: &Path) -> Result<Parsed, String> {
     let meta = std::fs::metadata(path).map_err(|e| format!("{}: {e}", path.display()))?;
     if meta.len() > MAX_BYTES {
-        return Err(format!("{}: larger than {} MiB", path.display(), MAX_BYTES >> 20));
+        return Err(format!(
+            "{}: larger than {} MiB",
+            path.display(),
+            MAX_BYTES >> 20
+        ));
     }
     let mut bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     if bytes.starts_with(&[0x1f, 0x8b]) {
         bytes = gunzip(&bytes)?;
     }
-    let format = detect(&bytes).ok_or_else(|| format!("{}: unknown profile format", path.display()))?;
+    let format =
+        detect(&bytes).ok_or_else(|| format!("{}: unknown profile format", path.display()))?;
     let mut syms = None;
     if format == Format::Firefox {
-        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let stem = name.trim_end_matches(".gz").trim_end_matches(".json");
         for cand in [format!("{stem}.syms.json"), format!("{name}.syms.json")] {
             if let Ok(s) = std::fs::read(path.with_file_name(cand)) {
@@ -118,7 +129,8 @@ pub fn parse_file(path: &Path) -> Result<Parsed, String> {
 
 /// Parse `bytes` known to be `format`.
 pub fn parse(bytes: &[u8], format: Format, syms: Option<&Value>) -> Result<Parsed, String> {
-    let json = || serde_json::from_slice::<Value>(bytes).map_err(|e| format!("{}: {e}", format.as_str()));
+    let json =
+        || serde_json::from_slice::<Value>(bytes).map_err(|e| format!("{}: {e}", format.as_str()));
     let text = || String::from_utf8_lossy(bytes);
     let mut out = Parsed {
         format: Some(format),
@@ -133,7 +145,11 @@ pub fn parse(bytes: &[u8], format: Format, syms: Option<&Value>) -> Result<Parse
         Format::ChromeHeap => out.memory = Some(chrome_heap(&json()?)?),
         Format::Firefox => out.cpu = Some(firefox(&json()?, syms)?),
         Format::Pprof => {
-            let raw = if bytes.starts_with(&[0x1f, 0x8b]) { gunzip(bytes)? } else { bytes.to_vec() };
+            let raw = if bytes.starts_with(&[0x1f, 0x8b]) {
+                gunzip(bytes)?
+            } else {
+                bytes.to_vec()
+            };
             let (p, memory) = super::pprof::parse(&raw)?;
             if memory {
                 out.memory = Some(p);
@@ -184,7 +200,9 @@ pub fn collapsed(text: &str) -> Profile {
             };
             continue;
         }
-        let Some((stack, n)) = collapsed_line(l) else { continue };
+        let Some((stack, n)) = collapsed_line(l) else {
+            continue;
+        };
         let s = stack
             .split(';')
             .map(|f| {
@@ -199,7 +217,10 @@ pub fn collapsed(text: &str) -> Profile {
 
 fn is_perf_frame(l: &str) -> bool {
     let t = l.trim_start();
-    l.starts_with(['\t', ' ']) && t.split_whitespace().next().is_some_and(|a| a.len() >= 4 && a.bytes().all(|b| b.is_ascii_hexdigit()))
+    l.starts_with(['\t', ' '])
+        && t.split_whitespace()
+            .next()
+            .is_some_and(|a| a.len() >= 4 && a.bytes().all(|b| b.is_ascii_hexdigit()))
 }
 
 /// `perf script` output: a header line per sample, then frames leaf first
@@ -257,9 +278,20 @@ pub fn mac_sample(text: &str) -> Profile {
             continue;
         }
         let rest = &l[indent..];
-        let Some((n, body)) = rest.split_once(' ') else { continue };
-        let Ok(count) = n.parse::<u64>() else { continue };
-        let name = body.split("  (in ").next().unwrap_or(body).split("  ").next().unwrap_or(body).trim();
+        let Some((n, body)) = rest.split_once(' ') else {
+            continue;
+        };
+        let Ok(count) = n.parse::<u64>() else {
+            continue;
+        };
+        let name = body
+            .split("  (in ")
+            .next()
+            .unwrap_or(body)
+            .split("  ")
+            .next()
+            .unwrap_or(body)
+            .trim();
         let loc = body.split_whitespace().last().and_then(|t| {
             let (f, ln) = t.rsplit_once(':')?;
             Some((f, ln.parse::<u32>().ok()?))
@@ -306,19 +338,34 @@ fn speedscope_unit(u: &str) -> (Unit, f64) {
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // non-negative, rounded
 fn weight(x: f64) -> u64 {
-    if x.is_finite() && x > 0.0 { x.round() as u64 } else { 0 }
+    if x.is_finite() && x > 0.0 {
+        x.round() as u64
+    } else {
+        0
+    }
 }
 
 /// Speedscope file: `shared.frames` and `profiles` (sampled or evented).
 pub fn speedscope(v: &Value) -> Result<Profile, String> {
-    let frames = v["shared"]["frames"].as_array().ok_or("speedscope: no shared.frames")?;
+    let frames = v["shared"]["frames"]
+        .as_array()
+        .ok_or("speedscope: no shared.frames")?;
     let profiles = v["profiles"].as_array().ok_or("speedscope: no profiles")?;
-    let unit = profiles.first().and_then(|p| p["unit"].as_str()).unwrap_or("none");
+    let unit = profiles
+        .first()
+        .and_then(|p| p["unit"].as_str())
+        .unwrap_or("none");
     let (unit, k) = speedscope_unit(unit);
     let mut p = Profile::new(unit);
     let ids: Vec<u32> = frames
         .iter()
-        .map(|f| p.frame(f["name"].as_str().unwrap_or(""), f["file"].as_str(), f["line"].as_u64().and_then(|l| u32::try_from(l).ok())))
+        .map(|f| {
+            p.frame(
+                f["name"].as_str().unwrap_or(""),
+                f["file"].as_str(),
+                f["line"].as_u64().and_then(|l| u32::try_from(l).ok()),
+            )
+        })
         .collect();
     let map = |i: &Value| u32_of(i).and_then(|i| ids.get(i as usize).copied());
     for prof in profiles {
@@ -327,8 +374,14 @@ pub fn speedscope(v: &Value) -> Result<Profile, String> {
                 let samples = prof["samples"].as_array().ok_or("speedscope: no samples")?;
                 let weights = prof["weights"].as_array();
                 for (i, s) in samples.iter().enumerate() {
-                    let stack: Vec<u32> = s.as_array().map(|a| a.iter().filter_map(map).collect()).unwrap_or_default();
-                    let w = weights.and_then(|w| w.get(i)).and_then(Value::as_f64).unwrap_or(1.0);
+                    let stack: Vec<u32> = s
+                        .as_array()
+                        .map(|a| a.iter().filter_map(map).collect())
+                        .unwrap_or_default();
+                    let w = weights
+                        .and_then(|w| w.get(i))
+                        .and_then(Value::as_f64)
+                        .unwrap_or(1.0);
                     p.add(stack, weight(w * k));
                 }
             }
@@ -366,7 +419,10 @@ fn call_frame(p: &mut Profile, cf: &Value) -> Option<u32> {
     }
     let url = cf["url"].as_str().filter(|u| !u.is_empty());
     // Chrome line numbers are 0-based; -1 means unknown.
-    let line = cf["lineNumber"].as_i64().filter(|l| *l >= 0).and_then(|l| u32::try_from(l + 1).ok());
+    let line = cf["lineNumber"]
+        .as_i64()
+        .filter(|l| *l >= 0)
+        .and_then(|l| u32::try_from(l + 1).ok());
     let name = if name.is_empty() {
         url.map_or("(anonymous)", |u| u.rsplit('/').next().unwrap_or(u))
     } else {
@@ -383,7 +439,12 @@ pub fn chrome_cpu(v: &Value) -> Result<Profile, String> {
     let mut frame: HashMap<u64, Option<u32>> = HashMap::new();
     for n in nodes {
         let id = n["id"].as_u64().ok_or("cpuprofile: node without id")?;
-        for c in n["children"].as_array().into_iter().flatten().filter_map(Value::as_u64) {
+        for c in n["children"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_u64)
+        {
             parent.insert(c, id);
         }
         frame.insert(id, call_frame(&mut p, &n["callFrame"]));
@@ -407,7 +468,10 @@ pub fn chrome_cpu(v: &Value) -> Result<Profile, String> {
     let samples = v["samples"].as_array().filter(|s| !s.is_empty());
     let mut counts: HashMap<u64, u64> = HashMap::new();
     match samples {
-        Some(s) => s.iter().filter_map(Value::as_u64).for_each(|id| *counts.entry(id).or_default() += 1),
+        Some(s) => s
+            .iter()
+            .filter_map(Value::as_u64)
+            .for_each(|id| *counts.entry(id).or_default() += 1),
         None => nodes.iter().for_each(|n| {
             if let (Some(id), Some(h)) = (n["id"].as_u64(), n["hitCount"].as_u64()) {
                 counts.insert(id, h);
@@ -449,22 +513,37 @@ pub fn chrome_heap(v: &Value) -> Result<Profile, String> {
 
 /// Strings of the Firefox processed format: per thread (`stringArray`/`stringTable`) or shared.
 fn strings<'a>(profile: &'a Value, thread: &'a Value) -> Vec<&'a str> {
-    [&thread["stringArray"], &thread["stringTable"], &profile["shared"]["stringArray"]]
-        .into_iter()
-        .find_map(Value::as_array)
-        .map(|a| a.iter().map(|s| s.as_str().unwrap_or("")).collect())
-        .unwrap_or_default()
+    [
+        &thread["stringArray"],
+        &thread["stringTable"],
+        &profile["shared"]["stringArray"],
+    ]
+    .into_iter()
+    .find_map(Value::as_array)
+    .map(|a| a.iter().map(|s| s.as_str().unwrap_or("")).collect())
+    .unwrap_or_default()
 }
 
 /// The presymbolication sidecar: library debug name → sorted (rva, size, name, file, line).
 type SymTable = HashMap<String, Vec<(u64, u64, String, Option<String>, Option<u32>)>>;
 
 fn sym_table(syms: &Value) -> SymTable {
-    let st: Vec<&str> = syms["string_table"].as_array().map(|a| a.iter().map(|s| s.as_str().unwrap_or("")).collect()).unwrap_or_default();
-    let text = |v: &Value| v.as_str().map(str::to_owned).or_else(|| v.as_u64().and_then(|i| st.get(usize::try_from(i).ok()?)).map(|s| (*s).to_owned()));
+    let st: Vec<&str> = syms["string_table"]
+        .as_array()
+        .map(|a| a.iter().map(|s| s.as_str().unwrap_or("")).collect())
+        .unwrap_or_default();
+    let text = |v: &Value| {
+        v.as_str().map(str::to_owned).or_else(|| {
+            v.as_u64()
+                .and_then(|i| st.get(usize::try_from(i).ok()?))
+                .map(|s| (*s).to_owned())
+        })
+    };
     let mut out = SymTable::new();
     for lib in syms["data"].as_array().into_iter().flatten() {
-        let Some(name) = lib["debug_name"].as_str() else { continue };
+        let Some(name) = lib["debug_name"].as_str() else {
+            continue;
+        };
         let mut v: Vec<_> = lib["symbol_table"]
             .as_array()
             .into_iter()
@@ -475,7 +554,9 @@ fn sym_table(syms: &Value) -> SymTable {
                 let sym = text(&s["symbol"])?;
                 let inner = s["frames"].as_array().and_then(|f| f.last());
                 let file = inner.and_then(|f| text(&f["file"]));
-                let line = inner.and_then(|f| f["line"].as_u64()).and_then(|l| u32::try_from(l).ok());
+                let line = inner
+                    .and_then(|f| f["line"].as_u64())
+                    .and_then(|l| u32::try_from(l).ok());
                 Some((rva, size, sym, file, line))
             })
             .collect();
@@ -496,10 +577,23 @@ pub fn firefox(v: &Value, syms: Option<&Value>) -> Result<Profile, String> {
         let s = strings(v, t);
         let col = |table: &str, c: &str| t[table][c].as_array().cloned().unwrap_or_default();
         let (st_frame, st_prefix) = (col("stackTable", "frame"), col("stackTable", "prefix"));
-        let (fr_func, fr_addr, fr_line) = (col("frameTable", "func"), col("frameTable", "address"), col("frameTable", "line"));
-        let (fn_name, fn_file, fn_line, fn_res) = (col("funcTable", "name"), col("funcTable", "fileName"), col("funcTable", "lineNumber"), col("funcTable", "resource"));
+        let (fr_func, fr_addr, fr_line) = (
+            col("frameTable", "func"),
+            col("frameTable", "address"),
+            col("frameTable", "line"),
+        );
+        let (fn_name, fn_file, fn_line, fn_res) = (
+            col("funcTable", "name"),
+            col("funcTable", "fileName"),
+            col("funcTable", "lineNumber"),
+            col("funcTable", "resource"),
+        );
         let res_lib = col("resourceTable", "lib");
-        let str_at = |v: Option<&Value>| v.and_then(Value::as_u64).and_then(|i| s.get(usize::try_from(i).ok()?)).copied();
+        let str_at = |v: Option<&Value>| {
+            v.and_then(Value::as_u64)
+                .and_then(|i| s.get(usize::try_from(i).ok()?))
+                .copied()
+        };
         // Frame index → Kor frame.
         let mut memo: HashMap<usize, u32> = HashMap::new();
         let mut frame_of = |p: &mut Profile, fi: usize| -> Option<u32> {
@@ -509,10 +603,19 @@ pub fn firefox(v: &Value, syms: Option<&Value>) -> Result<Profile, String> {
             let func = usize::try_from(fr_func.get(fi)?.as_u64()?).ok()?;
             let mut name = str_at(fn_name.get(func)).unwrap_or("").to_owned();
             let mut file = str_at(fn_file.get(func)).map(str::to_owned);
-            let mut line = fn_line.get(func).and_then(Value::as_u64).or_else(|| fr_line.get(fi).and_then(Value::as_u64)).and_then(|l| u32::try_from(l).ok());
+            let mut line = fn_line
+                .get(func)
+                .and_then(Value::as_u64)
+                .or_else(|| fr_line.get(fi).and_then(Value::as_u64))
+                .and_then(|l| u32::try_from(l).ok());
             if name.starts_with("0x") || name.is_empty() {
-                let lib = fn_res.get(func).and_then(Value::as_u64).and_then(|r| res_lib.get(usize::try_from(r).ok()?)).and_then(Value::as_u64);
-                let dbg = lib.and_then(|l| libs?.get(usize::try_from(l).ok()?)?["debugName"].as_str());
+                let lib = fn_res
+                    .get(func)
+                    .and_then(Value::as_u64)
+                    .and_then(|r| res_lib.get(usize::try_from(r).ok()?))
+                    .and_then(Value::as_u64);
+                let dbg =
+                    lib.and_then(|l| libs?.get(usize::try_from(l).ok()?)?["debugName"].as_str());
                 let addr = fr_addr.get(fi).and_then(Value::as_u64);
                 if let (Some(dbg), Some(addr)) = (dbg, addr)
                     && let Some(list) = table.get(dbg)
@@ -538,14 +641,20 @@ pub fn firefox(v: &Value, syms: Option<&Value>) -> Result<Profile, String> {
         let weights = samples["weight"].as_array();
         let mut cache: HashMap<usize, Vec<u32>> = HashMap::new();
         for (i, st) in stacks.iter().enumerate() {
-            let Some(mut si) = st.as_u64().and_then(|x| usize::try_from(x).ok()) else { continue };
+            let Some(mut si) = st.as_u64().and_then(|x| usize::try_from(x).ok()) else {
+                continue;
+            };
             let leaf = si;
             let stack = if let Some(s) = cache.get(&leaf) {
                 s.clone()
             } else {
                 let mut s = Vec::new();
                 for _ in 0..4096 {
-                    if let Some(f) = st_frame.get(si).and_then(Value::as_u64).and_then(|f| frame_of(&mut p, usize::try_from(f).ok()?)) {
+                    if let Some(f) = st_frame
+                        .get(si)
+                        .and_then(Value::as_u64)
+                        .and_then(|f| frame_of(&mut p, usize::try_from(f).ok()?))
+                    {
                         s.push(f);
                     }
                     match st_prefix.get(si).and_then(Value::as_u64) {
@@ -557,7 +666,10 @@ pub fn firefox(v: &Value, syms: Option<&Value>) -> Result<Profile, String> {
                 cache.insert(leaf, s.clone());
                 s
             };
-            let w = weights.and_then(|w| w.get(i)).and_then(Value::as_f64).unwrap_or(1.0);
+            let w = weights
+                .and_then(|w| w.get(i))
+                .and_then(Value::as_f64)
+                .unwrap_or(1.0);
             p.add(stack, weight(w));
         }
     }
@@ -596,7 +708,10 @@ mod tests {
         assert_eq!(p.total(), 3);
         assert_eq!(top_name(&p), ("hot::fib", 2));
         let top = p.top(3);
-        let main = top.iter().find(|s| p.frames[s.frame as usize].name == "main").unwrap();
+        let main = top
+            .iter()
+            .find(|s| p.frames[s.frame as usize].name == "main")
+            .unwrap();
         assert_eq!(main.total_weight, 3);
     }
 
@@ -613,8 +728,12 @@ mod tests {
 
     #[test]
     fn speedscope_sampled_and_evented() {
-        let v: Value = serde_json::from_str(include_str!("fixtures/profile.speedscope.json")).unwrap();
-        assert_eq!(detect(include_bytes!("fixtures/profile.speedscope.json")), Some(Format::Speedscope));
+        let v: Value =
+            serde_json::from_str(include_str!("fixtures/profile.speedscope.json")).unwrap();
+        assert_eq!(
+            detect(include_bytes!("fixtures/profile.speedscope.json")),
+            Some(Format::Speedscope)
+        );
         let p = speedscope(&v).unwrap();
         assert_eq!(p.unit, Unit::Microseconds);
         // sampled: 3 × 10 ms in fib, 1 × 10 ms in main; evented: main 0..5, fib 1..4 (ms)
@@ -634,7 +753,10 @@ mod tests {
         assert_eq!(p.total(), 6);
         assert_eq!(top_name(&p), ("fib", 4));
         let f = &p.frames[p.top(1)[0].frame as usize];
-        assert_eq!((f.file.as_deref(), f.line), (Some("file:///C:/proj/a.js"), Some(1)));
+        assert_eq!(
+            (f.file.as_deref(), f.line),
+            (Some("file:///C:/proj/a.js"), Some(1))
+        );
         let h = include_bytes!("fixtures/node.heapprofile");
         let parsed = parse(h, detect(h).unwrap(), None).unwrap();
         let m = parsed.memory.unwrap();
@@ -646,7 +768,10 @@ mod tests {
     fn firefox_with_sidecar() {
         let v: Value = serde_json::from_str(include_str!("fixtures/samply.json")).unwrap();
         let syms: Value = serde_json::from_str(include_str!("fixtures/samply.syms.json")).unwrap();
-        assert_eq!(detect(include_bytes!("fixtures/samply.json")), Some(Format::Firefox));
+        assert_eq!(
+            detect(include_bytes!("fixtures/samply.json")),
+            Some(Format::Firefox)
+        );
         let p = firefox(&v, Some(&syms)).unwrap();
         assert_eq!(p.total(), 4);
         assert_eq!(top_name(&p), ("hot::fib", 3));
@@ -661,18 +786,37 @@ mod tests {
     fn pprof_cpu_and_heap_from_go() {
         // Real `go test -cpuprofile/-memprofile` output (Go 1.2x, gzip). Reference numbers from
         // `go tool pprof -top`: 5 samples (50 ms); hot.Alloc 92.26% of alloc_space.
-        let cpu = parse(include_bytes!("fixtures/go-cpu.pprof"), Format::Pprof, None).unwrap().cpu.unwrap();
+        let cpu = parse(include_bytes!("fixtures/go-cpu.pprof"), Format::Pprof, None)
+            .unwrap()
+            .cpu
+            .unwrap();
         assert_eq!((cpu.unit, cpu.total()), (Unit::Samples, 5));
-        let fib = cpu.top(50).into_iter().find(|s| cpu.frames[s.frame as usize].name == "hot.Fib").unwrap();
+        let fib = cpu
+            .top(50)
+            .into_iter()
+            .find(|s| cpu.frames[s.frame as usize].name == "hot.Fib")
+            .unwrap();
         assert_eq!(fib.self_weight, 1);
-        assert!(cpu.frames[fib.frame as usize].file.as_deref().unwrap().ends_with("hot.go"));
-        let mem = parse(include_bytes!("fixtures/go-mem.pprof"), Format::Pprof, None).unwrap().memory.unwrap();
+        assert!(
+            cpu.frames[fib.frame as usize]
+                .file
+                .as_deref()
+                .unwrap()
+                .ends_with("hot.go")
+        );
+        let mem = parse(include_bytes!("fixtures/go-mem.pprof"), Format::Pprof, None)
+            .unwrap()
+            .memory
+            .unwrap();
         assert_eq!(mem.unit, Unit::Bytes);
         let (name, w) = top_name(&mem);
         assert_eq!(name, "hot.Alloc");
         let share = w * 10_000 / mem.total();
         assert!((9_200..=9_250).contains(&share), "{share}");
         assert!(mem.count.unwrap() > 0);
-        assert_eq!(detect(&gunzip(include_bytes!("fixtures/go-cpu.pprof")).unwrap()), Some(Format::Pprof));
+        assert_eq!(
+            detect(&gunzip(include_bytes!("fixtures/go-cpu.pprof")).unwrap()),
+            Some(Format::Pprof)
+        );
     }
 }

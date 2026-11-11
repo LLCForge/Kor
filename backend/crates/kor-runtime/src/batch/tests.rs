@@ -23,32 +23,78 @@ fn name(s: &str) -> String {
 #[test]
 fn model_answers_are_parsed_fenced_or_bare() {
     let a = "Plan:\n```json\n[{\"op\":\"rename\",\"from\":\"a.jpg\",\"to\":\"2024-a.jpg\"}]\n```";
-    assert_eq!(parse_ops(a).unwrap(), vec![Op::Rename { from: name("a.jpg"), to: name("2024-a.jpg") }]);
+    assert_eq!(
+        parse_ops(a).unwrap(),
+        vec![Op::Rename {
+            from: name("a.jpg"),
+            to: name("2024-a.jpg")
+        }]
+    );
     assert!(parse_ops("yapamam").is_err());
-    assert!(parse_ops("[{\"op\":\"delete\",\"file\":\"a\"}]").is_err(), "there is no delete");
+    assert!(
+        parse_ops("[{\"op\":\"delete\",\"file\":\"a\"}]").is_err(),
+        "there is no delete"
+    );
     let c = parse_ops("[{\"op\":\"csv_clean\",\"file\":\"x.csv\"}]").unwrap();
-    assert!(matches!(&c[0], Op::CsvClean { trim: true, drop_empty: true, dedupe: false, .. }));
+    assert!(matches!(
+        &c[0],
+        Op::CsvClean {
+            trim: true,
+            drop_empty: true,
+            dedupe: false,
+            ..
+        }
+    ));
 }
 
 #[test]
 fn validation_numbers_clashes_and_keeps_targets_in_the_selection() {
     let d = tempfile::tempdir().unwrap();
-    let sel = files(d.path(), &[("a.jpg", b"1"), ("b.jpg", b"2"), ("hedef.jpg", b"var")]);
+    let sel = files(
+        d.path(),
+        &[("a.jpg", b"1"), ("b.jpg", b"2"), ("hedef.jpg", b"var")],
+    );
     let other = d.path().join("baska.txt");
     std::fs::write(&other, "x").unwrap();
     let plan = validate(
         &sel[..2],
         vec![
-            Op::Rename { from: name("a.jpg"), to: name("hedef.jpg") },
-            Op::Rename { from: name("b.jpg"), to: name("hedef.jpg") },
-            Op::Rename { from: name("baska.txt"), to: name("y.txt") },
-            Op::Rename { from: name("a.jpg"), to: name("../kacis.jpg") },
-            Op::Rename { from: sel[1].display().to_string(), to: name("alt/c.jpg") },
-            Op::ConvertImage { from: name("a.jpg"), to: name("a.exe"), width: None, height: None },
+            Op::Rename {
+                from: name("a.jpg"),
+                to: name("hedef.jpg"),
+            },
+            Op::Rename {
+                from: name("b.jpg"),
+                to: name("hedef.jpg"),
+            },
+            Op::Rename {
+                from: name("baska.txt"),
+                to: name("y.txt"),
+            },
+            Op::Rename {
+                from: name("a.jpg"),
+                to: name("../kacis.jpg"),
+            },
+            Op::Rename {
+                from: sel[1].display().to_string(),
+                to: name("alt/c.jpg"),
+            },
+            Op::ConvertImage {
+                from: name("a.jpg"),
+                to: name("a.exe"),
+                width: None,
+                height: None,
+            },
         ],
     );
     let targets: Vec<PathBuf> = plan.steps.iter().map(|s| s.target.clone()).collect();
-    assert_eq!(targets, vec![d.path().join("hedef (2).jpg"), d.path().join("hedef (3).jpg")]);
+    assert_eq!(
+        targets,
+        vec![
+            d.path().join("hedef (2).jpg"),
+            d.path().join("hedef (3).jpg")
+        ]
+    );
     // `b.jpg` is already renamed by step 2; outside file, `..`, bad type are refused.
     assert_eq!(plan.warnings.len(), 4, "{:?}", plan.warnings);
     assert_eq!(plan.rows[0].op, "rename");
@@ -61,7 +107,9 @@ fn apply_runs_every_operation_and_undo_reverts_the_batch() {
     let undo = d.path().join("undo");
     let dir = d.path().join("w");
     let mut png = std::io::Cursor::new(Vec::new());
-    image::DynamicImage::new_rgb8(40, 20).write_to(&mut png, image::ImageFormat::Png).unwrap();
+    image::DynamicImage::new_rgb8(40, 20)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
     // PNG with a text chunk inserted after IHDR (8 sig + 25 IHDR).
     let mut tagged = png.get_ref()[..33].to_vec();
     let text = b"tEXtComment\0gizli";
@@ -81,12 +129,38 @@ fn apply_runs_every_operation_and_undo_reverts_the_batch() {
         ],
     );
     let ops = vec![
-        Op::ConvertImage { from: name("foto 1.png"), to: name("foto-1.jpg"), width: Some(20), height: None },
-        Op::StripMetadata { from: name("foto 1.png"), to: None },
-        Op::Replace { file: name("not.txt"), find: name("dunya"), replace: name("dünya"), regex: false },
-        Op::Reencode { file: name("eski.txt"), encoding: name("windows-1254") },
-        Op::CsvClean { file: name("veri.csv"), to: None, trim: true, drop_empty: true, dedupe: true, delimiter: None },
-        Op::Rename { from: name("tasi.txt"), to: name("arsiv/tasindi.txt") },
+        Op::ConvertImage {
+            from: name("foto 1.png"),
+            to: name("foto-1.jpg"),
+            width: Some(20),
+            height: None,
+        },
+        Op::StripMetadata {
+            from: name("foto 1.png"),
+            to: None,
+        },
+        Op::Replace {
+            file: name("not.txt"),
+            find: name("dunya"),
+            replace: name("dünya"),
+            regex: false,
+        },
+        Op::Reencode {
+            file: name("eski.txt"),
+            encoding: name("windows-1254"),
+        },
+        Op::CsvClean {
+            file: name("veri.csv"),
+            to: None,
+            trim: true,
+            drop_empty: true,
+            dedupe: true,
+            delimiter: None,
+        },
+        Op::Rename {
+            from: name("tasi.txt"),
+            to: name("arsiv/tasindi.txt"),
+        },
     ];
     let plan = validate(&sel, ops);
     assert!(plan.warnings.is_empty(), "{:?}", plan.warnings);
@@ -96,15 +170,29 @@ fn apply_runs_every_operation_and_undo_reverts_the_batch() {
     let jpg = image::open(dir.join("foto-1.jpg")).unwrap();
     assert_eq!((jpg.width(), jpg.height()), (20, 10));
     let stripped = std::fs::read(dir.join("foto 1.png")).unwrap();
-    assert!(!stripped.windows(4).any(|w| w == b"tEXt") && image::load_from_memory(&stripped).is_ok());
-    assert_eq!(std::fs::read_to_string(dir.join("not.txt")).unwrap(), "merhaba dünya, dünya");
-    assert_eq!(std::fs::read_to_string(dir.join("eski.txt")).unwrap(), "çığ şöyle");
-    assert_eq!(std::fs::read_to_string(dir.join("veri.csv")).unwrap(), "ad,yas\nali,3\nveli,4;5\n");
+    assert!(
+        !stripped.windows(4).any(|w| w == b"tEXt") && image::load_from_memory(&stripped).is_ok()
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("not.txt")).unwrap(),
+        "merhaba dünya, dünya"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("eski.txt")).unwrap(),
+        "çığ şöyle"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("veri.csv")).unwrap(),
+        "ad,yas\nali,3\nveli,4;5\n"
+    );
     assert!(dir.join("arsiv/tasindi.txt").is_file() && !dir.join("tasi.txt").exists());
 
     // `kor undo` (the same journal) restores everything and removes new files.
     let id = out.undo.unwrap();
-    let j = kor_tools::undo::list(&undo).into_iter().find(|j| j.session == id).unwrap();
+    let j = kor_tools::undo::list(&undo)
+        .into_iter()
+        .find(|j| j.session == id)
+        .unwrap();
     let r = kor_tools::undo::undo(&j.dir).unwrap();
     assert!(r.failed.is_empty(), "{r:?}");
     assert_eq!(std::fs::read(dir.join("foto 1.png")).unwrap(), tagged);
@@ -116,7 +204,9 @@ fn apply_runs_every_operation_and_undo_reverts_the_batch() {
 #[test]
 fn jpeg_metadata_is_stripped_losslessly() {
     let mut jpg = std::io::Cursor::new(Vec::new());
-    image::DynamicImage::new_rgb8(8, 8).write_to(&mut jpg, image::ImageFormat::Jpeg).unwrap();
+    image::DynamicImage::new_rgb8(8, 8)
+        .write_to(&mut jpg, image::ImageFormat::Jpeg)
+        .unwrap();
     let raw = jpg.into_inner();
     let mut tagged = raw[..2].to_vec();
     let exif = b"Exif\0\0konum";
@@ -138,7 +228,10 @@ fn pdfs_merge_in_order() {
         let kids: Vec<Object> = (0..n)
             .map(|_| {
                 let c = doc.add_object(Stream::new(dictionary! {}, b"".to_vec()));
-                doc.add_object(dictionary! { "Type" => "Page", "Parent" => pages_id, "Contents" => c }).into()
+                doc.add_object(
+                    dictionary! { "Type" => "Page", "Parent" => pages_id, "Contents" => c },
+                )
+                .into()
             })
             .collect();
         doc.objects.insert(
@@ -155,11 +248,29 @@ fn pdfs_merge_in_order() {
     make(&d.path().join("a.pdf"), 2);
     make(&d.path().join("b.pdf"), 3);
     let sel = vec![d.path().join("a.pdf"), d.path().join("b.pdf")];
-    let plan = validate(&sel, vec![Op::PdfMerge { files: vec![name("a.pdf"), name("b.pdf")], to: name("hepsi.pdf") }]);
+    let plan = validate(
+        &sel,
+        vec![Op::PdfMerge {
+            files: vec![name("a.pdf"), name("b.pdf")],
+            to: name("hepsi.pdf"),
+        }],
+    );
     let out = apply(&plan, None);
     assert!(out.failed.is_empty(), "{:?}", out.failed);
-    assert_eq!(Document::load(d.path().join("hepsi.pdf")).unwrap().get_pages().len(), 5);
-    let bad = validate(&sel, vec![Op::PdfMerge { files: vec![name("a.pdf")], to: name("x.pdf") }]);
+    assert_eq!(
+        Document::load(d.path().join("hepsi.pdf"))
+            .unwrap()
+            .get_pages()
+            .len(),
+        5
+    );
+    let bad = validate(
+        &sel,
+        vec![Op::PdfMerge {
+            files: vec![name("a.pdf")],
+            to: name("x.pdf"),
+        }],
+    );
     assert_eq!(bad.warnings.len(), 1);
 }
 
@@ -170,9 +281,36 @@ fn media_steps_never_pass_raw_arguments() {
     let plan = validate(
         &sel,
         vec![
-            Op::Media { from: name("v.mp4"), to: name("v.webm"), width: Some(640), height: None, audio_bitrate_k: None, video_bitrate_k: None, start_s: Some(1.5), duration_s: None },
-            Op::Media { from: name("v.mp4"), to: name("v"), width: None, height: None, audio_bitrate_k: None, video_bitrate_k: None, start_s: None, duration_s: None },
-            Op::Media { from: name("v.mp4"), to: name("w.mp3"), width: None, height: None, audio_bitrate_k: None, video_bitrate_k: None, start_s: Some(-1.0), duration_s: None },
+            Op::Media {
+                from: name("v.mp4"),
+                to: name("v.webm"),
+                width: Some(640),
+                height: None,
+                audio_bitrate_k: None,
+                video_bitrate_k: None,
+                start_s: Some(1.5),
+                duration_s: None,
+            },
+            Op::Media {
+                from: name("v.mp4"),
+                to: name("v"),
+                width: None,
+                height: None,
+                audio_bitrate_k: None,
+                video_bitrate_k: None,
+                start_s: None,
+                duration_s: None,
+            },
+            Op::Media {
+                from: name("v.mp4"),
+                to: name("w.mp3"),
+                width: None,
+                height: None,
+                audio_bitrate_k: None,
+                video_bitrate_k: None,
+                start_s: Some(-1.0),
+                duration_s: None,
+            },
         ],
     );
     assert_eq!(plan.steps.len(), 1);
@@ -182,7 +320,15 @@ fn media_steps_never_pass_raw_arguments() {
 #[test]
 fn globs_expand_relative_to_the_working_folder() {
     let d = tempfile::tempdir().unwrap();
-    files(d.path(), &[("a.jpg", b""), ("b.JPG", b""), ("c.png", b""), ("alt/d.jpg", b"")]);
+    files(
+        d.path(),
+        &[
+            ("a.jpg", b""),
+            ("b.JPG", b""),
+            ("c.png", b""),
+            ("alt/d.jpg", b""),
+        ],
+    );
     let got = expand(&[name("*.jpg")], d.path()).unwrap();
     assert_eq!(got, vec![d.path().join("a.jpg")]);
     let got = expand(&[name("**/*.jpg"), name("c.png")], d.path()).unwrap();
@@ -204,7 +350,13 @@ impl Planner for Scripted {
 async fn plan_asks_once_and_validates() {
     let d = tempfile::tempdir().unwrap();
     let sel = files(d.path(), &[("a.txt", b"x")]);
-    let p = plan(&Scripted(r#"[{"op":"rename","from":"a.txt","to":"b.txt"}]"#.into()), &sel, "adını b yap").await.unwrap();
+    let p = plan(
+        &Scripted(r#"[{"op":"rename","from":"a.txt","to":"b.txt"}]"#.into()),
+        &sel,
+        "adını b yap",
+    )
+    .await
+    .unwrap();
     assert_eq!(p.steps[0].target, d.path().join("b.txt"));
     assert!(plan(&Scripted("[]".into()), &sel, "  ").await.is_err());
     assert!(plan(&Scripted("[]".into()), &[], "x").await.is_err());

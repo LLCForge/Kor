@@ -57,7 +57,10 @@ pub fn tasks_pending(l: &Layout) -> Vec<PathBuf> {
         .flatten()
         .map(|e| e.path())
         .filter(|p| {
-            let n = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            let n = p
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
             p.is_file()
                 && n.to_lowercase().ends_with(".md")
                 && !n.starts_with('.')
@@ -93,7 +96,11 @@ pub fn parse(path: &Path, name: &str, text: &str, default_root: &Path) -> Result
     let mode = match get("mode").as_deref() {
         None | Some("plan") => PermissionMode::Plan,
         Some("default" | "ask") => PermissionMode::Default,
-        Some(other) => return Err(format!("mode `{other}` is not allowed for file tasks (plan, default)")),
+        Some(other) => {
+            return Err(format!(
+                "mode `{other}` is not allowed for file tasks (plan, default)"
+            ));
+        }
     };
     let root = match get("project") {
         Some(p) => {
@@ -151,7 +158,10 @@ pub async fn run_pending(l: &Layout, runner: &dyn TaskRunner) -> Vec<TaskOutcome
                 );
                 match std::fs::write(&res, answer) {
                     Ok(()) => TaskOutcome::Done { result: res, file },
-                    Err(e) => TaskOutcome::Failed { error: e.to_string(), file },
+                    Err(e) => TaskOutcome::Failed {
+                        error: e.to_string(),
+                        file,
+                    },
                 }
             }
             Err(error) => {

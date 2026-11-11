@@ -135,11 +135,7 @@ pub fn cited_providers() -> Vec<&'static str> {
 
 /// The card of `provider` (and `model`, a model id without the provider prefix).
 pub fn card(manifest: &ProviderManifest, model: Option<&str>) -> Card {
-    card_for(
-        &manifest.id,
-        manifest.category == Category::Local,
-        model,
-    )
+    card_for(&manifest.id, manifest.category == Category::Local, model)
 }
 
 /// [`card`] without a manifest (`local` = the provider runs on this machine).
@@ -186,7 +182,12 @@ pub fn card_for(provider: &str, local: bool, model: Option<&str>) -> Card {
     // does not apply, because the gateway picks the host.
     let sub_processor = e
         .gateway
-        .then(|| model.as_deref().and_then(|m| m.split_once('/')).map(|(v, _)| v.to_owned()))
+        .then(|| {
+            model
+                .as_deref()
+                .and_then(|m| m.split_once('/'))
+                .map(|(v, _)| v.to_owned())
+        })
         .flatten();
     Card {
         provider: provider.to_owned(),
@@ -270,7 +271,11 @@ mod tests {
                     e.id,
                     s.retrieved
                 );
-                assert!(s.quote.split_whitespace().count() < 15, "{}: quote too long", e.id);
+                assert!(
+                    s.quote.split_whitespace().count() < 15,
+                    "{}: quote too long",
+                    e.id
+                );
             }
             assert!(
                 e.retention.is_none() || e.retention.as_deref() == Some("indefinite"),
@@ -298,7 +303,10 @@ mod tests {
         let c = card_for("no-such-provider", false, Some("m"));
         assert_eq!(c.training, Training::Unknown);
         assert_eq!(c.region, Region::Unknown);
-        assert_eq!(c.unmet(&PrivacyRequirement::ALL).len(), PrivacyRequirement::ALL.len());
+        assert_eq!(
+            c.unmet(&PrivacyRequirement::ALL).len(),
+            PrivacyRequirement::ALL.len()
+        );
         assert!(c.sources.is_empty());
     }
 

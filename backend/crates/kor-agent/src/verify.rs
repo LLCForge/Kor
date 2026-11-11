@@ -142,7 +142,10 @@ pub fn related_tests(root: &Path, file: &Path) -> Vec<PathBuf> {
     {
         cands.push(krate.join("tests").join(format!("{stem}.rs")));
     }
-    let mut out: Vec<PathBuf> = cands.into_iter().filter(|p| p != file && p.is_file()).collect();
+    let mut out: Vec<PathBuf> = cands
+        .into_iter()
+        .filter(|p| p != file && p.is_file())
+        .collect();
     out.dedup();
     out
 }
@@ -430,9 +433,26 @@ impl crate::Agent {
             .collect();
         // Tree-sitter first: a file that no longer parses is reported at once (line and column),
         // without waiting for the compiler, and counts as a failed round like a compiler error.
+        // Reading and parsing run off the async runtime (large files, many of them).
+        let probe = files.clone();
+        let errors: std::collections::HashMap<PathBuf, (usize, usize)> =
+            tokio::task::spawn_blocking(move || {
+                probe
+                    .into_iter()
+                    .filter_map(|f| {
+                        let lang = f
+                            .extension()
+                            .and_then(|e| e.to_str())
+                            .and_then(kor_graph::lang::Lang::from_ext)?;
+                        let src = std::fs::read_to_string(&f).ok()?;
+                        kor_graph::symbols::first_error(lang, &src).map(|at| (f, at))
+                    })
+                    .collect()
+            })
+            .await
+            .unwrap_or_default();
         files.retain(|f| {
-            let lang = f.extension().and_then(|e| e.to_str()).and_then(kor_graph::lang::Lang::from_ext);
-            let Some((line, col)) = lang.and_then(|l| std::fs::read_to_string(f).ok().and_then(|s| kor_graph::symbols::first_error(l, &s))) else {
+            let Some(&(line, col)) = errors.get(f) else {
                 return true;
             };
             let n = self.verify.failures.entry(f.clone()).or_insert(0);
@@ -472,9 +492,20 @@ impl crate::Agent {
                 );
                 continue;
             }
-            match run(&check, self.verify.timeout, &self.ctx.scrub_env, Some(&self.ctx)).await {
+            match run(
+                &check,
+                self.verify.timeout,
+                &self.ctx.scrub_env,
+                Some(&self.ctx),
+            )
+            .await
+            {
                 Outcome::Pass => {
-                    let _ = write!(out.content, "\n\n[verify] `{}`: no errors in {shown}.", check.program);
+                    let _ = write!(
+                        out.content,
+                        "\n\n[verify] `{}`: no errors in {shown}.",
+                        check.program
+                    );
                     let tests: Vec<String> = check
                         .files
                         .iter()
@@ -503,8 +534,9 @@ impl crate::Agent {
                         check.program
                     );
                     if round >= MAX_ROUNDS {
-                        out.content
-                            .push_str("\nThis was the last automatic check of this file in this turn.");
+                        out.content.push_str(
+                            "\nThis was the last automatic check of this file in this turn.",
+                        );
                     }
                 }
                 Outcome::Skipped(reason) => {
@@ -553,11 +585,24 @@ mod tests {
     fn finds_related_tests_by_name() {
         let dir = tempfile::tempdir().unwrap();
         let root = dir.path().canonicalize().unwrap();
-        for p in ["web/cart.ts", "web/cart.test.ts", "py/tax.py", "py/tests/test_tax.py", "k/Cargo.toml", "k/src/fee.rs", "k/tests/fee.rs"] {
+        for p in [
+            "web/cart.ts",
+            "web/cart.test.ts",
+            "py/tax.py",
+            "py/tests/test_tax.py",
+            "k/Cargo.toml",
+            "k/src/fee.rs",
+            "k/tests/fee.rs",
+        ] {
             std::fs::create_dir_all(root.join(p).parent().unwrap()).unwrap();
             std::fs::write(root.join(p), "").unwrap();
         }
-        let names = |f: &str| -> Vec<String> { related_tests(&root, &root.join(f)).iter().map(|p| rel(&root, p)).collect() };
+        let names = |f: &str| -> Vec<String> {
+            related_tests(&root, &root.join(f))
+                .iter()
+                .map(|p| rel(&root, p))
+                .collect()
+        };
         assert_eq!(names("web/cart.ts"), ["web/cart.test.ts"]);
         assert_eq!(names("py/tax.py"), ["py/tests/test_tax.py"]);
         assert_eq!(names("k/src/fee.rs"), ["k/tests/fee.rs"]);
@@ -582,7 +627,10 @@ mod tests {
         let js = w("web/x.js", "");
         let txt = w("notes.txt", "");
         let lone = w("loose/x.rs", "");
-        let checks = plan(&root, &[a.clone(), b, py, js, txt, lone, root.join("gone.py")]);
+        let checks = plan(
+            &root,
+            &[a.clone(), b, py, js, txt, lone, root.join("gone.py")],
+        );
         assert_eq!(checks.len(), 3, "{checks:#?}");
         assert_eq!(checks[0].program, "cargo");
         assert_eq!(checks[0].files.len(), 2, "one cargo check per package");
@@ -640,7 +688,9 @@ mod tests {
             files: vec![PathBuf::from("/p/a.py")],
             ..check
         };
-        assert!(matches!(filter(&single, "  File \"a.py\", line 1\nSyntaxError: x"), Outcome::Fail(t) if t.contains("SyntaxError")));
+        assert!(
+            matches!(filter(&single, "  File \"a.py\", line 1\nSyntaxError: x"), Outcome::Fail(t) if t.contains("SyntaxError"))
+        );
         assert_eq!(filter(&single, "Python was not found"), Outcome::Pass);
         assert!(cap(&"é".repeat(5_000)).ends_with("[output truncated]"));
     }

@@ -331,8 +331,7 @@ pub fn ranked_files(root: &Path, limit: usize) -> Option<Vec<String>> {
     if !db.is_file() {
         return None;
     }
-    let conn =
-        Connection::open_with_flags(&db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).ok()?;
+    let conn = Connection::open_with_flags(&db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY).ok()?;
     let mut st = conn
         .prepare(
             "SELECT file FROM nodes WHERE file IS NOT NULL AND kind NOT IN ('package', 'decision')
@@ -340,7 +339,9 @@ pub fn ranked_files(root: &Path, limit: usize) -> Option<Vec<String>> {
         )
         .ok()?;
     let rows = st
-        .query_map([i64_of(u64::try_from(limit).unwrap_or(u64::MAX))], |r| r.get::<_, String>(0))
+        .query_map([i64_of(u64::try_from(limit).unwrap_or(u64::MAX))], |r| {
+            r.get::<_, String>(0)
+        })
         .ok()?;
     Some(rows.filter_map(std::result::Result::ok).collect())
 }

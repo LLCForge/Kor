@@ -209,7 +209,11 @@ pub fn diff(changes: &[Change]) -> String {
     let mut out = String::new();
     for c in changes {
         if let (Ok(a), Ok(b)) = (text(&c.before), text(&c.after)) {
-            out.push_str(&crate::textdiff::unified(&c.path, a.as_deref(), b.as_deref()));
+            out.push_str(&crate::textdiff::unified(
+                &c.path,
+                a.as_deref(),
+                b.as_deref(),
+            ));
         } else {
             out.push_str("Binary file ");
             out.push_str(&c.path);
@@ -324,7 +328,11 @@ mod tests {
             .collect();
         assert_eq!(
             st,
-            [("gone.txt", "conflict"), ("new.md", "written"), ("src/a.rs", "written")]
+            [
+                ("gone.txt", "conflict"),
+                ("new.md", "written"),
+                ("src/a.rs", "written")
+            ]
         );
         assert_eq!(
             std::fs::read_to_string(src.path().join("src/a.rs")).unwrap(),

@@ -1,7 +1,7 @@
 //! Git layer: co-change and churn from bounded history, and file contents at a revision (for `diff`).
 
-use kor_platform::NoWindow as _;
 use crate::{Error, Result};
+use kor_platform::NoWindow as _;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};

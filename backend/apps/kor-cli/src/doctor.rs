@@ -63,13 +63,27 @@ pub fn run_with(ctx: &Ctx, fix: bool, yes: bool, cmd: Option<&dyn Fn() -> clap::
         for shell in completions::detected() {
             let plan = kor_platform::completions::plan(shell, &dirs);
             if kor_platform::completions::installed(&plan) {
-                println!("  ✓ {}", l.t_args("doctor-completions-ok", &args!("shell" => shell.name())));
+                println!(
+                    "  ✓ {}",
+                    l.t_args("doctor-completions-ok", &args!("shell" => shell.name()))
+                );
                 continue;
             }
-            println!("  ! {}", l.t_args("doctor-completions-missing", &args!("shell" => shell.name())));
+            println!(
+                "  ! {}",
+                l.t_args(
+                    "doctor-completions-missing",
+                    &args!("shell" => shell.name())
+                )
+            );
             match cmd {
                 // The profile-line question is asked by `install_one` itself.
-                Some(cmd) if fix && ask(l.t_args("doctor-fix-completions", &args!("shell" => shell.name()))) => {
+                Some(cmd)
+                    if fix
+                        && ask(
+                            l.t_args("doctor-fix-completions", &args!("shell" => shell.name()))
+                        ) =>
+                {
                     if !completions::install_one(l, cmd(), shell, yes) {
                         open += 1;
                     }
@@ -79,7 +93,10 @@ pub fn run_with(ctx: &Ctx, fix: bool, yes: bool, cmd: Option<&dyn Fn() -> clap::
         }
     }
     // Kor's own folders, stale locks, interrupted writes.
-    let issues = kor_runtime::prefs::find_issues(&kor_runtime::prefs::own_dirs(), std::time::Duration::from_secs(3600));
+    let issues = kor_runtime::prefs::find_issues(
+        &kor_runtime::prefs::own_dirs(),
+        std::time::Duration::from_secs(3600),
+    );
     for i in &issues {
         let key = match i {
             kor_runtime::prefs::Issue::MissingDir { .. } => "doctor-issue-dir",
@@ -93,7 +110,10 @@ pub fn run_with(ctx: &Ctx, fix: bool, yes: bool, cmd: Option<&dyn Fn() -> clap::
                 Ok(()) => println!("  ✓ {}", l.t_args("doctor-fixed", &args!("what" => what))),
                 Err(e) => {
                     open += 1;
-                    println!("  ✗ {}", l.t_args("doctor-fix-failed", &args!("error" => e.to_string())));
+                    println!(
+                        "  ✗ {}",
+                        l.t_args("doctor-fix-failed", &args!("error" => e.to_string()))
+                    );
                 }
             }
         } else {
@@ -112,8 +132,16 @@ pub fn run_with(ctx: &Ctx, fix: bool, yes: bool, cmd: Option<&dyn Fn() -> clap::
 fn prereqs(l: &kor_i18n::Localizer) {
     let mut missing = false;
     for s in kor_platform::sysdeps::status(&kor_platform::sysdeps::Host::detect()) {
-        let mark = if s.installed == Some(true) { "✓" } else { "·" };
-        println!("  {mark} {} — {}", prereq_describe(l, s.prereq), prereq_state(l, s.installed));
+        let mark = if s.installed == Some(true) {
+            "✓"
+        } else {
+            "·"
+        };
+        println!(
+            "  {mark} {} — {}",
+            prereq_describe(l, s.prereq),
+            prereq_state(l, s.installed)
+        );
         missing |= s.installed == Some(false);
     }
     if missing {
@@ -207,10 +235,10 @@ fn checks(ctx: &Ctx) -> bool {
     }
 
     // §6.4: the backend `sandbox = on` uses; without one, commands ask (a warning, not a failure).
-    let sbx = ctx
-        .config
-        .as_ref()
-        .map_or_else(|_| kor_config::Sandbox::default(), |c| c.config.sandbox.clone());
+    let sbx = ctx.config.as_ref().map_or_else(
+        |_| kor_config::Sandbox::default(),
+        |c| c.config.sandbox.clone(),
+    );
     let mode = sbx.mode;
     let backend = kor_runtime::sandbox::kind(&kor_config::Sandbox {
         mode: kor_config::SandboxMode::On,
@@ -236,12 +264,22 @@ fn checks(ctx: &Ctx) -> bool {
     // §25.2: a failed context-menu registration is silent elsewhere; the reason shows here.
     let menu = kor_platform::shell_integration::recorded_status();
     match (&menu.last_error, menu.installed) {
-        (Some(e), _) => println!("  ! {}", l.t_args("doctor-integrate-error", &args!("error" => e.clone()))),
+        (Some(e), _) => println!(
+            "  ! {}",
+            l.t_args("doctor-integrate-error", &args!("error" => e.clone()))
+        ),
         (None, true) => report(true, l.t("doctor-integrate-ok")),
         (None, false) => println!("  · {}", l.t("doctor-integrate-off")),
     }
-    let integrations = ctx.config.as_ref().map(|c| c.config.integrations.clone()).unwrap_or_default();
-    println!("  · {}", kor_runtime::autointegrate::status_line(l, &integrations));
+    let integrations = ctx
+        .config
+        .as_ref()
+        .map(|c| c.config.integrations.clone())
+        .unwrap_or_default();
+    println!(
+        "  · {}",
+        kor_runtime::autointegrate::status_line(l, &integrations)
+    );
 
     if ctx.config.as_ref().is_ok_and(|c| c.config.privacy.mode) {
         report(true, l.t("doctor-privacy-on"));

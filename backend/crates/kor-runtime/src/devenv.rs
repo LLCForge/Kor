@@ -196,8 +196,14 @@ mod tests {
         std::fs::write(root.join(".devcontainer/devcontainer.json"), "{}").unwrap();
         // Containers are opt-in: by default the devcontainer is not used and nothing is said.
         let (env, notes) = session(&l, &cfg, root, SandboxKind::None);
-        assert!(env.unwrap().detected.kind.is_none() && notes.is_empty(), "{notes:?}");
-        let containers = kor_config::DevEnv { containers: true, ..cfg.clone() };
+        assert!(
+            env.unwrap().detected.kind.is_none() && notes.is_empty(),
+            "{notes:?}"
+        );
+        let containers = kor_config::DevEnv {
+            containers: true,
+            ..cfg.clone()
+        };
         let (env, notes) = session(&l, &containers, root, SandboxKind::Docker);
         assert!(!env.unwrap().wrap);
         assert!(notes[0].contains("devcontainer"), "{notes:?}");

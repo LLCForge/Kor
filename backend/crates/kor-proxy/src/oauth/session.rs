@@ -10,10 +10,13 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use futures::StreamExt;
-use kor_core::{ContentPart, FinishReason, ImageSource, PrivacyTier, ProviderError, ProviderErrorKind, Role, StreamEvent, Usage};
+use kor_core::{
+    ContentPart, FinishReason, ImageSource, PrivacyTier, ProviderError, ProviderErrorKind, Role,
+    StreamEvent, Usage,
+};
 use kor_providers::{
-    AdapterKind, Auth, AuthKind, CancellationToken, Category, ChatRequest, EventStream, ModelInfo, Privacy, Provider, ProviderManifest,
-    Quirks,
+    AdapterKind, Auth, AuthKind, CancellationToken, Category, ChatRequest, EventStream, ModelInfo,
+    Privacy, Provider, ProviderManifest, Quirks,
 };
 use serde_json::{Value, json};
 
@@ -25,7 +28,11 @@ const BETA: &str = "claude-code-20250219,oauth-2025-04-20,interleaved-thinking-2
 const USER_AGENT: &str = "claude-cli/2.1.220 (external, cli)";
 const MESSAGES: &str = "https://api.anthropic.com/v1";
 
-pub(crate) fn load_subscriptions(dir: &Path, settings: &mut Settings, creds: &mut Vec<Credential>) -> Vec<String> {
+pub(crate) fn load_subscriptions(
+    dir: &Path,
+    settings: &mut Settings,
+    creds: &mut Vec<Credential>,
+) -> Vec<String> {
     let mut notes = Vec::new();
     let entries = match std::fs::read_dir(dir) {
         Ok(entries) => entries,
@@ -82,18 +89,30 @@ fn load_file(path: &Path, group: usize) -> Result<Option<(Group, Credential)>, E
     }
 }
 
-fn load_claude(doc: &Value, group: usize, weight: u32, priority: i64) -> Result<Option<(Group, Credential)>, Error> {
+fn load_claude(
+    doc: &Value,
+    group: usize,
+    weight: u32,
+    priority: i64,
+) -> Result<Option<(Group, Credential)>, Error> {
     let access = string_field(doc, "access_token");
     if access.is_empty() {
         return Err(err("claude auth file has no access token"));
     }
     let email = string_field(doc, "email");
-    let label = if email.is_empty() { "claude".to_owned() } else { email };
+    let label = if email.is_empty() {
+        "claude".to_owned()
+    } else {
+        email
+    };
     let provider = Arc::new(ClaudeSession {
         manifest: manifest(),
         token: access.clone(),
         base: MESSAGES.to_owned(),
-        http: reqwest::Client::builder().timeout(Duration::from_secs(30)).build().map_err(|e| err(e.to_string()))?,
+        http: reqwest::Client::builder()
+            .timeout(Duration::from_secs(30))
+            .build()
+            .map_err(|e| err(e.to_string()))?,
     });
     let group_spec = Group {
         kind: Kind::Claude,
@@ -121,7 +140,12 @@ fn load_claude(doc: &Value, group: usize, weight: u32, priority: i64) -> Result<
 
 const CODEX_API: &str = "https://api.openai.com/v1";
 
-fn load_codex(doc: &Value, group: usize, weight: u32, priority: i64) -> Result<Option<(Group, Credential)>, Error> {
+fn load_codex(
+    doc: &Value,
+    group: usize,
+    weight: u32,
+    priority: i64,
+) -> Result<Option<(Group, Credential)>, Error> {
     let access = string_field(doc, "access_token");
     if access.is_empty() {
         return Err(err("codex auth file has no access token"));
@@ -141,8 +165,11 @@ fn load_codex(doc: &Value, group: usize, weight: u32, priority: i64) -> Result<O
     manifest.name.clone_from(&label);
     manifest.base_url = CODEX_API.to_owned();
     manifest.base_url_env = None;
-    let provider: Arc<dyn Provider> = kor_providers::build(&manifest, Some(kor_secrets::SecretString::from(access.clone())))
-        .map_err(|e| err(e.message))?;
+    let provider: Arc<dyn Provider> = kor_providers::build(
+        &manifest,
+        Some(kor_secrets::SecretString::from(access.clone())),
+    )
+    .map_err(|e| err(e.message))?;
     let group_spec = Group {
         kind: Kind::Codex,
         name: label.clone(),
@@ -175,7 +202,12 @@ fn manifest() -> ProviderManifest {
         adapter: AdapterKind::Anthropic,
         base_url: MESSAGES.to_owned(),
         base_url_env: None,
-        auth: Auth { kind: AuthKind::Bearer, env: None, header: None, prefix: None },
+        auth: Auth {
+            kind: AuthKind::Bearer,
+            env: None,
+            header: None,
+            prefix: None,
+        },
         models_endpoint: None,
         static_models: Vec::new(),
         tags: vec!["oauth".to_owned()],
@@ -216,7 +248,11 @@ impl Provider for ClaudeSession {
         Ok(Vec::new())
     }
 
-    async fn complete(&self, req: ChatRequest, _cancel: CancellationToken) -> Result<EventStream, ProviderError> {
+    async fn complete(
+        &self,
+        req: ChatRequest,
+        _cancel: CancellationToken,
+    ) -> Result<EventStream, ProviderError> {
         let body = message_body(&req);
         let url = format!("{}/messages", self.base.trim_end_matches('/'));
         let token = self.token.clone();
@@ -236,7 +272,11 @@ impl Provider for ClaudeSession {
                 let text = response.text().await.unwrap_or_default();
                 return Err(status_error(status, &text));
             }
-            Ok(sse_stream(response.bytes_stream().map(|c| c.map_err(|e| e.to_string()))))
+            Ok(sse_stream(
+                response
+                    .bytes_stream()
+                    .map(|c| c.map_err(|e| e.to_string())),
+            ))
         } else {
             let response = self
                 .http
@@ -255,7 +295,11 @@ impl Provider for ClaudeSession {
                 let text = response.text().await.unwrap_or_default();
                 return Err(status_error(status, &text));
             }
-            Ok(sse_stream(response.bytes_stream().map(|c| c.map_err(|e| e.to_string()))))
+            Ok(sse_stream(
+                response
+                    .bytes_stream()
+                    .map(|c| c.map_err(|e| e.to_string())),
+            ))
         }
     }
 }
@@ -275,7 +319,11 @@ fn message_body(req: &ChatRequest) -> Value {
             }
             continue;
         }
-        let role = if message.role == Role::Assistant { "assistant" } else { "user" };
+        let role = if message.role == Role::Assistant {
+            "assistant"
+        } else {
+            "user"
+        };
         let blocks: Vec<Value> = message
             .parts
             .iter()
@@ -341,11 +389,15 @@ where
         }
         if !finished {
             let _ = tx
-                .send(Ok(StreamEvent::Finish { reason: FinishReason::Stop }))
+                .send(Ok(StreamEvent::Finish {
+                    reason: FinishReason::Stop,
+                }))
                 .await;
         }
     });
-    Box::pin(futures::stream::unfold(rx, |mut rx| async move { rx.recv().await.map(|event| (event, rx)) }))
+    Box::pin(futures::stream::unfold(rx, |mut rx| async move {
+        rx.recv().await.map(|event| (event, rx))
+    }))
 }
 
 fn parse_line(line: &str) -> Vec<Result<StreamEvent, ProviderError>> {
@@ -361,16 +413,26 @@ fn parse_line(line: &str) -> Vec<Result<StreamEvent, ProviderError>> {
     };
     let kind = value.get("type").and_then(Value::as_str).unwrap_or("");
     match kind {
-        "content_block_delta" => match value.pointer("/delta/type").and_then(Value::as_str).unwrap_or("") {
-            "text_delta" => vec![Ok(StreamEvent::TextDelta { text: text_at(&value, "/delta/text") })],
-            "thinking_delta" => vec![Ok(StreamEvent::ThinkingDelta { text: text_at(&value, "/delta/thinking") })],
+        "content_block_delta" => match value
+            .pointer("/delta/type")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+        {
+            "text_delta" => vec![Ok(StreamEvent::TextDelta {
+                text: text_at(&value, "/delta/text"),
+            })],
+            "thinking_delta" => vec![Ok(StreamEvent::ThinkingDelta {
+                text: text_at(&value, "/delta/thinking"),
+            })],
             "input_json_delta" => vec![Ok(StreamEvent::ToolCallDelta {
                 index: index_of(&value),
                 json: text_at(&value, "/delta/partial_json"),
             })],
             _ => Vec::new(),
         },
-        "content_block_start" if value.pointer("/content_block/type").and_then(Value::as_str) == Some("tool_use") => {
+        "content_block_start"
+            if value.pointer("/content_block/type").and_then(Value::as_str) == Some("tool_use") =>
+        {
             vec![Ok(StreamEvent::ToolCallStart {
                 index: index_of(&value),
                 id: text_at(&value, "/content_block/id"),
@@ -385,7 +447,9 @@ fn parse_line(line: &str) -> Vec<Result<StreamEvent, ProviderError>> {
             };
             let mut events = Vec::new();
             if let Some(usage) = value.get("usage") {
-                events.push(Ok(StreamEvent::Usage { usage: usage_of(usage) }));
+                events.push(Ok(StreamEvent::Usage {
+                    usage: usage_of(usage),
+                }));
             }
             events.push(Ok(StreamEvent::Finish { reason }));
             events
@@ -397,20 +461,40 @@ fn parse_line(line: &str) -> Vec<Result<StreamEvent, ProviderError>> {
 
 fn usage_of(value: &Value) -> Usage {
     Usage {
-        input: value.get("input_tokens").and_then(Value::as_u64).unwrap_or(0),
-        output: value.get("output_tokens").and_then(Value::as_u64).unwrap_or(0),
-        cache_read: value.get("cache_read_input_tokens").and_then(Value::as_u64).unwrap_or(0),
-        cache_write: value.get("cache_creation_input_tokens").and_then(Value::as_u64).unwrap_or(0),
+        input: value
+            .get("input_tokens")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        output: value
+            .get("output_tokens")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        cache_read: value
+            .get("cache_read_input_tokens")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
+        cache_write: value
+            .get("cache_creation_input_tokens")
+            .and_then(Value::as_u64)
+            .unwrap_or(0),
         reasoning: 0,
     }
 }
 
 fn text_at(value: &Value, pointer: &str) -> String {
-    value.pointer(pointer).and_then(Value::as_str).unwrap_or("").to_owned()
+    value
+        .pointer(pointer)
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_owned()
 }
 
 fn index_of(value: &Value) -> u32 {
-    value.get("index").and_then(Value::as_u64).and_then(|n| u32::try_from(n).ok()).unwrap_or(0)
+    value
+        .get("index")
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+        .unwrap_or(0)
 }
 
 fn fail(message: &str) -> ProviderError {
@@ -486,14 +570,25 @@ mod tests {
             }
         };
         let first = stream.next().await.unwrap().unwrap();
-        assert_eq!(first, StreamEvent::TextDelta { text: "hello".to_owned() });
+        assert_eq!(
+            first,
+            StreamEvent::TextDelta {
+                text: "hello".to_owned()
+            }
+        );
         let got = server.received_requests().await.unwrap();
         let headers = &got[0].headers;
         assert_eq!(
             headers.get("authorization").and_then(|v| v.to_str().ok()),
             Some("Bearer subscription-token")
         );
-        assert!(headers.get("anthropic-beta").and_then(|v| v.to_str().ok()).unwrap_or("").contains("oauth-2025-04-20"));
+        assert!(
+            headers
+                .get("anthropic-beta")
+                .and_then(|v| v.to_str().ok())
+                .unwrap_or("")
+                .contains("oauth-2025-04-20")
+        );
     }
 
     #[test]

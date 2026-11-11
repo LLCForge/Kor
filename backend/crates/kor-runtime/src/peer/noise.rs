@@ -50,7 +50,9 @@ impl Link {
     /// # Errors
     /// When the connection is gone.
     pub fn send(&self, v: Value) -> Result<(), String> {
-        self.tx.send(v).map_err(|_| "peer connection closed".to_owned())
+        self.tx
+            .send(v)
+            .map_err(|_| "peer connection closed".to_owned())
     }
 
     /// Next value; `None` once the connection closed.
@@ -161,7 +163,9 @@ where
             .map_err(|_| "handshake failed (wrong pairing code or key)".to_owned())?;
         let their: Value = serde_json::from_slice(&payload[..n]).unwrap_or(Value::Null);
         let mine = serde_json::to_vec(hello).map_err(|e| e.to_string())?;
-        let n = hs.write_message(&mine, &mut buf).map_err(|e| e.to_string())?;
+        let n = hs
+            .write_message(&mine, &mut buf)
+            .map_err(|e| e.to_string())?;
         write_msg(&mut io, &buf[..n]).await?;
         Ok::<_, String>(their)
     };
@@ -221,7 +225,9 @@ where
         hs.read_message(&m, &mut payload)
             .map_err(|_| "handshake failed".to_owned())?;
         let mine = serde_json::to_vec(hello).map_err(|e| e.to_string())?;
-        let n = hs.write_message(&mine, &mut buf).map_err(|e| e.to_string())?;
+        let n = hs
+            .write_message(&mine, &mut buf)
+            .map_err(|e| e.to_string())?;
         write_msg(&mut io, &buf[..n]).await?;
         let m = read_msg(&mut io).await?;
         let n = hs

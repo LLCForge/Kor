@@ -74,9 +74,7 @@ impl ServerCertVerifier for ReadOnly {
     }
 
     fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
-        self.0
-            .signature_verification_algorithms
-            .supported_schemes()
+        self.0.signature_verification_algorithms.supported_schemes()
     }
 }
 
@@ -155,7 +153,8 @@ fn time(b: &[u8], (tag, s, e): (u8, usize, usize)) -> Option<i64> {
         0x18 => txt.to_owned(),
         _ => return None,
     };
-    let dt = chrono::NaiveDateTime::parse_from_str(full.trim_end_matches('Z'), "%Y%m%d%H%M%S").ok()?;
+    let dt =
+        chrono::NaiveDateTime::parse_from_str(full.trim_end_matches('Z'), "%Y%m%d%H%M%S").ok()?;
     Some(dt.and_utc().timestamp())
 }
 

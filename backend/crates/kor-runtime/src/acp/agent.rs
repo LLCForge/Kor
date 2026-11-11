@@ -19,8 +19,8 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc;
 
 use super::rpc::{
-    Handler, INTERNAL_ERROR, INVALID_PARAMS, INVALID_REQUEST, METHOD_NOT_FOUND,
-    RESOURCE_NOT_FOUND, Rpc, RpcError,
+    Handler, INTERNAL_ERROR, INVALID_PARAMS, INVALID_REQUEST, METHOD_NOT_FOUND, RESOURCE_NOT_FOUND,
+    Rpc, RpcError,
 };
 
 /// The ACP major version Kor speaks.
@@ -78,7 +78,11 @@ fn modes_json(l: &Localizer, current: PermissionMode) -> Value {
             json!({ "id": m.as_str(), "name": l.t(n), "description": l.t(d) })
         })
         .collect();
-    let current = if MODES.contains(&current) { current } else { PermissionMode::Default };
+    let current = if MODES.contains(&current) {
+        current
+    } else {
+        PermissionMode::Default
+    };
     json!({ "currentModeId": current.as_str(), "availableModes": available })
 }
 
@@ -114,17 +118,24 @@ pub fn prompt_text(blocks: &[Value]) -> String {
                 let r = &b["resource"];
                 let uri = r["uri"].as_str().unwrap_or_default().replace('"', "%22");
                 parts.push(match r["text"].as_str() {
-                    Some(text) => format!("<context uri=\"{uri}\">
+                    Some(text) => format!(
+                        "<context uri=\"{uri}\">
 {text}
-</context>"),
+</context>"
+                    ),
                     None => format!("[binary resource {uri}]"),
                 });
             }
             _ => {}
         }
     }
-    parts.join("
-").trim_end().to_owned()
+    parts
+        .join(
+            "
+",
+        )
+        .trim_end()
+        .to_owned()
 }
 
 fn stop_reason(r: &StopReason) -> &'static str {
@@ -142,7 +153,9 @@ fn stop_reason(r: &StopReason) -> &'static str {
 /// `session/update` bodies for one Kor event (`None`: nothing to show).
 pub fn update_for(ev: AgentEvent, notices: bool) -> Option<Value> {
     Some(match ev {
-        AgentEvent::Text(t) => json!({ "sessionUpdate": "agent_message_chunk", "content": { "type": "text", "text": t } }),
+        AgentEvent::Text(t) => {
+            json!({ "sessionUpdate": "agent_message_chunk", "content": { "type": "text", "text": t } })
+        }
         AgentEvent::ToolStart { id, name, summary } => json!({
             "sessionUpdate": "tool_call", "toolCallId": id,
             "title": if summary.trim().is_empty() { name.clone() } else { summary },
@@ -151,18 +164,28 @@ pub fn update_for(ev: AgentEvent, notices: bool) -> Option<Value> {
         AgentEvent::ToolProgress { id, message, .. } => {
             let mut u = json!({ "sessionUpdate": "tool_call_update", "toolCallId": id, "status": "in_progress" });
             if let Some(m) = message {
-                u["content"] = json!([{ "type": "content", "content": { "type": "text", "text": m } }]);
+                u["content"] =
+                    json!([{ "type": "content", "content": { "type": "text", "text": m } }]);
             }
             u
         }
-        AgentEvent::ToolEnd { id, output, is_error, .. } => json!({
+        AgentEvent::ToolEnd {
+            id,
+            output,
+            is_error,
+            ..
+        } => json!({
             "sessionUpdate": "tool_call_update", "toolCallId": id,
             "status": if is_error { "failed" } else { "completed" },
             "content": [{ "type": "content", "content": { "type": "text", "text": output } }],
         }),
-        AgentEvent::Notice(t) if notices => json!({ "sessionUpdate": "notice", "severity": "info", "title": t }),
+        AgentEvent::Notice(t) if notices => {
+            json!({ "sessionUpdate": "notice", "severity": "info", "title": t })
+        }
         // Without `session.notices`, notices travel as thoughts.
-        AgentEvent::Thinking(t) | AgentEvent::Notice(t) => json!({ "sessionUpdate": "agent_thought_chunk", "content": { "type": "text", "text": t } }),
+        AgentEvent::Thinking(t) | AgentEvent::Notice(t) => {
+            json!({ "sessionUpdate": "agent_thought_chunk", "content": { "type": "text", "text": t } })
+        }
         // Usage, context, status and estimates have no ACP update.
         _ => return None,
     })
@@ -215,7 +238,10 @@ pub struct AcpEditor {
 
 impl AcpEditor {
     fn sid(&self) -> Result<String, String> {
-        self.session.get().cloned().ok_or_else(|| "no session".to_owned())
+        self.session
+            .get()
+            .cloned()
+            .ok_or_else(|| "no session".to_owned())
     }
 }
 
@@ -234,10 +260,16 @@ impl EditorBridge for AcpEditor {
     async fn read_text(&self, path: &Path) -> Result<String, String> {
         let v = self
             .rpc
-            .request("fs/read_text_file", json!({ "sessionId": self.sid()?, "path": path }))
+            .request(
+                "fs/read_text_file",
+                json!({ "sessionId": self.sid()?, "path": path }),
+            )
             .await
             .map_err(|e| e.to_string())?;
-        v["content"].as_str().map(str::to_owned).ok_or_else(|| "no content".into())
+        v["content"]
+            .as_str()
+            .map(str::to_owned)
+            .ok_or_else(|| "no content".into())
     }
 
     async fn write_text(&self, path: &Path, content: &str) -> Result<(), String> {
@@ -261,7 +293,10 @@ impl EditorBridge for AcpEditor {
         cancel: &CancellationToken,
     ) -> Result<(String, Option<i32>), String> {
         let sid = self.sid()?;
-        let env: Vec<Value> = env.iter().map(|(k, v)| json!({ "name": k, "value": v })).collect();
+        let env: Vec<Value> = env
+            .iter()
+            .map(|(k, v)| json!({ "name": k, "value": v }))
+            .collect();
         let t = self
             .rpc
             .request(
@@ -329,7 +364,10 @@ impl Pump {
                         *lock(&self.editor.current_call) = Some(id.clone());
                     }
                     if let Some(u) = update_for(ev, self.notices) {
-                        self.rpc.notify("session/update", json!({ "sessionId": self.session, "update": u }));
+                        self.rpc.notify(
+                            "session/update",
+                            json!({ "sessionId": self.session, "update": u }),
+                        );
                     }
                 }
                 Err(mpsc::error::TryRecvError::Empty) => return false,
@@ -358,13 +396,21 @@ impl Approver for AcpApprover {
                 json!({ "type": "diff", "path": self.cwd.join(&f.path), "oldText": f.before, "newText": f.after.clone().unwrap_or_default() })
             })
             .collect();
-        let mut options = vec![json!({ "optionId": "allow", "name": self.l.t("acp-allow-once"), "kind": "allow_once" })];
+        let mut options = vec![
+            json!({ "optionId": "allow", "name": self.l.t("acp-allow-once"), "kind": "allow_once" }),
+        ];
         // A destructive call is never remembered as "always".
         if req.destructive.is_none() {
             options.push(json!({ "optionId": "always", "name": self.l.t("acp-allow-always"), "kind": "allow_always" }));
         }
-        options.push(json!({ "optionId": "reject", "name": self.l.t("acp-reject"), "kind": "reject_once" }));
-        let title = if req.summary.trim().is_empty() { req.tool.clone() } else { req.summary.clone() };
+        options.push(
+            json!({ "optionId": "reject", "name": self.l.t("acp-reject"), "kind": "reject_once" }),
+        );
+        let title = if req.summary.trim().is_empty() {
+            req.tool.clone()
+        } else {
+            req.summary.clone()
+        };
         let r = self
             .rpc
             .request(
@@ -422,14 +468,43 @@ fn mcp_specs(v: &Value) -> Result<Vec<ServerSpec>, RpcError> {
     };
     list.iter()
         .map(|s| {
-            if s.get("type").and_then(Value::as_str).is_some_and(|t| t != "stdio") {
+            if s.get("type")
+                .and_then(Value::as_str)
+                .is_some_and(|t| t != "stdio")
+            {
                 return Err(invalid("only stdio MCP servers are supported"));
             }
             Ok(ServerSpec {
-                name: s["name"].as_str().ok_or_else(|| invalid("mcp server without name"))?.to_owned(),
-                command: s["command"].as_str().ok_or_else(|| invalid("mcp server without command"))?.to_owned(),
-                args: s["args"].as_array().map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).collect()).unwrap_or_default(),
-                env: s["env"].as_array().map(|a| a.iter().filter_map(|e| Some((e["name"].as_str()?.to_owned(), e["value"].as_str()?.to_owned()))).collect()).unwrap_or_default(),
+                name: s["name"]
+                    .as_str()
+                    .ok_or_else(|| invalid("mcp server without name"))?
+                    .to_owned(),
+                command: s["command"]
+                    .as_str()
+                    .ok_or_else(|| invalid("mcp server without command"))?
+                    .to_owned(),
+                args: s["args"]
+                    .as_array()
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(Value::as_str)
+                            .map(str::to_owned)
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                env: s["env"]
+                    .as_array()
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|e| {
+                                Some((
+                                    e["name"].as_str()?.to_owned(),
+                                    e["value"].as_str()?.to_owned(),
+                                ))
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
                 origin: "ACP client".into(),
             })
         })
@@ -449,12 +524,22 @@ impl AcpAgent {
     fn entry(&self, params: &Value) -> Result<Arc<Entry>, RpcError> {
         let id = params["sessionId"].as_str().unwrap_or_default();
         lock(&self.sessions).get(id).cloned().ok_or_else(|| {
-            RpcError::new(RESOURCE_NOT_FOUND, "unknown session").with_data(json!({ "sessionId": id }))
+            RpcError::new(RESOURCE_NOT_FOUND, "unknown session")
+                .with_data(json!({ "sessionId": id }))
         })
     }
 
-    async fn open(&self, rpc: Arc<Rpc>, params: &Value, resume: Option<&str>) -> Result<(String, Arc<Entry>), RpcError> {
-        let cwd = PathBuf::from(params["cwd"].as_str().ok_or_else(|| invalid("cwd is required"))?);
+    async fn open(
+        &self,
+        rpc: Arc<Rpc>,
+        params: &Value,
+        resume: Option<&str>,
+    ) -> Result<(String, Arc<Entry>), RpcError> {
+        let cwd = PathBuf::from(
+            params["cwd"]
+                .as_str()
+                .ok_or_else(|| invalid("cwd is required"))?,
+        );
         if !cwd.is_absolute() || !cwd.is_dir() {
             return Err(invalid("cwd must be an existing absolute directory"));
         }
@@ -486,7 +571,9 @@ impl AcpAgent {
     async fn prompt(&self, rpc: Arc<Rpc>, params: &Value) -> Result<Value, RpcError> {
         let e = self.entry(params)?;
         let sid = params["sessionId"].as_str().unwrap_or_default().to_owned();
-        let blocks = params["prompt"].as_array().ok_or_else(|| invalid("prompt is required"))?;
+        let blocks = params["prompt"]
+            .as_array()
+            .ok_or_else(|| invalid("prompt is required"))?;
         let text = prompt_text(blocks);
         if text.is_empty() {
             return Err(invalid("empty prompt"));
@@ -537,7 +624,9 @@ impl AcpAgent {
 impl Handler for AcpAgent {
     async fn request(&self, rpc: Arc<Rpc>, method: &str, params: Value) -> Result<Value, RpcError> {
         if method == "initialize" {
-            let asked = params["protocolVersion"].as_u64().unwrap_or(PROTOCOL_VERSION);
+            let asked = params["protocolVersion"]
+                .as_u64()
+                .unwrap_or(PROTOCOL_VERSION);
             let c = &params["clientCapabilities"];
             *lock(&self.caps) = Some(Caps {
                 read: c["fs"]["readTextFile"].as_bool() == Some(true),
@@ -569,7 +658,8 @@ impl Handler for AcpAgent {
             "session/load" => {
                 let want = params["sessionId"].as_str().unwrap_or_default().to_owned();
                 if !crate::valid_session_id(&want) {
-                    return Err(RpcError::new(RESOURCE_NOT_FOUND, "unknown session").with_data(json!({ "sessionId": want })));
+                    return Err(RpcError::new(RESOURCE_NOT_FOUND, "unknown session")
+                        .with_data(json!({ "sessionId": want })));
                 }
                 let (id, e) = self.open(rpc.clone(), &params, Some(&want)).await?;
                 let s = e.session.lock().await;
@@ -593,7 +683,10 @@ impl Handler for AcpAgent {
                 );
                 Ok(json!({}))
             }
-            _ => Err(RpcError::new(METHOD_NOT_FOUND, format!("unknown method {method}"))),
+            _ => Err(RpcError::new(
+                METHOD_NOT_FOUND,
+                format!("unknown method {method}"),
+            )),
         }
     }
 
@@ -671,7 +764,8 @@ impl Engine for KorEngine {
     ) -> Result<Box<dyn Session>, String> {
         let root = cwd.canonicalize().map_err(|e| e.to_string())?;
         if let Some(id) = resume {
-            let exists = crate::sessions_dir().is_some_and(|d| d.join(format!("{id}.jsonl")).is_file());
+            let exists =
+                crate::sessions_dir().is_some_and(|d| d.join(format!("{id}.jsonl")).is_file());
             if !exists {
                 return Err(format!("no session {id}"));
             }

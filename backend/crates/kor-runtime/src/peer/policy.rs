@@ -198,12 +198,21 @@ mod tests {
         let write = tool("Write");
         let bash = tool("Bash");
         assert!(p.check(&*read, &json!({"file_path": "a"})).is_ok());
-        assert!(p.check(&*write, &json!({"file_path": "a", "content": ""})).is_err());
+        assert!(
+            p.check(&*write, &json!({"file_path": "a", "content": ""}))
+                .is_err()
+        );
         assert!(p.check(&*bash, &json!({"command": "ls"})).is_err());
-        assert!(p.check(&*tool("WebFetch"), &json!({"url": "https://x"})).is_err());
+        assert!(
+            p.check(&*tool("WebFetch"), &json!({"url": "https://x"}))
+                .is_err()
+        );
         // The task's own snapshot copy is writable, commands still need a grant.
         let w = policy(Grant::default(), true);
-        assert!(w.check(&*write, &json!({"file_path": "a", "content": ""})).is_ok());
+        assert!(
+            w.check(&*write, &json!({"file_path": "a", "content": ""}))
+                .is_ok()
+        );
         assert!(w.check(&*bash, &json!({"command": "ls"})).is_err());
     }
 
@@ -218,11 +227,20 @@ mod tests {
             false,
         );
         let bash = tool("Bash");
-        assert!(p.check(&*bash, &json!({"command": "cargo test -p x"})).is_ok());
+        assert!(
+            p.check(&*bash, &json!({"command": "cargo test -p x"}))
+                .is_ok()
+        );
         assert!(p.check(&*bash, &json!({"command": "cargo test"})).is_ok());
-        assert!(p.check(&*bash, &json!({"command": "cargo testfoo"})).is_err());
+        assert!(
+            p.check(&*bash, &json!({"command": "cargo testfoo"}))
+                .is_err()
+        );
         assert!(p.check(&*bash, &json!({"command": "rm -rf /"})).is_err());
-        assert!(p.check(&*tool("WebFetch"), &json!({"url": "https://x"})).is_ok());
+        assert!(
+            p.check(&*tool("WebFetch"), &json!({"url": "https://x"}))
+                .is_ok()
+        );
         assert!(command_allowed(&["*".into()], "anything"));
     }
 
@@ -235,7 +253,11 @@ mod tests {
         let out = tools[0]
             .call(json!({"file_path": "x.txt", "content": "hi"}), &ctx)
             .await;
-        assert!(out.is_error && out.content.contains("read-only"), "{}", out.content);
+        assert!(
+            out.is_error && out.content.contains("read-only"),
+            "{}",
+            out.content
+        );
         assert!(!d.path().join("x.txt").exists());
         assert_eq!(tools[0].name(), "Write");
     }

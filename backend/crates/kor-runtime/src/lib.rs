@@ -33,8 +33,8 @@ pub mod forge;
 pub mod fork;
 pub mod textdiff;
 // Live diagrams from the graph (§27.14, ADR 0063).
-pub mod diagram_sync;
 pub mod diagram_render;
+pub mod diagram_sync;
 // Time and cost estimate before a task (§27.16, ADR 0063).
 pub mod estimate;
 // Rule compliance: rule sets, `kor rules check`, model judgment (§28.3, ADR 0063).
@@ -66,18 +66,18 @@ pub mod media;
 pub mod osint;
 pub mod perf;
 // Tray, notifications, approval queue, ETA, "call me", window layouts (ADR 0051).
+pub mod prefs;
 pub mod presence;
+pub mod privacycard;
 pub mod quota;
 pub mod remote;
 pub mod replay;
 pub mod review;
 pub mod routines;
 pub mod sandbox;
-pub mod prefs;
-pub mod privacycard;
 pub mod secure;
-pub mod session_tree;
 pub mod session_import;
+pub mod session_tree;
 pub mod shell;
 pub mod task;
 pub mod triggers;
@@ -257,10 +257,12 @@ fn reqwest_host(url: &str) -> Option<String> {
 
 /// Tools that reach the network themselves; removed in privacy mode.
 fn needs_network(name: &str) -> bool {
-    matches!(name, "WebFetch" | "WebSearch" | "weather" | "search_places" | "file_search")
-        || ["browser_", "chrome_", "ssh_", "db_", "mcp__", "web_"]
-            .iter()
-            .any(|p| name.starts_with(p))
+    matches!(
+        name,
+        "WebFetch" | "WebSearch" | "weather" | "search_places" | "file_search"
+    ) || ["browser_", "chrome_", "ssh_", "db_", "mcp__", "web_"]
+        .iter()
+        .any(|p| name.starts_with(p))
 }
 
 /// Agent tools from crates that depend on this one (kor-web, §29), registered once at start-up.
@@ -327,7 +329,9 @@ pub fn hf_client(
     endpoint: Option<&str>,
 ) -> Result<(kor_providers::huggingface::Hf, Option<SecretString>), String> {
     let reg = registry(l, &mut Vec::new())?;
-    let m = reg.get("huggingface").ok_or("huggingface manifest missing")?;
+    let m = reg
+        .get("huggingface")
+        .ok_or("huggingface manifest missing")?;
     let key = key_for(m).ok().flatten().map(|(k, _)| k);
     let hf = match endpoint {
         Some(url) => kor_providers::huggingface::Hf::endpoint(m, key.clone(), url),
@@ -354,14 +358,22 @@ pub fn kor_home() -> Option<PathBuf> {
 /// §19 (ADR 0059): per-app desktop tiers, computer actions into the audit log, `[health]` for the
 /// write stop, the CLI's "Kor controls the desktop" line, and one health line on stderr when a
 /// terminal session starts.
-fn computer_and_health_setup(config: &kor_config::Config, lang: kor_i18n::Lang, surface: prompt::Surface) {
+fn computer_and_health_setup(
+    config: &kor_config::Config,
+    lang: kor_i18n::Lang,
+    surface: prompt::Surface,
+) {
     use std::io::IsTerminal as _;
     kor_computer::policy::set_policy(kor_computer::policy::Policy::from_config(&config.computer));
-    kor_computer::set_audit_sink(Arc::new(|action, fields| kor_agent::audit::record(action, fields)));
+    kor_computer::set_audit_sink(Arc::new(|action, fields| {
+        kor_agent::audit::record(action, fields)
+    }));
     kor_health::set_config(config.health.clone());
     if surface == prompt::Surface::Terminal {
         let l = Arc::new(Localizer::new(lang));
-        kor_computer::indicator::set_listener_if_none(kor_computer::indicator::stderr_listener(l.clone()));
+        kor_computer::indicator::set_listener_if_none(kor_computer::indicator::stderr_listener(
+            l.clone(),
+        ));
         if std::io::stderr().is_terminal()
             && let Ok(cwd) = std::env::current_dir()
             && let Some(line) = kor_health::quick_line(&config.health, &cwd, &l)
@@ -379,8 +391,9 @@ pub fn context_log_path() -> Option<PathBuf> {
 /// Context window of `model`: the model catalog cache (no network), else the provider's
 /// default, else [`kor_agent::compact::DEFAULT_CONTEXT_WINDOW`].
 pub fn context_window_for(model: &ModelRef, manifest: &ProviderManifest) -> u64 {
-    let cached = dirs::cache_dir()
-        .and_then(|d| kor_providers::model_catalog::read_cache(&d.join("kor").join("model-catalog.json")));
+    let cached = dirs::cache_dir().and_then(|d| {
+        kor_providers::model_catalog::read_cache(&d.join("kor").join("model-catalog.json"))
+    });
     cached
         .and_then(|c| {
             let models = &c.catalog.models;
@@ -411,7 +424,10 @@ fn summarizer(
                 || check_provider_allowed(l, p.manifest()).is_err()
                 || check_privacy_card(l, p.manifest(), m.model()).is_err() =>
         {
-            notes.push(l.t_args("context-summarizer-privacy", &args!("model" => spec.to_owned())));
+            notes.push(l.t_args(
+                "context-summarizer-privacy",
+                &args!("model" => spec.to_owned()),
+            ));
             None
         }
         Ok((p, m, key)) => {
@@ -485,10 +501,14 @@ pub fn load_compat(root: &Path) -> Compat {
 pub fn plugin_dirs(root: &Path, home: Option<&Path>, trusted: bool) -> Vec<PathBuf> {
     let mut dirs = Vec::new();
     if trusted {
-        dirs.extend(kor_agent::plugins::enabled_dirs(&root.join(".kor").join("plugins")));
+        dirs.extend(kor_agent::plugins::enabled_dirs(
+            &root.join(".kor").join("plugins"),
+        ));
     }
     if let Some(home) = home {
-        dirs.extend(kor_agent::plugins::enabled_dirs(&kor_agent::plugins::plugins_root(home)));
+        dirs.extend(kor_agent::plugins::enabled_dirs(
+            &kor_agent::plugins::plugins_root(home),
+        ));
     }
     dirs
 }
@@ -647,7 +667,11 @@ pub fn build_provider(
 
 /// Shadow mode (§5.1, `[routing] shadow`): the cheap model answering finished tasks in the
 /// background; `None` when off or when the model cannot be used (a note says why).
-fn shadow_runner(l: &Localizer, config: &kor_config::Config, notes: &mut Vec<String>) -> Option<Arc<dyn kor_agent::shadow::Shadow>> {
+fn shadow_runner(
+    l: &Localizer,
+    config: &kor_config::Config,
+    notes: &mut Vec<String>,
+) -> Option<Arc<dyn kor_agent::shadow::Shadow>> {
     let m = config.routing.shadow.trim();
     if m.is_empty() {
         return None;
@@ -659,9 +683,24 @@ fn shadow_runner(l: &Localizer, config: &kor_config::Config, notes: &mut Vec<Str
     });
     match (built, kor_home()) {
         (Ok((p, model)), Some(home)) => {
-            let threshold = if config.routing.shadow_threshold == 0 { 85 } else { config.routing.shadow_threshold.min(100) };
-            let min = if config.routing.shadow_min_samples == 0 { 5 } else { config.routing.shadow_min_samples };
-            Some(Arc::new(consensus::ShadowRunner::new(p, model, home.join("shadow.jsonl"), threshold, min as usize, Localizer::new(l.lang()))))
+            let threshold = if config.routing.shadow_threshold == 0 {
+                85
+            } else {
+                config.routing.shadow_threshold.min(100)
+            };
+            let min = if config.routing.shadow_min_samples == 0 {
+                5
+            } else {
+                config.routing.shadow_min_samples
+            };
+            Some(Arc::new(consensus::ShadowRunner::new(
+                p,
+                model,
+                home.join("shadow.jsonl"),
+                threshold,
+                min as usize,
+                Localizer::new(l.lang()),
+            )))
         }
         (Err(e), _) => {
             notes.push(format!("shadow: {e}"));
@@ -673,7 +712,11 @@ fn shadow_runner(l: &Localizer, config: &kor_config::Config, notes: &mut Vec<Str
 
 /// `[routing] repair`: the cheap model for repairing malformed tool calls, under the same
 /// provider and privacy checks as the main model; `None` when off or unusable (a note says why).
-fn repair_model(l: &Localizer, config: &kor_config::Config, notes: &mut Vec<String>) -> Option<(Arc<dyn Provider>, String)> {
+fn repair_model(
+    l: &Localizer,
+    config: &kor_config::Config,
+    notes: &mut Vec<String>,
+) -> Option<(Arc<dyn Provider>, String)> {
     let m = config.routing.repair.trim();
     if m.is_empty() {
         return None;
@@ -707,11 +750,16 @@ pub fn oneshot_provider(
     Ok((provider, model.model().to_owned()))
 }
 
-fn tool_mode_for(cfg: kor_config::ToolCalling, provider_tools: bool) -> kor_agent::toolcall::ToolMode {
+fn tool_mode_for(
+    cfg: kor_config::ToolCalling,
+    provider_tools: bool,
+) -> kor_agent::toolcall::ToolMode {
     match cfg {
         kor_config::ToolCalling::Native => kor_agent::toolcall::ToolMode::Native,
         kor_config::ToolCalling::Text => kor_agent::toolcall::ToolMode::Text,
-        kor_config::ToolCalling::Auto => kor_agent::toolcall::ToolMode::for_provider(provider_tools),
+        kor_config::ToolCalling::Auto => {
+            kor_agent::toolcall::ToolMode::for_provider(provider_tools)
+        }
     }
 }
 
@@ -1178,7 +1226,11 @@ pub fn prepare(
     if let Some(home) = kor_home() {
         system.push_str(&analysis::metrics::style::prompt_section(&home, &tctx.root));
         // §19.2 (ADR 0059): this machine's profile from `system.json`, budgeted.
-        system.push_str(&kor_health::prompt_section(&home, config.health.refresh_minutes, 1200));
+        system.push_str(&kor_health::prompt_section(
+            &home,
+            config.health.refresh_minutes,
+            1200,
+        ));
     }
     // §5.3: real window of the model, and a signature map instead of whole files.
     let context_window = context_window_for(&model, provider.manifest());
@@ -1205,8 +1257,7 @@ pub fn prepare(
     system.push_str(&repo_map);
     // §27.5: files dropped into `~/Kor/Gelen/` join the next new interactive session (CLI REPL or
     // desktop; not triggers, bench or file tasks, which pass their own id) as context (ADR 0052).
-    if opts.resume.is_none()
-        && (opts.new_id.is_none() || opts.surface == prompt::Surface::Desktop)
+    if opts.resume.is_none() && (opts.new_id.is_none() || opts.surface == prompt::Surface::Desktop)
     {
         system.push_str(&korfolder::take_inbox_context());
     }
@@ -1235,15 +1286,25 @@ pub fn prepare(
     // `kor undo`: per-session journal of the first state of every changed file.
     if let (Some(base), Some(id)) = (
         undo_dir(),
-        path.as_deref().and_then(Path::file_stem).and_then(|s| s.to_str()),
+        path.as_deref()
+            .and_then(Path::file_stem)
+            .and_then(|s| s.to_str()),
     ) {
         match kor_tools::undo::Journal::open(&base, id, std::slice::from_ref(&tctx.root)) {
-            Ok(j) => *tctx.undo.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(j),
+            Ok(j) => {
+                *tctx
+                    .undo
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(j)
+            }
             Err(e) => compat_warnings.push(format!("undo journal: {e}")),
         }
     }
     // §32.3 (ADR 0062): plugin hooks run under a time budget.
-    kor_agent::hooks::set_plugin_budget(loaded.config.perf.plugin_budget_ms, loaded.config.perf.log);
+    kor_agent::hooks::set_plugin_budget(
+        loaded.config.perf.plugin_budget_ms,
+        loaded.config.perf.log,
+    );
     budgets::apply_low_power(&loaded.config);
     let hooks = (!compat.hooks.is_empty()).then(|| HookRunner {
         hooks: compat.hooks.clone(),
@@ -1347,7 +1408,10 @@ pub fn prepare(
             tools.extend(kor_agent::media::studio_tools(&s));
         }
         // §20.3: generated media and their derivation chain, once whichever provider made them.
-        if tools.iter().any(|t| t.name() == "generate_image" || t.name() == "image_generate") {
+        if tools
+            .iter()
+            .any(|t| t.name() == "generate_image" || t.name() == "image_generate")
+        {
             tools.push(kor_agent::media::gallery_tool());
         }
     }
@@ -1365,7 +1429,9 @@ pub fn prepare(
         let desktop = matches!(opts.surface, prompt::Surface::Desktop);
         let (assistant, deferred) =
             kor_agent::assistant::tools(home.join("assistant.json"), desktop);
-        system.push_str(&kor_agent::assistant::deferred_section(&assistant, &deferred));
+        system.push_str(&kor_agent::assistant::deferred_section(
+            &assistant, &deferred,
+        ));
         if let Ok(mut d) = tctx.deferred.lock() {
             d.extend(deferred.iter().map(|n| (*n).to_owned()));
         }
@@ -1478,7 +1544,13 @@ pub fn prepare(
     }
     tctx.plan_gate = Arc::new(gate);
     let session_notes = path.as_ref().and_then(|p| session_notes_for(&tctx.root, p));
-    let summarizer = summarizer(l, &config.context.summarize_model, privacy, &mut redactor, notes);
+    let summarizer = summarizer(
+        l,
+        &config.context.summarize_model,
+        privacy,
+        &mut redactor,
+        notes,
+    );
     let cost = cost_control(l, &config, &provider, model.model(), privacy, notes);
     // §31.3: knowledge base recall/learning; a missing or locked database just leaves it off.
     let recall = kor_agent::recall::Recall::open(
@@ -1634,8 +1706,9 @@ pub async fn attach_mcp(l: &Localizer, agent: &mut Agent, compat: &Compat) -> Mc
     let (mut tools, report) = connect_all(&specs, &root).await;
     // §28.15: the agent may restart a server it is developing (`mcp_restart`, asks first).
     let clients: Vec<_> = report.iter().filter_map(|c| c.client.clone()).collect();
-    let restart: Option<Arc<dyn kor_tools::Tool>> =
-        (!clients.is_empty()).then(|| Arc::new(kor_agent::mcp_tools::McpRestart::new(clients)) as Arc<dyn kor_tools::Tool>);
+    let restart: Option<Arc<dyn kor_tools::Tool>> = (!clients.is_empty()).then(|| {
+        Arc::new(kor_agent::mcp_tools::McpRestart::new(clients)) as Arc<dyn kor_tools::Tool>
+    });
     let mut names = Vec::new();
     for c in report {
         match c.result {
@@ -1694,19 +1767,28 @@ mod tests {
 
     #[test]
     fn local_providers_and_network_tools_are_recognized() {
-        assert_eq!(reqwest_host("http://localhost:11434/v1").as_deref(), Some("localhost"));
-        assert_eq!(reqwest_host("https://u:p@API.x.dev:8/a").as_deref(), Some("api.x.dev"));
+        assert_eq!(
+            reqwest_host("http://localhost:11434/v1").as_deref(),
+            Some("localhost")
+        );
+        assert_eq!(
+            reqwest_host("https://u:p@API.x.dev:8/a").as_deref(),
+            Some("api.x.dev")
+        );
         assert_eq!(reqwest_host("http://[::1]:8080").as_deref(), Some("[::1]"));
         let reg = kor_providers::Registry::builtin();
         assert!(is_local_provider(reg.get("local").unwrap()));
         assert!(!is_local_provider(reg.get("venice").unwrap()));
-        assert!(needs_network("WebFetch") && needs_network("mcp__rea__x") && needs_network("ssh_exec"));
+        assert!(
+            needs_network("WebFetch") && needs_network("mcp__rea__x") && needs_network("ssh_exec")
+        );
         assert!(!needs_network("Read") && !needs_network("Bash"));
     }
 
     #[test]
     fn mcp_section_groups_by_server() {
-        let tools = kor_agent::assistant::tools(std::env::temp_dir().join("kor-none.json"), false).0;
+        let tools =
+            kor_agent::assistant::tools(std::env::temp_dir().join("kor-none.json"), false).0;
         let s = mcp_deferred_section(&tools[..2]);
         assert!(s.contains("# MCP tools (load on demand)"));
         assert!(s.contains("- other: "));

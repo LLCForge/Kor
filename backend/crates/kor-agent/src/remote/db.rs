@@ -421,7 +421,16 @@ pub(crate) async fn server_query(
         }
         DbKind::Mssql => {
             // -h -1: no header row, -W: trimmed, -s TAB, -b: non-zero exit on errors.
-            cmd.args(["-S", &format!("{host},{port}"), "-b", "-W", "-h", "-1", "-s", "\t"]);
+            cmd.args([
+                "-S",
+                &format!("{host},{port}"),
+                "-b",
+                "-W",
+                "-h",
+                "-1",
+                "-s",
+                "\t",
+            ]);
             match &d.user {
                 Some(u) => cmd.args(["-U", u]),
                 None => cmd.arg("-E"),
@@ -494,7 +503,11 @@ pub(crate) async fn server_query(
 }
 
 /// RFC 4180 CSV as written by `psql --csv`.
-fn parse_csv(text: &str, truncated: bool, max_rows: usize) -> (Vec<String>, Vec<Vec<String>>, bool) {
+fn parse_csv(
+    text: &str,
+    truncated: bool,
+    max_rows: usize,
+) -> (Vec<String>, Vec<Vec<String>>, bool) {
     let mut records: Vec<Vec<String>> = Vec::new();
     let mut field = String::new();
     let mut record = Vec::new();
@@ -525,7 +538,11 @@ fn parse_csv(text: &str, truncated: bool, max_rows: usize) -> (Vec<String>, Vec<
 }
 
 /// `mysql --batch`: tab-separated, `\t` `\n` `\\` escaped, NULL as `NULL`.
-fn parse_tsv(text: &str, truncated: bool, max_rows: usize) -> (Vec<String>, Vec<Vec<String>>, bool) {
+fn parse_tsv(
+    text: &str,
+    truncated: bool,
+    max_rows: usize,
+) -> (Vec<String>, Vec<Vec<String>>, bool) {
     let records = text
         .lines()
         .map(|l| {
@@ -664,8 +681,16 @@ pub(crate) async fn run(
         }
         None => schema_sql(d.kind).to_owned(),
     };
-    let (columns, rows, more) =
-        server_query(&conns, &id, &d, &statement, MAX_ROWS, &ctx.cancel, Exec::ReadOnly).await?;
+    let (columns, rows, more) = server_query(
+        &conns,
+        &id,
+        &d,
+        &statement,
+        MAX_ROWS,
+        &ctx.cancel,
+        Exec::ReadOnly,
+    )
+    .await?;
     if query {
         Ok(table(&columns, &rows, more))
     } else {
@@ -751,7 +776,11 @@ fn sqlite_tables(path: &Path) -> Result<Vec<kor_graph::LiveTable>, String> {
             .prepare("SELECT name, type FROM pragma_table_info(?1)")
             .and_then(|mut s| {
                 s.query_map([&name], |r| {
-                    Ok(format!("{} {}", r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+                    Ok(format!(
+                        "{} {}",
+                        r.get::<_, String>(0)?,
+                        r.get::<_, String>(1)?
+                    ))
                 })?
                 .collect()
             })
@@ -989,7 +1018,10 @@ fn statements(sql: &str) -> Vec<String> {
 /// `DELETE`/`UPDATE` without `WHERE`. These always ask and run on a copy first.
 pub fn destructive_statements(sql: &str) -> Vec<String> {
     static RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
-        regex::Regex::new(r"(?i)^(drop\s|truncate\s|alter\s+table\s.*\s(drop|rename)\s|delete\s+from\s|update\s)").expect("ddl regex")
+        regex::Regex::new(
+            r"(?i)^(drop\s|truncate\s|alter\s+table\s.*\s(drop|rename)\s|delete\s+from\s|update\s)",
+        )
+        .expect("ddl regex")
     });
     statements(sql)
         .into_iter()
@@ -1024,15 +1056,25 @@ pub(crate) fn check_backslashes(sql: &str) -> Result<(), String> {
 }
 
 /// What changed between two schemas: `- table x`, `+ table y`, `- column t.c`, `+ column t.c`.
-pub fn schema_change(before: &[kor_graph::LiveTable], after: &[kor_graph::LiveTable]) -> Vec<String> {
+pub fn schema_change(
+    before: &[kor_graph::LiveTable],
+    after: &[kor_graph::LiveTable],
+) -> Vec<String> {
     let cols = |t: &kor_graph::LiveTable| -> Vec<String> {
         t.columns
             .iter()
-            .map(|c| c.split_whitespace().next().unwrap_or_default().to_ascii_lowercase())
+            .map(|c| {
+                c.split_whitespace()
+                    .next()
+                    .unwrap_or_default()
+                    .to_ascii_lowercase()
+            })
             .collect()
     };
     let find = |list: &'_ [kor_graph::LiveTable], n: &str| {
-        list.iter().find(|t| t.name.eq_ignore_ascii_case(n)).map(cols)
+        list.iter()
+            .find(|t| t.name.eq_ignore_ascii_case(n))
+            .map(cols)
     };
     let mut out = Vec::new();
     for t in before {
@@ -1054,7 +1096,8 @@ pub fn schema_change(before: &[kor_graph::LiveTable], after: &[kor_graph::LiveTa
     out
 }
 
-static TRIALS: std::sync::Mutex<Vec<(String, std::time::Instant)>> = std::sync::Mutex::new(Vec::new());
+static TRIALS: std::sync::Mutex<Vec<(String, std::time::Instant)>> =
+    std::sync::Mutex::new(Vec::new());
 
 fn trial_key(id: &str, sql: &str) -> String {
     use sha2::Digest as _;
@@ -1066,14 +1109,17 @@ fn trial_key(id: &str, sql: &str) -> String {
 }
 
 fn trial_passed(key: &str) -> bool {
-    let list = TRIALS.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let list = TRIALS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     list.iter()
         .any(|(k, at)| k == key && at.elapsed() < Duration::from_secs(30 * 60))
 }
 
 fn sqlite_exec(path: &Path, sql: &str) -> Result<(), String> {
     let mut c = rusqlite::Connection::open(path).map_err(|e| e.to_string())?;
-    c.busy_timeout(Duration::from_secs(5)).map_err(|e| e.to_string())?;
+    c.busy_timeout(Duration::from_secs(5))
+        .map_err(|e| e.to_string())?;
     let tx = c.transaction().map_err(|e| e.to_string())?;
     tx.execute_batch(sql).map_err(|e| e.to_string())?;
     tx.commit().map_err(|e| e.to_string())
@@ -1204,9 +1250,15 @@ pub async fn apply(
                 return Err("privacy mode is on: Kor does not connect to database servers".into());
             }
             check_backslashes(sql)?;
-            let exec = if kind == DbKind::Postgres { Exec::WriteTx } else { Exec::Write };
+            let exec = if kind == DbKind::Postgres {
+                Exec::WriteTx
+            } else {
+                Exec::Write
+            };
             let cancel = tokio_util::sync::CancellationToken::new();
-            server_query(&conns, id, &d, sql, 0, &cancel, exec).await.map(|_| ())
+            server_query(&conns, id, &d, sql, 0, &cancel, exec)
+                .await
+                .map(|_| ())
         }
     }
 }
@@ -1253,7 +1305,11 @@ mod tests {
                 .unwrap_err()
                 .contains("privacy")
         );
-        assert!(introspect(Some(conf.clone()), "nope", dir.path(), true).await.is_err());
+        assert!(
+            introspect(Some(conf.clone()), "nope", dir.path(), true)
+                .await
+                .is_err()
+        );
         assert_eq!(connection_ids(Some(&conf)).unwrap(), vec!["app", "pg"]);
         // The snapshot becomes a graph layer.
         kor_graph::db::save_snapshot(dir.path(), &snap).unwrap();
@@ -1281,7 +1337,9 @@ mod tests {
         assert_eq!(t[0].references, vec!["public.b"]);
         assert_eq!(t[0].fk_columns, vec!["b_id"]);
         let rows = vec![
-            ["i", "a", "a_pkey", "id unique", "0"].map(str::to_owned).to_vec(),
+            ["i", "a", "a_pkey", "id unique", "0"]
+                .map(str::to_owned)
+                .to_vec(),
             ["i", "a", "a_x", "x,y", "0"].map(str::to_owned).to_vec(),
         ];
         assert_eq!(
@@ -1298,7 +1356,11 @@ mod tests {
         let sql = "-- DROP TABLE x;\nCREATE TABLE a(id int); INSERT INTO a VALUES ('drop table b; x');\n/* truncate c; */ ALTER TABLE a DROP COLUMN id;\nDELETE FROM a WHERE id = 1; delete from a; UPDATE a SET id = 2";
         assert_eq!(
             destructive_statements(sql),
-            vec!["ALTER TABLE a DROP COLUMN id", "delete from a", "UPDATE a SET id = 2"]
+            vec![
+                "ALTER TABLE a DROP COLUMN id",
+                "delete from a",
+                "UPDATE a SET id = 2"
+            ]
         );
         assert!(destructive_statements("CREATE INDEX i ON a(id)").is_empty());
         assert!(check_backslashes("SELECT 'a\\nb', E'\\x'").is_ok());
@@ -1320,7 +1382,9 @@ mod tests {
         }
         let conf = dir.path().join("connections.toml");
         std::fs::write(&conf, "[db.app]\nkind = \"sqlite\"\nfile = \"app.db\"\n[db.my]\nkind = \"mysql\"\nhost = \"h\"\n").unwrap();
-        let snap = introspect(Some(conf.clone()), "app", dir.path(), false).await.unwrap();
+        let snap = introspect(Some(conf.clone()), "app", dir.path(), false)
+            .await
+            .unwrap();
         let users = snap.tables.iter().find(|t| t.name == "users").unwrap();
         assert_eq!(users.indexes, vec!["users_email (email)"]);
         let orders = snap.tables.iter().find(|t| t.name == "orders").unwrap();
@@ -1328,19 +1392,57 @@ mod tests {
 
         let sql = "DROP TABLE old; ALTER TABLE users ADD COLUMN name TEXT;";
         // No trial yet: refused.
-        assert!(apply(Some(conf.clone()), "app", dir.path(), sql, false).await.unwrap_err().contains("copy"));
-        let change = trial(Some(conf.clone()), "app", dir.path(), sql, false).await.unwrap();
+        assert!(
+            apply(Some(conf.clone()), "app", dir.path(), sql, false)
+                .await
+                .unwrap_err()
+                .contains("copy")
+        );
+        let change = trial(Some(conf.clone()), "app", dir.path(), sql, false)
+            .await
+            .unwrap();
         assert_eq!(change, vec!["- table old", "+ column users.name"]);
         // The real file is untouched by the trial.
-        let names = |p: &Path| sqlite_tables(p).unwrap().into_iter().map(|t| t.name).collect::<Vec<_>>();
+        let names = |p: &Path| {
+            sqlite_tables(p)
+                .unwrap()
+                .into_iter()
+                .map(|t| t.name)
+                .collect::<Vec<_>>()
+        };
         assert!(names(&db).contains(&"old".to_owned()));
-        apply(Some(conf.clone()), "app", dir.path(), sql, false).await.unwrap();
+        apply(Some(conf.clone()), "app", dir.path(), sql, false)
+            .await
+            .unwrap();
         assert!(!names(&db).contains(&"old".to_owned()));
         // A failing trial reports the error and leaves nothing behind.
-        assert!(trial(Some(conf.clone()), "app", dir.path(), "DROP TABLE nope", false).await.is_err());
+        assert!(
+            trial(
+                Some(conf.clone()),
+                "app",
+                dir.path(),
+                "DROP TABLE nope",
+                false
+            )
+            .await
+            .is_err()
+        );
         // Non-destructive SQL needs no trial; MySQL destructive is refused with the reason.
-        apply(Some(conf.clone()), "app", dir.path(), "CREATE TABLE t(id int)", false).await.unwrap();
-        assert!(trial(Some(conf.clone()), "my", dir.path(), "DROP TABLE x", true).await.unwrap_err().contains("MySQL"));
+        apply(
+            Some(conf.clone()),
+            "app",
+            dir.path(),
+            "CREATE TABLE t(id int)",
+            false,
+        )
+        .await
+        .unwrap();
+        assert!(
+            trial(Some(conf.clone()), "my", dir.path(), "DROP TABLE x", true)
+                .await
+                .unwrap_err()
+                .contains("MySQL")
+        );
         assert!(slow_queries(Some(conf), "app", true).await.is_err());
     }
 
@@ -1354,7 +1456,9 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let conf = dir.path().join("connections.toml");
         std::fs::write(&conf, format!("[db.pg]\nkind = \"postgres\"\nhost = \"{}\"\nport = {}\nuser = \"{}\"\ndatabase = \"{}\"\nsslmode = \"disable\"\n", p[0], p[1], p[2], p[3])).unwrap();
-        let snap = introspect(Some(conf), "pg", dir.path(), true).await.unwrap();
+        let snap = introspect(Some(conf), "pg", dir.path(), true)
+            .await
+            .unwrap();
         assert_eq!(snap.kind, "postgres");
         assert!(!snap.tables.is_empty());
     }

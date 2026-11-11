@@ -111,11 +111,17 @@ pub async fn maybe_compact_with(
         "context: summarizing {} messages ({tools} tool outputs, ≈{tokens} tokens)",
         items.len()
     )));
-    let keep = match approver.compact(&items, agent.context.compact_confirm).await {
+    let keep = match approver
+        .compact(&items, agent.context.compact_confirm)
+        .await
+    {
         crate::ask::CompactChoice::Cancel => {
             // Asked again only after the conversation grows by another tenth of the window.
-            agent.context.compact_snooze = estimate_tokens(&agent.messages) + agent.context_window / 10;
-            let _ = events.send(crate::AgentEvent::Notice("context: summary cancelled".into()));
+            agent.context.compact_snooze =
+                estimate_tokens(&agent.messages) + agent.context_window / 10;
+            let _ = events.send(crate::AgentEvent::Notice(
+                "context: summary cancelled".into(),
+            ));
             return Ok(false);
         }
         crate::ask::CompactChoice::Proceed { keep } => keep,

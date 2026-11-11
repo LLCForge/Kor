@@ -82,7 +82,14 @@ pub fn new_code(dir: &Path) -> Result<(String, u64), String> {
         .map(|b| char::from(ALPHABET[usize::from(*b) % ALPHABET.len()]))
         .collect();
     let expires = now() + CODE_TTL.as_secs();
-    write_pending(dir, &Pending { hash: sha(&raw), expires, tries: 0 })?;
+    write_pending(
+        dir,
+        &Pending {
+            hash: sha(&raw),
+            expires,
+            tries: 0,
+        },
+    )?;
     Ok((format!("{}-{}", &raw[..4], &raw[4..]), expires))
 }
 
@@ -153,9 +160,9 @@ pub fn known_key(store: &dyn SecretStore, key: &str) -> bool {
         return false;
     }
     let h = sha(key);
-    keys(store)
-        .iter()
-        .fold(false, |hit, k| hit | super::server::same(k.as_bytes(), h.as_bytes()))
+    keys(store).iter().fold(false, |hit, k| {
+        hit | super::server::same(k.as_bytes(), h.as_bytes())
+    })
 }
 
 /// Number of paired browsers.
@@ -212,7 +219,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = MemoryStore::default();
         let (code, _) = new_code(dir.path()).unwrap();
-        let mut p: Pending = serde_json::from_slice(&std::fs::read(pending_file(dir.path())).unwrap()).unwrap();
+        let mut p: Pending =
+            serde_json::from_slice(&std::fs::read(pending_file(dir.path())).unwrap()).unwrap();
         p.expires = now() - 1;
         write_pending(dir.path(), &p).unwrap();
         assert!(redeem(dir.path(), &code, &store).is_err());

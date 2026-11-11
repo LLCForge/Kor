@@ -74,7 +74,8 @@ pub fn start(
         }
     })
     .map_err(|e| e.to_string())?;
-    w.watch(&l.root, RecursiveMode::Recursive).map_err(|e| e.to_string())?;
+    w.watch(&l.root, RecursiveMode::Recursive)
+        .map_err(|e| e.to_string())?;
     for d in ["sessions", "undo"] {
         let p = l.home.join(d);
         if p.is_dir() {
@@ -142,7 +143,12 @@ impl TaskRunner for AgentRunner {
         let drain = tokio::spawn(async move { while rx.recv().await.is_some() {} });
         let stop = p
             .agent
-            .send(task.prompt.clone(), &tx, &Unattended, kor_providers::CancellationToken::new())
+            .send(
+                task.prompt.clone(),
+                &tx,
+                &Unattended,
+                kor_providers::CancellationToken::new(),
+            )
             .await
             .map_err(|e| e.to_string())?;
         drop(tx);

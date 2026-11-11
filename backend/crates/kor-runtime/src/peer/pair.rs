@@ -35,7 +35,9 @@ struct Pending {
 fn random_chars(n: usize) -> Result<String, String> {
     let mut b = vec![0u8; n];
     getrandom::fill(&mut b).map_err(|e| e.to_string())?;
-    Ok(b.iter().map(|x| ALPHABET[usize::from(x & 31)] as char).collect())
+    Ok(b.iter()
+        .map(|x| ALPHABET[usize::from(x & 31)] as char)
+        .collect())
 }
 
 fn normalize(s: &str) -> String {
@@ -96,7 +98,11 @@ impl Code {
             .filter(|a| !a.is_empty())
             .map(str::to_owned)
             .collect();
-        if addrs.is_empty() || addrs.iter().any(|a| a.len() > 300 || a.contains(char::is_whitespace)) {
+        if addrs.is_empty()
+            || addrs
+                .iter()
+                .any(|a| a.len() > 300 || a.contains(char::is_whitespace))
+        {
             return Err(bad());
         }
         Ok(Self {
@@ -108,7 +114,8 @@ impl Code {
 }
 
 fn pending_path(dir: &Path, id: [u8; 4]) -> std::path::PathBuf {
-    dir.join("pending").join(format!("{}.json", String::from_utf8_lossy(&id)))
+    dir.join("pending")
+        .join(format!("{}.json", String::from_utf8_lossy(&id)))
 }
 
 /// A new code for this machine, valid for [`TTL`], answered by `kor peer serve` (or the
@@ -160,7 +167,12 @@ fn entry_from(remote: &[u8; 32], hello: &Value) -> PeerEntry {
         key: hex(remote),
         addrs: hello["addrs"]
             .as_array()
-            .map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(Value::as_str)
+                    .map(str::to_owned)
+                    .collect()
+            })
             .unwrap_or_default(),
         ssh: None,
         grant: super::Grant::default(),
@@ -173,7 +185,9 @@ fn store(node: &Node, mut e: PeerEntry, ssh: Option<String>) -> Result<PeerEntry
     e.ssh = ssh;
     let name = book.upsert(e);
     book.save(&node.dir)?;
-    book.get(&name).cloned().ok_or_else(|| "peer not saved".into())
+    book.get(&name)
+        .cloned()
+        .ok_or_else(|| "peer not saved".into())
 }
 
 /// Listening side of a pairing connection whose prelude named code `id`.
@@ -185,9 +199,13 @@ where
     S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
 {
     let code = take(&node.dir, id)?;
-    let link = noise::respond(io, &node.identity, Some(&code.psk()), &node.hello()?, |_, _| {
-        Ok(())
-    })
+    let link = noise::respond(
+        io,
+        &node.identity,
+        Some(&code.psk()),
+        &node.hello()?,
+        |_, _| Ok(()),
+    )
     .await?;
     finish(node, link, None).await
 }
@@ -216,7 +234,14 @@ pub async fn join(node: &Node, code: &Code, ssh: Option<&str>) -> Result<PeerEnt
     if let Some(target) = ssh {
         match super::client::ssh_stream(target) {
             Ok(io) => {
-                let link = noise::initiate(io, &node.identity, Mode::Pair { id: code.id }, Some(&psk), &hello).await?;
+                let link = noise::initiate(
+                    io,
+                    &node.identity,
+                    Mode::Pair { id: code.id },
+                    Some(&psk),
+                    &hello,
+                )
+                .await?;
                 return finish(node, link, Some(target.to_owned())).await;
             }
             Err(e) => errors.push(e),
@@ -226,15 +251,23 @@ pub async fn join(node: &Node, code: &Code, ssh: Option<&str>) -> Result<PeerEnt
         let addr = a.strip_prefix("ts:").unwrap_or(a);
         match super::client::tcp(addr).await {
             Ok(io) => {
-                let link =
-                    noise::initiate(io, &node.identity, Mode::Pair { id: code.id }, Some(&psk), &hello)
-                        .await?;
+                let link = noise::initiate(
+                    io,
+                    &node.identity,
+                    Mode::Pair { id: code.id },
+                    Some(&psk),
+                    &hello,
+                )
+                .await?;
                 return finish(node, link, None).await;
             }
             Err(e) => errors.push(format!("{addr}: {e}")),
         }
     }
-    Err(format!("could not reach the pairing machine ({})", errors.join("; ")))
+    Err(format!(
+        "could not reach the pairing machine ({})",
+        errors.join("; ")
+    ))
 }
 
 /// The code as a terminal QR code (two rows per character).
@@ -270,7 +303,11 @@ mod tests {
     #[allow(clippy::many_single_char_names)]
     fn codes_render_parse_and_tolerate_typing() {
         let d = tempfile::tempdir().unwrap();
-        let c = create(d.path(), vec!["192.168.1.5:47321".into(), "ts:100.64.0.2:47321".into()]).unwrap();
+        let c = create(
+            d.path(),
+            vec!["192.168.1.5:47321".into(), "ts:100.64.0.2:47321".into()],
+        )
+        .unwrap();
         let text = c.render();
         assert!(text.starts_with("KOR1-"));
         let back = Code::parse(&text).unwrap();

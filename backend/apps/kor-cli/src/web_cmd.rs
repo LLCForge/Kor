@@ -22,7 +22,10 @@ use kor_web::site::{self as web, client, cms, docs, doctor, host, proposal, redi
 use crate::Ctx;
 
 fn fail(l: &Localizer, e: impl std::fmt::Display) -> bool {
-    eprintln!("{}", l.t_args("error-generic", &args!("error" => e.to_string())));
+    eprintln!(
+        "{}",
+        l.t_args("error-generic", &args!("error" => e.to_string()))
+    );
     false
 }
 
@@ -32,10 +35,16 @@ fn base(l: &Localizer) -> Option<PathBuf> {
 
 /// The configured vault; the encrypted file backend asks for its passphrase unless it is set.
 fn store(ctx: &Ctx) -> Option<Box<dyn SecretStore>> {
-    let cfg = ctx.config.as_ref().map(|c| c.config.vault.clone()).unwrap_or_default();
+    let cfg = ctx
+        .config
+        .as_ref()
+        .map(|c| c.config.vault.clone())
+        .unwrap_or_default();
     let env_set = std::env::var(kor_runtime::secure::PASSPHRASE_ENV).is_ok_and(|v| !v.is_empty());
     let pass = if cfg.backend == kor_config::VaultBackend::File && !env_set {
-        crate::auth::read_secret(&ctx.l.t("vault-passphrase")).ok().flatten()
+        crate::auth::read_secret(&ctx.l.t("vault-passphrase"))
+            .ok()
+            .flatten()
     } else {
         None
     };
@@ -44,7 +53,10 @@ fn store(ctx: &Ctx) -> Option<Box<dyn SecretStore>> {
 
 fn saved(l: &Localizer, files: &[PathBuf]) {
     for f in files {
-        println!("{}", l.t_args("web-saved", &args!("path" => f.display().to_string())));
+        println!(
+            "{}",
+            l.t_args("web-saved", &args!("path" => f.display().to_string()))
+        );
     }
 }
 
@@ -106,34 +118,133 @@ pub enum HostCmd {
         json: bool,
     },
     /// Install or renew SSL (Let's Encrypt / AutoSSL).
-    Ssl { #[command(flatten)] t: Target, #[arg(long)] domain: String },
+    Ssl {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        domain: String,
+    },
     /// Change a site's PHP version (warns about incompatible WordPress plugins).
-    Php { #[command(flatten)] t: Target, #[arg(long)] domain: String, #[arg(long)] version: String },
+    Php {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        domain: String,
+        #[arg(long)]
+        version: String,
+    },
     /// Set a php.ini value for a site.
-    PhpIni { #[command(flatten)] t: Target, #[arg(long)] domain: String, #[arg(long)] key: String, #[arg(long)] value: String },
+    PhpIni {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        domain: String,
+        #[arg(long)]
+        key: String,
+        #[arg(long)]
+        value: String,
+    },
     /// Create a subdomain.
-    Subdomain { #[command(flatten)] t: Target, #[arg(long)] sub: String, #[arg(long)] domain: String, #[arg(long)] dir: Option<String> },
+    Subdomain {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        sub: String,
+        #[arg(long)]
+        domain: String,
+        #[arg(long)]
+        dir: Option<String>,
+    },
     /// Create a database and user (password goes to the vault).
-    Db { #[command(flatten)] t: Target, #[arg(long = "name", id = "db_name")] db: String, #[arg(long)] user: String },
+    Db {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long = "name", id = "db_name")]
+        db: String,
+        #[arg(long)]
+        user: String,
+    },
     /// Create a mailbox (password goes to the vault).
-    Email { #[command(flatten)] t: Target, #[arg(long)] address: String, #[arg(long, default_value_t = 1024)] quota: u32 },
+    Email {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        address: String,
+        #[arg(long, default_value_t = 1024)]
+        quota: u32,
+    },
     /// Take a backup.
-    Backup { #[command(flatten)] t: Target, #[arg(long)] domain: Option<String> },
+    Backup {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        domain: Option<String>,
+    },
     /// Restore a backup Kor made (`~/kor-backups/…tar.gz`); the current state is saved first.
-    Restore { #[command(flatten)] t: Target, #[arg(long)] archive: String, #[arg(long)] domain: String },
+    Restore {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        archive: String,
+        #[arg(long)]
+        domain: String,
+    },
     /// Disk clean-up: list candidates, or delete the `--path` ones.
-    Clean { #[command(flatten)] t: Target, #[arg(long = "path")] paths: Vec<String> },
+    Clean {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long = "path")]
+        paths: Vec<String>,
+    },
     /// Add a cron job.
-    Cron { #[command(flatten)] t: Target, #[arg(long)] schedule: String, #[arg(long)] command: String },
+    Cron {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        schedule: String,
+        #[arg(long)]
+        command: String,
+    },
     /// Fix permissions (folders 755, files 644, wp-config.php 640).
-    Perms { #[command(flatten)] t: Target, #[arg(long)] path: String },
+    Perms {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        path: String,
+    },
     /// Create an SFTP/FTP user (password goes to the vault).
-    Sftp { #[command(flatten)] t: Target, #[arg(long)] user: String, #[arg(long)] path: String, #[arg(long)] domain: Option<String> },
+    Sftp {
+        #[command(flatten)]
+        t: Target,
+        #[arg(long)]
+        user: String,
+        #[arg(long)]
+        path: String,
+        #[arg(long)]
+        domain: Option<String>,
+    },
 }
 
 pub fn localize_host(c: clap::Command, l: &Localizer) -> clap::Command {
     let mut c = c.about(l.t("cmd-host"));
-    for s in ["connect", "list", "remove", "inventory", "ssl", "php", "php-ini", "subdomain", "db", "email", "backup", "restore", "clean", "cron", "perms", "sftp"] {
+    for s in [
+        "connect",
+        "list",
+        "remove",
+        "inventory",
+        "ssl",
+        "php",
+        "php-ini",
+        "subdomain",
+        "db",
+        "email",
+        "backup",
+        "restore",
+        "clean",
+        "cron",
+        "perms",
+        "sftp",
+    ] {
         let key = format!("cmd-host-{s}");
         c = c.mut_subcommand(s, |x| x.about(l.t(&key)));
     }
@@ -153,9 +264,16 @@ fn names(l: &Localizer, base: &Path, t: &Target) -> Vec<String> {
 }
 
 fn print_plan(l: &Localizer, host_name: &str, rows: &[host::PlanRow]) {
-    println!("{}", l.t_args("web-plan-header", &args!("host" => host_name.to_owned())));
+    println!(
+        "{}",
+        l.t_args("web-plan-header", &args!("host" => host_name.to_owned()))
+    );
     for r in rows {
-        let undo = if r.reversible { l.t("web-reversible") } else { l.t("web-irreversible") };
+        let undo = if r.reversible {
+            l.t("web-reversible")
+        } else {
+            l.t("web-irreversible")
+        };
         println!("  • {} — {} — {} ({undo})", r.step, r.target, r.impact);
     }
 }
@@ -167,14 +285,23 @@ fn report_run(l: &Localizer, r: &host::RunReport) -> bool {
         return fail(l, e);
     }
     if let Some(a) = &r.applied {
-        println!("{}", l.t_args("web-applied", &args!("summary" => a.clone())));
+        println!(
+            "{}",
+            l.t_args("web-applied", &args!("summary" => a.clone()))
+        );
     }
     for o in &r.output {
         println!("  {o}");
     }
     if let Some(v) = &r.verify {
         if v.ok {
-            println!("{}", l.t_args("web-verify-ok", &args!("url" => v.url.clone(), "status" => v.status, "ms" => v.ms)));
+            println!(
+                "{}",
+                l.t_args(
+                    "web-verify-ok",
+                    &args!("url" => v.url.clone(), "status" => v.status, "ms" => v.ms)
+                )
+            );
         } else {
             println!("{}", l.t_args("web-verify-fail", &args!("url" => v.url.clone(), "status" => v.status, "detail" => v.error.clone().unwrap_or_default())));
         }
@@ -183,7 +310,10 @@ fn report_run(l: &Localizer, r: &host::RunReport) -> bool {
         println!("{}", l.t("web-rolled-back"));
     }
     if let Some(c) = &r.credential {
-        println!("{}", l.t_args("web-credential", &args!("name" => c.clone())));
+        println!(
+            "{}",
+            l.t_args("web-credential", &args!("name" => c.clone()))
+        );
     }
     if let Some(e) = &r.error {
         return fail(l, e);
@@ -193,7 +323,9 @@ fn report_run(l: &Localizer, r: &host::RunReport) -> bool {
 
 fn run_task(ctx: &Ctx, t: &Target, task: &host::Task) -> anyhow::Result<bool> {
     let l = &ctx.l;
-    let Some(base) = base(l) else { return Ok(false) };
+    let Some(base) = base(l) else {
+        return Ok(false);
+    };
     let st = store(ctx);
     let rt = crate::providers::runtime()?;
     let mut ok = true;
@@ -215,9 +347,25 @@ fn run_task(ctx: &Ctx, t: &Target, task: &host::Task) -> anyhow::Result<bool> {
             crate::shell_cmd::confirm(&l, &l.t("web-approve-q"), yes)
         };
         let kind = format!("host-{}", task.id());
-        let r = rt.block_on(host::run(l, &name, &prof, panel.as_ref(), task.clone(), &warnings, st.as_deref(), &approve));
+        let r = rt.block_on(host::run(
+            l,
+            &name,
+            &prof,
+            panel.as_ref(),
+            task.clone(),
+            &warnings,
+            st.as_deref(),
+            &approve,
+        ));
         if r.approved && r.applied.is_some() {
-            client::log_auto(&base, prof.client.as_deref(), &kind, &name, r.applied.as_deref().unwrap_or(""), r.secs);
+            client::log_auto(
+                &base,
+                prof.client.as_deref(),
+                &kind,
+                &name,
+                r.applied.as_deref().unwrap_or(""),
+                r.secs,
+            );
         }
         ok &= report_run(l, &r);
     }
@@ -227,13 +375,35 @@ fn run_task(ctx: &Ctx, t: &Target, task: &host::Task) -> anyhow::Result<bool> {
 #[allow(clippy::too_many_lines)]
 pub fn host(ctx: &Ctx, cmd: HostCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
-    let Some(base) = base(l) else { return Ok(false) };
+    let Some(base) = base(l) else {
+        return Ok(false);
+    };
     let task = match cmd {
-        HostCmd::Connect { name, kind, url, user, secret, ssh, account, client, email, no_check } => {
+        HostCmd::Connect {
+            name,
+            kind,
+            url,
+            user,
+            secret,
+            ssh,
+            account,
+            client,
+            email,
+            no_check,
+        } => {
             let Some(k) = host::Kind::parse(&kind) else {
                 return Ok(fail(l, l.t_args("web-bad-kind", &args!("kind" => kind))));
             };
-            let mut p = host::HostProfile { kind: Some(k), url, user, secret, ssh, account, client, email };
+            let mut p = host::HostProfile {
+                kind: Some(k),
+                url,
+                user,
+                secret,
+                ssh,
+                account,
+                client,
+                email,
+            };
             if let Err(e) = p.validate() {
                 return Ok(fail(l, e));
             }
@@ -246,19 +416,32 @@ pub fn host(ctx: &Ctx, cmd: HostCmd) -> anyhow::Result<bool> {
                     },
                     None => None,
                 };
-                let panel = match host::ssh_shell(&p).and_then(|sh| host::open(&name, &p, secret.as_deref(), sh, None)) {
+                let panel = match host::ssh_shell(&p)
+                    .and_then(|sh| host::open(&name, &p, secret.as_deref(), sh, None))
+                {
                     Ok(x) => x,
                     Err(e) => return Ok(fail(l, e)),
                 };
                 let rt = crate::providers::runtime()?;
                 match rt.block_on(host::inventory(panel.as_ref())) {
                     Ok(inv) => println!("{}", host::inventory_markdown(l, &inv, web::now())),
-                    Err(e) => return Ok(fail(l, l.t_args("web-connect-failed", &args!("error" => e)))),
+                    Err(e) => {
+                        return Ok(fail(
+                            l,
+                            l.t_args("web-connect-failed", &args!("error" => e)),
+                        ));
+                    }
                 }
             }
             return Ok(match host::save(&base, &name, &p) {
                 Ok(path) => {
-                    println!("{}", l.t_args("web-connected", &args!("name" => name, "path" => path.display().to_string())));
+                    println!(
+                        "{}",
+                        l.t_args(
+                            "web-connected",
+                            &args!("name" => name, "path" => path.display().to_string())
+                        )
+                    );
                     true
                 }
                 Err(e) => fail(l, e),
@@ -271,7 +454,12 @@ pub fn host(ctx: &Ctx, cmd: HostCmd) -> anyhow::Result<bool> {
             }
             for (n, p) in all {
                 match p {
-                    Ok(p) => println!("{n}\t{}\t{}\t{}", p.kind().as_str(), p.url.as_deref().or(p.ssh.as_deref()).unwrap_or(""), p.client.as_deref().unwrap_or("")),
+                    Ok(p) => println!(
+                        "{n}\t{}\t{}\t{}",
+                        p.kind().as_str(),
+                        p.url.as_deref().or(p.ssh.as_deref()).unwrap_or(""),
+                        p.client.as_deref().unwrap_or("")
+                    ),
                     Err(e) => println!("{n}\t{e}"),
                 }
             }
@@ -292,7 +480,8 @@ pub fn host(ctx: &Ctx, cmd: HostCmd) -> anyhow::Result<bool> {
             let rt = crate::providers::runtime()?;
             let mut ok = true;
             for name in names(l, &base, &t) {
-                let r = host::connect(&base, &name, st.as_deref(), t.account.clone()).and_then(|(_, p)| rt.block_on(host::inventory(p.as_ref())));
+                let r = host::connect(&base, &name, st.as_deref(), t.account.clone())
+                    .and_then(|(_, p)| rt.block_on(host::inventory(p.as_ref())));
                 match r {
                     Ok(inv) if json => println!("{}", serde_json::to_string_pretty(&inv)?),
                     Ok(inv) => println!("{}", host::inventory_markdown(l, &inv, web::now())),
@@ -303,16 +492,41 @@ pub fn host(ctx: &Ctx, cmd: HostCmd) -> anyhow::Result<bool> {
         }
         HostCmd::Ssl { t, domain } => (t, host::Task::Ssl { domain }),
         HostCmd::Php { t, domain, version } => (t, host::Task::Php { domain, version }),
-        HostCmd::PhpIni { t, domain, key, value } => (t, host::Task::PhpIni { domain, key, value }),
-        HostCmd::Subdomain { t, sub, domain, dir } => (t, host::Task::Subdomain { sub, domain, dir }),
+        HostCmd::PhpIni {
+            t,
+            domain,
+            key,
+            value,
+        } => (t, host::Task::PhpIni { domain, key, value }),
+        HostCmd::Subdomain {
+            t,
+            sub,
+            domain,
+            dir,
+        } => (t, host::Task::Subdomain { sub, domain, dir }),
         HostCmd::Db { t, db, user } => (t, host::Task::Database { name: db, user }),
-        HostCmd::Email { t, address, quota } => (t, host::Task::Email { address, quota_mb: quota }),
+        HostCmd::Email { t, address, quota } => (
+            t,
+            host::Task::Email {
+                address,
+                quota_mb: quota,
+            },
+        ),
         HostCmd::Backup { t, domain } => (t, host::Task::Backup { domain }),
         HostCmd::Restore { t, archive, domain } => (t, host::Task::Restore { archive, domain }),
         HostCmd::Clean { t, paths } => (t, host::Task::Clean { paths }),
-        HostCmd::Cron { t, schedule, command } => (t, host::Task::Cron { schedule, command }),
+        HostCmd::Cron {
+            t,
+            schedule,
+            command,
+        } => (t, host::Task::Cron { schedule, command }),
         HostCmd::Perms { t, path } => (t, host::Task::Perms { path }),
-        HostCmd::Sftp { t, user, path, domain } => (t, host::Task::Sftp { user, path, domain }),
+        HostCmd::Sftp {
+            t,
+            user,
+            path,
+            domain,
+        } => (t, host::Task::Sftp { user, path, domain }),
     };
     run_task(ctx, &task.0, &task.1)
 }
@@ -347,7 +561,11 @@ pub enum WpCmd {
     /// Forget a site.
     Remove { name: String },
     /// Version, plugins, themes, users, WooCommerce products and orders.
-    Inventory { name: String, #[arg(long)] json: bool },
+    Inventory {
+        name: String,
+        #[arg(long)]
+        json: bool,
+    },
     /// Site Health tests, page checks, core checksums.
     Health { name: String },
     /// Plugin doctor: conflicts, outdated/abandoned/vulnerable plugins, A–F grades.
@@ -375,11 +593,24 @@ pub enum WpCmd {
         yes: bool,
     },
     /// Staging copy in `<root>/kor-staging`: `create` or `drop`.
-    Staging { name: String, action: String, #[arg(long)] yes: bool },
+    Staging {
+        name: String,
+        action: String,
+        #[arg(long)]
+        yes: bool,
+    },
     /// Core files vs WordPress.org checksums, plugin checksums, suspicious code.
-    Integrity { name: String, #[arg(long)] json: bool },
+    Integrity {
+        name: String,
+        #[arg(long)]
+        json: bool,
+    },
     /// After a compromise: reinstall core/plugins, new salts, password resets (asks first).
-    Cleanup { name: String, #[arg(long)] yes: bool },
+    Cleanup {
+        name: String,
+        #[arg(long)]
+        yes: bool,
+    },
     /// Skeletons: child-theme, plugin, opencart, prestashop.
     Scaffold {
         kind: String,
@@ -404,7 +635,20 @@ pub enum WpCmd {
 
 pub fn localize_wp(c: clap::Command, l: &Localizer) -> clap::Command {
     let mut c = c.about(l.t("cmd-wp"));
-    for s in ["connect", "list", "remove", "inventory", "health", "doctor", "update", "staging", "integrity", "cleanup", "scaffold", "detect"] {
+    for s in [
+        "connect",
+        "list",
+        "remove",
+        "inventory",
+        "health",
+        "doctor",
+        "update",
+        "staging",
+        "integrity",
+        "cleanup",
+        "scaffold",
+        "detect",
+    ] {
         let key = format!("cmd-wp-{s}");
         c = c.mut_subcommand(s, |x| x.about(l.t(&key)));
     }
@@ -412,7 +656,10 @@ pub fn localize_wp(c: clap::Command, l: &Localizer) -> clap::Command {
 }
 
 fn print_update(l: &Localizer, r: &wp::UpdateReport) -> bool {
-    println!("{}", l.t_args("wp-update-target", &args!("url" => r.target.clone())));
+    println!(
+        "{}",
+        l.t_args("wp-update-target", &args!("url" => r.target.clone()))
+    );
     for b in &r.backup {
         println!("  {}", l.t_args("wp-backup", &args!("path" => b.clone())));
     }
@@ -420,7 +667,15 @@ fn print_update(l: &Localizer, r: &wp::UpdateReport) -> bool {
         println!("{}", l.t("wp-nothing-to-update"));
     }
     for i in &r.items {
-        println!("  {} {} {} → {}: {} {}", i.kind, i.slug, i.from, i.to, l.t(&format!("wp-result-{}", i.result)), i.note);
+        println!(
+            "  {} {} {} → {}: {} {}",
+            i.kind,
+            i.slug,
+            i.from,
+            i.to,
+            l.t(&format!("wp-result-{}", i.result)),
+            i.note
+        );
         for s in i.smoke.iter().filter(|s| !s.ok) {
             println!("    ✗ {} {} HTTP {} {}", s.page, s.url, s.status, s.note);
         }
@@ -431,12 +686,31 @@ fn print_update(l: &Localizer, r: &wp::UpdateReport) -> bool {
 #[allow(clippy::too_many_lines)]
 pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
-    let Some(base) = base(l) else { return Ok(false) };
+    let Some(base) = base(l) else {
+        return Ok(false);
+    };
     let rt = crate::providers::runtime()?;
     let open = |name: &str| web::tools::open_wp(&base, name);
     Ok(match cmd {
-        WpCmd::Connect { name, url, user, secret, ssh, path, host, client } => {
-            let mut s = wp::WpSite { url, user, secret, ssh, path, host, client };
+        WpCmd::Connect {
+            name,
+            url,
+            user,
+            secret,
+            ssh,
+            path,
+            host,
+            client,
+        } => {
+            let mut s = wp::WpSite {
+                url,
+                user,
+                secret,
+                ssh,
+                path,
+                host,
+                client,
+            };
             if let Err(e) = s.validate() {
                 return Ok(fail(l, e));
             }
@@ -457,7 +731,12 @@ pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
         WpCmd::List => {
             for (n, s) in wp::list(&base) {
                 match s {
-                    Ok(s) => println!("{n}\t{}\t{}\t{}", s.url, if s.ssh.is_some() { "wp-cli" } else { "rest" }, s.client.unwrap_or_default()),
+                    Ok(s) => println!(
+                        "{n}\t{}\t{}\t{}",
+                        s.url,
+                        if s.ssh.is_some() { "wp-cli" } else { "rest" },
+                        s.client.unwrap_or_default()
+                    ),
                     Err(e) => println!("{n}\t{e}"),
                 }
             }
@@ -486,13 +765,30 @@ pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
             Ok(w) => {
                 let checks = rt.block_on(wp::health(&w));
                 for c in &checks {
-                    println!("{} {} — {} [{}]", if c.status == "good" { "✓" } else if c.status == "critical" { "✗" } else { "!" }, c.id, c.label, c.source);
+                    println!(
+                        "{} {} — {} [{}]",
+                        if c.status == "good" {
+                            "✓"
+                        } else if c.status == "critical" {
+                            "✗"
+                        } else {
+                            "!"
+                        },
+                        c.id,
+                        c.label,
+                        c.source
+                    );
                 }
                 checks.iter().all(|c| c.status != "critical")
             }
             Err(e) => fail(l, e),
         },
-        WpCmd::Doctor { name, php, measure, json } => {
+        WpCmd::Doctor {
+            name,
+            php,
+            measure,
+            json,
+        } => {
             let w = match open(&name) {
                 Ok(w) => w,
                 Err(e) => return Ok(fail(l, e)),
@@ -502,8 +798,17 @@ pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
                 Err(e) => return Ok(fail(l, e)),
             };
             let st = store(ctx);
-            let token = web::secret(st.as_deref(), "WPSCAN_API_TOKEN").ok().map(|t| t.expose_secret().to_owned());
-            let mut rep = rt.block_on(doctor::diagnose(w.http(), &name, &inv.plugins, inv.version.as_deref(), token.as_deref().map(|t| ("https://wpscan.com", t)), None));
+            let token = web::secret(st.as_deref(), "WPSCAN_API_TOKEN")
+                .ok()
+                .map(|t| t.expose_secret().to_owned());
+            let mut rep = rt.block_on(doctor::diagnose(
+                w.http(),
+                &name,
+                &inv.plugins,
+                inv.version.as_deref(),
+                token.as_deref().map(|t| ("https://wpscan.com", t)),
+                None,
+            ));
             if measure {
                 let root = w.site.path.clone().unwrap_or_default();
                 let st_root = format!("{}/kor-staging", root.trim_end_matches('/'));
@@ -518,15 +823,31 @@ pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
                 println!("{}", doctor::render(l, &rep));
             }
             if let Some(v) = php {
-                let infos: Vec<_> = rep.rows.iter().map(|r| (r.plugin.clone(), r.org.clone())).collect();
+                let infos: Vec<_> = rep
+                    .rows
+                    .iter()
+                    .map(|r| (r.plugin.clone(), r.org.clone()))
+                    .collect();
                 for warn in doctor::php_warnings(l, &infos, &v) {
                     println!("- {warn}");
                 }
             }
-            client::log_auto(&base, w.site.client.as_deref(), "doctor", &name, &format!("{} plugins", rep.rows.len()), 0);
+            client::log_auto(
+                &base,
+                w.site.client.as_deref(),
+                "doctor",
+                &name,
+                &format!("{} plugins", rep.rows.len()),
+                0,
+            );
             true
         }
-        WpCmd::Update { name, staging, only, yes } => {
+        WpCmd::Update {
+            name,
+            staging,
+            only,
+            yes,
+        } => {
             let w = match open(&name) {
                 Ok(w) => w,
                 Err(e) => return Ok(fail(l, e)),
@@ -543,14 +864,19 @@ pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
                 println!("{}", l.t("wp-nothing-to-update"));
                 return Ok(true);
             }
-            let Some(root) = w.site.path.clone() else { return Ok(fail(l, "this site has no WP-CLI path (--ssh/--path)")) };
+            let Some(root) = w.site.path.clone() else {
+                return Ok(fail(l, "this site has no WP-CLI path (--ssh/--path)"));
+            };
             let start = std::time::Instant::now();
             if staging {
                 let url = match rt.block_on(wp::create_staging(&w)) {
                     Ok(u) => u,
                     Err(e) => return Ok(fail(l, e)),
                 };
-                println!("{}", l.t_args("wp-staging-ready", &args!("url" => url.clone())));
+                println!(
+                    "{}",
+                    l.t_args("wp-staging-ready", &args!("url" => url.clone()))
+                );
                 let st_root = format!("{}/kor-staging", root.trim_end_matches('/'));
                 match rt.block_on(wp::update(&w, &st_root, &url, &inv, &only)) {
                     Ok(r) => {
@@ -566,7 +892,14 @@ pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
                 Ok(r) => {
                     let ok = print_update(l, &r);
                     let done = r.items.iter().filter(|i| i.result == "updated").count();
-                    client::log_auto(&base, w.site.client.as_deref(), "wp-update", &name, &l.t_args("wp-update-log", &args!("count" => done)), start.elapsed().as_secs());
+                    client::log_auto(
+                        &base,
+                        w.site.client.as_deref(),
+                        "wp-update",
+                        &name,
+                        &l.t_args("wp-update-log", &args!("count" => done)),
+                        start.elapsed().as_secs(),
+                    );
                     ok
                 }
                 Err(e) => fail(l, e),
@@ -585,29 +918,49 @@ pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
                     }
                     Err(e) => fail(l, e),
                 },
-                "drop" if crate::shell_cmd::confirm(l, &l.t("wp-staging-drop-q"), yes) => match rt.block_on(wp::drop_staging(&w)) {
-                    Ok(()) => {
-                        println!("{}", l.t("wp-staging-dropped"));
-                        true
+                "drop" if crate::shell_cmd::confirm(l, &l.t("wp-staging-drop-q"), yes) => {
+                    match rt.block_on(wp::drop_staging(&w)) {
+                        Ok(()) => {
+                            println!("{}", l.t("wp-staging-dropped"));
+                            true
+                        }
+                        Err(e) => fail(l, e),
                     }
-                    Err(e) => fail(l, e),
-                },
+                }
                 "drop" => false,
                 other => fail(l, format!("create | drop, not `{other}`")),
             }
         }
-        WpCmd::Integrity { name, json } => match open(&name).map(|w| (rt.block_on(wp::integrity(&w)), w)) {
-            Ok((Ok(i), w)) => {
-                if json {
-                    println!("{}", serde_json::to_string_pretty(&i)?);
-                } else {
-                    println!("{}", integrity_text(l, &i));
+        WpCmd::Integrity { name, json } => {
+            match open(&name).map(|w| (rt.block_on(wp::integrity(&w)), w)) {
+                Ok((Ok(i), w)) => {
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&i)?);
+                    } else {
+                        println!("{}", integrity_text(l, &i));
+                    }
+                    client::log_auto(
+                        &base,
+                        w.site.client.as_deref(),
+                        "wp-integrity",
+                        &name,
+                        &format!(
+                            "{} modified, {} unknown, {} suspicious",
+                            i.modified.len(),
+                            i.unknown.len(),
+                            i.suspicious.len()
+                        ),
+                        0,
+                    );
+                    i.modified.is_empty()
+                        && i.unknown.is_empty()
+                        && i.suspicious.is_empty()
+                        && i.uploads_php.is_empty()
+                        && i.plugins.is_empty()
                 }
-                client::log_auto(&base, w.site.client.as_deref(), "wp-integrity", &name, &format!("{} modified, {} unknown, {} suspicious", i.modified.len(), i.unknown.len(), i.suspicious.len()), 0);
-                i.modified.is_empty() && i.unknown.is_empty() && i.suspicious.is_empty() && i.uploads_php.is_empty() && i.plugins.is_empty()
+                Ok((Err(e), _)) | Err(e) => fail(l, e),
             }
-            Ok((Err(e), _)) | Err(e) => fail(l, e),
-        },
+        }
         WpCmd::Cleanup { name, yes } => {
             let w = match open(&name) {
                 Ok(w) => w,
@@ -628,22 +981,45 @@ pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
                         println!("  ✓ {d}");
                     }
                     println!("{}", l.t("wp-cleanup-next"));
-                    client::log_auto(&base, w.site.client.as_deref(), "wp-cleanup", &name, &done.join("; "), 0);
+                    client::log_auto(
+                        &base,
+                        w.site.client.as_deref(),
+                        "wp-cleanup",
+                        &name,
+                        &done.join("; "),
+                        0,
+                    );
                     true
                 }
                 Err(e) => fail(l, e),
             }
         }
-        WpCmd::Scaffold { kind, name, slug, parent, woocommerce, out } => {
+        WpCmd::Scaffold {
+            kind,
+            name,
+            slug,
+            parent,
+            woocommerce,
+            out,
+        } => {
             if !web::valid_name(&slug) {
                 return Ok(fail(l, format!("invalid slug `{slug}`")));
             }
             let files = match kind.as_str() {
-                "child-theme" => wp::child_theme(parent.as_deref().unwrap_or("twentytwentyfive"), &name, &slug),
+                "child-theme" => wp::child_theme(
+                    parent.as_deref().unwrap_or("twentytwentyfive"),
+                    &name,
+                    &slug,
+                ),
                 "plugin" => wp::plugin_skeleton(&name, &slug, woocommerce),
                 "opencart" => cms::opencart_module(&slug, &name),
                 "prestashop" => cms::prestashop_module(&slug, &name),
-                other => return Ok(fail(l, format!("child-theme | plugin | opencart | prestashop, not `{other}`"))),
+                other => {
+                    return Ok(fail(
+                        l,
+                        format!("child-theme | plugin | opencart | prestashop, not `{other}`"),
+                    ));
+                }
             };
             match wp::write_scaffold(&out, &files) {
                 Ok(paths) => {
@@ -666,7 +1042,13 @@ pub fn wp(ctx: &Ctx, cmd: WpCmd) -> anyhow::Result<bool> {
                 println!("{}", l.t("wp-detect-none"));
             }
             for d in &found {
-                println!("{} {} [{}]{}", d.platform, d.version.as_deref().unwrap_or(""), d.evidence, if d.modules { "" } else { " (SaaS)" });
+                println!(
+                    "{} {} [{}]{}",
+                    d.platform,
+                    d.version.as_deref().unwrap_or(""),
+                    d.evidence,
+                    if d.modules { "" } else { " (SaaS)" }
+                );
             }
             !found.is_empty()
         }
@@ -686,7 +1068,17 @@ fn wp_inventory_text(l: &Localizer, inv: &wp::WpInventory) -> String {
         let _ = writeln!(o, "{}", l.t_args("wp-woo", &args!("products" => inv.products.map_or_else(|| "?".into(), |u| u.to_string()), "orders" => inv.orders.map_or_else(|| "?".into(), |u| u.to_string()))));
     }
     for p in &inv.plugins {
-        let _ = writeln!(o, "  {} {} {}{}", if p.active { "●" } else { "○" }, p.slug, p.version, p.update.as_deref().map(|u| format!(" → {u}")).unwrap_or_default());
+        let _ = writeln!(
+            o,
+            "  {} {} {}{}",
+            if p.active { "●" } else { "○" },
+            p.slug,
+            p.version,
+            p.update
+                .as_deref()
+                .map(|u| format!(" → {u}"))
+                .unwrap_or_default()
+        );
     }
     for n in &inv.notes {
         let _ = writeln!(o, "  ! {n}");
@@ -698,7 +1090,13 @@ fn integrity_text(l: &Localizer, i: &wp::Integrity) -> String {
     use std::fmt::Write as _;
     let mut o = l.t_args("wp-integrity", &args!("version" => i.version.clone(), "modified" => i.modified.len(), "unknown" => i.unknown.len(), "uploads" => i.uploads_php.len(), "plugins" => i.plugins.len()));
     o.push('\n');
-    for f in i.modified.iter().map(|f| ("M", f)).chain(i.unknown.iter().map(|f| ("?", f))).chain(i.uploads_php.iter().map(|f| ("U", f))) {
+    for f in i
+        .modified
+        .iter()
+        .map(|f| ("M", f))
+        .chain(i.unknown.iter().map(|f| ("?", f)))
+        .chain(i.uploads_php.iter().map(|f| ("U", f)))
+    {
         let _ = writeln!(o, "  {} {}", f.0, f.1);
     }
     for p in &i.plugins {
@@ -745,9 +1143,17 @@ pub enum RedirectsCmd {
         out: Option<PathBuf>,
     },
     /// After launch: request every old URL and report 404s, chains and loops.
-    Check { map: PathBuf, #[arg(long)] base: String },
+    Check {
+        map: PathBuf,
+        #[arg(long)]
+        base: String,
+    },
     /// Redirects for URLs with Turkish letters to ASCII slugs.
-    Slugs { source: String, #[arg(long, default_value = "redirects-slugs.csv")] out: PathBuf },
+    Slugs {
+        source: String,
+        #[arg(long, default_value = "redirects-slugs.csv")]
+        out: PathBuf,
+    },
 }
 
 pub fn localize_redirects(c: clap::Command, l: &Localizer) -> clap::Command {
@@ -775,7 +1181,13 @@ pub fn redirects_run(ctx: &Ctx, cmd: RedirectsCmd) -> anyhow::Result<bool> {
         Err(e) => return Ok(fail(l, e)),
     };
     Ok(match cmd {
-        RedirectsCmd::Build { old, new, min, limit, out } => {
+        RedirectsCmd::Build {
+            old,
+            new,
+            min,
+            limit,
+            out,
+        } => {
             let r = rt.block_on(async {
                 let (o, mut ot) = redirects::collect(&http, &old, limit).await?;
                 let (n, nt) = redirects::collect(&http, &new, limit).await?;
@@ -785,7 +1197,13 @@ pub fn redirects_run(ctx: &Ctx, cmd: RedirectsCmd) -> anyhow::Result<bool> {
             match r {
                 Ok((o, n, titles)) => {
                     let rows = redirects::build(&o, &n, &titles, min);
-                    println!("{}", l.t_args("redirects-built", &args!("old" => o.len(), "new" => n.len(), "rows" => rows.len())));
+                    println!(
+                        "{}",
+                        l.t_args(
+                            "redirects-built",
+                            &args!("old" => o.len(), "new" => n.len(), "rows" => rows.len())
+                        )
+                    );
                     print_issues(l, &rows);
                     match std::fs::write(&out, redirects::to_csv(&rows)) {
                         Ok(()) => {
@@ -798,14 +1216,32 @@ pub fn redirects_run(ctx: &Ctx, cmd: RedirectsCmd) -> anyhow::Result<bool> {
                 Err(e) => fail(l, e),
             }
         }
-        RedirectsCmd::Export { map, format, host, collapse, out } => {
-            let Some(fmt) = redirects::Format::parse(&format) else { return Ok(fail(l, format!("apache | nginx | cloudflare | redirection | csv, not `{format}`"))) };
-            let rows = match std::fs::read_to_string(&map).map_err(|e| e.to_string()).and_then(|t| redirects::from_csv(&t)) {
+        RedirectsCmd::Export {
+            map,
+            format,
+            host,
+            collapse,
+            out,
+        } => {
+            let Some(fmt) = redirects::Format::parse(&format) else {
+                return Ok(fail(
+                    l,
+                    format!("apache | nginx | cloudflare | redirection | csv, not `{format}`"),
+                ));
+            };
+            let rows = match std::fs::read_to_string(&map)
+                .map_err(|e| e.to_string())
+                .and_then(|t| redirects::from_csv(&t))
+            {
                 Ok(r) => r,
                 Err(e) => return Ok(fail(l, e)),
             };
             print_issues(l, &rows);
-            let rows = if collapse { redirects::collapse(&rows) } else { rows };
+            let rows = if collapse {
+                redirects::collapse(&rows)
+            } else {
+                rows
+            };
             let text = redirects::render(&rows, fmt, &host);
             if let Some(p) = out {
                 match std::fs::write(&p, text) {
@@ -821,35 +1257,61 @@ pub fn redirects_run(ctx: &Ctx, cmd: RedirectsCmd) -> anyhow::Result<bool> {
             }
         }
         RedirectsCmd::Check { map, base } => {
-            let rows = match std::fs::read_to_string(&map).map_err(|e| e.to_string()).and_then(|t| redirects::from_csv(&t)) {
+            let rows = match std::fs::read_to_string(&map)
+                .map_err(|e| e.to_string())
+                .and_then(|t| redirects::from_csv(&t))
+            {
                 Ok(r) => r,
                 Err(e) => return Ok(fail(l, e)),
             };
             let checked = rt.block_on(redirects::verify(&http, &base, &rows));
             for c in checked.iter().filter(|c| c.verdict != "ok") {
-                println!("{} {} → {} (HTTP {}, {} hops)", l.t(&format!("redirects-verdict-{}", c.verdict)), c.old, c.final_url, c.status, c.hops);
+                println!(
+                    "{} {} → {} (HTTP {}, {} hops)",
+                    l.t(&format!("redirects-verdict-{}", c.verdict)),
+                    c.old,
+                    c.final_url,
+                    c.status,
+                    c.hops
+                );
             }
             let bad = checked.iter().filter(|c| c.verdict != "ok").count();
-            println!("{}", l.t_args("redirects-checked", &args!("total" => checked.len(), "bad" => bad)));
+            println!(
+                "{}",
+                l.t_args(
+                    "redirects-checked",
+                    &args!("total" => checked.len(), "bad" => bad)
+                )
+            );
             bad == 0
         }
-        RedirectsCmd::Slugs { source, out } => match rt.block_on(redirects::collect(&http, &source, 5000)) {
-            Ok((paths, _)) => {
-                let rows: Vec<redirects::Row> = tr::slug_redirects(&paths)
-                    .into_iter()
-                    .map(|(old, new)| redirects::Row { old, new, score: 1.0, method: "slug".into() })
-                    .collect();
-                println!("{}", l.t_args("redirects-slugs", &args!("count" => rows.len())));
-                match std::fs::write(&out, redirects::to_csv(&rows)) {
-                    Ok(()) => {
-                        saved(l, &[out]);
-                        true
+        RedirectsCmd::Slugs { source, out } => {
+            match rt.block_on(redirects::collect(&http, &source, 5000)) {
+                Ok((paths, _)) => {
+                    let rows: Vec<redirects::Row> = tr::slug_redirects(&paths)
+                        .into_iter()
+                        .map(|(old, new)| redirects::Row {
+                            old,
+                            new,
+                            score: 1.0,
+                            method: "slug".into(),
+                        })
+                        .collect();
+                    println!(
+                        "{}",
+                        l.t_args("redirects-slugs", &args!("count" => rows.len()))
+                    );
+                    match std::fs::write(&out, redirects::to_csv(&rows)) {
+                        Ok(()) => {
+                            saved(l, &[out]);
+                            true
+                        }
+                        Err(e) => fail(l, e),
                     }
-                    Err(e) => fail(l, e),
                 }
+                Err(e) => fail(l, e),
             }
-            Err(e) => fail(l, e),
-        },
+        }
     })
 }
 
@@ -922,7 +1384,9 @@ fn read_input(p: &Path) -> std::io::Result<String> {
 #[allow(clippy::too_many_lines)]
 pub fn proposal_run(ctx: &Ctx, cmd: ProposalCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
-    let Some(base) = base(l) else { return Ok(false) };
+    let Some(base) = base(l) else {
+        return Ok(false);
+    };
     let biz = match proposal::business(&base) {
         Ok(b) => b,
         Err(e) => return Ok(fail(l, e)),
@@ -935,8 +1399,21 @@ pub fn proposal_run(ctx: &Ctx, cmd: ProposalCmd) -> anyhow::Result<bool> {
             }
             Err(e) => fail(l, e),
         },
-        ProposalCmd::New { client, project, from, items, packages, lang, contracts, format, valid_days, out } => {
-            let Some(lang) = proposal::Lang::parse(&lang) else { return Ok(fail(l, "--lang tr | en")) };
+        ProposalCmd::New {
+            client,
+            project,
+            from,
+            items,
+            packages,
+            lang,
+            contracts,
+            format,
+            valid_days,
+            out,
+        } => {
+            let Some(lang) = proposal::Lang::parse(&lang) else {
+                return Ok(fail(l, "--lang tr | en"));
+            };
             let mut list = Vec::new();
             if let Some(f) = from {
                 match read_input(&f) {
@@ -952,8 +1429,18 @@ pub fn proposal_run(ctx: &Ctx, cmd: ProposalCmd) -> anyhow::Result<bool> {
             }
             for p in &packages {
                 match biz.packages.iter().find(|x| &x.name == p) {
-                    Some(x) => list.push(proposal::Item { title: x.name.clone(), hours: x.hours, estimated: false, price: Some(x.price) }),
-                    None => return Ok(fail(l, l.t_args("proposal-no-package", &args!("name" => p.clone())))),
+                    Some(x) => list.push(proposal::Item {
+                        title: x.name.clone(),
+                        hours: x.hours,
+                        estimated: false,
+                        price: Some(x.price),
+                    }),
+                    None => {
+                        return Ok(fail(
+                            l,
+                            l.t_args("proposal-no-package", &args!("name" => p.clone())),
+                        ));
+                    }
                 }
             }
             if list.is_empty() {
@@ -986,7 +1473,12 @@ pub fn proposal_run(ctx: &Ctx, cmd: ProposalCmd) -> anyhow::Result<bool> {
                 Err(e) => fail(l, e),
             }
         }
-        ProposalCmd::Revise { dir, reply, contracts, format } => {
+        ProposalCmd::Revise {
+            dir,
+            reply,
+            contracts,
+            format,
+        } => {
             let mut p = match proposal::load_state(&dir) {
                 Ok(p) => p,
                 Err(e) => return Ok(fail(l, e)),
@@ -1051,9 +1543,19 @@ pub enum ClientCmd {
     /// Client workspaces.
     List,
     /// Log manual work time.
-    Log { id: String, #[arg(long)] hours: f64, #[arg(long)] note: String },
+    Log {
+        id: String,
+        #[arg(long)]
+        hours: f64,
+        #[arg(long)]
+        note: String,
+    },
     /// Tickets: add <title>, close <n>, list.
-    Ticket { id: String, action: String, value: Option<String> },
+    Ticket {
+        id: String,
+        action: String,
+        value: Option<String>,
+    },
     /// Take an uptime/SSL sample of every site (schedule it with a routine).
     Check { id: String },
     /// Monthly report: work, uptime/SSL, updates, security, SEO, tickets, time sheet; Telegram and email drafts.
@@ -1078,10 +1580,21 @@ pub fn localize_client(c: clap::Command, l: &Localizer) -> clap::Command {
 
 pub fn client_run(ctx: &Ctx, cmd: ClientCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
-    let Some(base) = base(l) else { return Ok(false) };
+    let Some(base) = base(l) else {
+        return Ok(false);
+    };
     let rt = crate::providers::runtime()?;
     Ok(match cmd {
-        ClientCmd::Add { id, name, email, telegram, sites, hosts, urls, rate } => {
+        ClientCmd::Add {
+            id,
+            name,
+            email,
+            telegram,
+            sites,
+            hosts,
+            urls,
+            rate,
+        } => {
             let mut c = client::load(&base, &id).unwrap_or_default();
             if let Some(v) = name {
                 c.name = v;
@@ -1095,7 +1608,11 @@ pub fn client_run(ctx: &Ctx, cmd: ClientCmd) -> anyhow::Result<bool> {
             if let Some(v) = rate {
                 c.rate = v;
             }
-            for (list, add) in [(&mut c.sites, sites), (&mut c.hosts, hosts), (&mut c.urls, urls)] {
+            for (list, add) in [
+                (&mut c.sites, sites),
+                (&mut c.hosts, hosts),
+                (&mut c.urls, urls),
+            ] {
                 for x in add {
                     if !list.contains(&x) {
                         list.push(x);
@@ -1113,7 +1630,12 @@ pub fn client_run(ctx: &Ctx, cmd: ClientCmd) -> anyhow::Result<bool> {
         ClientCmd::List => {
             for id in client::list(&base) {
                 let c = client::load(&base, &id).unwrap_or_default();
-                println!("{id}\t{}\t{} site(s)\t{} server(s)", c.name, c.sites.len() + c.urls.len(), c.hosts.len());
+                println!(
+                    "{id}\t{}\t{} site(s)\t{} server(s)",
+                    c.name,
+                    c.sites.len() + c.urls.len(),
+                    c.hosts.len()
+                );
             }
             true
         }
@@ -1123,7 +1645,18 @@ pub fn client_run(ctx: &Ctx, cmd: ClientCmd) -> anyhow::Result<bool> {
             }
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let secs = (hours * 3600.0).round() as u64;
-            match client::log(&base, &id, &client::Entry { ts: web::now(), kind: "manual".into(), target: String::new(), summary: note, secs, source: "manual".into() }) {
+            match client::log(
+                &base,
+                &id,
+                &client::Entry {
+                    ts: web::now(),
+                    kind: "manual".into(),
+                    target: String::new(),
+                    summary: note,
+                    secs,
+                    source: "manual".into(),
+                },
+            ) {
                 Ok(()) => true,
                 Err(e) => fail(l, e),
             }
@@ -1136,7 +1669,11 @@ pub fn client_run(ctx: &Ctx, cmd: ClientCmd) -> anyhow::Result<bool> {
                 }
                 Err(e) => fail(l, e),
             },
-            ("close", Some(n)) => match n.parse().map_err(|_| "ticket number".to_owned()).and_then(|n| client::ticket_close(&base, &id, n)) {
+            ("close", Some(n)) => match n
+                .parse()
+                .map_err(|_| "ticket number".to_owned())
+                .and_then(|n| client::ticket_close(&base, &id, n))
+            {
                 Ok(true) => true,
                 Ok(false) => fail(l, l.t_args("web-not-found", &args!("name" => n))),
                 Err(e) => fail(l, e),
@@ -1149,23 +1686,38 @@ pub fn client_run(ctx: &Ctx, cmd: ClientCmd) -> anyhow::Result<bool> {
             }
             _ => fail(l, "add <title> | close <n> | list"),
         },
-        ClientCmd::Check { id } => match web::http::Http::new().and_then(|h| rt.block_on(client::check(&base, &id, &h))) {
-            Ok(samples) => {
-                for s in &samples {
-                    println!("{} {} HTTP {} {} ms{}", if s.up { "✓" } else { "✗" }, s.url, s.status, s.ms, s.ssl_days.map(|d| format!(" · SSL {d} d")).unwrap_or_default());
+        ClientCmd::Check { id } => {
+            match web::http::Http::new().and_then(|h| rt.block_on(client::check(&base, &id, &h))) {
+                Ok(samples) => {
+                    for s in &samples {
+                        println!(
+                            "{} {} HTTP {} {} ms{}",
+                            if s.up { "✓" } else { "✗" },
+                            s.url,
+                            s.status,
+                            s.ms,
+                            s.ssl_days
+                                .map(|d| format!(" · SSL {d} d"))
+                                .unwrap_or_default()
+                        );
+                    }
+                    samples.iter().all(|s| s.up)
                 }
-                samples.iter().all(|s| s.up)
+                Err(e) => fail(l, e),
             }
-            Err(e) => fail(l, e),
-        },
+        }
         ClientCmd::Report { id, month, format } => {
             let month = month.unwrap_or_else(|| chrono::Local::now().format("%Y-%m").to_string());
-            let live = match web::http::Http::new().and_then(|h| rt.block_on(client::check(&base, &id, &h))) {
+            let live = match web::http::Http::new()
+                .and_then(|h| rt.block_on(client::check(&base, &id, &h)))
+            {
                 Ok(s) => s,
                 Err(e) => return Ok(fail(l, e)),
             };
             let biz = proposal::business(&base).unwrap_or_default();
-            match client::report(l, &base, &id, &month, &live, biz.hourly_rate).and_then(|r| client::write_report(&base, &id, &month, &r, &biz.accent, &format)) {
+            match client::report(l, &base, &id, &month, &live, biz.hourly_rate)
+                .and_then(|r| client::write_report(&base, &id, &month, &r, &biz.accent, &format))
+            {
                 Ok(files) => {
                     saved(l, &files);
                     true
@@ -1190,7 +1742,13 @@ pub enum TrCmd {
     /// Turkish-aware URL slug.
     Slug { text: String },
     /// KDV: net → gross, or with --gross the other way.
-    Kdv { amount: String, #[arg(long, default_value_t = 20)] rate: u32, #[arg(long)] gross: bool },
+    Kdv {
+        amount: String,
+        #[arg(long, default_value_t = 20)]
+        rate: u32,
+        #[arg(long)]
+        gross: bool,
+    },
     /// KVKK disclosure text and cookie policy from business.toml and options.
     Kvkk {
         #[arg(long = "data")]
@@ -1210,20 +1768,42 @@ pub enum TrCmd {
         out: PathBuf,
     },
     /// UBL-TR e-Fatura/e-Arşiv XML from a TOML/JSON invoice; --send posts it to the integrator.
-    Efatura { file: PathBuf, #[arg(long)] out: Option<PathBuf>, #[arg(long)] send: bool },
+    Efatura {
+        file: PathBuf,
+        #[arg(long)]
+        out: Option<PathBuf>,
+        #[arg(long)]
+        send: bool,
+    },
     /// UBL-TR e-İrsaliye XML from a TOML/JSON despatch; --send posts it to the integrator.
-    Irsaliye { file: PathBuf, #[arg(long)] out: Option<PathBuf>, #[arg(long)] send: bool },
+    Irsaliye {
+        file: PathBuf,
+        #[arg(long)]
+        out: Option<PathBuf>,
+        #[arg(long)]
+        send: bool,
+    },
     /// Payment integration templates: iyzico, paytr.
-    Payment { provider: String, #[arg(long, default_value = ".")] out: PathBuf },
+    Payment {
+        provider: String,
+        #[arg(long, default_value = ".")]
+        out: PathBuf,
+    },
     /// Product/order counts from Trendyol and Hepsiburada (credentials in business.toml + vault).
     Market,
     /// Most frequent Turkish keyword stems of a file or page.
-    Keywords { source: String, #[arg(long, default_value_t = 20)] top: usize },
+    Keywords {
+        source: String,
+        #[arg(long, default_value_t = 20)]
+        top: usize,
+    },
 }
 
 pub fn localize_tr(c: clap::Command, l: &Localizer) -> clap::Command {
     let mut c = c.about(l.t("cmd-tr"));
-    for s in ["check", "slug", "kdv", "kvkk", "efatura", "irsaliye", "payment", "market", "keywords"] {
+    for s in [
+        "check", "slug", "kdv", "kvkk", "efatura", "irsaliye", "payment", "market", "keywords",
+    ] {
         let key = format!("cmd-tr-{s}");
         c = c.mut_subcommand(s, |x| x.about(l.t(&key)));
     }
@@ -1248,7 +1828,12 @@ fn send_ubl(ctx: &Ctx, xml: &str) -> Result<String, String> {
     let st = store(ctx);
     let token = web::secret(st.as_deref(), &biz.efatura.secret)?;
     let rt = crate::providers::runtime().map_err(|e| e.to_string())?;
-    rt.block_on(tr::efatura::send(&web::http::Http::new()?, &biz.efatura.url, token.expose_secret(), xml))
+    rt.block_on(tr::efatura::send(
+        &web::http::Http::new()?,
+        &biz.efatura.url,
+        token.expose_secret(),
+        xml,
+    ))
 }
 
 #[allow(clippy::too_many_lines)]
@@ -1258,7 +1843,11 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
     Ok(match cmd {
         TrCmd::Check { url, site } => {
             let plugins: Vec<String> = match (&site, web::base()) {
-                (Some(s), Ok(b)) => web::tools::open_wp(&b, s).ok().and_then(|w| rt.block_on(w.inventory()).ok()).map(|i| i.plugins.into_iter().map(|p| p.slug).collect()).unwrap_or_default(),
+                (Some(s), Ok(b)) => web::tools::open_wp(&b, s)
+                    .ok()
+                    .and_then(|w| rt.block_on(w.inventory()).ok())
+                    .map(|i| i.plugins.into_iter().map(|p| p.slug).collect())
+                    .unwrap_or_default(),
                 _ => Vec::new(),
             };
             match web::http::Http::new().and_then(|h| rt.block_on(tr::check(&h, &url, &plugins))) {
@@ -1266,7 +1855,14 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
                     println!("{}", tr::render(l, &r));
                     if let (Some(s), Ok(b)) = (&site, web::base()) {
                         let c = wp::load(&b, s).ok().and_then(|w| w.client);
-                        client::log_auto(&b, c.as_deref(), "tr-check", &url, &format!("{} checks", r.items.len()), 0);
+                        client::log_auto(
+                            &b,
+                            c.as_deref(),
+                            "tr-check",
+                            &url,
+                            &format!("{} checks", r.items.len()),
+                            0,
+                        );
                     }
                     !r.items.iter().any(|i| i.status == "fail")
                 }
@@ -1277,7 +1873,11 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
             println!("{}", tr::slug(&text));
             true
         }
-        TrCmd::Kdv { amount, rate, gross } => match tr::parse_try(&amount) {
+        TrCmd::Kdv {
+            amount,
+            rate,
+            gross,
+        } => match tr::parse_try(&amount) {
             Some(k) => {
                 let (net, tax, total) = if gross {
                     let (n, t) = tr::kdv_from_gross(k, rate);
@@ -1291,8 +1891,18 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
             }
             None => fail(l, format!("`{amount}`")),
         },
-        TrCmd::Kvkk { data, purposes, recipients, abroad, cookies, format, out } => {
-            let biz = web::base().and_then(|b| proposal::business(&b)).unwrap_or_default();
+        TrCmd::Kvkk {
+            data,
+            purposes,
+            recipients,
+            abroad,
+            cookies,
+            format,
+            out,
+        } => {
+            let biz = web::base()
+                .and_then(|b| proposal::business(&b))
+                .unwrap_or_default();
             let input = tr::KvkkInput {
                 company: biz.name.clone(),
                 address: format!("{} {}", biz.address, biz.city).trim().to_owned(),
@@ -1306,13 +1916,20 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
                     .iter()
                     .map(|c| {
                         let mut p = c.splitn(3, '|').map(str::to_owned);
-                        (p.next().unwrap_or_default(), p.next().unwrap_or_default(), p.next().unwrap_or_default())
+                        (
+                            p.next().unwrap_or_default(),
+                            p.next().unwrap_or_default(),
+                            p.next().unwrap_or_default(),
+                        )
                     })
                     .collect(),
             };
             let (disclosure, cookie) = tr::kvkk_text(&input);
             let mut files = Vec::new();
-            for (stem, md, title) in [("aydinlatma-metni", disclosure, "Aydınlatma Metni"), ("cerez-politikasi", cookie, "Çerez Politikası")] {
+            for (stem, md, title) in [
+                ("aydinlatma-metni", disclosure, "Aydınlatma Metni"),
+                ("cerez-politikasi", cookie, "Çerez Politikası"),
+            ] {
                 match docs::write_all(&out, stem, &md, title, &biz.accent, &format) {
                     Ok(f) => files.extend(f),
                     Err(e) => return Ok(fail(l, e)),
@@ -1380,7 +1997,10 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
                 }
                 Err(e) => fail(l, e),
             },
-            None => fail(l, format!("{}, not `{provider}`", tr::templates::PROVIDERS.join(" | "))),
+            None => fail(
+                l,
+                format!("{}, not `{provider}`", tr::templates::PROVIDERS.join(" | ")),
+            ),
         },
         TrCmd::Market => {
             let Ok(b) = web::base() else { return Ok(false) };
@@ -1394,7 +2014,17 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
             let mut any = false;
             if !biz.trendyol.id.is_empty() {
                 any = true;
-                match get(&biz.trendyol.key).and_then(|k| Ok((k, get(&biz.trendyol.secret)?))).and_then(|(k, s)| rt.block_on(tr::market::trendyol(&http, tr::market::TRENDYOL, &biz.trendyol.id, &k, &s))) {
+                match get(&biz.trendyol.key)
+                    .and_then(|k| Ok((k, get(&biz.trendyol.secret)?)))
+                    .and_then(|(k, s)| {
+                        rt.block_on(tr::market::trendyol(
+                            &http,
+                            tr::market::TRENDYOL,
+                            &biz.trendyol.id,
+                            &k,
+                            &s,
+                        ))
+                    }) {
                     Ok(c) => println!("{}: {:?} / {:?}", c.market, c.products, c.orders),
                     Err(e) => {
                         fail(l, e);
@@ -1403,7 +2033,17 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
             }
             if !biz.hepsiburada.id.is_empty() {
                 any = true;
-                match get(&biz.hepsiburada.key).and_then(|k| Ok((k, get(&biz.hepsiburada.secret)?))).and_then(|(k, s)| rt.block_on(tr::market::hepsiburada(&http, tr::market::HEPSIBURADA, &biz.hepsiburada.id, &k, &s))) {
+                match get(&biz.hepsiburada.key)
+                    .and_then(|k| Ok((k, get(&biz.hepsiburada.secret)?)))
+                    .and_then(|(k, s)| {
+                        rt.block_on(tr::market::hepsiburada(
+                            &http,
+                            tr::market::HEPSIBURADA,
+                            &biz.hepsiburada.id,
+                            &k,
+                            &s,
+                        ))
+                    }) {
                     Ok(c) => println!("{}: {:?}", c.market, c.products),
                     Err(e) => {
                         fail(l, e);
@@ -1427,7 +2067,11 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
                     Err(e) => return Ok(fail(l, e)),
                 }
             };
-            let plain = if text.contains('<') { tr::strip_tags(&text) } else { text };
+            let plain = if text.contains('<') {
+                tr::strip_tags(&text)
+            } else {
+                text
+            };
             for (w, n) in tr::keywords(&plain, top) {
                 println!("{n}\t{w}");
             }
@@ -1471,17 +2115,120 @@ mod tests {
 
     #[test]
     fn commands_parse() {
-        let t = T::try_parse_from(["kor", "host", "php", "prod", "--domain", "a.com", "--version", "8.3", "--yes"]).unwrap();
+        let t = T::try_parse_from([
+            "kor",
+            "host",
+            "php",
+            "prod",
+            "--domain",
+            "a.com",
+            "--version",
+            "8.3",
+            "--yes",
+        ])
+        .unwrap();
         assert!(matches!(t, T::Host { c: HostCmd::Php { ref domain, .. } } if domain == "a.com"));
         assert!(T::try_parse_from(["kor", "host", "inventory", "--all", "--json"]).is_ok());
-        assert!(T::try_parse_from(["kor", "host", "connect", "srv", "--kind", "cpanel", "--url", "https://x:2083", "--user", "u", "--secret", "CP"]).is_ok());
-        assert!(T::try_parse_from(["kor", "host", "clean", "prod", "--path", "/home/u/tmp", "--path", "/home/u/x.log"]).is_ok());
-        assert!(T::try_parse_from(["kor", "wp", "update", "shop", "--staging", "--only", "akismet,woocommerce"]).is_ok());
-        assert!(T::try_parse_from(["kor", "wp", "scaffold", "plugin", "--name", "X", "--slug", "x", "--woocommerce"]).is_ok());
-        assert!(T::try_parse_from(["kor", "redirects", "build", "--old", "sitemap:https://a/s.xml", "--new", "crawl:https://b/"]).is_ok());
-        assert!(T::try_parse_from(["kor", "redirects", "export", "m.csv", "--format", "nginx", "--collapse"]).is_ok());
-        assert!(T::try_parse_from(["kor", "proposal", "new", "--client", "A", "--project", "B", "--item", "Tasarım=12", "--contracts", "--format", "pdf,docx"]).is_ok());
-        assert!(T::try_parse_from(["kor", "client", "report", "acme", "--month", "2026-11"]).is_ok());
+        assert!(
+            T::try_parse_from([
+                "kor",
+                "host",
+                "connect",
+                "srv",
+                "--kind",
+                "cpanel",
+                "--url",
+                "https://x:2083",
+                "--user",
+                "u",
+                "--secret",
+                "CP"
+            ])
+            .is_ok()
+        );
+        assert!(
+            T::try_parse_from([
+                "kor",
+                "host",
+                "clean",
+                "prod",
+                "--path",
+                "/home/u/tmp",
+                "--path",
+                "/home/u/x.log"
+            ])
+            .is_ok()
+        );
+        assert!(
+            T::try_parse_from([
+                "kor",
+                "wp",
+                "update",
+                "shop",
+                "--staging",
+                "--only",
+                "akismet,woocommerce"
+            ])
+            .is_ok()
+        );
+        assert!(
+            T::try_parse_from([
+                "kor",
+                "wp",
+                "scaffold",
+                "plugin",
+                "--name",
+                "X",
+                "--slug",
+                "x",
+                "--woocommerce"
+            ])
+            .is_ok()
+        );
+        assert!(
+            T::try_parse_from([
+                "kor",
+                "redirects",
+                "build",
+                "--old",
+                "sitemap:https://a/s.xml",
+                "--new",
+                "crawl:https://b/"
+            ])
+            .is_ok()
+        );
+        assert!(
+            T::try_parse_from([
+                "kor",
+                "redirects",
+                "export",
+                "m.csv",
+                "--format",
+                "nginx",
+                "--collapse"
+            ])
+            .is_ok()
+        );
+        assert!(
+            T::try_parse_from([
+                "kor",
+                "proposal",
+                "new",
+                "--client",
+                "A",
+                "--project",
+                "B",
+                "--item",
+                "Tasarım=12",
+                "--contracts",
+                "--format",
+                "pdf,docx"
+            ])
+            .is_ok()
+        );
+        assert!(
+            T::try_parse_from(["kor", "client", "report", "acme", "--month", "2026-11"]).is_ok()
+        );
         assert!(T::try_parse_from(["kor", "client", "ticket", "acme", "add", "Logo"]).is_ok());
         assert!(T::try_parse_from(["kor", "tr", "kdv", "1.000,00", "--rate", "10"]).is_ok());
         assert!(T::try_parse_from(["kor", "tr", "kvkk", "--cookie", "_ga|Analiz|2 yıl"]).is_ok());

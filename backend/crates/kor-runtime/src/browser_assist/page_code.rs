@@ -74,7 +74,11 @@ pub fn target_for(stack: &Stack) -> String {
     if !stack.ui.is_empty() {
         return stack.ui.clone();
     }
-    if stack.frameworks.iter().any(|f| f == "@tauri-apps/api" || f == "tauri") {
+    if stack
+        .frameworks
+        .iter()
+        .any(|f| f == "@tauri-apps/api" || f == "tauri")
+    {
         return "react".into();
     }
     "html".into()
@@ -99,7 +103,14 @@ fn walk(root: &Path, exts: &[&str], max: usize) -> Vec<std::path::PathBuf> {
         .flatten()
         .map(ignore::DirEntry::into_path)
         .filter(|p| p.extension().is_some_and(|e| exts.iter().any(|x| e == *x)))
-        .filter(|p| !p.components().any(|c| matches!(c.as_os_str().to_str(), Some("node_modules" | "dist" | "target" | "build" | ".kor"))))
+        .filter(|p| {
+            !p.components().any(|c| {
+                matches!(
+                    c.as_os_str().to_str(),
+                    Some("node_modules" | "dist" | "target" | "build" | ".kor")
+                )
+            })
+        })
         .take(max)
         .collect()
 }
@@ -111,8 +122,12 @@ pub fn design_system(root: &Path) -> String {
     let mut seen = 0usize;
     let mut tailwind_theme = false;
     for p in walk(root, &["css", "scss"], 40) {
-        let Ok(text) = std::fs::read_to_string(&p) else { continue };
-        tailwind_theme |= text.contains("@theme") || text.contains("@tailwind") || text.contains("@import \"tailwindcss\"");
+        let Ok(text) = std::fs::read_to_string(&p) else {
+            continue;
+        };
+        tailwind_theme |= text.contains("@theme")
+            || text.contains("@tailwind")
+            || text.contains("@import \"tailwindcss\"");
         for c in var.captures_iter(&text) {
             if seen >= 150 {
                 break;
@@ -121,20 +136,35 @@ pub fn design_system(root: &Path) -> String {
             seen += 1;
         }
     }
-    let tw_config = ["tailwind.config.js", "tailwind.config.ts", "tailwind.config.cjs", "tailwind.config.mjs"]
-        .iter()
-        .any(|f| root.join(f).is_file());
+    let tw_config = [
+        "tailwind.config.js",
+        "tailwind.config.ts",
+        "tailwind.config.cjs",
+        "tailwind.config.mjs",
+    ]
+    .iter()
+    .any(|f| root.join(f).is_file());
     if tailwind_theme || tw_config {
-        out.push_str("Tailwind CSS is used: prefer its utility classes and the theme tokens above.\n");
+        out.push_str(
+            "Tailwind CSS is used: prefer its utility classes and the theme tokens above.\n",
+        );
     }
     let comps: Vec<String> = walk(root, &["tsx", "vue", "svelte", "jsx"], 400)
         .into_iter()
         .filter(|p| p.components().any(|c| c.as_os_str() == "components"))
-        .filter_map(|p| p.strip_prefix(root).ok().map(|r| r.to_string_lossy().replace('\\', "/")))
+        .filter_map(|p| {
+            p.strip_prefix(root)
+                .ok()
+                .map(|r| r.to_string_lossy().replace('\\', "/"))
+        })
         .take(60)
         .collect();
     if !comps.is_empty() {
-        let _ = writeln!(out, "Existing components (reuse them instead of new markup): {}", comps.join(", "));
+        let _ = writeln!(
+            out,
+            "Existing components (reuse them instead of new markup): {}",
+            comps.join(", ")
+        );
     }
     if out.is_empty() {
         out.push_str("No design tokens found; use plain, accessible styles.\n");
@@ -152,7 +182,9 @@ pub fn strip_assets(html: &str, styles: &str) -> (String, String, Vec<String>) {
     let n_img = img.find_iter(html).count();
     let n_svg = svg.find_iter(html).count();
     let html = svg.replace_all(html, r#"<span data-kor-placeholder="icon"></span>"#);
-    let html = img.replace_all(&html, r#"<span data-kor-placeholder="image"></span>"#).into_owned();
+    let html = img
+        .replace_all(&html, r#"<span data-kor-placeholder="image"></span>"#)
+        .into_owned();
     let n_url = url.find_iter(styles).count();
     let styles = url.replace_all(styles, "none").into_owned();
     if n_img + n_svg + n_url > 0 {
@@ -162,7 +194,14 @@ pub fn strip_assets(html: &str, styles: &str) -> (String, String, Vec<String>) {
 }
 
 /// The request text.
-pub fn prompt(cap: &Capture, target: &str, stack: &Stack, design: &str, opts: &Options, ocr: Option<&str>) -> String {
+pub fn prompt(
+    cap: &Capture,
+    target: &str,
+    stack: &Stack,
+    design: &str,
+    opts: &Options,
+    ocr: Option<&str>,
+) -> String {
     let html: String = cap.html.chars().take(MAX_HTML).collect();
     let styles: String = cap.styles.chars().take(MAX_STYLES).collect();
     let mut p = format!(
@@ -182,7 +221,10 @@ pub fn prompt(cap: &Capture, target: &str, stack: &Stack, design: &str, opts: &O
         cap.width, cap.height, cap.url, cap.a11y, cap.states
     );
     if let Some(d) = ocr {
-        let _ = write!(p, "\nYou cannot see the screenshot; Kor read it locally:\n<image-description>\n{d}</image-description>\n");
+        let _ = write!(
+            p,
+            "\nYou cannot see the screenshot; Kor read it locally:\n<image-description>\n{d}</image-description>\n"
+        );
     }
     p.push_str("\nOutput format, strictly: every file as a fenced code block whose info string is the language followed by `file=<relative/path>`. Paths are relative to the project root, use `/`, never `..`. No prose after the files.");
     p
@@ -191,9 +233,20 @@ pub fn prompt(cap: &Capture, target: &str, stack: &Stack, design: &str, opts: &O
 /// Similarity of two images in percent: mean absolute RGB difference after scaling both to the
 /// same size.
 pub fn similarity(a: &[u8], b: &[u8]) -> Option<u8> {
-    let a = image::load_from_memory(a).ok()?.resize_exact(160, 160, image::imageops::FilterType::Triangle).to_rgb8();
-    let b = image::load_from_memory(b).ok()?.resize_exact(160, 160, image::imageops::FilterType::Triangle).to_rgb8();
-    let total: u64 = a.as_raw().iter().zip(b.as_raw()).map(|(x, y)| u64::from(x.abs_diff(*y))).sum();
+    let a = image::load_from_memory(a)
+        .ok()?
+        .resize_exact(160, 160, image::imageops::FilterType::Triangle)
+        .to_rgb8();
+    let b = image::load_from_memory(b)
+        .ok()?
+        .resize_exact(160, 160, image::imageops::FilterType::Triangle)
+        .to_rgb8();
+    let total: u64 = a
+        .as_raw()
+        .iter()
+        .zip(b.as_raw())
+        .map(|(x, y)| u64::from(x.abs_diff(*y)))
+        .sum();
     let mean = total as f64 / a.as_raw().len().max(1) as f64;
     Some((100.0 * (1.0 - mean / 255.0)).round().clamp(0.0, 100.0) as u8)
 }
@@ -213,20 +266,34 @@ pub async fn generate(
 ) -> Result<Generated, String> {
     let pic = Picture::from_data_url("component.png", &cap.screenshot)?;
     let stack = Stack::detect(root);
-    let target = if opts.target.is_empty() { target_for(&stack) } else { opts.target.clone() };
+    let target = if opts.target.is_empty() {
+        target_for(&stack)
+    } else {
+        opts.target.clone()
+    };
     let (html, styles, mut notes) = strip_assets(&cap.html, &cap.styles);
     notes.extend(cap.removed.iter().map(|r| format!("replaced: {r}")));
-    let cap = Capture { html, styles, ..cap };
+    let cap = Capture {
+        html,
+        styles,
+        ..cap
+    };
     let design = design_system(root);
     let vision = provider.manifest().vision;
     let parts = if vision {
         vec![
-            ContentPart::Image { source: pic.source() },
-            ContentPart::Text { text: prompt(&cap, &target, &stack, &design, opts, None) },
+            ContentPart::Image {
+                source: pic.source(),
+            },
+            ContentPart::Text {
+                text: prompt(&cap, &target, &stack, &design, opts, None),
+            },
         ]
     } else {
         let d = visual::describe(&pic, ocr, cancel).await?;
-        vec![ContentPart::Text { text: prompt(&cap, &target, &stack, &design, opts, Some(&d)) }]
+        vec![ContentPart::Text {
+            text: prompt(&cap, &target, &stack, &design, opts, Some(&d)),
+        }]
     };
     let req = ChatRequest {
         model: model.to_owned(),
@@ -235,27 +302,45 @@ pub async fn generate(
         max_tokens: Some(16_000),
         ..ChatRequest::default()
     };
-    let stream = provider.complete(req, cancel.clone()).await.map_err(|e| e.message)?;
-    let reply = kor_agent::subagent::collect_text(stream).await.map_err(|e| e.message)?;
+    let stream = provider
+        .complete(req, cancel.clone())
+        .await
+        .map_err(|e| e.message)?;
+    let reply = kor_agent::subagent::collect_text(stream)
+        .await
+        .map_err(|e| e.message)?;
     let mut files = visual::parse_files(&reply);
-    let preview = files.iter().position(|f| f.path == PREVIEW).map(|i| files.remove(i));
+    let preview = files
+        .iter()
+        .position(|f| f.path == PREVIEW)
+        .map(|i| files.remove(i));
     if files.is_empty() {
         return Err("the model's reply contained no files".into());
     }
     let similarity = match preview {
-        Some(p) => match kor_tools::html_screenshot(&p.content, cap.width.max(16), cap.height.max(16)).await {
-            Ok(png) => similarity(&png, &pic.bytes),
-            Err(e) => {
-                notes.push(format!("visual comparison skipped: {e}"));
-                None
+        Some(p) => {
+            match kor_tools::html_screenshot(&p.content, cap.width.max(16), cap.height.max(16))
+                .await
+            {
+                Ok(png) => similarity(&png, &pic.bytes),
+                Err(e) => {
+                    notes.push(format!("visual comparison skipped: {e}"));
+                    None
+                }
             }
-        },
+        }
         None => {
             notes.push("visual comparison skipped: the model wrote no preview".into());
             None
         }
     };
-    Ok(Generated { target, files, similarity, notes, vision })
+    Ok(Generated {
+        target,
+        files,
+        similarity,
+        notes,
+        vision,
+    })
 }
 
 #[cfg(test)]
@@ -265,7 +350,9 @@ mod tests {
     fn png(color: [u8; 3]) -> Vec<u8> {
         let img = image::RgbImage::from_pixel(20, 10, image::Rgb(color));
         let mut out = Vec::new();
-        image::DynamicImage::ImageRgb8(img).write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png).unwrap();
+        image::DynamicImage::ImageRgb8(img)
+            .write_to(&mut std::io::Cursor::new(&mut out), image::ImageFormat::Png)
+            .unwrap();
         out
     }
 
@@ -276,14 +363,20 @@ mod tests {
             "[data-k=\"1\"] { background: url('hero.jpg') no-repeat; }",
         );
         assert!(!h.contains("logo.png") && !h.contains("<svg") && h.contains("<b>Buy</b>"));
-        assert!(h.contains(r#"data-kor-placeholder="image""#) && h.contains(r#"data-kor-placeholder="icon""#));
+        assert!(
+            h.contains(r#"data-kor-placeholder="image""#)
+                && h.contains(r#"data-kor-placeholder="icon""#)
+        );
         assert!(!s.contains("hero.jpg"));
         assert_eq!(notes.len(), 1);
     }
 
     #[test]
     fn similarity_is_100_for_equal_images_and_low_for_opposites() {
-        assert_eq!(similarity(&png([10, 20, 30]), &png([10, 20, 30])), Some(100));
+        assert_eq!(
+            similarity(&png([10, 20, 30]), &png([10, 20, 30])),
+            Some(100)
+        );
         assert_eq!(similarity(&png([0, 0, 0]), &png([255, 255, 255])), Some(0));
         assert_eq!(similarity(b"nope", &png([0, 0, 0])), None);
     }
@@ -292,15 +385,53 @@ mod tests {
     fn targets_tokens_and_prompt() {
         let dir = tempfile::tempdir().unwrap();
         std::fs::create_dir_all(dir.path().join("src/components/ui")).unwrap();
-        std::fs::write(dir.path().join("src/app.css"), "@import \"tailwindcss\";\n:root { --primary: #0a7; --radius: 8px; }\n").unwrap();
-        std::fs::write(dir.path().join("src/components/ui/button.tsx"), "export function Button() {}\n").unwrap();
+        std::fs::write(
+            dir.path().join("src/app.css"),
+            "@import \"tailwindcss\";\n:root { --primary: #0a7; --radius: 8px; }\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.path().join("src/components/ui/button.tsx"),
+            "export function Button() {}\n",
+        )
+        .unwrap();
         let ds = design_system(dir.path());
-        assert!(ds.contains("--primary: #0a7") && ds.contains("Tailwind") && ds.contains("src/components/ui/button.tsx"), "{ds}");
-        let stack = Stack { ui: "vue".into(), ..Stack::default() };
+        assert!(
+            ds.contains("--primary: #0a7")
+                && ds.contains("Tailwind")
+                && ds.contains("src/components/ui/button.tsx"),
+            "{ds}"
+        );
+        let stack = Stack {
+            ui: "vue".into(),
+            ..Stack::default()
+        };
         assert_eq!(target_for(&stack), "vue");
         assert_eq!(target_for(&Stack::default()), "html");
-        let cap = Capture { url: "https://x".into(), html: "<div/>".into(), width: 300, height: 80, ..Capture::default() };
-        let p = prompt(&cap, "react", &Stack::default(), &ds, &Options { story: true, test: true, ..Options::default() }, Some("OCR"));
-        assert!(p.contains("Storybook") && p.contains("unit test") && p.contains(PREVIEW) && p.contains("<image-description>"));
+        let cap = Capture {
+            url: "https://x".into(),
+            html: "<div/>".into(),
+            width: 300,
+            height: 80,
+            ..Capture::default()
+        };
+        let p = prompt(
+            &cap,
+            "react",
+            &Stack::default(),
+            &ds,
+            &Options {
+                story: true,
+                test: true,
+                ..Options::default()
+            },
+            Some("OCR"),
+        );
+        assert!(
+            p.contains("Storybook")
+                && p.contains("unit test")
+                && p.contains(PREVIEW)
+                && p.contains("<image-description>")
+        );
     }
 }

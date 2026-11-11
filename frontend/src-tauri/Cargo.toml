@@ -35,7 +35,7 @@ serde = { version = "1", features = ["derive"] }
 dirs = "7"
 regex = "1"
 async-trait = "0.1"
-tokio = { version = "1", features = ["sync", "macros", "process", "time", "io-util", "net"] }
+tokio = { version = "1", features = ["sync", "macros", "process", "time", "io-util", "net", "fs"] }
 futures = "0.3"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 toml_edit = "0.25"

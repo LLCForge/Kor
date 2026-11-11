@@ -105,7 +105,12 @@ mod tests {
         assert_eq!(r.files.len(), 1);
         assert_eq!(r.files.get("b.rs"), Some(&FileDecision::Reject));
         let mut r = from_marks(PermissionReply::Allow, &files, &rejected);
-        apply_edits(&mut r, &files, &rejected, &[Some("new".into()), Some("x".into())]);
+        apply_edits(
+            &mut r,
+            &files,
+            &rejected,
+            &[Some("new".into()), Some("x".into())],
+        );
         assert_eq!(r.files.get("a.rs"), Some(&FileDecision::Edit("new".into())));
         assert_eq!(r.files.get("b.rs"), Some(&FileDecision::Reject));
     }

@@ -320,11 +320,17 @@ fn groups_of(kind: Kind, v: Option<Value>, out: &mut Vec<Group>) -> Result<(), S
 
 fn expand_home(path: &str) -> std::path::PathBuf {
     let trimmed = path.trim();
-    let Some(rest) = trimmed.strip_prefix("~/").or_else(|| trimmed.strip_prefix("~\\")) else {
+    let Some(rest) = trimmed
+        .strip_prefix("~/")
+        .or_else(|| trimmed.strip_prefix("~\\"))
+    else {
         return std::path::PathBuf::from(trimmed);
     };
     let home = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"));
-    home.map_or_else(|| std::path::PathBuf::from(trimmed), |home| std::path::PathBuf::from(home).join(rest))
+    home.map_or_else(
+        || std::path::PathBuf::from(trimmed),
+        |home| std::path::PathBuf::from(home).join(rest),
+    )
 }
 
 /// Parse a CLIProxyAPI `config.yaml` (v8 or legacy layout).
@@ -512,7 +518,11 @@ pub fn load(path: &Path) -> Result<Settings, String> {
 }
 
 /// Update routing strategy and retry rounds in `proxy.yaml` (creates the file if missing).
-pub fn patch_routing(path: &Path, strategy: Strategy, request_retry: u32) -> Result<Settings, String> {
+pub fn patch_routing(
+    path: &Path,
+    strategy: Strategy,
+    request_retry: u32,
+) -> Result<Settings, String> {
     let mut root: serde_yaml::Value = if path.exists() {
         let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
         serde_yaml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?
@@ -602,7 +612,11 @@ oauth: { auth-dir: "~/.cli-proxy-api" }
         assert_eq!(g.models[0].client_name(), "flash");
         assert_eq!(st.groups[1].kind, Kind::OpenAiCompat);
         assert_eq!(st.aliases["fast"], "local/llama3");
-        assert!(st.auth_dir.as_deref().is_some_and(|p| p.ends_with(".cli-proxy-api")));
+        assert!(
+            st.auth_dir
+                .as_deref()
+                .is_some_and(|p| p.ends_with(".cli-proxy-api"))
+        );
         assert!(st.ignored.is_empty());
     }
 

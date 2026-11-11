@@ -6,8 +6,8 @@ pub mod catalog;
 pub mod custom;
 pub mod fal;
 pub mod health;
-pub mod huggingface;
 mod http;
+pub mod huggingface;
 mod manifest;
 pub mod media;
 pub mod media_catalog;
@@ -24,8 +24,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures::Stream;
-pub use kor_core::{Reasoning, ReasoningEffort};
 use kor_core::{Message, ProviderError, ProviderErrorKind, StreamEvent, ToolSpec};
+pub use kor_core::{Reasoning, ReasoningEffort};
 use kor_secrets::SecretString;
 use serde::{Deserialize, Serialize};
 pub use tokio_util::sync::CancellationToken;
@@ -104,7 +104,8 @@ pub fn build(
     manifest: &ProviderManifest,
     key: Option<SecretString>,
 ) -> Result<Arc<dyn Provider>, ProviderError> {
-    let invalid = |msg: String| ProviderError::new(&manifest.id, ProviderErrorKind::InvalidRequest, msg);
+    let invalid =
+        |msg: String| ProviderError::new(&manifest.id, ProviderErrorKind::InvalidRequest, msg);
     if manifest.tags.iter().any(|t| t == "retired") {
         return Err(invalid(format!(
             "{} has been retired by its operator; see {}",

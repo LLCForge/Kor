@@ -67,7 +67,9 @@ pub struct Forge {
 impl std::fmt::Debug for Forge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // The token is never printed.
-        f.debug_struct("Forge").field("remote", &self.remote).finish_non_exhaustive()
+        f.debug_struct("Forge")
+            .field("remote", &self.remote)
+            .finish_non_exhaustive()
     }
 }
 
@@ -281,10 +283,13 @@ impl Forge {
                 .header("Content-Type", "application/json")
                 .body(serde_json::to_vec(b).map_err(|e| ForgeError::Parse(e.to_string()))?);
         }
-        let resp = rb.send().await.map_err(|e| match kor_core::net::blocked_in(&e) {
-            Some(b) => ForgeError::Blocked(b.message.clone()),
-            None => ForgeError::Network(kor_core::net::describe(&e)),
-        })?;
+        let resp = rb
+            .send()
+            .await
+            .map_err(|e| match kor_core::net::blocked_in(&e) {
+                Some(b) => ForgeError::Blocked(b.message.clone()),
+                None => ForgeError::Network(kor_core::net::describe(&e)),
+            })?;
         let status = resp.status();
         let text = resp
             .text()
@@ -305,7 +310,12 @@ impl Forge {
         }
     }
 
-    async fn json(&self, method: Method, path: &str, body: Option<&Value>) -> Result<Value, ForgeError> {
+    async fn json(
+        &self,
+        method: Method,
+        path: &str,
+        body: Option<&Value>,
+    ) -> Result<Value, ForgeError> {
         let text = self.send(method, path, body, None).await?;
         if text.trim().is_empty() {
             return Ok(Value::Null);
@@ -367,7 +377,9 @@ impl Forge {
             Kind::Bitbucket => "?state=OPEN&pagelen=50",
             Kind::Azure => "?searchCriteria.status=active&$top=50",
         };
-        let v = self.json(Method::GET, &format!("{}{q}", self.prs()), None).await?;
+        let v = self
+            .json(Method::GET, &format!("{}{q}", self.prs()), None)
+            .await?;
         Ok(items(&v)
             .iter()
             .filter_map(|p| pr_from(self.remote.kind, p))
@@ -410,12 +422,22 @@ impl Forge {
                 .await
             }
             Kind::Gitea => {
-                self.send(Method::GET, &format!("{prs}/{number}.diff"), None, Some("text/plain"))
-                    .await
+                self.send(
+                    Method::GET,
+                    &format!("{prs}/{number}.diff"),
+                    None,
+                    Some("text/plain"),
+                )
+                .await
             }
             Kind::Bitbucket => {
-                self.send(Method::GET, &format!("{prs}/{number}/diff"), None, Some("text/plain"))
-                    .await
+                self.send(
+                    Method::GET,
+                    &format!("{prs}/{number}/diff"),
+                    None,
+                    Some("text/plain"),
+                )
+                .await
             }
             Kind::Gitlab => {
                 let v = self
@@ -432,7 +454,10 @@ impl Forge {
         if commit.is_empty() {
             return None;
         }
-        let v = self.json(Method::GET, &azure::item_path(path, commit), None).await.ok()?;
+        let v = self
+            .json(Method::GET, &azure::item_path(path, commit), None)
+            .await
+            .ok()?;
         v.get("content").and_then(Value::as_str).map(str::to_owned)
     }
 
@@ -440,18 +465,36 @@ impl Forge {
     /// sides fetched and diffed here (at most 50 files).
     async fn azure_diff(&self, number: u64) -> Result<String, ForgeError> {
         let prs = self.prs();
-        let its = self.json(Method::GET, &format!("{prs}/{number}/iterations"), None).await?;
+        let its = self
+            .json(Method::GET, &format!("{prs}/{number}/iterations"), None)
+            .await?;
         let (it, base, head) =
             azure::last_iteration(&its).ok_or_else(|| ForgeError::Parse("no iteration".into()))?;
         let ch = self
-            .json(Method::GET, &format!("{prs}/{number}/iterations/{it}/changes"), None)
+            .json(
+                Method::GET,
+                &format!("{prs}/{number}/iterations/{it}/changes"),
+                None,
+            )
             .await?;
         let mut out = String::new();
         for (path, kind) in azure::changed_paths(&ch).into_iter().take(50) {
-            let before = if kind.contains("add") { None } else { self.azure_item(&path, &base).await };
-            let after = if kind.contains("delete") { None } else { self.azure_item(&path, &head).await };
+            let before = if kind.contains("add") {
+                None
+            } else {
+                self.azure_item(&path, &base).await
+            };
+            let after = if kind.contains("delete") {
+                None
+            } else {
+                self.azure_item(&path, &head).await
+            };
             let _ = writeln!(out, "diff --git a/{path} b/{path}");
-            out.push_str(&crate::textdiff::unified(&path, before.as_deref(), after.as_deref()));
+            out.push_str(&crate::textdiff::unified(
+                &path,
+                before.as_deref(),
+                after.as_deref(),
+            ));
         }
         Ok(out)
     }
@@ -476,7 +519,11 @@ impl Forge {
         match self.remote.kind {
             Kind::Github => {
                 let rc = self
-                    .json(Method::GET, &format!("{prs}/{number}/comments?per_page=100"), None)
+                    .json(
+                        Method::GET,
+                        &format!("{prs}/{number}/comments?per_page=100"),
+                        None,
+                    )
                     .await?;
                 // Replies belong to their thread; answer the thread's first comment.
                 out.extend(
@@ -486,7 +533,11 @@ impl Forge {
                         .map(|c| gh_like(c, true)),
                 );
                 let ic = self
-                    .json(Method::GET, &format!("{repo}/issues/{number}/comments?per_page=100"), None)
+                    .json(
+                        Method::GET,
+                        &format!("{repo}/issues/{number}/comments?per_page=100"),
+                        None,
+                    )
                     .await?;
                 out.extend(items(&ic).iter().map(|c| gh_like(c, false)));
             }
@@ -497,21 +548,35 @@ impl Forge {
                 for r in items(&reviews) {
                     let Some(id) = n(&r, "/id") else { continue };
                     let cs = self
-                        .json(Method::GET, &format!("{prs}/{number}/reviews/{id}/comments"), None)
+                        .json(
+                            Method::GET,
+                            &format!("{prs}/{number}/reviews/{id}/comments"),
+                            None,
+                        )
                         .await?;
                     out.extend(items(&cs).iter().map(|c| gh_like(c, true)));
                 }
                 let ic = self
-                    .json(Method::GET, &format!("{repo}/issues/{number}/comments"), None)
+                    .json(
+                        Method::GET,
+                        &format!("{repo}/issues/{number}/comments"),
+                        None,
+                    )
                     .await?;
                 out.extend(items(&ic).iter().map(|c| gh_like(c, false)));
             }
             Kind::Gitlab => {
                 let ds = self
-                    .json(Method::GET, &format!("{prs}/{number}/discussions?per_page=100"), None)
+                    .json(
+                        Method::GET,
+                        &format!("{prs}/{number}/discussions?per_page=100"),
+                        None,
+                    )
                     .await?;
                 for d in items(&ds) {
-                    let Some(first) = d.pointer("/notes/0") else { continue };
+                    let Some(first) = d.pointer("/notes/0") else {
+                        continue;
+                    };
                     if first.get("system").and_then(Value::as_bool) == Some(true)
                         || first.get("resolved").and_then(Value::as_bool) == Some(true)
                     {
@@ -528,7 +593,11 @@ impl Forge {
             }
             Kind::Bitbucket => {
                 let cs = self
-                    .json(Method::GET, &format!("{prs}/{number}/comments?pagelen=100"), None)
+                    .json(
+                        Method::GET,
+                        &format!("{prs}/{number}/comments?pagelen=100"),
+                        None,
+                    )
                     .await?;
                 out.extend(
                     items(&cs)
@@ -547,7 +616,9 @@ impl Forge {
                 );
             }
             Kind::Azure => {
-                let ts = self.json(Method::GET, &format!("{prs}/{number}/threads"), None).await?;
+                let ts = self
+                    .json(Method::GET, &format!("{prs}/{number}/threads"), None)
+                    .await?;
                 out.extend(azure::comments(&ts));
             }
         }
@@ -588,18 +659,26 @@ impl Forge {
                 let path = format!("{prs}/{number}/reviews");
                 let full = json!({ "body": body, "event": "COMMENT", "comments": comments });
                 match self.json(Method::POST, &path, Some(&full)).await {
-                    Ok(_) => Ok(ReviewPosted { inline: notes.len(), folded: 0 }),
+                    Ok(_) => Ok(ReviewPosted {
+                        inline: notes.len(),
+                        folded: 0,
+                    }),
                     Err(ForgeError::Http { status: 422, .. }) if !notes.is_empty() => {
                         let all: Vec<&InlineNote> = notes.iter().collect();
                         let only = json!({ "body": folded(body, &all), "event": "COMMENT" });
                         self.json(Method::POST, &path, Some(&only)).await?;
-                        Ok(ReviewPosted { inline: 0, folded: notes.len() })
+                        Ok(ReviewPosted {
+                            inline: 0,
+                            folded: notes.len(),
+                        })
                     }
                     Err(e) => Err(e),
                 }
             }
             Kind::Gitlab => {
-                let mr = self.json(Method::GET, &format!("{prs}/{number}"), None).await?;
+                let mr = self
+                    .json(Method::GET, &format!("{prs}/{number}"), None)
+                    .await?;
                 let mut refused = Vec::new();
                 for x in notes {
                     let pos = json!({
@@ -613,7 +692,11 @@ impl Forge {
                         }
                     });
                     if self
-                        .json(Method::POST, &format!("{prs}/{number}/discussions"), Some(&pos))
+                        .json(
+                            Method::POST,
+                            &format!("{prs}/{number}/discussions"),
+                            Some(&pos),
+                        )
                         .await
                         .is_err()
                     {
@@ -623,7 +706,10 @@ impl Forge {
                 let note = json!({ "body": folded(body, &refused) });
                 self.json(Method::POST, &format!("{prs}/{number}/notes"), Some(&note))
                     .await?;
-                Ok(ReviewPosted { inline: notes.len() - refused.len(), folded: refused.len() })
+                Ok(ReviewPosted {
+                    inline: notes.len() - refused.len(),
+                    folded: refused.len(),
+                })
             }
             Kind::Bitbucket => {
                 let path = format!("{prs}/{number}/comments");
@@ -636,7 +722,10 @@ impl Forge {
                 }
                 let c = json!({ "content": { "raw": folded(body, &refused) } });
                 self.json(Method::POST, &path, Some(&c)).await?;
-                Ok(ReviewPosted { inline: notes.len() - refused.len(), folded: refused.len() })
+                Ok(ReviewPosted {
+                    inline: notes.len() - refused.len(),
+                    folded: refused.len(),
+                })
             }
             Kind::Azure => {
                 let path = format!("{prs}/{number}/threads");
@@ -649,7 +738,10 @@ impl Forge {
                 }
                 let summary = azure::thread(&folded(body, &refused), None);
                 self.json(Method::POST, &path, Some(&summary)).await?;
-                Ok(ReviewPosted { inline: notes.len() - refused.len(), folded: refused.len() })
+                Ok(ReviewPosted {
+                    inline: notes.len() - refused.len(),
+                    folded: refused.len(),
+                })
             }
         }
     }
@@ -665,7 +757,10 @@ impl Forge {
                 format!("{prs}/{number}/comments/{}/replies", c.id),
                 json!({ "body": body }),
             ),
-            Kind::Github => (format!("{repo}/issues/{number}/comments"), json!({ "body": body })),
+            Kind::Github => (
+                format!("{repo}/issues/{number}/comments"),
+                json!({ "body": body }),
+            ),
             Kind::Gitea => {
                 let quote = c.body.lines().next().unwrap_or_default();
                 (
@@ -684,8 +779,13 @@ impl Forge {
                     "parent": { "id": c.id.parse::<u64>().unwrap_or_default() },
                 }),
             ),
-            Kind::Azure => (format!("{prs}/{number}/threads/{}/comments", c.id), azure::reply(body)),
+            Kind::Azure => (
+                format!("{prs}/{number}/threads/{}/comments", c.id),
+                azure::reply(body),
+            ),
         };
-        self.json(Method::POST, &path, Some(&payload)).await.map(|_| ())
+        self.json(Method::POST, &path, Some(&payload))
+            .await
+            .map(|_| ())
     }
 }

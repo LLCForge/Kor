@@ -303,7 +303,10 @@ pub fn reduce(screen: &mut Screen, l: &Localizer, ev: Ev) -> Out {
     {
         let n = screen.perm_choices.len();
         let decision = match ev {
-            Ev::Char(c) if c.to_digit(10).is_some_and(|d| (1..=n).contains(&(d as usize))) => {
+            Ev::Char(c)
+                if c.to_digit(10)
+                    .is_some_and(|d| (1..=n).contains(&(d as usize))) =>
+            {
                 screen.perm_choice = c.to_digit(10).map_or(0, |d| d as usize - 1);
                 return Out::None;
             }
@@ -315,7 +318,11 @@ pub fn reduce(screen: &mut Screen, l: &Localizer, ev: Ev) -> Out {
             Ev::Char('d' | 'n') => PermissionReply::Deny,
             _ => return Out::None,
         };
-        let picked = screen.perm_choices.get(screen.perm_choice).cloned().unwrap_or_default();
+        let picked = screen
+            .perm_choices
+            .get(screen.perm_choice)
+            .cloned()
+            .unwrap_or_default();
         screen.push(format!("{prompt} → {picked}"));
         screen.perm = None;
         return Out::Decision(decision);
@@ -794,13 +801,22 @@ pub fn status_line(s: &kor_agent::status::AgentStatus) -> String {
 
 fn status_line_at(s: &kor_agent::status::AgentStatus, tick: usize) -> String {
     let frames = crate::brand::spinner_frames();
-    format!("{} {}… ({}s)", frames[tick % frames.len()], s.verb, s.elapsed_ms / 1000)
+    format!(
+        "{} {}… ({}s)",
+        frames[tick % frames.len()],
+        s.verb,
+        s.elapsed_ms / 1000
+    )
 }
 
 /// 100 ms animation ticks since the first frame of this process.
 pub fn anim_tick() -> usize {
     static START: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
-    let ms = START.get_or_init(std::time::Instant::now).elapsed().as_millis() / 100;
+    let ms = START
+        .get_or_init(std::time::Instant::now)
+        .elapsed()
+        .as_millis()
+        / 100;
     usize::try_from(ms).unwrap_or(0)
 }
 
@@ -917,7 +933,11 @@ mod tests {
             reduce(&mut screen, &l, Ev::Char('a')),
             Out::Decision(PermissionReply::Allow)
         );
-        let r = review::from_marks(PermissionReply::Allow, &screen.perm_files, &screen.perm_rejected);
+        let r = review::from_marks(
+            PermissionReply::Allow,
+            &screen.perm_files,
+            &screen.perm_rejected,
+        );
         assert_eq!(r.files.get("b.rs"), Some(&kor_agent::FileDecision::Reject));
     }
 
@@ -931,7 +951,11 @@ mod tests {
         reduce(&mut screen, &l, Ev::Ask("apply_patch".into()));
         assert_eq!(reduce(&mut screen, &l, Ev::Char('e')), Out::None);
         assert_eq!(reduce(&mut screen, &l, Ev::Char('2')), Out::EditFile(1));
-        assert_eq!(screen.perm_rejected, [false, false], "the digit after e does not toggle");
+        assert_eq!(
+            screen.perm_rejected,
+            [false, false],
+            "the digit after e does not toggle"
+        );
         assert_eq!(reduce(&mut screen, &l, Ev::Char('2')), Out::None);
         assert_eq!(screen.perm_rejected, [false, true]);
     }
@@ -1015,7 +1039,9 @@ mod tests {
         assert_eq!(s.status.as_ref(), Some(&st));
         assert!(status_line(&st).contains(&format!("{}… (4s)", st.verb)));
         // The frame turns with the screen's clock, not the core's once-a-second report.
-        let frames: Vec<String> = (0..8).map(|t| status_line_at(&st, t).chars().next().unwrap().to_string()).collect();
+        let frames: Vec<String> = (0..8)
+            .map(|t| status_line_at(&st, t).chars().next().unwrap().to_string())
+            .collect();
         assert_eq!(frames, kor_core::theme::frames::EMBER);
         reduce(&mut s, &l, Ev::Busy(None));
         assert!(s.status.is_none());

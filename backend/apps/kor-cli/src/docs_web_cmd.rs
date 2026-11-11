@@ -50,9 +50,11 @@ pub fn use_page(ctx: &Ctx, a: &UseArgs) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let loaded = ctx.config.as_ref().map_err(|e| anyhow::anyhow!("{e}"))?;
     let root = kor_runtime::osint::project_root(&std::env::current_dir()?);
-    let (provider, model) =
-        kor_runtime::oneshot_provider(l, loaded, a.model.as_deref()).map_err(|e| anyhow::anyhow!(e))?;
-    let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build()?;
+    let (provider, model) = kor_runtime::oneshot_provider(l, loaded, a.model.as_deref())
+        .map_err(|e| anyhow::anyhow!(e))?;
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?;
     let question = a.question.join(" ");
     let cached = docs::cache_dir().and_then(|d| docs::cache_get(&d, &a.url));
     let page = match cached {
@@ -61,19 +63,32 @@ pub fn use_page(ctx: &Ctx, a: &UseArgs) -> anyhow::Result<bool> {
             c.page
         }
         None => {
-            println!("{}", l.t_args("docs-use-reading", &args!("url" => a.url.clone())));
+            println!(
+                "{}",
+                l.t_args("docs-use-reading", &args!("url" => a.url.clone()))
+            );
             let (title, text) = if a.browser {
-                rt.block_on(kor_tools::chrome::read_page(&a.url)).map_err(|e| anyhow::anyhow!(e))?
+                rt.block_on(kor_tools::chrome::read_page(&a.url))
+                    .map_err(|e| anyhow::anyhow!(e))?
             } else {
-                let (text, title) = rt.block_on(kor_runtime::docs::extract(&a.url, false)).map_err(|e| anyhow::anyhow!(e))?;
+                let (text, title) = rt
+                    .block_on(kor_runtime::docs::extract(&a.url, false))
+                    .map_err(|e| anyhow::anyhow!(e))?;
                 (title, text)
             };
-            docs::Page { url: a.url.clone(), title, text, selection: String::new() }
+            docs::Page {
+                url: a.url.clone(),
+                title,
+                text,
+                selection: String::new(),
+            }
         }
     };
     let lang = l.lang();
     let answer = rt
-        .block_on(docs::answer(&provider, &model, &root, page, &question, lang))
+        .block_on(docs::answer(
+            &provider, &model, &root, page, &question, lang,
+        ))
         .map_err(|e| anyhow::anyhow!(e))?;
     if a.json {
         println!("{}", serde_json::to_string_pretty(&answer)?);
@@ -96,20 +111,36 @@ pub fn use_page(ctx: &Ctx, a: &UseArgs) -> anyhow::Result<bool> {
     }
     println!("\n{}", answer.answer.trim());
     if !answer.places.is_empty() {
-        println!("\n{}", l.t_args("docs-use-places", &args!("places" => answer.places.join(", "))));
+        println!(
+            "\n{}",
+            l.t_args(
+                "docs-use-places",
+                &args!("places" => answer.places.join(", "))
+            )
+        );
     }
     Ok(true)
 }
 
 fn or_dash(s: &str) -> String {
-    if s.is_empty() { "—".into() } else { s.to_owned() }
+    if s.is_empty() {
+        "—".into()
+    } else {
+        s.to_owned()
+    }
 }
 
 pub fn cache(ctx: &Ctx, a: &CacheArgs) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let dir = docs::cache_dir().ok_or_else(|| anyhow::anyhow!(l.t("system-no-home")))?;
     if a.clear {
-        println!("{}", l.t_args("docs-cache-cleared", &args!("count" => docs::cache_clear(&dir))));
+        println!(
+            "{}",
+            l.t_args(
+                "docs-cache-cleared",
+                &args!("count" => docs::cache_clear(&dir))
+            )
+        );
         return Ok(true);
     }
     let list = docs::cache_list(&dir);
@@ -144,13 +175,30 @@ mod tests {
 
     #[test]
     fn parses() {
-        let T::Use(u) = T::parse_from(["t", "use", "https://docs.rs/serde", "how", "do", "I", "derive?", "--browser"]) else {
+        let T::Use(u) = T::parse_from([
+            "t",
+            "use",
+            "https://docs.rs/serde",
+            "how",
+            "do",
+            "I",
+            "derive?",
+            "--browser",
+        ]) else {
             panic!("use")
         };
-        assert_eq!((u.url.as_str(), u.question.join(" ").as_str(), u.browser), ("https://docs.rs/serde", "how do I derive?", true));
-        assert!(matches!(T::parse_from(["t", "cache", "--clear"]), T::Cache(CacheArgs { clear: true, .. })));
+        assert_eq!(
+            (u.url.as_str(), u.question.join(" ").as_str(), u.browser),
+            ("https://docs.rs/serde", "how do I derive?", true)
+        );
+        assert!(matches!(
+            T::parse_from(["t", "cache", "--clear"]),
+            T::Cache(CacheArgs { clear: true, .. })
+        ));
         let l = Localizer::new(kor_i18n::Lang::Fr);
         let cmd = <T as clap::CommandFactory>::command();
-        let _ = cmd.mut_subcommand("use", |c| localize_use(c, &l)).mut_subcommand("cache", |c| localize_cache(c, &l));
+        let _ = cmd
+            .mut_subcommand("use", |c| localize_use(c, &l))
+            .mut_subcommand("cache", |c| localize_cache(c, &l));
     }
 }

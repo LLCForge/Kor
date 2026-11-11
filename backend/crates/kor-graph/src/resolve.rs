@@ -43,7 +43,13 @@ impl Derived {
             });
     }
 
-    pub(crate) fn edge(&mut self, source: &str, target: &str, kind: EdgeKind, confidence: Confidence) {
+    pub(crate) fn edge(
+        &mut self,
+        source: &str,
+        target: &str,
+        kind: EdgeKind,
+        confidence: Confidence,
+    ) {
         if source == target {
             return;
         }

@@ -21,7 +21,10 @@ pub struct Detected {
 }
 
 fn grab(text: &str, re: &str) -> Option<String> {
-    regex::Regex::new(re).ok()?.captures(text).map(|c| c[1].to_owned())
+    regex::Regex::new(re)
+        .ok()?
+        .captures(text)
+        .map(|c| c[1].to_owned())
 }
 
 /// Platforms in a local project folder.
@@ -31,14 +34,23 @@ pub fn detect_dir(root: &Path) -> Vec<Detected> {
     if root.join("wp-includes/version.php").is_file() || root.join("wp-config.php").is_file() {
         out.push(Detected {
             platform: "wordpress".into(),
-            version: grab(&read("wp-includes/version.php"), r"\$wp_version\s*=\s*'([^']+)'"),
+            version: grab(
+                &read("wp-includes/version.php"),
+                r"\$wp_version\s*=\s*'([^']+)'",
+            ),
             evidence: "wp-includes/version.php".into(),
             modules: true,
         });
-        if root.join("wp-content/plugins/woocommerce/woocommerce.php").is_file() {
+        if root
+            .join("wp-content/plugins/woocommerce/woocommerce.php")
+            .is_file()
+        {
             out.push(Detected {
                 platform: "woocommerce".into(),
-                version: grab(&read("wp-content/plugins/woocommerce/woocommerce.php"), r"Version:\s*([0-9.]+)"),
+                version: grab(
+                    &read("wp-content/plugins/woocommerce/woocommerce.php"),
+                    r"Version:\s*([0-9.]+)",
+                ),
                 evidence: "wp-content/plugins/woocommerce".into(),
                 modules: true,
             });
@@ -47,21 +59,37 @@ pub fn detect_dir(root: &Path) -> Vec<Detected> {
     if root.join("system/startup.php").is_file() && root.join("catalog").is_dir() {
         out.push(Detected {
             platform: "opencart".into(),
-            version: grab(&read("admin/index.php"), r"define\('VERSION',\s*'([^']+)'\)").or_else(|| grab(&read("index.php"), r"define\('VERSION',\s*'([^']+)'\)")),
+            version: grab(
+                &read("admin/index.php"),
+                r"define\('VERSION',\s*'([^']+)'\)",
+            )
+            .or_else(|| grab(&read("index.php"), r"define\('VERSION',\s*'([^']+)'\)")),
             evidence: "system/startup.php".into(),
             modules: true,
         });
     }
-    if root.join("config/defines.inc.php").is_file() || root.join("classes/PrestaShopAutoload.php").is_file() {
+    if root.join("config/defines.inc.php").is_file()
+        || root.join("classes/PrestaShopAutoload.php").is_file()
+    {
         out.push(Detected {
             platform: "prestashop".into(),
-            version: grab(&read("app/AppKernel.php"), r"const VERSION = '([^']+)'").or_else(|| grab(&read("config/settings.inc.php"), r"_PS_VERSION_',\s*'([^']+)'")),
+            version: grab(&read("app/AppKernel.php"), r"const VERSION = '([^']+)'").or_else(|| {
+                grab(
+                    &read("config/settings.inc.php"),
+                    r"_PS_VERSION_',\s*'([^']+)'",
+                )
+            }),
             evidence: "config/defines.inc.php".into(),
             modules: true,
         });
     }
     if root.join("bin/magento").is_file() {
-        out.push(Detected { platform: "magento".into(), version: None, evidence: "bin/magento".into(), modules: true });
+        out.push(Detected {
+            platform: "magento".into(),
+            version: None,
+            evidence: "bin/magento".into(),
+            modules: true,
+        });
     }
     out
 }
@@ -71,18 +99,34 @@ pub fn detect_html(html: &str) -> Vec<Detected> {
     let l = html.to_ascii_lowercase();
     let mut out = Vec::new();
     let mut add = |p: &str, version: Option<String>, ev: &str, modules: bool| {
-        out.push(Detected { platform: p.into(), version, evidence: ev.into(), modules });
+        out.push(Detected {
+            platform: p.into(),
+            version,
+            evidence: ev.into(),
+            modules,
+        });
     };
     if l.contains("/wp-content/") || l.contains("content=\"wordpress") {
-        add("wordpress", super::wp::generator_version(html), "/wp-content/", true);
+        add(
+            "wordpress",
+            super::wp::generator_version(html),
+            "/wp-content/",
+            true,
+        );
     }
     if l.contains("woocommerce") {
         add("woocommerce", None, "woocommerce", true);
     }
-    if l.contains("catalog/view/theme") || l.contains("route=common/home") || l.contains("index.php?route=product") {
+    if l.contains("catalog/view/theme")
+        || l.contains("route=common/home")
+        || l.contains("index.php?route=product")
+    {
         add("opencart", None, "catalog/view/theme", true);
     }
-    if l.contains("var prestashop") || l.contains("content=\"prestashop") || l.contains("/modules/ps_") {
+    if l.contains("var prestashop")
+        || l.contains("content=\"prestashop")
+        || l.contains("/modules/ps_")
+    {
         add("prestashop", None, "prestashop", true);
     }
     if l.contains("mage/cookies") || l.contains("magento") {
@@ -115,7 +159,9 @@ fn pascal(slug: &str) -> String {
         .filter(|w| !w.is_empty())
         .map(|w| {
             let mut c = w.chars();
-            c.next().map(|f| f.to_ascii_uppercase().to_string() + c.as_str()).unwrap_or_default()
+            c.next()
+                .map(|f| f.to_ascii_uppercase().to_string() + c.as_str())
+                .unwrap_or_default()
         })
         .collect()
 }
@@ -127,7 +173,9 @@ pub fn opencart_module(code: &str, name: &str) -> Vec<(String, String)> {
     vec![
         (
             format!("{code}/install.json"),
-            format!("{{\n  \"name\": \"{name}\",\n  \"version\": \"1.0.0\",\n  \"author\": \"\",\n  \"link\": \"\"\n}}\n"),
+            format!(
+                "{{\n  \"name\": \"{name}\",\n  \"version\": \"1.0.0\",\n  \"author\": \"\",\n  \"link\": \"\"\n}}\n"
+            ),
         ),
         (
             format!("{code}/admin/controller/module/{c}.php"),
@@ -147,11 +195,15 @@ pub fn opencart_module(code: &str, name: &str) -> Vec<(String, String)> {
         ),
         (
             format!("{code}/admin/language/en-gb/module/{c}.php"),
-            format!("<?php\n$_['heading_title'] = '{name}';\n$_['text_success'] = 'Success: settings saved.';\n$_['entry_status'] = 'Status';\n$_['error_permission'] = 'Warning: you do not have permission to modify this module.';\n"),
+            format!(
+                "<?php\n$_['heading_title'] = '{name}';\n$_['text_success'] = 'Success: settings saved.';\n$_['entry_status'] = 'Status';\n$_['error_permission'] = 'Warning: you do not have permission to modify this module.';\n"
+            ),
         ),
         (
             format!("{code}/admin/language/tr-tr/module/{c}.php"),
-            format!("<?php\n$_['heading_title'] = '{name}';\n$_['text_success'] = 'Ayarlar kaydedildi.';\n$_['entry_status'] = 'Durum';\n$_['error_permission'] = 'Uyarı: bu modülü değiştirme yetkiniz yok.';\n"),
+            format!(
+                "<?php\n$_['heading_title'] = '{name}';\n$_['text_success'] = 'Ayarlar kaydedildi.';\n$_['entry_status'] = 'Durum';\n$_['error_permission'] = 'Uyarı: bu modülü değiştirme yetkiniz yok.';\n"
+            ),
         ),
         (
             format!("{code}/admin/view/template/module/{c}.twig"),
@@ -175,7 +227,11 @@ pub fn opencart_module(code: &str, name: &str) -> Vec<(String, String)> {
 
 /// PrestaShop 8 module with a configuration form (token-checked, validated, escaped by Smarty).
 pub fn prestashop_module(code: &str, name: &str) -> Vec<(String, String)> {
-    let c: String = code.chars().filter(char::is_ascii_alphanumeric).collect::<String>().to_ascii_lowercase();
+    let c: String = code
+        .chars()
+        .filter(char::is_ascii_alphanumeric)
+        .collect::<String>()
+        .to_ascii_lowercase();
     let class = pascal(code);
     let up = c.to_ascii_uppercase();
     vec![
@@ -201,7 +257,10 @@ pub fn prestashop_module(code: &str, name: &str) -> Vec<(String, String)> {
     public function hookDisplayHeader($params)\n    {{\n        return '';\n    }}\n}}\n"
             ),
         ),
-        (format!("{c}/index.php"), "<?php\nheader('Location: ../');\nexit;\n".into()),
+        (
+            format!("{c}/index.php"),
+            "<?php\nheader('Location: ../');\nexit;\n".into(),
+        ),
     ]
 }
 
@@ -216,7 +275,11 @@ mod tests {
         std::fs::create_dir_all(d.path().join("catalog")).unwrap();
         std::fs::create_dir_all(d.path().join("admin")).unwrap();
         std::fs::write(d.path().join("system/startup.php"), "<?php").unwrap();
-        std::fs::write(d.path().join("admin/index.php"), "<?php define('VERSION', '4.0.2.3');").unwrap();
+        std::fs::write(
+            d.path().join("admin/index.php"),
+            "<?php define('VERSION', '4.0.2.3');",
+        )
+        .unwrap();
         let found = detect_dir(d.path());
         assert_eq!(found[0].platform, "opencart");
         assert_eq!(found[0].version.as_deref(), Some("4.0.2.3"));
@@ -230,9 +293,15 @@ mod tests {
     #[test]
     fn module_skeletons() {
         let oc = opencart_module("kargo-takip", "Kargo Takip");
-        assert!(oc[1].1.contains("namespace Opencart\\Admin\\Controller\\Extension\\KargoTakip\\Module;"));
+        assert!(
+            oc[1]
+                .1
+                .contains("namespace Opencart\\Admin\\Controller\\Extension\\KargoTakip\\Module;")
+        );
         assert!(oc[1].1.contains("hasPermission('modify'"));
         let ps = prestashop_module("kargo-takip", "Kargo Takip");
-        assert!(ps[0].0 == "kargotakip/kargotakip.php" && ps[0].1.contains("Validate::isGenericName"));
+        assert!(
+            ps[0].0 == "kargotakip/kargotakip.php" && ps[0].1.contains("Validate::isGenericName")
+        );
     }
 }

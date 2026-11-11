@@ -56,7 +56,10 @@ pub fn serves_stdio(a: &AcpArgs) -> bool {
 }
 
 fn fail(l: &Localizer, e: impl std::fmt::Display) -> bool {
-    eprintln!("{}", l.t_args("error-generic", &args!("error" => e.to_string())));
+    eprintln!(
+        "{}",
+        l.t_args("error-generic", &args!("error" => e.to_string()))
+    );
     false
 }
 
@@ -120,7 +123,10 @@ pub fn run(ctx: &Ctx, a: AcpArgs) -> anyhow::Result<bool> {
     let rt = crate::providers::runtime()?;
     match a.command.unwrap_or(AcpCmd::Serve) {
         AcpCmd::Serve => {
-            rt.block_on(kor_runtime::acp::serve_stdio(Localizer::new(l.lang()), loaded));
+            rt.block_on(kor_runtime::acp::serve_stdio(
+                Localizer::new(l.lang()),
+                loaded,
+            ));
             Ok(true)
         }
         AcpCmd::Agents => {
@@ -136,10 +142,17 @@ pub fn run(ctx: &Ctx, a: AcpArgs) -> anyhow::Result<bool> {
             let exe = std::env::current_exe()?;
             let v = kor_runtime::acp::editor_setup(&exe);
             println!("{}", l.t("acp-setup-intro"));
-            println!("{}", serde_json::to_string_pretty(&v["zed"]).unwrap_or_default());
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&v["zed"]).unwrap_or_default()
+            );
             Ok(true)
         }
-        AcpCmd::Run { agent, prompt, args } => {
+        AcpCmd::Run {
+            agent,
+            prompt,
+            args,
+        } => {
             let spec = loaded
                 .config
                 .acp
@@ -194,8 +207,22 @@ mod tests {
     #[test]
     fn args_parse() {
         assert!(T::try_parse_from(["acp"]).unwrap().a.command.is_none());
-        assert!(matches!(T::try_parse_from(["acp", "serve"]).unwrap().a.command, Some(AcpCmd::Serve)));
-        let t = T::try_parse_from(["acp", "run", "gemini", "explain", "this", "--arg", "--experimental-acp"]).unwrap();
-        assert!(matches!(t.a.command, Some(AcpCmd::Run { ref agent, ref args, .. }) if agent == "gemini" && args.len() == 1));
+        assert!(matches!(
+            T::try_parse_from(["acp", "serve"]).unwrap().a.command,
+            Some(AcpCmd::Serve)
+        ));
+        let t = T::try_parse_from([
+            "acp",
+            "run",
+            "gemini",
+            "explain",
+            "this",
+            "--arg",
+            "--experimental-acp",
+        ])
+        .unwrap();
+        assert!(
+            matches!(t.a.command, Some(AcpCmd::Run { ref agent, ref args, .. }) if agent == "gemini" && args.len() == 1)
+        );
     }
 }

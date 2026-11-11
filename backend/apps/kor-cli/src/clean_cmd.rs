@@ -41,15 +41,26 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
 }
 
 fn label(c: &clean::Candidate) -> String {
-    c.path.as_ref().map_or_else(|| "Docker".to_owned(), |p| p.display().to_string())
+    c.path
+        .as_ref()
+        .map_or_else(|| "Docker".to_owned(), |p| p.display().to_string())
 }
 
 fn confirm(l: &Localizer, n: usize, total: u64) -> bool {
-    eprint!("{} ", l.t_args("clean-confirm", &args!("count" => n, "size" => human(total))));
+    eprint!(
+        "{} ",
+        l.t_args(
+            "clean-confirm",
+            &args!("count" => n, "size" => human(total))
+        )
+    );
     let _ = std::io::stderr().flush();
     let mut line = String::new();
     let _ = std::io::stdin().lock().read_line(&mut line);
-    matches!(line.trim().to_lowercase().as_str(), "y" | "yes" | "e" | "evet" | "o" | "oui")
+    matches!(
+        line.trim().to_lowercase().as_str(),
+        "y" | "yes" | "e" | "evet" | "o" | "oui"
+    )
 }
 
 pub fn run(ctx: &Ctx, a: &CleanArgs) -> anyhow::Result<bool> {
@@ -79,7 +90,13 @@ pub fn run(ctx: &Ctx, a: &CleanArgs) -> anyhow::Result<bool> {
             );
         }
         let total: u64 = list.iter().map(|c| c.bytes).sum();
-        println!("{}", l.t_args("clean-total", &args!("size" => human(total), "count" => list.len())));
+        println!(
+            "{}",
+            l.t_args(
+                "clean-total",
+                &args!("size" => human(total), "count" => list.len())
+            )
+        );
         println!("{}", l.t("clean-how"));
         return Ok(true);
     }
@@ -116,16 +133,34 @@ pub fn run(ctx: &Ctx, a: &CleanArgs) -> anyhow::Result<bool> {
     let out = clean::clean(&scan, &ids);
     let mut ok = true;
     for o in &out {
-        let what = o.path.as_ref().map_or_else(|| "Docker".to_owned(), |p| p.display().to_string());
+        let what = o
+            .path
+            .as_ref()
+            .map_or_else(|| "Docker".to_owned(), |p| p.display().to_string());
         match &o.error {
-            None => println!("{}", l.t_args("clean-freed", &args!("path" => what, "size" => human(o.freed)))),
+            None => println!(
+                "{}",
+                l.t_args(
+                    "clean-freed",
+                    &args!("path" => what, "size" => human(o.freed))
+                )
+            ),
             Some(e) => {
                 ok = false;
-                eprintln!("{}", l.t_args("clean-failed", &args!("path" => what, "error" => e.clone())));
+                eprintln!(
+                    "{}",
+                    l.t_args("clean-failed", &args!("path" => what, "error" => e.clone()))
+                );
             }
         }
     }
-    println!("{}", l.t_args("clean-done", &args!("size" => human(out.iter().map(|o| o.freed).sum()))));
+    println!(
+        "{}",
+        l.t_args(
+            "clean-done",
+            &args!("size" => human(out.iter().map(|o| o.freed).sum()))
+        )
+    );
     Ok(ok)
 }
 
@@ -148,6 +183,9 @@ mod tests {
         let t = T::parse_from(["t", "ab12cd34ef", "--yes"]);
         assert_eq!(t.a.ids, ["ab12cd34ef"]);
         assert!(T::try_parse_from(["t", "x", "--all"]).is_err());
-        let _ = localize(<T as clap::CommandFactory>::command(), &Localizer::new(kor_i18n::Lang::En));
+        let _ = localize(
+            <T as clap::CommandFactory>::command(),
+            &Localizer::new(kor_i18n::Lang::En),
+        );
     }
 }

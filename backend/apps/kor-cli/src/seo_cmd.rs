@@ -1673,10 +1673,16 @@ async fn agents_cmd(ctx: &Ctx, root: &Path, a: AgentsRun) -> bool {
         ask_model(ctx, model::Job::Writing, a.model.as_deref()).ok()
     };
     // Terminal: one braille spinner row per SEO agent, redrawn in place (§16.1, §16.2 rule 5).
-    let live = if a.json { None } else { crate::brand::LiveMulti::start() };
+    let live = if a.json {
+        None
+    } else {
+        crate::brand::LiveMulti::start()
+    };
     let rows: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
     let row = |agent: &str| {
-        let mut r = rows.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut r = rows
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         r.iter().position(|x| x == agent).unwrap_or_else(|| {
             r.push(agent.to_owned());
             r.len() - 1
@@ -1686,16 +1692,23 @@ async fn agents_cmd(ctx: &Ctx, root: &Path, a: AgentsRun) -> bool {
         use crate::brand::RowState;
         let Some(live) = &live else { return };
         match e {
-            agents::Event::Started { agent } => live.set(row(&agent), &agent, "", RowState::Running),
+            agents::Event::Started { agent } => {
+                live.set(row(&agent), &agent, "", RowState::Running)
+            }
             agents::Event::Progress { agent, detail } => {
                 let short: String = detail.chars().take(80).collect();
                 live.set(row(&agent), &agent, &short, RowState::Running);
             }
             agents::Event::Done { agent, findings } => {
-                let text = l.t_args("seo-agent-done", &args!("agent" => agent.clone(), "n" => findings));
+                let text = l.t_args(
+                    "seo-agent-done",
+                    &args!("agent" => agent.clone(), "n" => findings),
+                );
                 live.set(row(&agent), &agent, &text, RowState::Done);
             }
-            agents::Event::Skipped { agent, reason } => live.set(row(&agent), &agent, &reason, RowState::Failed),
+            agents::Event::Skipped { agent, reason } => {
+                live.set(row(&agent), &agent, &reason, RowState::Failed)
+            }
         }
     };
     let t = match agents::run(

@@ -96,7 +96,8 @@ pub struct Palette {
 /// # Errors
 /// When the bytes are not a decodable PNG or JPEG.
 pub fn dominant_colors(bytes: &[u8], top: usize) -> Result<Palette, String> {
-    let img = image::load_from_memory(bytes).map_err(|e| format!("image could not be decoded: {e}"))?;
+    let img =
+        image::load_from_memory(bytes).map_err(|e| format!("image could not be decoded: {e}"))?;
     let (w, h) = (img.width(), img.height());
     let thumb = img.thumbnail(64, 64).to_rgb8();
     let mut counts: HashMap<[u8; 3], u32> = HashMap::new();
@@ -172,7 +173,16 @@ mod tests {
     fn parses_ocr_lines_and_skips_headers() {
         let b = parse_ocr(OCR);
         assert_eq!(b.len(), 6);
-        assert_eq!(b[1], TextBox { x: 400, y: 12, w: 60, h: 18, text: "Login".into() });
+        assert_eq!(
+            b[1],
+            TextBox {
+                x: 400,
+                y: 12,
+                w: 60,
+                h: 18,
+                text: "Login".into()
+            }
+        );
         assert!(parse_ocr("No text found (OCR language: en).").is_empty());
         assert!(parse_ocr("[1,2 3] x\n[a,b cxd] y").is_empty());
     }
@@ -181,7 +191,10 @@ mod tests {
     fn groups_rows_and_cells() {
         let r = rows(&parse_ocr(OCR));
         assert_eq!(r.len(), 3);
-        assert_eq!(r[0].iter().map(|b| b.text.as_str()).collect::<Vec<_>>(), ["Logo", "Login", "Sign up"]);
+        assert_eq!(
+            r[0].iter().map(|b| b.text.as_str()).collect::<Vec<_>>(),
+            ["Logo", "Login", "Sign up"]
+        );
         let c = cells(&r[0]);
         assert_eq!(c.len(), 2, "Logo is far from the two nav links");
         assert_eq!(c[1].len(), 2);
@@ -193,8 +206,14 @@ mod tests {
         let d = describe(OCR, (640, 200), &[("#f8f8f8".into(), 80)]);
         assert!(d.contains("Image size: 640x200 px"));
         assert!(d.contains("Dominant colours: #f8f8f8 80%"));
-        assert!(d.contains("row 1 (y=10): [x=10 w=80 h=20] Logo | [x=400 w=150 h=18] Login Sign up"), "{d}");
-        assert!(d.contains("row 3 (y=130): [x=10 w=170 h=16] Email here"), "{d}");
+        assert!(
+            d.contains("row 1 (y=10): [x=10 w=80 h=20] Logo | [x=400 w=150 h=18] Login Sign up"),
+            "{d}"
+        );
+        assert!(
+            d.contains("row 3 (y=130): [x=10 w=170 h=16] Email here"),
+            "{d}"
+        );
         assert!(describe("", (1, 1), &[]).contains("No text was found"));
     }
 

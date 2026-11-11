@@ -47,7 +47,11 @@ pub fn event_json(ev: AgentEvent) -> Option<Value> {
             "usd": p.usd,
             "files": p.files,
         }),
-        AgentEvent::ToolProgress { id, message: Some(line), .. } => {
+        AgentEvent::ToolProgress {
+            id,
+            message: Some(line),
+            ..
+        } => {
             json!({ "type": "toolProgress", "id": id, "line": line })
         }
         AgentEvent::ToolProgress { .. } | AgentEvent::Usage(_) | AgentEvent::Context(_) => {

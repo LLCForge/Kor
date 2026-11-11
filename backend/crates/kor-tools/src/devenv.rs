@@ -686,7 +686,11 @@ impl Session {
         }
         // A missing environment program (devcontainer CLI, nix...) is not a version mismatch:
         // commands run on this computer instead, and the model is told once.
-        let note = if mismatch { "[env] warning (on_mismatch = \"warn\"):" } else { "[env] note: commands run on this computer." };
+        let note = if mismatch {
+            "[env] warning (on_mismatch = \"warn\"):"
+        } else {
+            "[env] note: commands run on this computer."
+        };
         Ok((!self.warned.swap(true, Ordering::Relaxed)).then(|| format!("{note}\n{p}")))
     }
 }

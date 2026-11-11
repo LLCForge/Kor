@@ -14,7 +14,9 @@ pub mod pairing;
 pub mod policy;
 pub(crate) mod server;
 
-pub use server::{Auth, Bridge, ClientHandler, PORT, PanelHandler, set_client_handler, set_panel_handler};
+pub use server::{
+    Auth, Bridge, ClientHandler, PORT, PanelHandler, set_client_handler, set_panel_handler,
+};
 
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU8, Ordering};
@@ -83,7 +85,10 @@ pub async fn start() -> Result<Arc<Bridge>, String> {
         return Ok(b);
     }
     let dir = state_dir().ok_or("no data directory for the browser bridge")?;
-    let auth = Auth { dir, store: Arc::new(kor_secrets::KeychainStore) };
+    let auth = Auth {
+        dir,
+        store: Arc::new(kor_secrets::KeychainStore),
+    };
     let bridge = Bridge::bind(PORT, auth).await?;
     *lock(&BRIDGE) = Some(bridge.clone());
     Ok(bridge)
@@ -161,7 +166,10 @@ impl Tool for InfoTool {
     }
     async fn call(&self, _input: Value, _ctx: &ToolCtx) -> ToolOutput {
         let (status, port) = match global() {
-            Some(b) if b.connected() => (format!("extension connected ({} browser(s))", b.connections()), b.port()),
+            Some(b) if b.connected() => (
+                format!("extension connected ({} browser(s))", b.connections()),
+                b.port(),
+            ),
             Some(b) => ("extension not connected".to_owned(), b.port()),
             None => ("bridge not running in this Kor process".to_owned(), PORT),
         };
@@ -199,14 +207,25 @@ pub async fn read_page(url: &str) -> Result<(String, String), String> {
     }
     let task = json!({"key": "docs", "title": "Kor · docs"});
     let tab = bridge
-        .request(json!({"cmd": "tabs.create", "task": task, "url": url, "active": false}), std::time::Duration::from_secs(40))
+        .request(
+            json!({"cmd": "tabs.create", "task": task, "url": url, "active": false}),
+            std::time::Duration::from_secs(40),
+        )
         .await?;
-    let id = tab["tabId"].as_i64().ok_or("the extension returned no tab id")?;
+    let id = tab["tabId"]
+        .as_i64()
+        .ok_or("the extension returned no tab id")?;
     let snap = bridge
-        .request(json!({"cmd": "snapshot", "task": task, "tabId": id}), std::time::Duration::from_secs(20))
+        .request(
+            json!({"cmd": "snapshot", "task": task, "tabId": id}),
+            std::time::Duration::from_secs(20),
+        )
         .await;
     let _ = bridge
-        .request(json!({"cmd": "tabs.close", "task": task, "tabId": id}), std::time::Duration::from_secs(10))
+        .request(
+            json!({"cmd": "tabs.close", "task": task, "tabId": id}),
+            std::time::Duration::from_secs(10),
+        )
         .await;
     let snap = snap?;
     Ok((

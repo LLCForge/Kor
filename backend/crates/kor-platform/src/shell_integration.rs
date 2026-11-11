@@ -229,11 +229,17 @@ pub fn argv(os: Os, apps: &Apps, action: Action) -> Option<Vec<String>> {
             .or_else(|| cli.map(|c| with(c, &["integrate", "open-terminal", "--task", t]))),
         Action::Cli => {
             // Windows: through the GUI desktop binary (no console flash); elsewhere the CLI.
-            let (first, second) = if os == Os::Windows { (desktop.clone(), cli.clone()) } else { (cli.clone(), desktop.clone()) };
+            let (first, second) = if os == Os::Windows {
+                (desktop.clone(), cli.clone())
+            } else {
+                (cli.clone(), desktop.clone())
+            };
             match (first, second) {
                 (Some(p), _) if os == Os::Windows => Some(with(p, &["--terminal"])),
                 (Some(p), _) => Some(with(p, &["integrate", "open-terminal"])),
-                (None, Some(p)) if os == Os::Windows => Some(with(p, &["integrate", "open-terminal"])),
+                (None, Some(p)) if os == Os::Windows => {
+                    Some(with(p, &["integrate", "open-terminal"]))
+                }
                 (None, Some(p)) => Some(with(p, &["--terminal"])),
                 (None, None) => None,
             }
@@ -244,15 +250,30 @@ pub fn argv(os: Os, apps: &Apps, action: Action) -> Option<Vec<String>> {
 /// Windows command line with the selection as `token` (`"%V"`, `"%1"`).
 pub fn windows_command(argv: &[String], token: &str) -> String {
     argv.iter()
-        .map(|a| if a == PATHS { format!("\"{token}\"") } else { crate::jumplist::quote_windows_arg(a) })
+        .map(|a| {
+            if a == PATHS {
+                format!("\"{token}\"")
+            } else {
+                crate::jumplist::quote_windows_arg(a)
+            }
+        })
         .collect::<Vec<_>>()
         .join(" ")
 }
 
 /// `.desktop` `Exec=` value with the selection as `%F`.
 pub fn desktop_exec(argv: &[String]) -> String {
-    let (prog, rest) = argv.split_first().map_or(("", &[][..]), |(p, r)| (p.as_str(), r));
-    let mut s = crate::jumplist::desktop_exec(Path::new(prog), &rest.iter().filter(|a| *a != PATHS).cloned().collect::<Vec<_>>());
+    let (prog, rest) = argv
+        .split_first()
+        .map_or(("", &[][..]), |(p, r)| (p.as_str(), r));
+    let mut s = crate::jumplist::desktop_exec(
+        Path::new(prog),
+        &rest
+            .iter()
+            .filter(|a| *a != PATHS)
+            .cloned()
+            .collect::<Vec<_>>(),
+    );
     if argv.iter().any(|a| a == PATHS) {
         s.push_str(" %F");
     }
@@ -263,7 +284,13 @@ pub fn desktop_exec(argv: &[String]) -> String {
 /// nothing is selected, as in a folder background).
 pub fn sh_line(argv: &[String]) -> String {
     argv.iter()
-        .map(|a| if a == PATHS { "\"$@\"".to_owned() } else { crate::terminal::sh_quote(a) })
+        .map(|a| {
+            if a == PATHS {
+                "\"$@\"".to_owned()
+            } else {
+                crate::terminal::sh_quote(a)
+            }
+        })
         .collect::<Vec<_>>()
         .join(" ")
 }
@@ -284,15 +311,25 @@ fn script(argv: &[String]) -> String {
 pub enum Item {
     /// A registry key under `HKCU` with values (`""` = default value). Created with its parents;
     /// removed as a tree.
-    Reg { key: String, values: Vec<(String, String)> },
+    Reg {
+        key: String,
+        values: Vec<(String, String)>,
+    },
     /// A file (executable when `exec`).
-    File { path: PathBuf, body: Vec<u8>, exec: bool },
+    File {
+        path: PathBuf,
+        body: Vec<u8>,
+        exec: bool,
+    },
     /// A directory removed as a whole on uninstall (macOS `.workflow` bundles).
     Dir { path: PathBuf },
     /// Kor's actions merged into Thunar's `uca.xml`.
     Thunar { path: PathBuf, actions: String },
     /// Kor's "Kor'da aç" tasks merged into an editor's `tasks.json`.
-    JsonTasks { path: PathBuf, tasks: Vec<serde_json::Value> },
+    JsonTasks {
+        path: PathBuf,
+        tasks: Vec<serde_json::Value>,
+    },
     /// `x-scheme-handler/kor` default in `mimeapps.list` (only when unset).
     Mime { path: PathBuf, entry: String },
 }
@@ -351,11 +388,19 @@ impl Target {
         let home = dirs::home_dir().ok_or_else(missing)?;
         let os = crate::os();
         Ok(Self {
-            config: dirs::config_dir().filter(|_| os == Os::Linux).unwrap_or_else(|| home.join(".config")),
-            share: dirs::data_dir().filter(|_| os == Os::Linux).unwrap_or_else(|| home.join(".local").join("share")),
+            config: dirs::config_dir()
+                .filter(|_| os == Os::Linux)
+                .unwrap_or_else(|| home.join(".config")),
+            share: dirs::data_dir()
+                .filter(|_| os == Os::Linux)
+                .unwrap_or_else(|| home.join(".local").join("share")),
             data: crate::data_dir().ok_or_else(missing)?,
             app_config: dirs::config_dir().unwrap_or_else(|| home.join(".config")),
-            managers: if os == Os::Linux { detect_managers() } else { Vec::new() },
+            managers: if os == Os::Linux {
+                detect_managers()
+            } else {
+                Vec::new()
+            },
             os,
             home,
         })
@@ -368,7 +413,12 @@ pub fn detect_managers() -> Vec<Manager> {
     let mut v = Vec::new();
     if on("nautilus") {
         v.push(Manager::Nautilus);
-        let libs = ["/usr/lib", "/usr/lib64", "/usr/lib/x86_64-linux-gnu", "/usr/lib/aarch64-linux-gnu"];
+        let libs = [
+            "/usr/lib",
+            "/usr/lib64",
+            "/usr/lib/x86_64-linux-gnu",
+            "/usr/lib/aarch64-linux-gnu",
+        ];
         let py = libs.iter().any(|l| {
             ["nautilus/extensions-4", "nautilus/extensions-3.0"]
                 .iter()
@@ -378,7 +428,12 @@ pub fn detect_managers() -> Vec<Manager> {
             v.push(Manager::NautilusPython);
         }
     }
-    for (bin, m) in [("caja", Manager::Caja), ("nemo", Manager::Nemo), ("dolphin", Manager::Dolphin), ("thunar", Manager::Thunar)] {
+    for (bin, m) in [
+        ("caja", Manager::Caja),
+        ("nemo", Manager::Nemo),
+        ("dolphin", Manager::Dolphin),
+        ("thunar", Manager::Thunar),
+    ] {
         if on(bin) {
             v.push(m);
         }
@@ -390,7 +445,10 @@ pub fn detect_managers() -> Vec<Manager> {
 }
 
 fn xml(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
 }
 
 /// Everything to write for `apps` on `t`.
@@ -426,8 +484,16 @@ fn editor_commands(apps: &Apps, lang: &str) -> Vec<EditorCommand> {
         (None, Some(c)) => (s(c), vec!["integrate".into(), "open-terminal".into()]),
         (None, None) => return Vec::new(),
     };
-    let with = |x: &str| pre.iter().cloned().chain(std::iter::once(x.to_owned())).collect::<Vec<_>>();
-    vec![(folder.to_owned(), prog.clone(), with("{dir}")), (file.to_owned(), prog, with("{file}"))]
+    let with = |x: &str| {
+        pre.iter()
+            .cloned()
+            .chain(std::iter::once(x.to_owned()))
+            .collect::<Vec<_>>()
+    };
+    vec![
+        (folder.to_owned(), prog.clone(), with("{dir}")),
+        (file.to_owned(), prog, with("{file}")),
+    ]
 }
 
 /// VS Code user tasks, Zed global tasks and `JetBrains` External Tools for every editor whose
@@ -449,9 +515,16 @@ fn editor_items(t: &Target, apps: &Apps, lang: &str) -> Vec<Item> {
                     "presentation": { "reveal": "never" }, "problemMatcher": [], "detail": EDITOR_MARK })
             })
             .collect();
-        out.push(Item::JsonTasks { path: code.join("tasks.json"), tasks });
+        out.push(Item::JsonTasks {
+            path: code.join("tasks.json"),
+            tasks,
+        });
     }
-    let zed = if t.os == Os::Windows { t.app_config.join("Zed") } else { t.home.join(".config").join("zed") };
+    let zed = if t.os == Os::Windows {
+        t.app_config.join("Zed")
+    } else {
+        t.home.join(".config").join("zed")
+    };
     if zed.is_dir() {
         let tasks = cmds
             .iter()
@@ -462,13 +535,24 @@ fn editor_items(t: &Target, apps: &Apps, lang: &str) -> Vec<Item> {
                     "hide": "always", "tags": [EDITOR_MARK] })
             })
             .collect();
-        out.push(Item::JsonTasks { path: zed.join("tasks.json"), tasks });
+        out.push(Item::JsonTasks {
+            path: zed.join("tasks.json"),
+            tasks,
+        });
     }
     if let Ok(rd) = std::fs::read_dir(t.app_config.join("JetBrains")) {
-        let mut products: Vec<PathBuf> = rd.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
+        let mut products: Vec<PathBuf> = rd
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.is_dir())
+            .collect();
         products.sort();
         for p in products {
-            out.push(Item::File { path: p.join("tools").join("Kor.xml"), body: jetbrains_tools(&cmds).into_bytes(), exec: false });
+            out.push(Item::File {
+                path: p.join("tools").join("Kor.xml"),
+                body: jetbrains_tools(&cmds).into_bytes(),
+                exec: false,
+            });
         }
     }
     out
@@ -482,8 +566,17 @@ fn jetbrains_tools(cmds: &[EditorCommand]) -> String {
     for (label, prog, args) in cmds {
         let params = args
             .iter()
-            .map(|a| a.replace("{dir}", "$ProjectFileDir$").replace("{file}", "$FilePath$"))
-            .map(|a| if a.contains(' ') { format!("\"{a}\"") } else { a })
+            .map(|a| {
+                a.replace("{dir}", "$ProjectFileDir$")
+                    .replace("{file}", "$FilePath$")
+            })
+            .map(|a| {
+                if a.contains(' ') {
+                    format!("\"{a}\"")
+                } else {
+                    a
+                }
+            })
             .collect::<Vec<_>>()
             .join(" ");
         let _ = writeln!(
@@ -505,7 +598,9 @@ pub fn tasks_merge(text: &str, tasks: &[serde_json::Value]) -> Option<String> {
     use serde_json::Value;
     let ours = |v: &Value| {
         v.get("detail").and_then(Value::as_str) == Some(EDITOR_MARK)
-            || v.get("tags").and_then(Value::as_array).is_some_and(|t| t.iter().any(|x| x.as_str() == Some(EDITOR_MARK)))
+            || v.get("tags")
+                .and_then(Value::as_array)
+                .is_some_and(|t| t.iter().any(|x| x.as_str() == Some(EDITOR_MARK)))
     };
     let mut doc: Value = if text.trim().is_empty() {
         if tasks.first().is_some_and(|t| t.get("tags").is_some()) {
@@ -518,14 +613,16 @@ pub fn tasks_merge(text: &str, tasks: &[serde_json::Value]) -> Option<String> {
     };
     let list = match &mut doc {
         Value::Array(a) => a,
-        Value::Object(o) => o.entry("tasks").or_insert_with(|| Value::Array(Vec::new())).as_array_mut()?,
+        Value::Object(o) => o
+            .entry("tasks")
+            .or_insert_with(|| Value::Array(Vec::new()))
+            .as_array_mut()?,
         _ => return None,
     };
     list.retain(|v| !ours(v));
     list.extend(tasks.iter().cloned());
     serde_json::to_string_pretty(&doc).ok().map(|s| s + "\n")
 }
-
 
 fn windows_plan(apps: &Apps, acts: &[(Action, Vec<String>)], l: &Labels) -> Vec<Item> {
     let icon = apps
@@ -542,26 +639,48 @@ fn windows_plan(apps: &Apps, acts: &[(Action, Vec<String>)], l: &Labels) -> Vec<
     ];
     for (base, token, kind) in bases {
         let fits = |a: Action| a.applies() == Applies::Any || a.applies() == kind;
-        let (tasks, plain): (Vec<_>, Vec<_>) = acts.iter().filter(|(a, _)| fits(*a)).partition(|(a, _)| matches!(a, Action::Task(_)));
+        let (tasks, plain): (Vec<_>, Vec<_>) = acts
+            .iter()
+            .filter(|(a, _)| fits(*a))
+            .partition(|(a, _)| matches!(a, Action::Task(_)));
         for (a, v) in plain {
             let key = format!(r"{CLASSES}\{base}\Kor.{}", a.id());
-            let mut values = vec![("MUIVerb".to_owned(), a.label(l).to_owned()), ("Icon".to_owned(), icon.clone())];
+            let mut values = vec![
+                ("MUIVerb".to_owned(), a.label(l).to_owned()),
+                ("Icon".to_owned(), icon.clone()),
+            ];
             if *a == Action::Edit {
                 values.push(("MultiSelectModel".into(), "Player".into()));
             }
-            out.push(Item::Reg { key: key.clone(), values });
-            out.push(Item::Reg { key: format!(r"{key}\command"), values: vec![(String::new(), windows_command(v, token))] });
+            out.push(Item::Reg {
+                key: key.clone(),
+                values,
+            });
+            out.push(Item::Reg {
+                key: format!(r"{key}\command"),
+                values: vec![(String::new(), windows_command(v, token))],
+            });
         }
         if !tasks.is_empty() {
             let key = format!(r"{CLASSES}\{base}\Kor.tasks");
             out.push(Item::Reg {
                 key: key.clone(),
-                values: vec![("MUIVerb".into(), l.submenu.into()), ("Icon".into(), icon.clone()), ("SubCommands".into(), String::new())],
+                values: vec![
+                    ("MUIVerb".into(), l.submenu.into()),
+                    ("Icon".into(), icon.clone()),
+                    ("SubCommands".into(), String::new()),
+                ],
             });
             for (a, v) in tasks {
                 let sub = format!(r"{key}\shell\{}", a.id());
-                out.push(Item::Reg { key: sub.clone(), values: vec![("MUIVerb".into(), a.label(l).into())] });
-                out.push(Item::Reg { key: format!(r"{sub}\command"), values: vec![(String::new(), windows_command(v, token))] });
+                out.push(Item::Reg {
+                    key: sub.clone(),
+                    values: vec![("MUIVerb".into(), a.label(l).into())],
+                });
+                out.push(Item::Reg {
+                    key: format!(r"{sub}\command"),
+                    values: vec![(String::new(), windows_command(v, token))],
+                });
             }
         }
     }
@@ -575,9 +694,21 @@ fn windows_plan(apps: &Apps, acts: &[(Action, Vec<String>)], l: &Labels) -> Vec<
 pub fn windows_scheme(desktop: &Path) -> Vec<Item> {
     let key = format!(r"{CLASSES}\kor");
     vec![
-        Item::Reg { key: key.clone(), values: vec![(String::new(), "URL:Kor".into()), ("URL Protocol".into(), String::new())] },
-        Item::Reg { key: format!(r"{key}\DefaultIcon"), values: vec![(String::new(), format!("{},0", desktop.display()))] },
-        Item::Reg { key: format!(r"{key}\shell\open\command"), values: vec![(String::new(), format!("\"{}\" \"%1\"", desktop.display()))] },
+        Item::Reg {
+            key: key.clone(),
+            values: vec![
+                (String::new(), "URL:Kor".into()),
+                ("URL Protocol".into(), String::new()),
+            ],
+        },
+        Item::Reg {
+            key: format!(r"{key}\DefaultIcon"),
+            values: vec![(String::new(), format!("{},0", desktop.display()))],
+        },
+        Item::Reg {
+            key: format!(r"{key}\shell\open\command"),
+            values: vec![(String::new(), format!("\"{}\" \"%1\"", desktop.display()))],
+        },
     ]
 }
 
@@ -594,7 +725,11 @@ fn mac_plan(t: &Target, acts: &[(Action, Vec<String>)], l: &Labels) -> Vec<Item>
         };
         out.push(Item::Dir { path: dir.clone() });
         let contents = dir.join("Contents");
-        out.push(Item::File { path: contents.join("Info.plist"), body: workflow_info(a.label(l), types).into_bytes(), exec: false });
+        out.push(Item::File {
+            path: contents.join("Info.plist"),
+            body: workflow_info(a.label(l), types).into_bytes(),
+            exec: false,
+        });
         out.push(Item::File {
             path: contents.join("document.wflow"),
             body: workflow_document(&format!("{} >/dev/null 2>&1 &", sh_line(v))).into_bytes(),
@@ -654,8 +789,18 @@ pub fn workflow_document(script: &str) -> String {
 
 fn linux_plan(t: &Target, apps: &Apps, acts: &[(Action, Vec<String>)], l: &Labels) -> Vec<Item> {
     let mut out = Vec::new();
-    let icon_path = t.share.join("icons").join("hicolor").join("128x128").join("apps").join("dev.kor.desktop.png");
-    out.push(Item::File { path: icon_path.clone(), body: ICON_PNG.to_vec(), exec: false });
+    let icon_path = t
+        .share
+        .join("icons")
+        .join("hicolor")
+        .join("128x128")
+        .join("apps")
+        .join("dev.kor.desktop.png");
+    out.push(Item::File {
+        path: icon_path.clone(),
+        body: ICON_PNG.to_vec(),
+        exec: false,
+    });
     let icon = icon_path.to_string_lossy().into_owned();
     let has = |m: Manager| t.managers.contains(&m);
     let file_name = |a: Action| a.label(l).replace([':', '/'], " ").trim().to_owned();
@@ -663,14 +808,26 @@ fn linux_plan(t: &Target, apps: &Apps, acts: &[(Action, Vec<String>)], l: &Label
         if !has(m) {
             continue;
         }
-        let dir = if m == Manager::Nautilus { t.share.join("nautilus").join("scripts") } else { t.config.join("caja").join("scripts") };
+        let dir = if m == Manager::Nautilus {
+            t.share.join("nautilus").join("scripts")
+        } else {
+            t.config.join("caja").join("scripts")
+        };
         for (a, v) in acts {
-            out.push(Item::File { path: dir.join(file_name(*a)), body: script(v).into_bytes(), exec: true });
+            out.push(Item::File {
+                path: dir.join(file_name(*a)),
+                body: script(v).into_bytes(),
+                exec: true,
+            });
         }
     }
     if has(Manager::NautilusPython) {
         out.push(Item::File {
-            path: t.share.join("nautilus-python").join("extensions").join("kor_integration.py"),
+            path: t
+                .share
+                .join("nautilus-python")
+                .join("extensions")
+                .join("kor_integration.py"),
             body: nautilus_python(acts, l).into_bytes(),
             exec: false,
         });
@@ -691,12 +848,22 @@ fn linux_plan(t: &Target, apps: &Apps, acts: &[(Action, Vec<String>)], l: &Label
     }
     if has(Manager::Dolphin) {
         let body = dolphin_menu(acts, l, &icon);
-        for dir in [t.share.join("kio").join("servicemenus"), t.share.join("kservices5").join("ServiceMenus")] {
-            out.push(Item::File { path: dir.join("kor.desktop"), body: body.clone().into_bytes(), exec: true });
+        for dir in [
+            t.share.join("kio").join("servicemenus"),
+            t.share.join("kservices5").join("ServiceMenus"),
+        ] {
+            out.push(Item::File {
+                path: dir.join("kor.desktop"),
+                body: body.clone().into_bytes(),
+                exec: true,
+            });
         }
     }
     if has(Manager::Thunar) {
-        out.push(Item::Thunar { path: t.config.join("Thunar").join("uca.xml"), actions: thunar_actions(acts, l) });
+        out.push(Item::Thunar {
+            path: t.config.join("Thunar").join("uca.xml"),
+            actions: thunar_actions(acts, l),
+        });
     }
     if has(Manager::Pcmanfm) {
         for (a, v) in acts {
@@ -728,7 +895,10 @@ fn linux_plan(t: &Target, apps: &Apps, acts: &[(Action, Vec<String>)], l: &Label
             .into_bytes(),
             exec: false,
         });
-        out.push(Item::Mime { path: t.config.join("mimeapps.list"), entry: LINUX_ENTRY_NAME.into() });
+        out.push(Item::Mime {
+            path: t.config.join("mimeapps.list"),
+            entry: LINUX_ENTRY_NAME.into(),
+        });
     }
     out
 }
@@ -743,7 +913,13 @@ fn dolphin_menu(acts: &[(Action, Vec<String>)], l: &Labels, icon: &str) -> Strin
         l.submenu
     );
     for (a, v) in acts {
-        let _ = write!(s, "\n[Desktop Action kor-{}]\nName={}\nIcon={icon}\nExec={}\n", a.id(), a.label(l), desktop_exec(v));
+        let _ = write!(
+            s,
+            "\n[Desktop Action kor-{}]\nName={}\nIcon={icon}\nExec={}\n",
+            a.id(),
+            a.label(l),
+            desktop_exec(v)
+        );
     }
     s
 }
@@ -752,9 +928,15 @@ fn thunar_actions(acts: &[(Action, Vec<String>)], l: &Labels) -> String {
     let mut s = String::new();
     for (a, v) in acts {
         let (dirs, files) = match a.applies() {
-            Applies::Files => ("", "<audio-files/><image-files/><other-files/><text-files/><video-files/>"),
+            Applies::Files => (
+                "",
+                "<audio-files/><image-files/><other-files/><text-files/><video-files/>",
+            ),
             Applies::Folders => ("<directories/>", ""),
-            Applies::Any => ("<directories/>", "<audio-files/><image-files/><other-files/><text-files/><video-files/>"),
+            Applies::Any => (
+                "<directories/>",
+                "<audio-files/><image-files/><other-files/><text-files/><video-files/>",
+            ),
         };
         let _ = writeln!(
             s,
@@ -772,7 +954,13 @@ fn nautilus_python(acts: &[(Action, Vec<String>)], l: &Labels) -> String {
     let mut items = String::new();
     for (a, v) in acts {
         let argv: Vec<String> = v.iter().filter(|x| *x != PATHS).map(|x| py(x)).collect();
-        let _ = writeln!(items, "    ({}, {}, [{}]),", py(&format!("Kor::{}", a.id())), py(a.label(l)), argv.join(", "));
+        let _ = writeln!(
+            items,
+            "    ({}, {}, [{}]),",
+            py(&format!("Kor::{}", a.id())),
+            py(a.label(l)),
+            argv.join(", ")
+        );
     }
     let kinds: String = acts.iter().fold(String::new(), |mut o, (a, _)| {
         let kind = match a.applies() {
@@ -855,16 +1043,24 @@ fn record_path(t: &Target) -> PathBuf {
 }
 
 fn read_record(t: &Target) -> Vec<String> {
-    std::fs::read_to_string(record_path(t)).map(|r| r.lines().map(str::to_owned).collect()).unwrap_or_default()
+    std::fs::read_to_string(record_path(t))
+        .map(|r| r.lines().map(str::to_owned).collect())
+        .unwrap_or_default()
 }
 
 /// `uca.xml` with Kor's actions replaced by `actions` (empty: removed).
 pub fn thunar_merge(text: &str, actions: &str) -> String {
-    let base = if text.trim().is_empty() { "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n</actions>\n" } else { text };
+    let base = if text.trim().is_empty() {
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<actions>\n</actions>\n"
+    } else {
+        text
+    };
     let mut kept = String::new();
     let mut rest = base;
     while let Some(start) = rest.find("<action>") {
-        let Some(len) = rest[start..].find("</action>") else { break };
+        let Some(len) = rest[start..].find("</action>") else {
+            break;
+        };
         let end = start + len + "</action>".len();
         kept.push_str(&rest[..start]);
         let block = &rest[start..end];
@@ -890,7 +1086,10 @@ pub fn mime_merge(text: &str, entry: &str, add: bool) -> String {
     const KEY: &str = "x-scheme-handler/kor=";
     let ours = format!("{KEY}{entry}");
     if !add {
-        return text.split_inclusive('\n').filter(|l| l.trim() != ours).collect();
+        return text
+            .split_inclusive('\n')
+            .filter(|l| l.trim() != ours)
+            .collect();
     }
     if text.lines().any(|l| l.trim().starts_with(KEY)) {
         return text.to_owned();
@@ -944,7 +1143,9 @@ pub fn apply(t: &Target, reg: &mut dyn Registry, items: &[Item], extended: bool)
                     if key.ends_with(r"Classes\kor") && reg.exists(key) {
                         continue;
                     }
-                    if key.contains(r"Classes\kor\") && !done.iter().any(|d| d == &format!(r"reg {CLASSES}\kor")) {
+                    if key.contains(r"Classes\kor\")
+                        && !done.iter().any(|d| d == &format!(r"reg {CLASSES}\kor"))
+                    {
                         continue;
                     }
                     for (n, v) in values {
@@ -958,7 +1159,9 @@ pub fn apply(t: &Target, reg: &mut dyn Registry, items: &[Item], extended: bool)
                 }
                 Item::File { path, body, exec } => {
                     // Files inside a recorded bundle directory go with it.
-                    let ours = done.iter().any(|d| d.strip_prefix("dir ").is_some_and(|p| path.starts_with(p)));
+                    let ours = done
+                        .iter()
+                        .any(|d| d.strip_prefix("dir ").is_some_and(|p| path.starts_with(p)));
                     write_file(path, body, *exec)?;
                     if !ours {
                         done.push(format!("file {}", path.display()));
@@ -1004,7 +1207,10 @@ pub fn apply(t: &Target, reg: &mut dyn Registry, items: &[Item], extended: bool)
 /// The Kor-owned key that contains `key` (`…\shell\Kor.cli`, `…\Kor.tasks`, `…\Classes\kor`).
 fn top_key(key: &str) -> String {
     let parts: Vec<&str> = key.split('\\').collect();
-    let n = parts.iter().position(|p| p.starts_with("Kor.") || *p == "kor").map_or(parts.len(), |i| i + 1);
+    let n = parts
+        .iter()
+        .position(|p| p.starts_with("Kor.") || *p == "kor")
+        .map_or(parts.len(), |i| i + 1);
     parts[..n].join("\\")
 }
 
@@ -1076,8 +1282,11 @@ pub fn status_of(t: &Target, reg: &dyn Registry) -> Status {
     let lines = read_record(t);
     let entries: Vec<String> = lines.iter().filter(|l| *l != "extended").cloned().collect();
     let scheme = match t.os {
-        Os::Windows => reg.get(r"Software\Classes\kor\shell\open\command", "").is_some_and(|c| c.to_ascii_lowercase().contains("kor")),
-        Os::Linux => std::fs::read_to_string(t.config.join("mimeapps.list")).is_ok_and(|m| m.contains("x-scheme-handler/kor=")),
+        Os::Windows => reg
+            .get(r"Software\Classes\kor\shell\open\command", "")
+            .is_some_and(|c| c.to_ascii_lowercase().contains("kor")),
+        Os::Linux => std::fs::read_to_string(t.config.join("mimeapps.list"))
+            .is_ok_and(|m| m.contains("x-scheme-handler/kor=")),
         // Kor.app's Info.plist declares the scheme.
         Os::Mac => true,
         Os::Other => false,
@@ -1090,7 +1299,9 @@ pub fn status_of(t: &Target, reg: &dyn Registry) -> Status {
         modern_menu: None,
         finder_sync: None,
         scheme,
-        last_error: std::fs::read_to_string(t.data.join(ERROR_FILE)).ok().filter(|e| !e.trim().is_empty()),
+        last_error: std::fs::read_to_string(t.data.join(ERROR_FILE))
+            .ok()
+            .filter(|e| !e.trim().is_empty()),
     }
 }
 
@@ -1136,7 +1347,13 @@ pub fn detect_apps(cli: Option<PathBuf>) -> Apps {
 ///
 /// # Errors
 /// When a write or a system command fails (recorded for `kor doctor`).
-pub fn install_with(t: &Target, reg: &mut dyn Registry, runner: &mut dyn Runner, apps: &Apps, opts: &Options) -> io::Result<Status> {
+pub fn install_with(
+    t: &Target,
+    reg: &mut dyn Registry,
+    runner: &mut dyn Runner,
+    apps: &Apps,
+    opts: &Options,
+) -> io::Result<Status> {
     let items = plan(t, apps, opts);
     let mut r = apply(t, reg, &items, opts.extended);
     if r.is_ok() {
@@ -1169,9 +1386,23 @@ fn native_on(t: &Target, runner: &mut dyn Runner, apps: &Apps) -> io::Result<()>
         Os::Linux => {
             let apps_dir = t.share.join("applications");
             if apps_dir.is_dir() {
-                let _ = runner.run("update-desktop-database", &[apps_dir.to_string_lossy().into_owned()]);
+                let _ = runner.run(
+                    "update-desktop-database",
+                    &[apps_dir.to_string_lossy().into_owned()],
+                );
             }
-            let _ = runner.run("gtk-update-icon-cache", &["-f".to_owned(), "-t".to_owned(), t.share.join("icons").join("hicolor").to_string_lossy().into_owned()]);
+            let _ = runner.run(
+                "gtk-update-icon-cache",
+                &[
+                    "-f".to_owned(),
+                    "-t".to_owned(),
+                    t.share
+                        .join("icons")
+                        .join("hicolor")
+                        .to_string_lossy()
+                        .into_owned(),
+                ],
+            );
             Ok(())
         }
         Os::Other => Ok(()),
@@ -1190,7 +1421,12 @@ fn append_record(t: &Target, line: &str) -> io::Result<()> {
 ///
 /// # Errors
 /// When something recorded cannot be removed.
-pub fn uninstall_with(t: &Target, reg: &mut dyn Registry, runner: &mut dyn Runner, apps: &Apps) -> io::Result<Status> {
+pub fn uninstall_with(
+    t: &Target,
+    reg: &mut dyn Registry,
+    runner: &mut dyn Runner,
+    apps: &Apps,
+) -> io::Result<Status> {
     let lines = read_record(t);
     let mut r = Ok(());
     if lines.iter().any(|l| l == "sparse menu") {
@@ -1213,9 +1449,15 @@ fn full_status(t: &Target, reg: &dyn Registry, runner: &mut dyn Runner, apps: &A
     let mut s = status_of(t, reg);
     match t.os {
         Os::Windows => {
-            s.modern_menu = sparse_dir(apps).map(|_| sparse::status(runner, sparse::Kind::Menu).is_ok_and(|p| p.is_some()));
+            s.modern_menu = sparse_dir(apps)
+                .map(|_| sparse::status(runner, sparse::Kind::Menu).is_ok_and(|p| p.is_some()));
         }
-        Os::Mac => s.finder_sync = finder_sync::status(runner).ok().filter(|k| k.0).map(|k| k.1),
+        Os::Mac => {
+            s.finder_sync = finder_sync::status(runner)
+                .ok()
+                .filter(|k| k.0)
+                .map(|k| k.1)
+        }
         _ => {}
     }
     s
@@ -1226,7 +1468,13 @@ fn full_status(t: &Target, reg: &dyn Registry, runner: &mut dyn Runner, apps: &A
 /// # Errors
 /// Without a home directory, or when a write fails.
 pub fn install(apps: &Apps, opts: &Options) -> io::Result<Status> {
-    install_with(&Target::current()?, &mut SystemRegistry, &mut sparse::System, apps, opts)
+    install_with(
+        &Target::current()?,
+        &mut SystemRegistry,
+        &mut sparse::System,
+        apps,
+        opts,
+    )
 }
 
 /// Remove everything Kor installed.
@@ -1234,14 +1482,22 @@ pub fn install(apps: &Apps, opts: &Options) -> io::Result<Status> {
 /// # Errors
 /// Without a home directory, or when a removal fails.
 pub fn uninstall() -> io::Result<Status> {
-    uninstall_with(&Target::current()?, &mut SystemRegistry, &mut sparse::System, &Apps::default())
+    uninstall_with(
+        &Target::current()?,
+        &mut SystemRegistry,
+        &mut sparse::System,
+        &Apps::default(),
+    )
 }
 
 /// Status on this machine.
 pub fn status(apps: &Apps) -> Status {
     match Target::current() {
         Ok(t) => full_status(&t, &SystemRegistry, &mut sparse::System, apps),
-        Err(e) => Status { last_error: Some(e.to_string()), ..Status::default() },
+        Err(e) => Status {
+            last_error: Some(e.to_string()),
+            ..Status::default()
+        },
     }
 }
 
@@ -1249,7 +1505,10 @@ pub fn status(apps: &Apps) -> Status {
 pub fn recorded_status() -> Status {
     match Target::current() {
         Ok(t) => status_of(&t, &SystemRegistry),
-        Err(e) => Status { last_error: Some(e.to_string()), ..Status::default() },
+        Err(e) => Status {
+            last_error: Some(e.to_string()),
+            ..Status::default()
+        },
     }
 }
 
@@ -1260,7 +1519,10 @@ pub fn recorded_status() -> Status {
 /// Without the desktop app, or when a write fails.
 pub fn register_scheme(apps: &Apps) -> io::Result<()> {
     let t = Target::current()?;
-    let desktop = apps.desktop.as_deref().ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Kor desktop not found"))?;
+    let desktop = apps
+        .desktop
+        .as_deref()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "Kor desktop not found"))?;
     let mut reg = SystemRegistry;
     // The context-menu install already includes the scheme; do not clear it.
     if !read_record(&t).is_empty() {
@@ -1272,7 +1534,15 @@ pub fn register_scheme(apps: &Apps) -> io::Result<()> {
 fn scheme_items(t: &Target, desktop: &Path) -> Vec<Item> {
     match t.os {
         Os::Windows => windows_scheme(desktop),
-        Os::Linux => linux_plan(t, &Apps { desktop: Some(desktop.to_path_buf()), cli: None }, &[], &labels("tr")),
+        Os::Linux => linux_plan(
+            t,
+            &Apps {
+                desktop: Some(desktop.to_path_buf()),
+                cli: None,
+            },
+            &[],
+            &labels("tr"),
+        ),
         _ => Vec::new(),
     }
 }
@@ -1283,9 +1553,16 @@ fn scheme_items(t: &Target, desktop: &Path) -> Vec<Item> {
 /// When a removal fails.
 pub fn unregister_scheme() -> io::Result<()> {
     let t = Target::current()?;
-    let menus = read_record(&t).iter().any(|l| l.contains(r"\shell\Kor.") || l.starts_with("dir ") || l.contains("scripts") || l.contains("actions"));
+    let menus = read_record(&t).iter().any(|l| {
+        l.contains(r"\shell\Kor.")
+            || l.starts_with("dir ")
+            || l.contains("scripts")
+            || l.contains("actions")
+    });
     if menus {
-        return Err(io::Error::other("kor:// is part of the context-menu integration: use `kor integrate uninstall`"));
+        return Err(io::Error::other(
+            "kor:// is part of the context-menu integration: use `kor integrate uninstall`",
+        ));
     }
     uninstall().map(drop)
 }

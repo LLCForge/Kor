@@ -248,7 +248,10 @@ mod tests {
 
     #[test]
     fn localized_powershell_5_and_colored_pwsh_7() {
-        let p = policy(r"C:\Users\user\AppData\Local\Temp\kor-sandbox-probe-1", false);
+        let p = policy(
+            r"C:\Users\user\AppData\Local\Temp\kor-sandbox-probe-1",
+            false,
+        );
         // Windows PowerShell 5.1 on a Turkish system: OEM code page, path wrapped mid-name.
         let ps5 = "Attempting to perform the InitializeDefaultDrives operation on the 'FileSystem' provider failed.\r\n\
                    Exception calling \"WriteAllText\" with \"2\" argument(s): \"'C:\\Users\\user\\AppData\\Local\\kor\\sandbox-probe\\outside-1.txt\r\n\
@@ -265,7 +268,11 @@ mod tests {
         // pwsh 7 colors its errors even into a pipe.
         let ps7 = "\u{1b}[31;1mSet-Content: \u{1b}[0m\n\u{1b}[31;1m\u{1b}[36;1m     | \u{1b}[31;1mAccess to the path 'C:\\Users\\user\\o.txt' is denied.\u{1b}[0m";
         let d = denials(SandboxKind::AppContainer, &p, ps7);
-        assert_eq!(d[0].target.as_deref(), Some(r"C:\Users\user\o.txt"), "{d:?}");
+        assert_eq!(
+            d[0].target.as_deref(),
+            Some(r"C:\Users\user\o.txt"),
+            "{d:?}"
+        );
         // A normal sandboxed PowerShell start prints this warning; it is not a block.
         let warn = "'FileSystem' sa\u{fffd}lay\u{fffd}c\u{fffd}s\u{fffd}nda InitializeDefaultDrives i\u{fffd}lemini ger\u{fffd}ekle\u{fffd}tirme giri\u{fffd}imi ba\u{fffd}ar\u{fffd}s\u{fffd}z oldu.";
         assert!(denials(SandboxKind::AppContainer, &p, warn).is_empty());

@@ -1,92 +1,92 @@
 //! `kor` command-line entry point.
 
-mod auth;
-mod docs_cmd;
-mod estimate_cmd;
-mod export_cmd;
-mod know_cmd;
-mod rules_cmd;
 mod acp_cmd;
-mod chrome_cmd;
-mod clean_cmd;
-mod completions_cmd;
-mod computer_cmd;
-mod docs_web_cmd;
-mod files_cmd;
-mod folder_cmd;
-mod install_hooks_cmd;
-mod integrate_cmd;
-mod intent_cmd;
-mod layout_cmd;
-mod notify_cmd;
-mod osint_cmd;
-mod peer_cmd;
-mod plan_cmd;
-mod prefs_cmd;
-mod prereq_cmd;
-mod privacy_cmd;
-mod seo_cmd;
-mod sessions_cmd;
-mod status_cmd;
-mod system_cmd;
-mod tool_cmd;
-mod web_cmd;
+mod audit_cmd;
+mod auth;
 mod bench_cmd;
 mod brand;
 mod catalog_cmd;
+mod chrome;
+mod chrome_cmd;
+mod clean_cmd;
 mod comment_cmd;
-mod consensus_cmd;
 mod commit_cmd;
+mod compat;
+mod completions_cmd;
+mod component_cmd;
+mod computer_cmd;
+mod consensus_cmd;
 mod context_cmd;
 mod cost_cmd;
-mod audit_cmd;
-mod db_cmd;
-mod graph_cmd;
-mod vault_cmd;
-mod sandbox_cmd;
-mod offline_cmd;
 mod daemon_cmd;
-mod deploy_cmd;
-mod discover_cmd;
-mod env_cmd;
-mod find_cmd;
+mod db_cmd;
 mod deadcode_cmd;
+mod deploy_cmd;
 mod deps_cmd;
 mod diagram_cmd;
-mod explain_cmd;
-mod perf_cmd;
-mod quality_cmd;
-mod screenshot_cmd;
-mod visualize_cmd;
-mod voice_cmd;
-mod mcp_cmd;
-mod pr_cmd;
-mod remote_cmd;
-mod replay_cmd;
-mod review_cmd;
-mod task_cmd;
-mod triggers_cmd;
-mod watch_cmd;
-mod memory_cmd;
-mod packages_cmd;
-mod shell_cmd;
-mod templates_cmd;
-mod component_cmd;
-mod chrome;
-mod hooks_cmd;
-mod hf_cmd;
-mod media_cmd;
-mod compat;
+mod discover_cmd;
+mod docs_cmd;
+mod docs_web_cmd;
 mod doctor;
+mod env_cmd;
+mod estimate_cmd;
+mod explain_cmd;
+mod export_cmd;
 mod extra;
-mod undo;
-mod update;
+mod files_cmd;
+mod find_cmd;
+mod folder_cmd;
+mod graph_cmd;
+mod hf_cmd;
+mod hooks_cmd;
+mod install_hooks_cmd;
+mod integrate_cmd;
+mod intent_cmd;
+mod know_cmd;
+mod layout_cmd;
+mod mcp_cmd;
+mod media_cmd;
+mod memory_cmd;
+mod notify_cmd;
 mod oauth;
+mod offline_cmd;
+mod osint_cmd;
+mod packages_cmd;
+mod peer_cmd;
+mod perf_cmd;
+mod plan_cmd;
+mod pr_cmd;
+mod prefs_cmd;
+mod prereq_cmd;
+mod privacy_cmd;
 mod provider_cmd;
 mod providers;
 mod proxy_cmd;
+mod quality_cmd;
+mod remote_cmd;
 mod repl;
+mod replay_cmd;
+mod review_cmd;
+mod rules_cmd;
+mod sandbox_cmd;
+mod screenshot_cmd;
+mod seo_cmd;
+mod sessions_cmd;
+mod shell_cmd;
+mod status_cmd;
+mod system_cmd;
+mod task_cmd;
+mod templates_cmd;
+mod tool_cmd;
+mod triggers_cmd;
 mod tui;
+mod undo;
+mod update;
+mod vault_cmd;
+mod visualize_cmd;
+mod voice_cmd;
+mod watch_cmd;
+mod web_cmd;
 
 use std::process::ExitCode;
 
@@ -902,7 +902,8 @@ fn localized_command(l: &Localizer) -> clap::Command {
                         .mut_arg("yes", |a| a.help(l.t("arg-component-yes")))
                 })
                 .mut_subcommand("update", |s| {
-                    s.about(l.t("cmd-component-update")).mut_arg("yes", |a| a.help(l.t("arg-component-yes")))
+                    s.about(l.t("cmd-component-update"))
+                        .mut_arg("yes", |a| a.help(l.t("arg-component-yes")))
                 })
                 .mut_subcommand("verify", |s| {
                     s.about(l.t("cmd-component-verify"))
@@ -998,9 +999,10 @@ fn localized_command(l: &Localizer) -> clap::Command {
                 .mut_subcommand("auth", |s| {
                     s.about(l.t("cmd-proxy-auth"))
                         .mut_subcommand("login", |s| {
-                            s.about(l.t("cmd-proxy-auth-login")).mut_arg("provider", |a| {
-                                a.help(l.t("arg-proxy-auth-provider")).required(true)
-                            })
+                            s.about(l.t("cmd-proxy-auth-login"))
+                                .mut_arg("provider", |a| {
+                                    a.help(l.t("arg-proxy-auth-provider")).required(true)
+                                })
                         })
                         .mut_subcommand("list", |s| s.about(l.t("cmd-proxy-auth-list")))
                         .mut_subcommand("refresh", |s| {
@@ -1071,7 +1073,11 @@ fn real_main() -> ExitCode {
         .map(|l| vec![("ui.language", kor_config::Value::String(l.code().into()))])
         .unwrap_or_default();
     // Read before parsing, like `--lang`: the config is loaded first.
-    if argv.iter().take_while(|a| *a != "--").any(|a| a == "--privacy-mode") {
+    if argv
+        .iter()
+        .take_while(|a| *a != "--")
+        .any(|a| a == "--privacy-mode")
+    {
         cli_overrides.push(("privacy.mode", kor_config::Value::Boolean(true)));
     }
     let config = kor_config::load(&paths, std::env::vars(), &cli_overrides);
@@ -1107,9 +1113,16 @@ fn real_main() -> ExitCode {
         let prompt = (!cli.prompt.is_empty()).then(|| cli.prompt.join(" "));
         let project = cli.project.as_deref();
         let r = match cli.command {
-            None if cli.print => remote_cmd::run(&ctx, target, project, remote_cmd::Mode::Print(prompt.unwrap_or_default())),
+            None if cli.print => remote_cmd::run(
+                &ctx,
+                target,
+                project,
+                remote_cmd::Mode::Print(prompt.unwrap_or_default()),
+            ),
             None => remote_cmd::run(&ctx, target, project, remote_cmd::Mode::Chat(prompt)),
-            Some(Cmd::Attach { task }) => remote_cmd::run(&ctx, target, project, remote_cmd::Mode::Attach(task)),
+            Some(Cmd::Attach { task }) => {
+                remote_cmd::run(&ctx, target, project, remote_cmd::Mode::Attach(task))
+            }
             Some(Cmd::Discover(a)) => discover_cmd::run(&ctx, &a, Some(target)),
             Some(_) => Err(anyhow::anyhow!(ctx.l.t("remote-only-session"))),
         };
@@ -1117,7 +1130,11 @@ fn real_main() -> ExitCode {
             Ok(true) => ExitCode::SUCCESS,
             Ok(false) => ExitCode::FAILURE,
             Err(e) => {
-                eprintln!("{}", ctx.l.t_args("error-generic", &args!("error" => format!("{e:#}"))));
+                eprintln!(
+                    "{}",
+                    ctx.l
+                        .t_args("error-generic", &args!("error" => format!("{e:#}")))
+                );
                 ExitCode::FAILURE
             }
         };
@@ -1180,10 +1197,18 @@ fn run_cmd(ctx: &Ctx, cmd: Cmd) -> anyhow::Result<bool> {
         } => compat::export(ctx, &to),
         Cmd::Trust { revoke } => compat::trust(ctx, revoke),
         Cmd::Doctor { perf: true, .. } => bench_cmd::doctor_perf(ctx),
-        Cmd::Doctor { ipc_trace: Some(p), .. } => {
-            Ok(doctor::ipc_trace::run(ctx, (!p.as_os_str().is_empty()).then_some(p.as_path())))
-        }
-        Cmd::Doctor { fix, yes, .. } => Ok(doctor::run_with(ctx, fix, yes, Some(&|| localized_command(&ctx.l)))),
+        Cmd::Doctor {
+            ipc_trace: Some(p), ..
+        } => Ok(doctor::ipc_trace::run(
+            ctx,
+            (!p.as_os_str().is_empty()).then_some(p.as_path()),
+        )),
+        Cmd::Doctor { fix, yes, .. } => Ok(doctor::run_with(
+            ctx,
+            fix,
+            yes,
+            Some(&|| localized_command(&ctx.l)),
+        )),
         Cmd::Catalog {
             model,
             refresh,
@@ -1261,7 +1286,9 @@ fn run_cmd(ctx: &Ctx, cmd: Cmd) -> anyhow::Result<bool> {
         Cmd::Perf(a) => perf_cmd::run(ctx, &a),
         Cmd::Replay(a) => replay_cmd::run(ctx, &a),
         Cmd::Env { command } => env_cmd::run(ctx, &command),
-        Cmd::RemoteServe { project, worker } => remote_cmd::serve(ctx, project.as_deref(), worker.as_deref()),
+        Cmd::RemoteServe { project, worker } => {
+            remote_cmd::serve(ctx, project.as_deref(), worker.as_deref())
+        }
         Cmd::Attach { .. } => {
             eprintln!("{}", ctx.l.t("remote-attach-needs-remote"));
             Ok(false)
@@ -1341,16 +1368,25 @@ pub(crate) fn run_slash(ctx: &Ctx, line: &str) -> Option<bool> {
             | Cmd::Tui { .. }
             | Cmd::ChromeNativeHost
             | Cmd::Status(status_cmd::StatusArgs { watch: true, .. })
-            | Cmd::Approvals(status_cmd::ApprovalsArgs { list: false, json: false })
+            | Cmd::Approvals(status_cmd::ApprovalsArgs {
+                list: false,
+                json: false
+            })
             | Cmd::Mcp {
                 command: Some(mcp_cmd::McpCmd::Serve { .. } | mcp_cmd::McpCmd::Run { .. })
             }
             | Cmd::RemoteServe { .. }
             | Cmd::Attach { .. }
             | Cmd::Daemon {
-                command: daemon_cmd::DaemonCmd::Run { .. } | daemon_cmd::DaemonCmd::Logs { follow: true, .. }
+                command: daemon_cmd::DaemonCmd::Run { .. }
+                    | daemon_cmd::DaemonCmd::Logs { follow: true, .. }
             }
-            | Cmd::Proxy { command: proxy_cmd::ProxyCmd::Serve { background: false, .. } }
+            | Cmd::Proxy {
+                command: proxy_cmd::ProxyCmd::Serve {
+                    background: false,
+                    ..
+                }
+            }
     ) {
         return None;
     }
@@ -1651,7 +1687,11 @@ mod tests {
             ),
         };
         assert_eq!(run_slash(&ctx, "/config paths"), Some(true));
-        assert_eq!(run_slash(&ctx, "/resume"), None, "interactive: not via slash");
+        assert_eq!(
+            run_slash(&ctx, "/resume"),
+            None,
+            "interactive: not via slash"
+        );
         assert_eq!(run_slash(&ctx, "/mcp serve"), None);
         assert_eq!(run_slash(&ctx, "/no-such-command"), None);
     }
@@ -1673,13 +1713,17 @@ mod tests {
         let text = std::fs::read_to_string(&file).expect("parity.toml at the repository root");
         let doc: toml::Table = text.parse().expect("valid parity.toml");
         let features = doc["feature"].as_array().expect("[[feature]] entries");
-        let field = |f: &toml::Value, k: &str| f.get(k).and_then(toml::Value::as_str).map(str::to_owned);
+        let field =
+            |f: &toml::Value, k: &str| f.get(k).and_then(toml::Value::as_str).map(str::to_owned);
         let cli: Vec<String> = features.iter().filter_map(|f| field(f, "cli")).collect();
 
         let mut commands = Vec::new();
         paths(&Cli::command(), "kor", &mut commands);
         let missing: Vec<&String> = commands.iter().filter(|c| !cli.contains(c)).collect();
-        assert!(missing.is_empty(), "add these commands to parity.toml: {missing:?}");
+        assert!(
+            missing.is_empty(),
+            "add these commands to parity.toml: {missing:?}"
+        );
 
         let gaps = features
             .iter()

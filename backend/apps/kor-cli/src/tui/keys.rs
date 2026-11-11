@@ -177,12 +177,19 @@ impl KeyState {
 
     /// A user binding from `keymap.toml` (§28.10) for this key, before the layout's own map.
     /// Plain characters still type while the input line takes text.
-    pub fn map_override(&mut self, input_focused: bool, key: KeyEvent, overrides: &[(String, Action)]) -> Option<Action> {
+    pub fn map_override(
+        &mut self,
+        input_focused: bool,
+        key: KeyEvent,
+        overrides: &[(String, Action)],
+    ) -> Option<Action> {
         if key.kind == KeyEventKind::Release || overrides.is_empty() {
             return None;
         }
         let plain_char = matches!(key.code, KeyCode::Char(_))
-            && !key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SUPER);
+            && !key
+                .modifiers
+                .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SUPER);
         if plain_char && self.typing(input_focused) {
             return None;
         }
@@ -352,14 +359,40 @@ mod tests {
         assert_eq!(key_name(k(KeyCode::BackTab)).as_deref(), Some("shift+tab"));
         assert_eq!(key_name(k(KeyCode::Char('G'))).as_deref(), Some("shift+g"));
         assert_eq!(key_name(k(KeyCode::F(2))).as_deref(), Some("f2"));
-        let names: Vec<&str> = vec!["submit", "backspace", "focus_next", "focus_prev", "up", "down", "page_up", "page_down", "accept", "reject", "refresh", "to_input", "command", "interrupt", "quit"];
+        let names: Vec<&str> = vec![
+            "submit",
+            "backspace",
+            "focus_next",
+            "focus_prev",
+            "up",
+            "down",
+            "page_up",
+            "page_down",
+            "accept",
+            "reject",
+            "refresh",
+            "to_input",
+            "command",
+            "interrupt",
+            "quit",
+        ];
         assert!(names.iter().all(|n| action_named(n).is_some()));
         assert_eq!(action_named("fly"), None);
-        let ov = vec![("ctrl+g".to_owned(), Action::Quit), ("j".to_owned(), Action::Refresh)];
+        let ov = vec![
+            ("ctrl+g".to_owned(), Action::Quit),
+            ("j".to_owned(), Action::Refresh),
+        ];
         let mut s = KeyState::new(Keys::Default);
         assert_eq!(s.map_override(true, ctrl('g'), &ov), Some(Action::Quit));
-        assert_eq!(s.map_override(true, k(KeyCode::Char('j')), &ov), None, "typing wins in the input line");
-        assert_eq!(s.map_override(false, k(KeyCode::Char('j')), &ov), Some(Action::Refresh));
+        assert_eq!(
+            s.map_override(true, k(KeyCode::Char('j')), &ov),
+            None,
+            "typing wins in the input line"
+        );
+        assert_eq!(
+            s.map_override(false, k(KeyCode::Char('j')), &ov),
+            Some(Action::Refresh)
+        );
     }
 
     #[test]

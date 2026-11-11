@@ -35,8 +35,15 @@ pub fn blocks(md: &str) -> Vec<Block> {
         let t = line.trim_start();
         if t.starts_with('|') {
             flush(&mut para, &mut out);
-            let cells: Vec<String> = t.trim_matches('|').split('|').map(|c| c.trim().replace("\\|", "|")).collect();
-            if !cells.iter().all(|c| !c.is_empty() && c.chars().all(|ch| matches!(ch, '-' | ':'))) {
+            let cells: Vec<String> = t
+                .trim_matches('|')
+                .split('|')
+                .map(|c| c.trim().replace("\\|", "|"))
+                .collect();
+            if !cells
+                .iter()
+                .all(|c| !c.is_empty() && c.chars().all(|ch| matches!(ch, '-' | ':')))
+            {
                 table.push(cells);
             }
             continue;
@@ -61,7 +68,10 @@ pub fn blocks(md: &str) -> Vec<Block> {
         } else if let Some(x) = t.strip_prefix("- ").or_else(|| t.strip_prefix("* ")) {
             flush(&mut para, &mut out);
             out.push(Block::Li(None, x.to_owned()));
-        } else if let Some((n, x)) = t.split_once(". ").filter(|(n, _)| !n.is_empty() && n.len() <= 3 && n.bytes().all(|b| b.is_ascii_digit())) {
+        } else if let Some((n, x)) = t
+            .split_once(". ")
+            .filter(|(n, _)| !n.is_empty() && n.len() <= 3 && n.bytes().all(|b| b.is_ascii_digit()))
+        {
             flush(&mut para, &mut out);
             out.push(Block::Li(n.parse().ok(), x.to_owned()));
         } else if let Some(q) = t.strip_prefix('>') {
@@ -95,19 +105,30 @@ fn inline_html(s: &str) -> String {
         o.push_str("</strong>");
     }
     let mut code = false;
-    o.split('`').enumerate().fold(String::new(), |mut acc, (i, part)| {
-        if i > 0 {
-            acc.push_str(if code { "</code>" } else { "<code>" });
-            code = !code;
-        }
-        acc.push_str(part);
-        acc
-    }) + if code { "</code>" } else { "" }
+    o.split('`')
+        .enumerate()
+        .fold(String::new(), |mut acc, (i, part)| {
+            if i > 0 {
+                acc.push_str(if code { "</code>" } else { "<code>" });
+                code = !code;
+            }
+            acc.push_str(part);
+            acc
+        })
+        + if code { "</code>" } else { "" }
 }
 
 /// A standalone, print-friendly HTML page. `accent` is a CSS colour (from `business.toml`).
 pub fn html(md: &str, title: &str, accent: &str) -> String {
-    let accent = if accent.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'#') && !accent.is_empty() { accent } else { "#c96442" };
+    let accent = if accent
+        .bytes()
+        .all(|b| b.is_ascii_alphanumeric() || b == b'#')
+        && !accent.is_empty()
+    {
+        accent
+    } else {
+        "#c96442"
+    };
     let mut body = String::new();
     let mut list: Option<bool> = None;
     let close = |body: &mut String, list: &mut Option<bool>| {
@@ -178,7 +199,9 @@ fn pdf_byte(c: char) -> Option<u8> {
         'ğ' => 0xF0,
         'ı' => 0xFD,
         'ş' => 0xFE,
-        '\u{a0}'..='\u{ff}' if !matches!(u32::from(c), 0xD0 | 0xDD | 0xDE | 0xF0 | 0xFD | 0xFE) => u8::try_from(u32::from(c)).ok()?,
+        '\u{a0}'..='\u{ff}' if !matches!(u32::from(c), 0xD0 | 0xDD | 0xDE | 0xF0 | 0xFD | 0xFE) => {
+            u8::try_from(u32::from(c)).ok()?
+        }
         '€' => 0x80,
         '…' => 0x85,
         '‘' => 0x91,
@@ -194,16 +217,23 @@ fn pdf_byte(c: char) -> Option<u8> {
 
 /// Text for the PDF fonts: Turkish lira sign as `TL`, arrows and `≈` spelled out.
 fn pdf_text(s: &str) -> Vec<u8> {
-    let s = s.replace("**", "").replace('`', "").replace('₺', "TL").replace('→', "->").replace('≈', "~").replace('✓', "+");
+    let s = s
+        .replace("**", "")
+        .replace('`', "")
+        .replace('₺', "TL")
+        .replace('→', "->")
+        .replace('≈', "~")
+        .replace('✓', "+");
     s.chars().map(|c| pdf_byte(c).unwrap_or(b'?')).collect()
 }
 
 /// Helvetica advance widths (1/1000 em) for ASCII 32–126.
 const HELV: [u16; 95] = [
-    278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556, 556, 556, 556, 556, 556, 556,
-    556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667, 611, 778, 722, 278, 500, 667, 556, 833, 722, 778, 667,
-    778, 722, 667, 611, 722, 667, 944, 667, 667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556, 556, 222,
-    222, 500, 222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584,
+    278, 278, 355, 556, 556, 889, 667, 191, 333, 333, 389, 584, 278, 333, 278, 278, 556, 556, 556,
+    556, 556, 556, 556, 556, 556, 556, 278, 278, 584, 584, 584, 556, 1015, 667, 667, 722, 722, 667,
+    611, 778, 722, 278, 500, 667, 556, 833, 722, 778, 667, 778, 722, 667, 611, 722, 667, 944, 667,
+    667, 611, 278, 278, 278, 469, 556, 333, 556, 556, 500, 556, 556, 278, 556, 556, 222, 222, 500,
+    222, 833, 556, 556, 556, 556, 333, 500, 278, 556, 500, 722, 500, 500, 500, 334, 260, 334, 584,
 ];
 
 fn width(bytes: &[u8], size: f32, bold: bool) -> f32 {
@@ -291,7 +321,13 @@ impl PdfPages {
     }
 
     fn text(&mut self, x: f32, b: &[u8], size: f32, bold: bool) {
-        let _ = writeln!(self.cur, "BT /{} {size} Tf {x:.1} {:.1} Td {} Tj ET", if bold { "F2" } else { "F1" }, self.y, pdf_str(b));
+        let _ = writeln!(
+            self.cur,
+            "BT /{} {size} Tf {x:.1} {:.1} Td {} Tj ET",
+            if bold { "F2" } else { "F1" },
+            self.y,
+            pdf_str(b)
+        );
     }
 
     fn para(&mut self, x: f32, text: &[u8], size: f32, bold: bool, after: f32) {
@@ -308,7 +344,11 @@ impl PdfPages {
 /// A4 PDF of the Markdown. `title` goes into the document info.
 #[allow(clippy::too_many_lines, clippy::cast_precision_loss)]
 pub fn pdf(md: &str, title: &str) -> Vec<u8> {
-    let mut p = PdfPages { pages: Vec::new(), cur: String::new(), y: PH - M };
+    let mut p = PdfPages {
+        pages: Vec::new(),
+        cur: String::new(),
+        y: PH - M,
+    };
     for b in blocks(md) {
         match b {
             Block::H(n, t) => {
@@ -328,12 +368,24 @@ pub fn pdf(md: &str, title: &str) -> Vec<u8> {
                 p.need(15.0);
                 let y0 = p.y;
                 p.para(M + 16.0, &pdf_text(&t), 10.5, false, 2.0);
-                let _ = writeln!(p.cur, "BT /F1 10.5 Tf {:.1} {:.1} Td {} Tj ET", M + 4.0, y0 - 14.7, pdf_str(&mark));
+                let _ = writeln!(
+                    p.cur,
+                    "BT /F1 10.5 Tf {:.1} {:.1} Td {} Tj ET",
+                    M + 4.0,
+                    y0 - 14.7,
+                    pdf_str(&mark)
+                );
             }
             Block::Rule => {
                 p.need(12.0);
                 p.y -= 6.0;
-                let _ = writeln!(p.cur, "0.8 G {M} {:.1} m {:.1} {:.1} l S 0 G", p.y, PW - M, p.y);
+                let _ = writeln!(
+                    p.cur,
+                    "0.8 G {M} {:.1} m {:.1} {:.1} l S 0 G",
+                    p.y,
+                    PW - M,
+                    p.y
+                );
                 p.y -= 6.0;
             }
             Block::Table(rows) => {
@@ -343,26 +395,53 @@ pub fn pdf(md: &str, title: &str) -> Vec<u8> {
                 let lead = size * 1.35;
                 for (ri, r) in rows.iter().enumerate() {
                     let cells: Vec<Vec<Vec<u8>>> = (0..cols)
-                        .map(|c| wrap(&pdf_text(r.get(c).map_or("", String::as_str)), size, ri == 0, col_w - 8.0))
+                        .map(|c| {
+                            wrap(
+                                &pdf_text(r.get(c).map_or("", String::as_str)),
+                                size,
+                                ri == 0,
+                                col_w - 8.0,
+                            )
+                        })
                         .collect();
                     let h = cells.iter().map(Vec::len).max().unwrap_or(1) as f32 * lead + 6.0;
                     p.need(h);
                     let top = p.y;
                     if ri == 0 {
-                        let _ = writeln!(p.cur, "0.93 g {M} {:.1} {:.1} {h:.1} re f 0 g", top - h, PW - 2.0 * M);
+                        let _ = writeln!(
+                            p.cur,
+                            "0.93 g {M} {:.1} {:.1} {h:.1} re f 0 g",
+                            top - h,
+                            PW - 2.0 * M
+                        );
                     }
                     for (c, lines) in cells.iter().enumerate() {
                         let x = M + col_w * c as f32 + 4.0;
                         let mut y = top - 3.0;
                         for l in lines {
                             y -= lead;
-                            let _ = writeln!(p.cur, "BT /{} {size} Tf {x:.1} {:.1} Td {} Tj ET", if ri == 0 { "F2" } else { "F1" }, y + 3.0, pdf_str(l));
+                            let _ = writeln!(
+                                p.cur,
+                                "BT /{} {size} Tf {x:.1} {:.1} Td {} Tj ET",
+                                if ri == 0 { "F2" } else { "F1" },
+                                y + 3.0,
+                                pdf_str(l)
+                            );
                         }
                     }
-                    let _ = writeln!(p.cur, "0.75 G 0.5 w {M} {:.1} {:.1} {h:.1} re S 0 G", top - h, PW - 2.0 * M);
+                    let _ = writeln!(
+                        p.cur,
+                        "0.75 G 0.5 w {M} {:.1} {:.1} {h:.1} re S 0 G",
+                        top - h,
+                        PW - 2.0 * M
+                    );
                     for c in 1..cols {
                         let x = M + col_w * c as f32;
-                        let _ = writeln!(p.cur, "0.75 G {x:.1} {:.1} m {x:.1} {top:.1} l S 0 G", top - h);
+                        let _ = writeln!(
+                            p.cur,
+                            "0.75 G {x:.1} {:.1} m {x:.1} {top:.1} l S 0 G",
+                            top - h
+                        );
                     }
                     p.y -= h;
                 }
@@ -383,7 +462,11 @@ pub fn pdf(md: &str, title: &str) -> Vec<u8> {
         format!("<< /Title {} /Producer (Kor) >>", pdf_str(&pdf_text(title))).into_bytes(),
     ];
     for (i, content) in p.pages.iter().enumerate() {
-        let footer = format!("BT /F1 8 Tf {:.1} 30 Td {} Tj ET\n", PW - M - 30.0, pdf_str(format!("{}/{n}", i + 1).as_bytes()));
+        let footer = format!(
+            "BT /F1 8 Tf {:.1} 30 Td {} Tj ET\n",
+            PW - M - 30.0,
+            pdf_str(format!("{}/{n}", i + 1).as_bytes())
+        );
         let stream = format!("{content}{footer}");
         objs.push(
             format!(
@@ -410,7 +493,11 @@ pub fn pdf(md: &str, title: &str) -> Vec<u8> {
     for off in offsets {
         let _ = writeln!(out, "{off:010} 00000 n ");
     }
-    let _ = write!(out, "trailer\n<< /Size {} /Root 1 0 R /Info 5 0 R >>\nstartxref\n{xref}\n%%EOF\n", objs.len() + 1);
+    let _ = write!(
+        out,
+        "trailer\n<< /Size {} /Root 1 0 R /Info 5 0 R >>\nstartxref\n{xref}\n%%EOF\n",
+        objs.len() + 1
+    );
     out
 }
 
@@ -433,7 +520,16 @@ fn runs(s: &str, bold_all: bool, size: Option<u32>) -> String {
         if let Some(sz) = size {
             let _ = write!(rpr, "<w:sz w:val=\"{sz}\"/>");
         }
-        let _ = write!(o, "<w:r>{}<w:t xml:space=\"preserve\">{}</w:t></w:r>", if rpr.is_empty() { String::new() } else { format!("<w:rPr>{rpr}</w:rPr>") }, xml(&part.replace('`', "")));
+        let _ = write!(
+            o,
+            "<w:r>{}<w:t xml:space=\"preserve\">{}</w:t></w:r>",
+            if rpr.is_empty() {
+                String::new()
+            } else {
+                format!("<w:rPr>{rpr}</w:rPr>")
+            },
+            xml(&part.replace('`', ""))
+        );
     }
     o
 }
@@ -500,7 +596,8 @@ pub fn docx(md: &str) -> Result<Vec<u8>> {
     let mut buf = std::io::Cursor::new(Vec::new());
     {
         let mut z = zip::ZipWriter::new(&mut buf);
-        let opt = zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated);
+        let opt = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
         for (name, text) in files {
             z.start_file(name, opt).map_err(|e| e.to_string())?;
             z.write_all(text.as_bytes()).map_err(|e| e.to_string())?;
@@ -511,7 +608,14 @@ pub fn docx(md: &str) -> Result<Vec<u8>> {
 }
 
 /// Write `md` as `<stem>.md` plus the requested formats (`html`, `pdf`, `docx`) in `dir`.
-pub fn write_all(dir: &std::path::Path, stem: &str, md: &str, title: &str, accent: &str, formats: &[String]) -> Result<Vec<std::path::PathBuf>> {
+pub fn write_all(
+    dir: &std::path::Path,
+    stem: &str,
+    md: &str,
+    title: &str,
+    accent: &str,
+    formats: &[String],
+) -> Result<Vec<std::path::PathBuf>> {
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let mut out = Vec::new();
     let md_path = dir.join(format!("{stem}.md"));
@@ -551,7 +655,11 @@ mod tests {
     #[test]
     fn html_escapes_and_styles() {
         let h = html("# A <b>\n\nx **y** `z`", "T<", "#123456");
-        assert!(h.contains("<h1>A &lt;b&gt;</h1>") && h.contains("<strong>y</strong>") && h.contains("<code>z</code>"));
+        assert!(
+            h.contains("<h1>A &lt;b&gt;</h1>")
+                && h.contains("<strong>y</strong>")
+                && h.contains("<code>z</code>")
+        );
         assert!(h.contains("--accent:#123456") && h.contains("<title>T&lt;</title>"));
         assert!(html("x", "t", "red;}body{").contains("--accent:#c96442"));
     }
@@ -567,7 +675,15 @@ mod tests {
         assert!(text.contains("\\376"));
         assert!(text.contains("TL"));
         // xref offsets point at the objects.
-        let xref_at: usize = text.rsplit("startxref\n").next().unwrap().lines().next().unwrap().parse().unwrap();
+        let xref_at: usize = text
+            .rsplit("startxref\n")
+            .next()
+            .unwrap()
+            .lines()
+            .next()
+            .unwrap()
+            .parse()
+            .unwrap();
         assert!(bytes[xref_at..].starts_with(b"xref"));
         let pages = text.matches("/Type /Page ").count();
         assert!(pages >= 2, "{pages}");
@@ -578,7 +694,8 @@ mod tests {
         let bytes = docx(MD).unwrap();
         let mut z = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
         let mut doc = String::new();
-        std::io::Read::read_to_string(&mut z.by_name("word/document.xml").unwrap(), &mut doc).unwrap();
+        std::io::Read::read_to_string(&mut z.by_name("word/document.xml").unwrap(), &mut doc)
+            .unwrap();
         assert!(doc.contains("Şık Çanta") && doc.contains("<w:tbl>") && doc.contains("<w:b/>"));
         assert!(z.by_name("[Content_Types].xml").is_ok());
     }

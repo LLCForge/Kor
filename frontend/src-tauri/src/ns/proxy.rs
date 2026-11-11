@@ -191,7 +191,7 @@ async fn routing_set(args: &[Value]) -> Res {
     let strat = kor_proxy::config::Strategy::parse_name(strategy)?;
     let path = kor_proxy::default_config_path().ok_or("Proxy yapılandırma dosyası yolu yok")?;
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        tokio::fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
     }
     let st = kor_proxy::config::patch_routing(&path, strat, request_retry)?;
     reload_running_gateway().await;

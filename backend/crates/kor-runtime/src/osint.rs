@@ -168,11 +168,14 @@ pub fn project_root(path: &Path) -> PathBuf {
     let start = if path.is_dir() {
         path.to_path_buf()
     } else {
-        path.parent().map_or_else(|| path.to_path_buf(), Path::to_path_buf)
+        path.parent()
+            .map_or_else(|| path.to_path_buf(), Path::to_path_buf)
     };
     start
         .ancestors()
-        .find(|d| d.join(".git").exists() || d.join("AGENTS.md").is_file() || d.join(".kor").is_dir())
+        .find(|d| {
+            d.join(".git").exists() || d.join("AGENTS.md").is_file() || d.join(".kor").is_dir()
+        })
         .map_or_else(|| start.clone(), Path::to_path_buf)
 }
 
@@ -203,7 +206,9 @@ fn check_paths(paths: &[PathBuf]) -> Result<(), ParseError> {
 fn clean_id(id: &str) -> Result<String, ParseError> {
     let ok = !id.is_empty()
         && id.len() <= 128
-        && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
     ok.then(|| id.to_owned()).ok_or(ParseError::BadId)
 }
 
@@ -461,15 +466,36 @@ mod tests {
             "--palette",
             "kor://resume?id=abc-1",
         ]);
-        let got: Vec<Request> = parse_args(&args, &root).into_iter().map(Result::unwrap).collect();
+        let got: Vec<Request> = parse_args(&args, &root)
+            .into_iter()
+            .map(Result::unwrap)
+            .collect();
         assert_eq!(
             got[0],
-            Request::Open { root: root.clone(), files: vec![f1.clone()], origin: Origin::Shell }
+            Request::Open {
+                root: root.clone(),
+                files: vec![f1.clone()],
+                origin: Origin::Shell
+            }
         );
-        assert_eq!(got[1], Request::Edit { files: vec![f1.clone(), f2.clone()], origin: Origin::Shell });
-        assert!(matches!(&got[2], Request::Task { quick: Some(QuickTask::Bugs), root: Some(r), files, .. } if *r == root && files.is_empty()));
+        assert_eq!(
+            got[1],
+            Request::Edit {
+                files: vec![f1.clone(), f2.clone()],
+                origin: Origin::Shell
+            }
+        );
+        assert!(
+            matches!(&got[2], Request::Task { quick: Some(QuickTask::Bugs), root: Some(r), files, .. } if *r == root && files.is_empty())
+        );
         assert_eq!(got[3], Request::Palette);
-        assert_eq!(got[4], Request::Resume { id: "abc-1".into(), origin: Origin::Link });
+        assert_eq!(
+            got[4],
+            Request::Resume {
+                id: "abc-1".into(),
+                origin: Origin::Link
+            }
+        );
         // Relative paths are taken from the second launch's working directory.
         let rel = parse_args(&s(&["--open", "a.txt"]), &root);
         assert!(matches!(&rel[0], Ok(Request::Open { files, .. }) if files == &vec![f1.clone()]));
@@ -486,18 +512,36 @@ mod tests {
         assert!(!url.contains(' '));
         assert_eq!(
             parse_url(&url).unwrap(),
-            Request::Open { root: p.clone(), files: vec![], origin: Origin::Link }
+            Request::Open {
+                root: p.clone(),
+                files: vec![],
+                origin: Origin::Link
+            }
         );
         let t = parse_url("kor://task?prompt=fix%20the%20%C3%A7%C4%B1kt%C4%B1+now").unwrap();
-        assert!(matches!(t, Request::Task { ref prompt, origin: Origin::Link, root: None, .. } if prompt == "fix the çıktı now"));
+        assert!(
+            matches!(t, Request::Task { ref prompt, origin: Origin::Link, root: None, .. } if prompt == "fix the çıktı now")
+        );
         assert_eq!(parse_url("kor://palette/").unwrap(), Request::Palette);
         assert_eq!(parse_url("kor:new").unwrap(), Request::New);
         assert_eq!(parse_url("kor://running").unwrap(), Request::Running);
         assert_eq!(parse_url("http://x"), Err(ParseError::UnknownScheme));
-        assert_eq!(parse_url("kor://rm?path=/"), Err(ParseError::UnknownAction("rm".into())));
-        assert_eq!(parse_url("kor://resume?id=../../etc"), Err(ParseError::BadId));
-        assert_eq!(parse_url("kor://open?path=relative/x"), Err(ParseError::RelativePath));
-        assert_eq!(parse_url("kor://task?prompt=%ZZ"), Err(ParseError::BadEncoding));
+        assert_eq!(
+            parse_url("kor://rm?path=/"),
+            Err(ParseError::UnknownAction("rm".into()))
+        );
+        assert_eq!(
+            parse_url("kor://resume?id=../../etc"),
+            Err(ParseError::BadId)
+        );
+        assert_eq!(
+            parse_url("kor://open?path=relative/x"),
+            Err(ParseError::RelativePath)
+        );
+        assert_eq!(
+            parse_url("kor://task?prompt=%ZZ"),
+            Err(ParseError::BadEncoding)
+        );
         assert_eq!(parse_url("kor://task"), Err(ParseError::Missing("prompt")));
         let long = format!("kor://task?prompt={}", "a".repeat(MAX_PROMPT + 1));
         assert_eq!(parse_url(&long), Err(ParseError::TooLong("prompt")));
@@ -506,7 +550,10 @@ mod tests {
     #[test]
     fn mentions_are_relative_and_quoted() {
         let root = Path::new("/p");
-        let m = mentions(root, &[PathBuf::from("/p/src/a.rs"), PathBuf::from("/p/b c.md")]);
+        let m = mentions(
+            root,
+            &[PathBuf::from("/p/src/a.rs"), PathBuf::from("/p/b c.md")],
+        );
         assert_eq!(m, "@src/a.rs\n@\"b c.md\"");
         assert_eq!(QuickTask::parse("test"), Some(QuickTask::Test));
     }

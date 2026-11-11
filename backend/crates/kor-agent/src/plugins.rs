@@ -41,7 +41,11 @@ pub fn plugins_root(home: &Path) -> PathBuf {
 /// Plugin metadata directory: `.kor-plugin/`, or Claude Code's `.claude-plugin/`.
 pub fn meta_dir(dir: &Path) -> PathBuf {
     let kor = dir.join(".kor-plugin");
-    if kor.is_dir() { kor } else { dir.join(".claude-plugin") }
+    if kor.is_dir() {
+        kor
+    } else {
+        dir.join(".claude-plugin")
+    }
 }
 
 fn market_dir(root: &Path, name: &str) -> PathBuf {
@@ -168,7 +172,9 @@ pub fn install(root: &Path, market: &str, plugin: &str) -> Result<PathBuf, Strin
     let src = market_dir(root, market).join(plugin);
     let plugin_json = meta_dir(&src).join("plugin.json");
     if !src.is_dir() || !plugin_json.is_file() {
-        return Err("plugin directory has no .kor-plugin/plugin.json or .claude-plugin/plugin.json".into());
+        return Err(
+            "plugin directory has no .kor-plugin/plugin.json or .claude-plugin/plugin.json".into(),
+        );
     }
     let dest = install_dir(root, market, plugin);
     if dest.exists() {
@@ -235,7 +241,12 @@ pub fn is_enabled(root: &Path, id: &str) -> bool {
 pub fn installed(root: &Path) -> Vec<(String, PathBuf)> {
     let subdirs = |d: &Path| -> Vec<PathBuf> {
         let mut v: Vec<PathBuf> = fs::read_dir(d)
-            .map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect())
+            .map(|rd| {
+                rd.flatten()
+                    .map(|e| e.path())
+                    .filter(|p| p.is_dir())
+                    .collect()
+            })
             .unwrap_or_default();
         v.sort();
         v

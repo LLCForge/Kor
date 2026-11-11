@@ -28,7 +28,10 @@ struct Keys {
 #[async_trait]
 impl Approver for Keys {
     async fn approve(&self, req: &PermissionRequest) -> PermissionReply {
-        self.asked.lock().unwrap_or_else(PoisonError::into_inner).push(req.clone());
+        self.asked
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(req.clone());
         PermissionReply::Allow
     }
 }
@@ -49,8 +52,14 @@ fn text(t: &Terminal<TestBackend>) -> String {
 fn every_panel_draws_real_core_events() {
     let scenario = Scenario::parse(SCENARIO).unwrap();
     let l = Localizer::new(Lang::En);
-    let rt = tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build().unwrap();
-    let mock = rt.block_on(MockServer::start(scenario.mock.clone())).unwrap();
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .unwrap();
+    let mock = rt
+        .block_on(MockServer::start(scenario.mock.clone()))
+        .unwrap();
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path().canonicalize().unwrap();
     for (rel, content) in &scenario.project.files {
@@ -74,18 +83,25 @@ fn every_panel_draws_real_core_events() {
         surface: kor_agent::prompt::Surface::Terminal,
     };
     let mut notes = Vec::new();
-    let mut prepared = kor_runtime::prepare(&l, &loaded, &opts, &mut notes).expect("agent assembles");
-    let mut manifest = kor_providers::Registry::builtin().get("local-vllm").expect("local-vllm manifest").clone();
+    let mut prepared =
+        kor_runtime::prepare(&l, &loaded, &opts, &mut notes).expect("agent assembles");
+    let mut manifest = kor_providers::Registry::builtin()
+        .get("local-vllm")
+        .expect("local-vllm manifest")
+        .clone();
     manifest.base_url.clone_from(&mock.url);
     prepared.agent.provider = kor_providers::build(&manifest, None).expect("mock provider");
     prepared.agent.model = kor_runtime::e2e::MODEL.into();
     // The developer's own Claude Code settings (allow rules, bypass mode) must not decide this test.
-    prepared.agent.permissions = kor_agent::Permissions::new(kor_core::PermissionMode::Default, &[], &[], &[]).unwrap();
+    prepared.agent.permissions =
+        kor_agent::Permissions::new(kor_core::PermissionMode::Default, &[], &[], &[]).unwrap();
 
     let mut screen = Screen::new("default", "local-vllm/kor-mock");
     let mut term = Terminal::new(TestBackend::new(160, 48)).unwrap();
     let asked = Arc::new(Mutex::new(Vec::new()));
-    let keys = Keys { asked: Arc::clone(&asked) };
+    let keys = Keys {
+        asked: Arc::clone(&asked),
+    };
     let prompt = scenario.steps[0].prompt.clone().unwrap();
     reduce(&mut screen, &l, Ev::Busy(Some(prompt.clone())));
 
@@ -95,7 +111,9 @@ fn every_panel_draws_real_core_events() {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         let agent = &mut prepared.agent;
         let work = async move {
-            let r = agent.send(prompt, &tx, &keys, CancellationToken::new()).await;
+            let r = agent
+                .send(prompt, &tx, &keys, CancellationToken::new())
+                .await;
             drop(tx);
             r
         };
@@ -125,18 +143,43 @@ fn every_panel_draws_real_core_events() {
     assert!(out.contains("Write"), "{out}");
     let asked = asked.lock().unwrap_or_else(PoisonError::into_inner).clone();
     assert_eq!(asked.len(), 1, "one approval card");
-    assert_eq!(asked[0].files.iter().map(|f| f.path.as_str()).collect::<Vec<_>>(), ["notes.md"]);
-    assert_eq!(std::fs::read_to_string(root.join("notes.md")).unwrap(), "# Notlar\n\n- ilk not\n");
+    assert_eq!(
+        asked[0]
+            .files
+            .iter()
+            .map(|f| f.path.as_str())
+            .collect::<Vec<_>>(),
+        ["notes.md"]
+    );
+    assert_eq!(
+        std::fs::read_to_string(root.join("notes.md")).unwrap(),
+        "# Notlar\n\n- ilk not\n"
+    );
     // `agent.status` (§16.2): the verb drawn is the core's, while the task runs.
     let verb = events
         .iter()
-        .find_map(|e| if let AgentEvent::Status(s) = e { Some(s.verb.clone()) } else { None })
+        .find_map(|e| {
+            if let AgentEvent::Status(s) = e {
+                Some(s.verb.clone())
+            } else {
+                None
+            }
+        })
         .expect("status events");
-    assert!(status_frame.unwrap_or_default().contains(&verb), "the status verb is drawn");
+    assert!(
+        status_frame.unwrap_or_default().contains(&verb),
+        "the status verb is drawn"
+    );
     // Cost panel: the provider's own token counts (1200 + 1300 in, 40 + 12 out).
     let usage: (u64, u64) = events
         .iter()
-        .filter_map(|e| if let AgentEvent::Usage(u) = e { Some((u.input, u.output)) } else { None })
+        .filter_map(|e| {
+            if let AgentEvent::Usage(u) = e {
+                Some((u.input, u.output))
+            } else {
+                None
+            }
+        })
         .fold((0, 0), |a, b| (a.0 + b.0, a.1 + b.1));
     assert_eq!(usage, (2500, 52));
     // Every panel is on the wide screen.

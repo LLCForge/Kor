@@ -87,7 +87,8 @@ async fn read_frame(out: &mut tokio::process::ChildStdout) -> Result<Value, Stri
 }
 
 async fn hover(command: &str, args: &[String], file: &str) -> Result<String, String> {
-    let mut child = Command::new(command).no_window()
+    let mut child = Command::new(command)
+        .no_window()
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

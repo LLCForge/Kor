@@ -87,7 +87,12 @@ pub fn disk_of<'a>(disks: &'a [Disk], path: &Path) -> Option<&'a Disk> {
 const GB: u64 = 1024 * 1024 * 1024;
 
 /// Alerts for `s` under thresholds `t`; the project's disk comes first.
-#[allow(clippy::too_many_lines, clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[allow(
+    clippy::too_many_lines,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 pub fn evaluate(s: &Sample, t: &Health, project: Option<&Path>, l: &Localizer) -> Vec<Alert> {
     if !t.enabled {
         return Vec::new();
@@ -113,39 +118,66 @@ pub fn evaluate(s: &Sample, t: &Health, project: Option<&Path>, l: &Localizer) -
     };
 
     if !muted("disk") {
-        let project_disk = project.and_then(|p| disk_of(&s.disks, p)).map(|d| d.mount.clone());
-        let mut disks: Vec<&Disk> = s.disks.iter().filter(|d| !d.removable || Some(&d.mount) == project_disk.as_ref()).collect();
+        let project_disk = project
+            .and_then(|p| disk_of(&s.disks, p))
+            .map(|d| d.mount.clone());
+        let mut disks: Vec<&Disk> = s
+            .disks
+            .iter()
+            .filter(|d| !d.removable || Some(&d.mount) == project_disk.as_ref())
+            .collect();
         disks.sort_by_key(|d| Some(&d.mount) != project_disk.as_ref());
         for d in disks {
             let used = d.used_percent();
             if used < t.disk_warn {
                 continue;
             }
-            let level = if used >= t.disk_critical { Level::Critical } else { Level::Warn };
+            let level = if used >= t.disk_critical {
+                Level::Critical
+            } else {
+                Level::Warn
+            };
             let hint = clean_hint();
             out.push(Alert {
                 id: format!("disk:{}", d.mount),
                 kind: "disk".into(),
                 level,
-                title: l.t_args("health-disk-title", &args!("disk" => d.mount.clone(), "percent" => u32::from(used))),
+                title: l.t_args(
+                    "health-disk-title",
+                    &args!("disk" => d.mount.clone(), "percent" => u32::from(used)),
+                ),
                 body: if hint.is_empty() {
-                    l.t_args("health-disk-body", &args!("free" => human(d.free_mb * 1024 * 1024)))
+                    l.t_args(
+                        "health-disk-body",
+                        &args!("free" => human(d.free_mb * 1024 * 1024)),
+                    )
                 } else {
-                    l.t_args("health-disk-body-clean", &args!("free" => human(d.free_mb * 1024 * 1024), "items" => hint))
+                    l.t_args(
+                        "health-disk-body-clean",
+                        &args!("free" => human(d.free_mb * 1024 * 1024), "items" => hint),
+                    )
                 },
                 clean: true,
             });
         }
     }
     if s.memory.total_mb > 0 {
-        let used = (s.memory.total_mb.saturating_sub(s.memory.available_mb)) * 100 / s.memory.total_mb;
+        let used =
+            (s.memory.total_mb.saturating_sub(s.memory.available_mb)) * 100 / s.memory.total_mb;
         if !muted("memory") && used >= u64::from(t.memory_warn) {
             out.push(Alert {
                 id: "memory".into(),
                 kind: "memory".into(),
-                level: if used >= 97 { Level::Critical } else { Level::Warn },
+                level: if used >= 97 {
+                    Level::Critical
+                } else {
+                    Level::Warn
+                },
                 title: l.t_args("health-memory-title", &args!("percent" => used)),
-                body: l.t_args("health-memory-body", &args!("free" => human(s.memory.available_mb * 1024 * 1024))),
+                body: l.t_args(
+                    "health-memory-body",
+                    &args!("free" => human(s.memory.available_mb * 1024 * 1024)),
+                ),
                 clean: false,
             });
         }
@@ -177,7 +209,10 @@ pub fn evaluate(s: &Sample, t: &Health, project: Option<&Path>, l: &Localizer) -
                 id: "kor".into(),
                 kind: "kor".into(),
                 level: Level::Warn,
-                title: l.t_args("health-kor-title", &args!("cpu" => cpu.round() as u32, "memory" => human(mem * 1024 * 1024))),
+                title: l.t_args(
+                    "health-kor-title",
+                    &args!("cpu" => cpu.round() as u32, "memory" => human(mem * 1024 * 1024)),
+                ),
                 body: l.t_args("health-kor-body", &args!("top" => top)),
                 clean: false,
             });
@@ -189,14 +224,25 @@ pub fn evaluate(s: &Sample, t: &Health, project: Option<&Path>, l: &Localizer) -
                 id: format!("runaway:{}", p.pid),
                 kind: "runaway".into(),
                 level: Level::Warn,
-                title: l.t_args("health-runaway-title", &args!("name" => p.name.clone(), "pid" => p.pid)),
-                body: l.t_args("health-runaway-body", &args!("cpu" => p.cpu.round() as u32, "minutes" => t.runaway_minutes)),
+                title: l.t_args(
+                    "health-runaway-title",
+                    &args!("name" => p.name.clone(), "pid" => p.pid),
+                ),
+                body: l.t_args(
+                    "health-runaway-body",
+                    &args!("cpu" => p.cpu.round() as u32, "minutes" => t.runaway_minutes),
+                ),
                 clean: false,
             });
         }
     }
     if !muted("temperature")
-        && let Some(max) = s.temps.iter().copied().filter(|v| v.is_finite()).reduce(f32::max)
+        && let Some(max) = s
+            .temps
+            .iter()
+            .copied()
+            .filter(|v| v.is_finite())
+            .reduce(f32::max)
         && max >= f32::from(t.temp_warn)
     {
         out.push(Alert {
@@ -217,7 +263,10 @@ pub fn evaluate(s: &Sample, t: &Health, project: Option<&Path>, l: &Localizer) -
             id: "battery".into(),
             kind: "battery".into(),
             level: Level::Critical,
-            title: l.t_args("health-battery-title", &args!("percent" => u32::from(b.percent))),
+            title: l.t_args(
+                "health-battery-title",
+                &args!("percent" => u32::from(b.percent)),
+            ),
             body: l.t("health-battery-body"),
             clean: false,
         });
@@ -233,11 +282,24 @@ pub fn evaluate(s: &Sample, t: &Health, project: Option<&Path>, l: &Localizer) -
                 id: format!("cache:{}", big[0].id),
                 kind: "cache".into(),
                 level: Level::Warn,
-                title: l.t_args("health-cache-title", &args!("size" => human(big.iter().map(|c| c.bytes).sum()))),
+                title: l.t_args(
+                    "health-cache-title",
+                    &args!("size" => human(big.iter().map(|c| c.bytes).sum())),
+                ),
                 body: big
                     .iter()
                     .take(3)
-                    .map(|c| format!("{} {}{}", c.path.as_ref().map(|p| p.display().to_string()).unwrap_or_default(), if c.approx { "≥ " } else { "" }, human(c.bytes)))
+                    .map(|c| {
+                        format!(
+                            "{} {}{}",
+                            c.path
+                                .as_ref()
+                                .map(|p| p.display().to_string())
+                                .unwrap_or_default(),
+                            if c.approx { "≥ " } else { "" },
+                            human(c.bytes)
+                        )
+                    })
                     .collect::<Vec<_>>()
                     .join(", "),
                 clean: true,
@@ -262,7 +324,10 @@ pub fn evaluate(s: &Sample, t: &Health, project: Option<&Path>, l: &Localizer) -
             id: "kor_cache".into(),
             kind: "kor_cache".into(),
             level: Level::Warn,
-            title: l.t_args("health-kor-cache-title", &args!("size" => human(s.kor_cache_bytes))),
+            title: l.t_args(
+                "health-kor-cache-title",
+                &args!("size" => human(s.kor_cache_bytes)),
+            ),
             body: l.t("health-kor-cache-body"),
             clean: true,
         });
@@ -335,7 +400,8 @@ impl Sampler {
             .collect();
         let now = Instant::now();
         let limit = Duration::from_secs(u64::from(t.runaway_minutes) * 60);
-        self.busy_since.retain(|pid, _| kor.iter().any(|p| p.pid == *pid));
+        self.busy_since
+            .retain(|pid, _| kor.iter().any(|p| p.pid == *pid));
         let mut runaway = Vec::new();
         for p in kor.iter().skip(1) {
             if p.cpu >= f32::from(t.runaway_cpu) {
@@ -359,7 +425,11 @@ impl Sampler {
             kor,
             cpus: self.sys.cpus().len(),
             runaway,
-            temps: self.components.iter().filter_map(sysinfo::Component::temperature).collect(),
+            temps: self
+                .components
+                .iter()
+                .filter_map(sysinfo::Component::temperature)
+                .collect(),
             caches: Vec::new(),
             docker_bytes: None,
             kor_cache_bytes: 0,
@@ -448,41 +518,107 @@ mod tests {
     }
 
     fn disk(mount: &str, total: u64, free: u64) -> Disk {
-        Disk { mount: mount.into(), total_mb: total, free_mb: free, ..Disk::default() }
+        Disk {
+            mount: mount.into(),
+            total_mb: total,
+            free_mb: free,
+            ..Disk::default()
+        }
     }
 
     #[test]
     fn thresholds_mutes_and_project_disk_first() {
         let t = Health::default();
         let d = tempfile::tempdir().unwrap();
-        let mount = std::fs::canonicalize(d.path()).unwrap().to_string_lossy().replace("\\\\?\\", "");
+        let mount = std::fs::canonicalize(d.path())
+            .unwrap()
+            .to_string_lossy()
+            .replace("\\\\?\\", "");
         let s = Sample {
             disks: vec![disk("/aaa-other", 1000, 100), disk(&mount, 1000, 40)],
-            memory: Memory { total_mb: 1000, available_mb: 50, swap_total_mb: 100, swap_used_mb: 90 },
-            battery: Some(Battery { percent: 5, charging: false }),
+            memory: Memory {
+                total_mb: 1000,
+                available_mb: 50,
+                swap_total_mb: 100,
+                swap_used_mb: 90,
+            },
+            battery: Some(Battery {
+                percent: 5,
+                charging: false,
+            }),
             kor: vec![
-                Proc { pid: 1, name: "kor".into(), cpu: 50.0, mem_mb: 100 },
-                Proc { pid: 2, name: "cargo".into(), cpu: 700.0, mem_mb: 5000 },
+                Proc {
+                    pid: 1,
+                    name: "kor".into(),
+                    cpu: 50.0,
+                    mem_mb: 100,
+                },
+                Proc {
+                    pid: 2,
+                    name: "cargo".into(),
+                    cpu: 700.0,
+                    mem_mb: 5000,
+                },
             ],
             cpus: 8,
-            runaway: vec![Proc { pid: 2, name: "cargo".into(), cpu: 700.0, mem_mb: 5000 }],
+            runaway: vec![Proc {
+                pid: 2,
+                name: "cargo".into(),
+                cpu: 700.0,
+                mem_mb: 5000,
+            }],
             temps: vec![55.0, 96.4, f32::NAN],
-            caches: vec![Candidate { id: "abc".into(), kind: "cargo".into(), path: Some("/p/target".into()), bytes: 18 * GB, approx: false }],
+            caches: vec![Candidate {
+                id: "abc".into(),
+                kind: "cargo".into(),
+                path: Some("/p/target".into()),
+                bytes: 18 * GB,
+                approx: false,
+            }],
             docker_bytes: Some(24 * GB),
             kor_cache_bytes: 3 * GB,
         };
         let a = evaluate(&s, &t, Some(d.path()), &l());
         let kinds: Vec<&str> = a.iter().map(|x| x.kind.as_str()).collect();
-        assert_eq!(kinds, ["disk", "disk", "memory", "swap", "kor", "runaway", "temperature", "battery", "cache", "docker", "kor_cache"]);
-        assert_eq!(a[0].id, format!("disk:{mount}"), "the project's disk comes first");
+        assert_eq!(
+            kinds,
+            [
+                "disk",
+                "disk",
+                "memory",
+                "swap",
+                "kor",
+                "runaway",
+                "temperature",
+                "battery",
+                "cache",
+                "docker",
+                "kor_cache"
+            ]
+        );
+        assert_eq!(
+            a[0].id,
+            format!("disk:{mount}"),
+            "the project's disk comes first"
+        );
         assert_eq!(a[0].level, Level::Critical);
         assert_eq!(a[1].level, Level::Warn);
-        assert!(a[0].body.contains("/p/target") && a[0].body.contains("Docker 24.0 GB"), "{}", a[0].body);
+        assert!(
+            a[0].body.contains("/p/target") && a[0].body.contains("Docker 24.0 GB"),
+            "{}",
+            a[0].body
+        );
         assert!(a[0].clean && !a[2].clean);
 
-        let quiet = Health { muted: kinds.iter().map(|k| (*k).to_owned()).collect(), ..Health::default() };
+        let quiet = Health {
+            muted: kinds.iter().map(|k| (*k).to_owned()).collect(),
+            ..Health::default()
+        };
         assert!(evaluate(&s, &quiet, None, &l()).is_empty());
-        let off = Health { enabled: false, ..Health::default() };
+        let off = Health {
+            enabled: false,
+            ..Health::default()
+        };
         assert!(evaluate(&s, &off, None, &l()).is_empty());
         assert!(evaluate(&Sample::default(), &t, None, &l()).is_empty());
     }
@@ -490,9 +626,16 @@ mod tests {
     #[test]
     fn writes_stop_on_a_critical_project_disk() {
         let d = tempfile::tempdir().unwrap();
-        let mount = std::fs::canonicalize(d.path()).unwrap().to_string_lossy().replace("\\\\?\\", "");
+        let mount = std::fs::canonicalize(d.path())
+            .unwrap()
+            .to_string_lossy()
+            .replace("\\\\?\\", "");
         let t = Health::default();
-        assert!(block_message(&[disk(&mount, 1000, 30)], d.path(), &t).unwrap().contains("97% full"));
+        assert!(
+            block_message(&[disk(&mount, 1000, 30)], d.path(), &t)
+                .unwrap()
+                .contains("97% full")
+        );
         assert!(block_message(&[disk(&mount, 1000, 300)], d.path(), &t).is_none());
         assert!(block_message(&[], d.path(), &t).is_none());
     }
@@ -502,6 +645,11 @@ mod tests {
         let mut s = Sampler::new();
         let first = s.sample(&Health::default());
         assert!(first.memory.total_mb > 0 && first.cpus > 0);
-        assert!(first.kor.first().is_some_and(|p| p.pid == std::process::id()));
+        assert!(
+            first
+                .kor
+                .first()
+                .is_some_and(|p| p.pid == std::process::id())
+        );
     }
 }

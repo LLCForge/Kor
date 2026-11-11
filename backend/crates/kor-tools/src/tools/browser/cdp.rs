@@ -237,7 +237,11 @@ pub(crate) fn launch_args(
 /// [`launch_args`] that loads one unpacked extension (the Kor extension's integration test,
 /// ADR 0058) instead of disabling all of them. Branded Chrome 137+ ignores `--load-extension`;
 /// Chromium and Chrome for Testing honour it.
-pub(crate) fn launch_args_with_extension(profile: &Path, headless: Option<&str>, extension: &Path) -> Vec<String> {
+pub(crate) fn launch_args_with_extension(
+    profile: &Path,
+    headless: Option<&str>,
+    extension: &Path,
+) -> Vec<String> {
     let dir = extension.display().to_string();
     let mut a: Vec<String> = launch_args(profile, headless, None, &NetRule::Open)
         .into_iter()
@@ -303,7 +307,11 @@ impl Cdp {
     }
 
     /// [`Cdp::launch`], optionally with one unpacked extension loaded (tests only use it).
-    pub(crate) async fn launch_with(visible: bool, rule: &NetRule, extension: Option<&Path>) -> Result<Self, String> {
+    pub(crate) async fn launch_with(
+        visible: bool,
+        rule: &NetRule,
+        extension: Option<&Path>,
+    ) -> Result<Self, String> {
         let exe = agent_browser(visible).ok_or(
             "No browser found. Install Kor's headless browser with `kor component add browser`, install Chrome or Edge, or set KOR_BROWSER to a Chromium-based browser.",
         )?;
@@ -554,7 +562,10 @@ fn on_event(v: &Value, logs: &Logs, requests: &Requests, out: &mpsc::UnboundedSe
                     .chars()
                     .take(500)
                     .collect();
-                params["type"].as_str().unwrap_or("").clone_into(&mut r.kind);
+                params["type"]
+                    .as_str()
+                    .unwrap_or("")
+                    .clone_into(&mut r.kind);
             });
         }
         Some("Network.responseReceived") if !rid.is_empty() => {

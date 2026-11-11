@@ -90,7 +90,10 @@ pub fn is_destructive_combo(combo: &str) -> bool {
     let Ok(keys) = parse_combo(combo) else {
         return true;
     };
-    let has = |n: &str| keys.iter().any(|k| matches!(k, KeyName::Named(x) if *x == n));
+    let has = |n: &str| {
+        keys.iter()
+            .any(|k| matches!(k, KeyName::Named(x) if *x == n))
+    };
     let ch = |c: char| keys.contains(&KeyName::Char(c));
     (has("Alt") && has("F4"))
         || (has("Meta") && (ch('q') || ch('w') || has("Backspace") || ch('l')))
@@ -118,7 +121,11 @@ mod tests {
     fn key_combos() {
         assert_eq!(
             parse_combo("ctrl+shift+T").unwrap(),
-            [KeyName::Named("Control"), KeyName::Named("Shift"), KeyName::Char('t')]
+            [
+                KeyName::Named("Control"),
+                KeyName::Named("Shift"),
+                KeyName::Char('t')
+            ]
         );
         assert_eq!(parse_combo("cmd+c").unwrap()[0], KeyName::Named("Meta"));
         assert_eq!(parse_combo("Return").unwrap(), [KeyName::Named("Return")]);
@@ -129,7 +136,16 @@ mod tests {
 
     #[test]
     fn destructive_combos_are_recognised() {
-        for c in ["alt+F4", "cmd+q", "ctrl+alt+del", "shift+Delete", "Delete", "cmd+backspace", "ctrl+w", "bogus+x"] {
+        for c in [
+            "alt+F4",
+            "cmd+q",
+            "ctrl+alt+del",
+            "shift+Delete",
+            "Delete",
+            "cmd+backspace",
+            "ctrl+w",
+            "bogus+x",
+        ] {
             assert!(is_destructive_combo(c), "{c}");
         }
         for c in ["ctrl+s", "Return", "ctrl+c", "cmd+shift+t", "a"] {

@@ -46,9 +46,13 @@ const DEFINITION_KINDS: &[&str] = &[
 
 fn name_of<'a>(n: Node<'_>, src: &'a str) -> Option<&'a str> {
     // `impl Cart { … }` is named by its type; elsewhere `type` is a return type (`int add(…)`).
-    let field = n
-        .child_by_field_name("name")
-        .or_else(|| if n.kind() == "impl_item" { n.child_by_field_name("type") } else { None });
+    let field = n.child_by_field_name("name").or_else(|| {
+        if n.kind() == "impl_item" {
+            n.child_by_field_name("type")
+        } else {
+            None
+        }
+    });
     if let Some(f) = field {
         return f.utf8_text(src.as_bytes()).ok();
     }
@@ -70,7 +74,9 @@ pub fn definitions(lang: Lang, src: &str) -> Vec<Symbol> {
     if p.set_language(&lang.language()).is_err() {
         return Vec::new();
     }
-    let Some(tree) = p.parse(src, None) else { return Vec::new() };
+    let Some(tree) = p.parse(src, None) else {
+        return Vec::new();
+    };
     let mut out = Vec::new();
     fn walk(n: Node<'_>, src: &str, container: &[String], out: &mut Vec<Symbol>) {
         let mut inner = container.to_vec();
@@ -78,13 +84,19 @@ pub fn definitions(lang: Lang, src: &str) -> Vec<Symbol> {
             && let Some(name) = name_of(n, src)
         {
             let name = name.trim().to_owned();
-            let qualified = if container.is_empty() { name.clone() } else { format!("{}::{name}", container.join("::")) };
+            let qualified = if container.is_empty() {
+                name.clone()
+            } else {
+                format!("{}::{name}", container.join("::"))
+            };
             out.push(Symbol {
                 kind: n.kind().to_owned(),
                 qualified,
                 start: n.start_byte(),
                 end: n.end_byte(),
-                body: n.child_by_field_name("body").map(|b| (b.start_byte(), b.end_byte())),
+                body: n
+                    .child_by_field_name("body")
+                    .map(|b| (b.start_byte(), b.end_byte())),
                 line: n.start_position().row + 1,
             });
             inner.push(name);
@@ -145,7 +157,9 @@ fn walk_err(n: Node<'_>, found: &mut Option<(usize, usize)>) {
 /// `true` when `src` parses without syntax errors.
 pub fn parses(lang: Lang, src: &str) -> bool {
     let mut p = Parser::new();
-    p.set_language(&lang.language()).is_ok() && p.parse(src, None).is_some_and(|t| !t.root_node().has_error())
+    p.set_language(&lang.language()).is_ok()
+        && p.parse(src, None)
+            .is_some_and(|t| !t.root_node().has_error())
 }
 
 #[cfg(test)]

@@ -12,8 +12,8 @@ use serde_json::{Value, json};
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::hooks::{HookRunner, claude_input};
-use crate::toolcall::{self, ToolMode};
 use crate::permissions::{Decision, Permissions};
+use crate::toolcall::{self, ToolMode};
 
 /// Progress reported while the agent works. Rendering is the caller's job.
 #[derive(Debug, Clone, PartialEq)]
@@ -151,7 +151,8 @@ pub trait Approver: Send + Sync {
             if opts.len() < 2 {
                 continue;
             }
-            let label = |v: &serde_json::Value| v.as_str().map_or_else(|| v.to_string(), str::to_owned);
+            let label =
+                |v: &serde_json::Value| v.as_str().map_or_else(|| v.to_string(), str::to_owned);
             let q = crate::ask::Question {
                 id: format!("param-{}", f.name),
                 question: format!("{}: {}", card.title, f.name),
@@ -367,7 +368,11 @@ impl Agent {
             // In the background: the user is not kept waiting for the cheap model.
             if let Ok(StopReason::Done(_)) = &result
                 && !cancel.is_cancelled()
-                && let Some(answer) = self.messages[start..].iter().rev().find(|m| m.role == Role::Assistant).map(Message::plain_text)
+                && let Some(answer) = self.messages[start..]
+                    .iter()
+                    .rev()
+                    .find(|m| m.role == Role::Assistant)
+                    .map(Message::plain_text)
             {
                 let main = format!("{}/{}", self.provider.id(), self.model);
                 let (ev, p) = (events.clone(), prompt.clone());
@@ -677,7 +682,9 @@ impl Agent {
         self.tools
             .iter()
             .find(|t| t.name() == name)
-            .is_some_and(|t| t.kind() == kor_tools::ToolKind::Read && !kor_tools::is_computer_tool(name))
+            .is_some_and(|t| {
+                t.kind() == kor_tools::ToolKind::Read && !kor_tools::is_computer_tool(name)
+            })
     }
 
     /// Read-only calls from one assistant message. Writes stay on the serial path.
@@ -779,7 +786,9 @@ impl Agent {
             Some(card) => match approver.params(&card).await {
                 Some(a) if a.go => card.apply(input, &a.values),
                 Some(_) => {
-                    return ToolOutput::err("the user declined this cost; do not retry unless asked");
+                    return ToolOutput::err(
+                        "the user declined this cost; do not retry unless asked",
+                    );
                 }
                 None if card.confirm => {
                     return ToolOutput::err(format!(
@@ -848,8 +857,10 @@ impl Agent {
             let files = tool.propose(&input, &self.ctx).await.unwrap_or_default();
             let root = self.ctx.root.clone();
             rule_findings = rc.check_proposals(&files, &|p| {
-                p.strip_prefix(&root)
-                    .map_or_else(|_| kor_tools::display_path(p), |r| r.to_string_lossy().replace('\\', "/"))
+                p.strip_prefix(&root).map_or_else(
+                    |_| kor_tools::display_path(p),
+                    |r| r.to_string_lossy().replace('\\', "/"),
+                )
             });
             let violated: Vec<&kor_tools::rules_check::Finding> = rule_findings
                 .iter()
@@ -861,7 +872,11 @@ impl Agent {
                     let _ = events.send(AgentEvent::Notice(format!(
                         "rules: {} broken, edit sent back to the model ({})",
                         violated.len(),
-                        violated.iter().map(|f| f.location()).collect::<Vec<_>>().join(", ")
+                        violated
+                            .iter()
+                            .map(|f| f.location())
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     )));
                     denial = kor_tools::rules_check::retry_message(&violated);
                     decision = Decision::Deny;
@@ -903,8 +918,7 @@ impl Agent {
                 match crate::review::outcome(&req.files, &review) {
                     crate::review::Outcome::All => {
                         // A destructive call is never remembered; only an explicit rule allows it.
-                        if review.reply == PermissionReply::AllowAlways
-                            && req.destructive.is_none()
+                        if review.reply == PermissionReply::AllowAlways && req.destructive.is_none()
                         {
                             self.permissions.set_tool_level(tool.name(), Some("allow"));
                         }
@@ -955,7 +969,11 @@ impl Agent {
         let target = tool.target(&input);
         let touched = tool.touches(&input);
         // `kor undo` for shell commands: list the project now, record what changed afterwards.
-        let shell_before = if matches!(name, "Bash" | "PowerShell") { self.ctx.shell_before().await } else { None };
+        let shell_before = if matches!(name, "Bash" | "PowerShell") {
+            self.ctx.shell_before().await
+        } else {
+            None
+        };
         // `kor undo`: the first state of every path is saved before the change; no save, no change.
         let mut out = match (self.ctx.record_undo(&touched), reviewed) {
             (Ok(()), Some(p)) => crate::review::apply(&self.ctx, p).await,
@@ -969,7 +987,12 @@ impl Agent {
             && let Some(ch) = self.ctx.shell_after(before).await
             && !ch.unrestorable.is_empty()
         {
-            let names: Vec<String> = ch.unrestorable.iter().take(10).map(|p| kor_tools::display_path(p)).collect();
+            let names: Vec<String> = ch
+                .unrestorable
+                .iter()
+                .take(10)
+                .map(|p| kor_tools::display_path(p))
+                .collect();
             out.content.push_str(&format!(
                 "\n\n[undo] {} file(s) this command changed have no earlier copy and cannot be restored by `kor undo`: {}",
                 ch.unrestorable.len(),
@@ -1068,7 +1091,11 @@ impl Agent {
     async fn ask_user(&self, id: &str, mut input: Value, approver: &dyn Approver) -> Value {
         let options: Vec<String> = input["options"]
             .as_array()
-            .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_owned)).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(str::to_owned))
+                    .collect()
+            })
             .unwrap_or_default();
         if !(2..=4).contains(&options.len()) {
             return input;
@@ -1173,7 +1200,11 @@ impl Agent {
         approver: &dyn Approver,
     ) -> ToolOutput {
         // Same schema gate as model calls: invalid input never reaches the tool.
-        if let Some(spec) = self.tools.iter().find(|t| t.name() == name).map(|t| t.spec())
+        if let Some(spec) = self
+            .tools
+            .iter()
+            .find(|t| t.name() == name)
+            .map(|t| t.spec())
             && let Err(e) = crate::schema::validate(&input, &spec.input_schema)
         {
             return ToolOutput::err(format!("invalid input for `{name}`: {e}"));

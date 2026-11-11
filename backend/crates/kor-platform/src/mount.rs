@@ -139,7 +139,9 @@ pub fn unmount_plan(target: Os, url: &str, at: &str) -> MountPlan {
 /// What to install when the `WebDAV` client is missing.
 pub fn client_hint(target: Os) -> &'static str {
     match target {
-        Os::Windows => "Windows WebClient service (Settings › Optional features › WebDAV Redirector)",
+        Os::Windows => {
+            "Windows WebClient service (Settings › Optional features › WebDAV Redirector)"
+        }
         Os::Mac => "mount_webdav (part of macOS)",
         Os::Linux | Os::Other => "gvfs-backends (provides `gio mount` for dav://)",
     }
@@ -182,7 +184,9 @@ pub fn mount(url: &str, at: &str) -> io::Result<String> {
     })?;
     Ok(match target {
         Os::Windows => parse_net_use_drive(&out).unwrap_or_else(|| at.to_owned()),
-        Os::Linux | Os::Other => gvfs_dir(url).map_or_else(|| at.to_owned(), |p| p.display().to_string()),
+        Os::Linux | Os::Other => {
+            gvfs_dir(url).map_or_else(|| at.to_owned(), |p| p.display().to_string())
+        }
         Os::Mac => at.to_owned(),
     })
 }
@@ -198,7 +202,9 @@ pub fn unmount(url: &str, at: &str) -> io::Result<()> {
 /// `Drive K: is now connected to …` → `K:`.
 fn parse_net_use_drive(out: &str) -> Option<String> {
     out.split_whitespace()
-        .find(|w| w.len() == 2 && w.ends_with(':') && w.starts_with(|c: char| c.is_ascii_alphabetic()))
+        .find(|w| {
+            w.len() == 2 && w.ends_with(':') && w.starts_with(|c: char| c.is_ascii_alphabetic())
+        })
         .map(str::to_owned)
 }
 
@@ -234,7 +240,10 @@ mod tests {
         assert!(link_dir(&target, &link).is_err(), "never replaces");
         remove_link(&link).unwrap();
         assert!(!link.exists() && target.join("a.txt").is_file());
-        assert!(remove_link(&target).is_err(), "a real folder is not removed");
+        assert!(
+            remove_link(&target).is_err(),
+            "a real folder is not removed"
+        );
         assert!(target.exists());
     }
 
@@ -244,12 +253,21 @@ mod tests {
         let w = mount_plan(Os::Windows, url, "*");
         assert_eq!(w.program, "net");
         assert_eq!(w.args, ["use", "*", url, "/persistent:no"]);
-        assert_eq!(unmount_plan(Os::Windows, url, "K:").args, ["use", "K:", "/delete", "/y"]);
+        assert_eq!(
+            unmount_plan(Os::Windows, url, "K:").args,
+            ["use", "K:", "/delete", "/y"]
+        );
         let m = mount_plan(Os::Mac, url, "/Users/a/KorDrive");
         assert_eq!(m.args.last().map(String::as_str), Some("/Users/a/KorDrive"));
         let l = mount_plan(Os::Linux, url, "");
         assert_eq!(l.args, ["mount", "dav://127.0.0.1:4567/tok/"]);
-        assert_eq!(parse_net_use_drive("Drive K: is now connected to http://x."), Some("K:".into()));
-        assert_eq!(parse_net_use_drive("Le lecteur Z: est maintenant connecté"), Some("Z:".into()));
+        assert_eq!(
+            parse_net_use_drive("Drive K: is now connected to http://x."),
+            Some("K:".into())
+        );
+        assert_eq!(
+            parse_net_use_drive("Le lecteur Z: est maintenant connecté"),
+            Some("Z:".into())
+        );
     }
 }

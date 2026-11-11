@@ -114,16 +114,27 @@ fn shared(messages: bool) -> &'static wreq::Client {
 }
 
 pub(super) fn build(tls: TlsOptions, http1: bool) -> Result<wreq::Client, Error> {
-    let mut builder = wreq::Client::builder().tls_options(tls).timeout(Duration::from_secs(30));
+    let mut builder = wreq::Client::builder()
+        .tls_options(tls)
+        .timeout(Duration::from_secs(30));
     if http1 {
         builder = builder.http1_only();
     }
-    builder.build().map_err(|e| err(format!("claude tls client: {e}")))
+    builder
+        .build()
+        .map_err(|e| err(format!("claude tls client: {e}")))
 }
 
-pub(super) async fn post_json(url: &str, body: &impl Serialize, headers: &[(&str, &str)]) -> Result<(u16, String), Error> {
+pub(super) async fn post_json(
+    url: &str,
+    body: &impl Serialize,
+    headers: &[(&str, &str)],
+) -> Result<(u16, String), Error> {
     let payload = serde_json::to_string(body).map_err(|e| err(e.to_string()))?;
-    let mut request = shared(false).post(url).header("content-type", "application/json").body(payload);
+    let mut request = shared(false)
+        .post(url)
+        .header("content-type", "application/json")
+        .body(payload);
     for (key, value) in headers {
         request = request.header(*key, *value);
     }
@@ -143,9 +154,15 @@ pub(super) fn messages_client() -> &'static wreq::Client {
 }
 
 async fn send(request: wreq::RequestBuilder) -> Result<(u16, String), Error> {
-    let response = request.send().await.map_err(|e| err(format!("claude tls request: {e}")))?;
+    let response = request
+        .send()
+        .await
+        .map_err(|e| err(format!("claude tls request: {e}")))?;
     let status = response.status().as_u16();
-    let body = response.text().await.map_err(|e| err(format!("claude tls response: {e}")))?;
+    let body = response
+        .text()
+        .await
+        .map_err(|e| err(format!("claude tls response: {e}")))?;
     Ok((status, body))
 }
 
@@ -188,7 +205,12 @@ pub(super) fn ja3(record: &[u8]) -> Option<String> {
         if kind == 10 {
             curves = groups(data);
         } else if kind == 11 {
-            points = data.iter().skip(1).map(|b| b.to_string()).collect::<Vec<_>>().join("-");
+            points = data
+                .iter()
+                .skip(1)
+                .map(|b| b.to_string())
+                .collect::<Vec<_>>()
+                .join("-");
         }
     }
     let cipher_ids = ciphers
@@ -199,7 +221,10 @@ pub(super) fn ja3(record: &[u8]) -> Option<String> {
         .collect::<Vec<_>>()
         .join("-");
     let version = u16::from_be_bytes([hello[4], hello[5]]);
-    Some(format!("{version},{cipher_ids},{},{curves},{points}", ext_ids.join("-")))
+    Some(format!(
+        "{version},{cipher_ids},{},{curves},{points}",
+        ext_ids.join("-")
+    ))
 }
 
 #[allow(dead_code)] // kept for reference and tests
@@ -242,7 +267,9 @@ mod tests {
         });
         let accepted = tokio::time::timeout(Duration::from_secs(5), listener.accept()).await;
         let Ok(Ok((mut sock, _))) = accepted else {
-            let why = rx.await.unwrap_or_else(|_| Err("client task dropped".into()));
+            let why = rx
+                .await
+                .unwrap_or_else(|_| Err("client task dropped".into()));
             panic!("proxy accepted no connection: {why:?}");
         };
         let mut prefix = Vec::new();
@@ -255,7 +282,9 @@ mod tests {
             }
         }
         use tokio::io::AsyncWriteExt;
-        sock.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n").await.unwrap();
+        sock.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+            .await
+            .unwrap();
         let mut header = [0u8; 5];
         sock.read_exact(&mut header).await.unwrap();
         let len = u16::from_be_bytes([header[3], header[4]]) as usize;

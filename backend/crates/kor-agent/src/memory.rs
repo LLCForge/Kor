@@ -83,7 +83,8 @@ pub fn auto_memory_enabled(settings: Option<bool>) -> bool {
         crate::env_compat("KOR_DISABLE_AUTO_MEMORY", "CLAUDE_CODE_DISABLE_AUTO_MEMORY").as_deref(),
         truthy_var("KOR_SIMPLE", "CLAUDE_CODE_SIMPLE"),
         truthy_var("KOR_REMOTE", "CLAUDE_CODE_REMOTE")
-            && crate::env_compat("KOR_REMOTE_MEMORY_DIR", "CLAUDE_CODE_REMOTE_MEMORY_DIR").is_none(),
+            && crate::env_compat("KOR_REMOTE_MEMORY_DIR", "CLAUDE_CODE_REMOTE_MEMORY_DIR")
+                .is_none(),
         settings,
     )
 }

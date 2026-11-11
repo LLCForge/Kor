@@ -36,7 +36,8 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
         .mut_subcommand("show", |s| json(s.about(l.t("cmd-system-show"))))
         .mut_subcommand("refresh", |s| json(s.about(l.t("cmd-system-refresh"))))
         .mut_subcommand("health", |s| {
-            json(s.about(l.t("cmd-system-health"))).mut_arg("deep", |a| a.help(l.t("arg-system-deep")))
+            json(s.about(l.t("cmd-system-health")))
+                .mut_arg("deep", |a| a.help(l.t("arg-system-deep")))
         })
 }
 
@@ -49,12 +50,22 @@ fn print_profile(l: &Localizer, p: &Profile) {
     for line in section.lines().skip_while(|s| !s.starts_with("OS:")) {
         println!("{line}");
     }
-    println!("{}", l.t_args("system-collected", &args!("age" => system::now_secs().saturating_sub(p.collected_at) / 60)));
+    println!(
+        "{}",
+        l.t_args(
+            "system-collected",
+            &args!("age" => system::now_secs().saturating_sub(p.collected_at) / 60)
+        )
+    );
 }
 
 pub fn run(ctx: &Ctx, cmd: Option<SystemCmd>) -> anyhow::Result<bool> {
     let l = &ctx.l;
-    let cfg = ctx.config.as_ref().map(|c| c.config.health.clone()).unwrap_or_default();
+    let cfg = ctx
+        .config
+        .as_ref()
+        .map(|c| c.config.health.clone())
+        .unwrap_or_default();
     match cmd.unwrap_or(SystemCmd::Show { json: false }) {
         SystemCmd::Show { json } => {
             let h = home(l)?;
@@ -79,7 +90,10 @@ pub fn run(ctx: &Ctx, cmd: Option<SystemCmd>) -> anyhow::Result<bool> {
             if r.changed.is_empty() {
                 println!("{}", l.t("system-unchanged"));
             } else {
-                println!("{}", l.t_args("system-changed", &args!("keys" => r.changed.join(", "))));
+                println!(
+                    "{}",
+                    l.t_args("system-changed", &args!("keys" => r.changed.join(", ")))
+                );
             }
             Ok(true)
         }
@@ -94,7 +108,11 @@ pub fn run(ctx: &Ctx, cmd: Option<SystemCmd>) -> anyhow::Result<bool> {
                 println!("{}", l.t("health-none"));
             }
             for a in &alerts {
-                let tag = l.t(if a.level == Level::Critical { "health-critical" } else { "health-warn" });
+                let tag = l.t(if a.level == Level::Critical {
+                    "health-critical"
+                } else {
+                    "health-warn"
+                });
                 println!("{tag} {}", a.title);
                 if !a.body.is_empty() {
                     println!("    {}", a.body);
@@ -122,8 +140,20 @@ mod tests {
 
     #[test]
     fn parses() {
-        assert!(matches!(T::parse_from(["t", "health", "--deep"]).c, SystemCmd::Health { deep: true, json: false }));
-        assert!(matches!(T::parse_from(["t", "refresh", "--json"]).c, SystemCmd::Refresh { json: true }));
-        let _ = localize(<T as clap::CommandFactory>::command(), &Localizer::new(kor_i18n::Lang::Fr));
+        assert!(matches!(
+            T::parse_from(["t", "health", "--deep"]).c,
+            SystemCmd::Health {
+                deep: true,
+                json: false
+            }
+        ));
+        assert!(matches!(
+            T::parse_from(["t", "refresh", "--json"]).c,
+            SystemCmd::Refresh { json: true }
+        ));
+        let _ = localize(
+            <T as clap::CommandFactory>::command(),
+            &Localizer::new(kor_i18n::Lang::Fr),
+        );
     }
 }

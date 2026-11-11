@@ -125,7 +125,13 @@ mod tests {
     #[test]
     fn unc_paths_map_both_ways() {
         let w = parse(Path::new(r"\\wsl$\Ubuntu-22.04\home\me\proj")).unwrap();
-        assert_eq!(w, WslPath { distro: "Ubuntu-22.04".into(), path: "/home/me/proj".into() });
+        assert_eq!(
+            w,
+            WslPath {
+                distro: "Ubuntu-22.04".into(),
+                path: "/home/me/proj".into()
+            }
+        );
         let w2 = parse(Path::new("//wsl.localhost/Debian/")).unwrap();
         assert_eq!(w2.path, "/");
         let w3 = parse(Path::new(r"\\?\UNC\wsl.localhost\Arch\srv")).unwrap();
@@ -137,19 +143,38 @@ mod tests {
             to_windows("Ubuntu", "/home/me/a b"),
             PathBuf::from(r"\\wsl.localhost\Ubuntu\home\me\a b")
         );
-        assert_eq!(parse(&to_windows("Ubuntu", "/home/me")).unwrap().path, "/home/me");
-        assert_eq!(to_linux(Path::new(r"C:\Users\me\x.txt")).unwrap(), "/mnt/c/Users/me/x.txt");
+        assert_eq!(
+            parse(&to_windows("Ubuntu", "/home/me")).unwrap().path,
+            "/home/me"
+        );
+        assert_eq!(
+            to_linux(Path::new(r"C:\Users\me\x.txt")).unwrap(),
+            "/mnt/c/Users/me/x.txt"
+        );
         assert_eq!(to_linux(Path::new(r"\\wsl$\U\etc")).unwrap(), "/etc");
         assert!(to_linux(Path::new(r"\\nas\x")).is_none());
     }
 
     #[test]
     fn commands_run_inside_the_distro() {
-        let (p, a) = command_for(Path::new(r"\\wsl$\Ubuntu\home\me\p"), "cargo test && echo 'ok'").unwrap();
+        let (p, a) = command_for(
+            Path::new(r"\\wsl$\Ubuntu\home\me\p"),
+            "cargo test && echo 'ok'",
+        )
+        .unwrap();
         assert_eq!(p, "wsl.exe");
         assert_eq!(
             a,
-            ["-d", "Ubuntu", "--cd", "/home/me/p", "--exec", "sh", "-lc", "cargo test && echo 'ok'"]
+            [
+                "-d",
+                "Ubuntu",
+                "--cd",
+                "/home/me/p",
+                "--exec",
+                "sh",
+                "-lc",
+                "cargo test && echo 'ok'"
+            ]
         );
         assert!(command_for(Path::new(r"C:\p"), "ls").is_none());
         if crate::os() != crate::Os::Windows {

@@ -99,9 +99,10 @@ mod tests {
 
     #[test]
     fn parses_path_and_format() {
-        let Sub::Visualize(a) = Cli::try_parse_from(["kor", "visualize", "src", "--format", "svg", "--no-open"])
-            .unwrap()
-            .cmd;
+        let Sub::Visualize(a) =
+            Cli::try_parse_from(["kor", "visualize", "src", "--format", "svg", "--no-open"])
+                .unwrap()
+                .cmd;
         assert_eq!(a.path, Some(PathBuf::from("src")));
         assert_eq!(a.format, "svg");
         assert!(a.no_open);

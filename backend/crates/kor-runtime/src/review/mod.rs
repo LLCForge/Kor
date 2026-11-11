@@ -27,7 +27,10 @@ const BUILTIN: &[(&str, &str)] = &[
     ("security", include_str!("personas/security.md")),
     ("performance", include_str!("personas/performance.md")),
     ("rust-idiomatic", include_str!("personas/rust-idiomatic.md")),
-    ("junior-friendly", include_str!("personas/junior-friendly.md")),
+    (
+        "junior-friendly",
+        include_str!("personas/junior-friendly.md"),
+    ),
 ];
 
 /// The persona used without `--persona`.
@@ -49,7 +52,9 @@ fn valid_name(n: &str) -> bool {
 }
 
 fn read_dir(dir: &Path, source: &'static str, out: &mut Vec<Persona>) {
-    let Ok(rd) = std::fs::read_dir(dir) else { return };
+    let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+    };
     let mut files: Vec<_> = rd.flatten().map(|e| e.path()).collect();
     files.sort();
     for p in files {
@@ -89,7 +94,11 @@ pub fn personas(root: &Path) -> Vec<Persona> {
     if let Some(home) = crate::kor_home() {
         read_dir(&home.join("review").join("personas"), "user", &mut out);
     }
-    read_dir(&root.join(".kor").join("review").join("personas"), "project", &mut out);
+    read_dir(
+        &root.join(".kor").join("review").join("personas"),
+        "project",
+        &mut out,
+    );
     out
 }
 
@@ -212,8 +221,16 @@ pub fn added_lines(diff: &str) -> Vec<Added> {
 fn is_fn_start(t: &str) -> bool {
     let mut t = t.trim_start();
     for p in [
-        "pub(crate) ", "pub(super) ", "pub ", "export ", "default ", "async ", "const ",
-        "unsafe ", "static ", "extern \"C\" ",
+        "pub(crate) ",
+        "pub(super) ",
+        "pub ",
+        "export ",
+        "default ",
+        "async ",
+        "const ",
+        "unsafe ",
+        "static ",
+        "extern \"C\" ",
     ] {
         while let Some(r) = t.strip_prefix(p) {
             t = r.trim_start();
@@ -298,7 +315,11 @@ pub fn review_prompt(l: &Localizer, persona: &Persona, diff: &str, pre: &[Findin
          Write messages in {}.\nAlready reported by automatic checks (do not repeat):\n{}\nDiff:\n{diff}",
         persona.prompt.trim(),
         language(l),
-        if known.is_empty() { "- none\n".into() } else { known },
+        if known.is_empty() {
+            "- none\n".into()
+        } else {
+            known
+        },
     )
 }
 
@@ -420,7 +441,11 @@ pub fn markdown(l: &Localizer, r: &Report) -> String {
         );
     }
     if let Some(e) = &r.model_error {
-        let _ = write!(s, "\n> {}\n", l.t_args("review-model-skipped", &args!("error" => e.clone())));
+        let _ = write!(
+            s,
+            "\n> {}\n",
+            l.t_args("review-model-skipped", &args!("error" => e.clone()))
+        );
     }
     s
 }
@@ -440,7 +465,12 @@ pub fn to_notes(l: &Localizer, r: &Report) -> (String, Vec<InlineNote>) {
         .collect();
     let rest = Report {
         persona: r.persona.clone(),
-        findings: r.findings.iter().filter(|f| f.line.is_none()).cloned().collect(),
+        findings: r
+            .findings
+            .iter()
+            .filter(|f| f.line.is_none())
+            .cloned()
+            .collect(),
         model_error: None,
     };
     let mut body = markdown(l, &rest);
@@ -475,7 +505,11 @@ mod tests {
     #[test]
     fn prechecks_find_secrets_and_large_functions() {
         let f = prechecks(&l(), DIFF);
-        assert!(f.iter().any(|f| f.rule.starts_with("secret/") && f.line == Some(11)), "{f:?}");
+        assert!(
+            f.iter()
+                .any(|f| f.rule.starts_with("secret/") && f.line == Some(11)),
+            "{f:?}"
+        );
         let mut big = String::from("+++ b/x.py\n@@ -0,0 +1,100 @@\n+def big():\n");
         for _ in 0..90 {
             big.push_str("+    x = 1\n");
@@ -491,7 +525,10 @@ mod tests {
         let r = "```json\n[{\"file\":\"b/a.rs\",\"line\":\"3\",\"severity\":\"warning\",\"message\":\"m\"},{\"message\":\"\"}]\n```";
         let f = parse_findings(r).unwrap();
         assert_eq!(f.len(), 1);
-        assert_eq!((f[0].file.as_str(), f[0].line, f[0].severity), ("a.rs", Some(3), Severity::Medium));
+        assert_eq!(
+            (f[0].file.as_str(), f[0].line, f[0].severity),
+            ("a.rs", Some(3), Severity::Medium)
+        );
         assert_eq!(f[0].rule, "review");
         assert!(parse_findings("nothing").is_err());
     }
@@ -507,7 +544,10 @@ mod tests {
         let all = personas(dir.path());
         assert_eq!(persona(dir.path(), "security").unwrap().prompt, "custom");
         assert_eq!(persona(dir.path(), "a11y").unwrap().source, "project");
-        assert!(all.iter().any(|p| p.name == "rust-idiomatic" && p.source == "builtin"));
+        assert!(
+            all.iter()
+                .any(|p| p.name == "rust-idiomatic" && p.source == "builtin")
+        );
         assert!(!all.iter().any(|p| p.name.contains(' ')));
     }
 
@@ -516,8 +556,22 @@ mod tests {
         let r = Report {
             persona: "security".into(),
             findings: vec![
-                Finding { file: "a.rs".into(), line: Some(3), severity: Severity::High, rule: "x".into(), message: "m".into(), source: "model" },
-                Finding { file: "b.rs".into(), line: None, severity: Severity::Low, rule: "y".into(), message: "n".into(), source: "model" },
+                Finding {
+                    file: "a.rs".into(),
+                    line: Some(3),
+                    severity: Severity::High,
+                    rule: "x".into(),
+                    message: "m".into(),
+                    source: "model",
+                },
+                Finding {
+                    file: "b.rs".into(),
+                    line: None,
+                    severity: Severity::Low,
+                    rule: "y".into(),
+                    message: "n".into(),
+                    source: "model",
+                },
             ],
             model_error: None,
         };

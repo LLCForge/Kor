@@ -2,13 +2,13 @@
 
 use crate::community;
 use crate::git::{self, GitStats};
-use crate::layers::{self, MemoryDecision};
-use crate::workspace::{self, Package, Workspace};
 use crate::lang::Lang;
+use crate::layers::{self, MemoryDecision};
 use crate::model::{Community, Edge, GraphNode, NodeId};
 use crate::parse::{self, FileFacts, FileKind, MAX_FILE_BYTES};
 use crate::resolve::{self, EdgeKey};
 use crate::store::{FileRow, Store};
+use crate::workspace::{self, Package, Workspace};
 use crate::{Error, Result};
 use ignore::gitignore::{Gitignore, GitignoreBuilder};
 use petgraph::graph::{DiGraph, NodeIndex};

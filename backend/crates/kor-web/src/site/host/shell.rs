@@ -9,7 +9,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use kor_agent::remote::{Shell, sh_quote};
 
-use super::{Applied, ApplyCtx, Domain, Disk, Inventory, Kind, Panel, Task, php_version};
+use super::{Applied, ApplyCtx, Disk, Domain, Inventory, Kind, Panel, Task, php_version};
 use crate::site::Result;
 
 const T: Duration = Duration::from_secs(300);
@@ -20,16 +20,21 @@ pub(crate) fn check_path(p: &str) -> Result<()> {
         || p.starts_with('-')
         || p.chars().any(char::is_control)
         || p.split(['/', '\\']).any(|c| c == "..");
-    if bad { Err(format!("invalid path `{p}`")) } else { Ok(()) }
+    if bad {
+        Err(format!("invalid path `{p}`"))
+    } else {
+        Ok(())
+    }
 }
 
 /// Five cron fields of `0-9 * / , -` and a one-line command.
 pub(crate) fn check_cron(schedule: &str, command: &str) -> Result<()> {
     let fields: Vec<&str> = schedule.split_whitespace().collect();
     let ok = fields.len() == 5
-        && fields
-            .iter()
-            .all(|f| f.bytes().all(|b| b.is_ascii_digit() || matches!(b, b'*' | b'/' | b',' | b'-')));
+        && fields.iter().all(|f| {
+            f.bytes()
+                .all(|b| b.is_ascii_digit() || matches!(b, b'*' | b'/' | b',' | b'-'))
+        });
     if !ok {
         return Err(format!("invalid cron schedule `{schedule}` (five fields)"));
     }
@@ -41,10 +46,18 @@ pub(crate) fn check_cron(schedule: &str, command: &str) -> Result<()> {
 
 pub(crate) fn check_ini(key: &str, value: &str) -> Result<()> {
     let k = (1..=64).contains(&key.len())
-        && key.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'_' | b'.'));
+        && key
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'_' | b'.'));
     let v = value.len() <= 200
-        && value.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'.' | b'/' | b'-' | b' ' | b':' | b','));
-    if k && v { Ok(()) } else { Err(format!("invalid php.ini setting `{key}={value}`")) }
+        && value.bytes().all(|b| {
+            b.is_ascii_alphanumeric() || matches!(b, b'_' | b'.' | b'/' | b'-' | b' ' | b':' | b',')
+        });
+    if k && v {
+        Ok(())
+    } else {
+        Err(format!("invalid php.ini setting `{key}={value}`"))
+    }
 }
 
 /// A path for the remote shell: `~/x` stays relative to the login's home.
@@ -65,7 +78,11 @@ pub(crate) async fn exec(sh: &dyn Shell, cmd: &str, stdin: Option<&[u8]>) -> Res
         Ok(out.text())
     } else {
         let err = out.error();
-        let msg = if err.trim().is_empty() { out.text() } else { err };
+        let msg = if err.trim().is_empty() {
+            out.text()
+        } else {
+            err
+        };
         Err(msg.trim().chars().take(2000).collect())
     }
 }
@@ -77,7 +94,11 @@ fn docroot<'a>(inv: &'a Inventory, domain: &str) -> Result<&'a str> {
 }
 
 /// Shell tasks every adapter with SSH can run. `None` = not a shell task.
-pub(crate) async fn generic(sh: &dyn Shell, task: &Task, ctx: &ApplyCtx<'_>) -> Option<Result<Applied>> {
+pub(crate) async fn generic(
+    sh: &dyn Shell,
+    task: &Task,
+    ctx: &ApplyCtx<'_>,
+) -> Option<Result<Applied>> {
     Some(match task {
         Task::Perms { path } => perms(sh, path).await,
         Task::RestoreModes { path, list } => exec(
@@ -91,30 +112,45 @@ pub(crate) async fn generic(sh: &dyn Shell, task: &Task, ctx: &ApplyCtx<'_>) -> 
             None,
         )
         .await
-        .map(|_| Applied { summary: format!("modes restored: {path}"), ..Applied::default() }),
+        .map(|_| Applied {
+            summary: format!("modes restored: {path}"),
+            ..Applied::default()
+        }),
         Task::Clean { paths } => clean(sh, paths).await,
         Task::Cron { schedule, command } => cron(sh, schedule, command).await,
         Task::RemoveCron { id } => exec(
             sh,
-            &format!("crontab -l 2>/dev/null | grep -v -F {} | crontab -", sh_quote(&format!("# kor:{id}"))),
+            &format!(
+                "crontab -l 2>/dev/null | grep -v -F {} | crontab -",
+                sh_quote(&format!("# kor:{id}"))
+            ),
             None,
         )
         .await
-        .map(|_| Applied { summary: format!("cron {id} removed"), ..Applied::default() }),
+        .map(|_| Applied {
+            summary: format!("cron {id} removed"),
+            ..Applied::default()
+        }),
         Task::PhpIni { domain, key, value } => match docroot(ctx.inv, domain) {
             Ok(root) => php_ini(sh, root, key, value).await,
             Err(e) => Err(e),
         },
-        Task::RestoreFile { path, backup, reload } => {
+        Task::RestoreFile {
+            path,
+            backup,
+            reload,
+        } => {
             let mut cmd = format!("cp -p {} {}", q(backup), q(path));
             if let Some(r) = reload {
                 let _ = write!(cmd, " && {r}");
             }
-            exec(sh, &cmd, None)
-                .await
-                .map(|_| Applied { summary: format!("restored {path}"), ..Applied::default() })
+            exec(sh, &cmd, None).await.map(|_| Applied {
+                summary: format!("restored {path}"),
+                ..Applied::default()
+            })
         }
-        Task::Backup { domain } => match domain.as_deref().map(|d| docroot(ctx.inv, d)).transpose() {
+        Task::Backup { domain } => match domain.as_deref().map(|d| docroot(ctx.inv, d)).transpose()
+        {
             Ok(root) => backup(sh, domain.as_deref().unwrap_or("home"), root).await,
             Err(e) => Err(e),
         },
@@ -138,7 +174,10 @@ async fn perms(sh: &dyn Shell, path: &str) -> Result<Applied> {
     let n = exec(sh, &cmd, None).await?;
     Ok(Applied {
         summary: format!("755/644 on {path} ({} entries)", n.trim()),
-        undo: Some(Task::RestoreModes { path: path.to_owned(), list }),
+        undo: Some(Task::RestoreModes {
+            path: path.to_owned(),
+            list,
+        }),
         ..Applied::default()
     })
 }
@@ -175,7 +214,11 @@ async fn clean(sh: &dyn Shell, paths: &[String]) -> Result<Applied> {
     }
     let mut cmd = String::new();
     for (_, p) in &chosen {
-        if p.ends_with("/tmp") || p.ends_with("/.cache") || p.ends_with("/.trash") || p.ends_with("/cache") {
+        if p.ends_with("/tmp")
+            || p.ends_with("/.cache")
+            || p.ends_with("/.trash")
+            || p.ends_with("/cache")
+        {
             let _ = write!(cmd, "find {} -mindepth 1 -delete; ", sh_quote(p));
         } else {
             let _ = write!(cmd, "rm -f {}; ", sh_quote(p));
@@ -194,7 +237,10 @@ async fn cron(sh: &dyn Shell, schedule: &str, command: &str) -> Result<Applied> 
     let line = format!("{schedule} {command} # kor:{id}");
     exec(
         sh,
-        &format!("(crontab -l 2>/dev/null; echo {}) | crontab -", sh_quote(&line)),
+        &format!(
+            "(crontab -l 2>/dev/null; echo {}) | crontab -",
+            sh_quote(&line)
+        ),
         None,
     )
     .await?;
@@ -219,7 +265,11 @@ async fn php_ini(sh: &dyn Shell, root: &str, key: &str, value: &str) -> Result<A
     exec(sh, &cmd, None).await?;
     Ok(Applied {
         summary: format!("{file}: {key} = {value}"),
-        undo: Some(Task::RestoreFile { path: file, backup, reload: None }),
+        undo: Some(Task::RestoreFile {
+            path: file,
+            backup,
+            reload: None,
+        }),
         ..Applied::default()
     })
 }
@@ -277,13 +327,18 @@ pub struct Plain {
 
 impl std::fmt::Debug for Plain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Plain").field("name", &self.name).finish_non_exhaustive()
+        f.debug_struct("Plain")
+            .field("name", &self.name)
+            .finish_non_exhaustive()
     }
 }
 
 impl Plain {
     pub fn new(name: &str, sh: Arc<dyn Shell>) -> Self {
-        Self { name: name.to_owned(), sh }
+        Self {
+            name: name.to_owned(),
+            sh,
+        }
     }
 }
 
@@ -337,19 +392,31 @@ pub(crate) fn parse_plain(host: &str, text: &str) -> Inventory {
                     .collect();
                 for n in &current {
                     if inv.domain(n).is_none() {
-                        inv.domains.push(Domain { name: n.clone(), kind: "site".into(), ..Domain::default() });
+                        inv.domains.push(Domain {
+                            name: n.clone(),
+                            kind: "site".into(),
+                            ..Domain::default()
+                        });
                     }
                 }
             }
             Some("root") => {
                 let r = w.next().map(str::to_owned);
-                for d in inv.domains.iter_mut().filter(|d| current.contains(&d.name) && d.docroot.is_none()) {
+                for d in inv
+                    .domains
+                    .iter_mut()
+                    .filter(|d| current.contains(&d.name) && d.docroot.is_none())
+                {
                     d.docroot.clone_from(&r);
                 }
             }
             Some("fastcgi_pass") => {
                 let v = w.next().and_then(php_version);
-                for d in inv.domains.iter_mut().filter(|d| current.contains(&d.name) && d.php.is_none()) {
+                for d in inv
+                    .domains
+                    .iter_mut()
+                    .filter(|d| current.contains(&d.name) && d.php.is_none())
+                {
                     d.php.clone_from(&v);
                 }
             }
@@ -366,22 +433,35 @@ pub(crate) fn parse_plain(host: &str, text: &str) -> Inventory {
         if let Some(n) = name.filter(|n| super::super::valid_domain(n) && !n.starts_with("www."))
             && inv.domain(n).is_none()
         {
-            inv.domains.push(Domain { name: n.to_owned(), kind: "site".into(), ..Domain::default() });
+            inv.domains.push(Domain {
+                name: n.to_owned(),
+                kind: "site".into(),
+                ..Domain::default()
+            });
         }
     }
     inv.databases = get("db")
         .into_iter()
-        .filter(|d| !matches!(*d, "information_schema" | "performance_schema" | "mysql" | "sys"))
+        .filter(|d| {
+            !matches!(
+                *d,
+                "information_schema" | "performance_schema" | "mysql" | "sys"
+            )
+        })
         .map(str::to_owned)
         .collect();
     if s.get("db").is_none_or(Vec::is_empty) {
-        inv.notes.push("databases: needs passwordless `sudo -n mysql`".into());
+        inv.notes
+            .push("databases: needs passwordless `sudo -n mysql`".into());
     }
     for l in get("certs") {
         if let Some((d, date)) = l.split_once(' ') {
-            let t = chrono::NaiveDateTime::parse_from_str(date.trim().trim_end_matches(" GMT"), "%b %e %H:%M:%S %Y")
-                .ok()
-                .map(|t| t.and_utc().timestamp());
+            let t = chrono::NaiveDateTime::parse_from_str(
+                date.trim().trim_end_matches(" GMT"),
+                "%b %e %H:%M:%S %Y",
+            )
+            .ok()
+            .map(|t| t.and_utc().timestamp());
             inv.certs.push(super::Cert {
                 domain: d.to_owned(),
                 not_after: t,
@@ -393,8 +473,14 @@ pub(crate) fn parse_plain(host: &str, text: &str) -> Inventory {
     }
     if let Some(l) = get("disk").first() {
         let f: Vec<&str> = l.split_whitespace().collect();
-        if let (Some(total), Some(used)) = (f.get(1).and_then(|x| x.parse().ok()), f.get(2).and_then(|x| x.parse().ok())) {
-            inv.disk = Some(Disk { used_mb: used, limit_mb: Some(total) });
+        if let (Some(total), Some(used)) = (
+            f.get(1).and_then(|x| x.parse().ok()),
+            f.get(2).and_then(|x| x.parse().ok()),
+        ) {
+            inv.disk = Some(Disk {
+                used_mb: used,
+                limit_mb: Some(total),
+            });
         }
     }
     inv
@@ -403,7 +489,10 @@ pub(crate) fn parse_plain(host: &str, text: &str) -> Inventory {
 #[async_trait]
 impl Panel for Plain {
     async fn inventory(&self) -> Result<Inventory> {
-        Ok(parse_plain(&self.name, &exec(self.sh.as_ref(), INVENTORY, None).await?))
+        Ok(parse_plain(
+            &self.name,
+            &exec(self.sh.as_ref(), INVENTORY, None).await?,
+        ))
     }
 
     #[allow(clippy::too_many_lines)]
@@ -414,7 +503,9 @@ impl Panel for Plain {
         }
         match task {
             Task::Ssl { domain } => {
-                let email = ctx.email.ok_or("Let's Encrypt needs the host's email (kor host connect … --email)")?;
+                let email = ctx
+                    .email
+                    .ok_or("Let's Encrypt needs the host's email (kor host connect … --email)")?;
                 let cmd = format!(
                     "if command -v nginx >/dev/null; then P=--nginx; else P=--apache; fi; \
                      sudo -n certbot $P --non-interactive --agree-tos -m {} -d {}",
@@ -422,7 +513,10 @@ impl Panel for Plain {
                     sh_quote(domain)
                 );
                 exec(sh, &cmd, None).await?;
-                Ok(Applied { summary: format!("certificate issued for {domain}"), ..Applied::default() })
+                Ok(Applied {
+                    summary: format!("certificate issued for {domain}"),
+                    ..Applied::default()
+                })
             }
             Task::Database { name, user } => {
                 let pw = ctx.password.ok_or("no password")?;
@@ -434,14 +528,22 @@ impl Panel for Plain {
                 exec(sh, "sudo -n mysql", Some(sql.as_bytes())).await?;
                 Ok(Applied {
                     summary: format!("database {name}, user {user}"),
-                    undo: Some(Task::RemoveDatabase { name: name.clone(), user: user.clone() }),
+                    undo: Some(Task::RemoveDatabase {
+                        name: name.clone(),
+                        user: user.clone(),
+                    }),
                     ..Applied::default()
                 })
             }
             Task::RemoveDatabase { name, user } => {
-                let sql = format!("DROP DATABASE IF EXISTS `{name}`;\nDROP USER IF EXISTS '{user}'@'localhost';\n");
+                let sql = format!(
+                    "DROP DATABASE IF EXISTS `{name}`;\nDROP USER IF EXISTS '{user}'@'localhost';\n"
+                );
                 exec(sh, "sudo -n mysql", Some(sql.as_bytes())).await?;
-                Ok(Applied { summary: format!("database {name} removed"), ..Applied::default() })
+                Ok(Applied {
+                    summary: format!("database {name} removed"),
+                    ..Applied::default()
+                })
             }
             Task::Subdomain { sub, domain, dir } => {
                 let fqdn = format!("{sub}.{domain}");
@@ -463,7 +565,10 @@ impl Panel for Plain {
                 exec(sh, &cmd, Some(conf.as_bytes())).await?;
                 Ok(Applied {
                     summary: format!("nginx site {fqdn} → {root}"),
-                    undo: Some(Task::RemoveSubdomain { sub: sub.clone(), domain: domain.clone() }),
+                    undo: Some(Task::RemoveSubdomain {
+                        sub: sub.clone(),
+                        domain: domain.clone(),
+                    }),
                     ..Applied::default()
                 })
             }
@@ -479,7 +584,10 @@ impl Panel for Plain {
                     None,
                 )
                 .await?;
-                Ok(Applied { summary: format!("nginx site {fqdn} removed"), ..Applied::default() })
+                Ok(Applied {
+                    summary: format!("nginx site {fqdn} removed"),
+                    ..Applied::default()
+                })
             }
             Task::Php { domain, version } => {
                 let cur = ctx
@@ -499,7 +607,13 @@ impl Panel for Plain {
                     d = domain.replace('.', "\\."),
                     b = sh_quote(&backup),
                 );
-                let file = exec(sh, &cmd, None).await?.trim().lines().last().unwrap_or_default().to_owned();
+                let file = exec(sh, &cmd, None)
+                    .await?
+                    .trim()
+                    .lines()
+                    .last()
+                    .unwrap_or_default()
+                    .to_owned();
                 Ok(Applied {
                     summary: format!("{domain}: PHP {cur} → {version}"),
                     undo: Some(Task::RestoreFile {
@@ -510,13 +624,20 @@ impl Panel for Plain {
                     ..Applied::default()
                 })
             }
-            Task::RestoreFile { path, backup, reload } => {
+            Task::RestoreFile {
+                path,
+                backup,
+                reload,
+            } => {
                 let mut cmd = format!("sudo -n cp -p {} {}", sh_quote(backup), sh_quote(path));
                 if let Some(r) = reload {
                     let _ = write!(cmd, " && {r}");
                 }
                 exec(sh, &cmd, None).await?;
-                Ok(Applied { summary: format!("restored {path}"), ..Applied::default() })
+                Ok(Applied {
+                    summary: format!("restored {path}"),
+                    ..Applied::default()
+                })
             }
             Task::Sftp { user, path, .. } => {
                 let pw = ctx.password.ok_or("no password")?;
@@ -533,18 +654,28 @@ impl Panel for Plain {
                 exec(sh, &cmd, Some(pw.as_bytes())).await?;
                 Ok(Applied {
                     summary: format!("SFTP user {user} → {path}"),
-                    undo: Some(Task::RemoveSftp { user: user.clone(), domain: None }),
+                    undo: Some(Task::RemoveSftp {
+                        user: user.clone(),
+                        domain: None,
+                    }),
                     ..Applied::default()
                 })
             }
             Task::RemoveSftp { user, .. } => {
                 exec(sh, &format!("sudo -n userdel {}", sh_quote(user)), None).await?;
-                Ok(Applied { summary: format!("SFTP user {user} removed"), ..Applied::default() })
+                Ok(Applied {
+                    summary: format!("SFTP user {user} removed"),
+                    ..Applied::default()
+                })
             }
-            Task::Email { .. } | Task::RemoveEmail { .. } => {
-                Err("plain servers have no mail system Kor manages; use the panel or mail provider".into())
-            }
-            other => Err(format!("{} is not available on plain SSH servers", other.id())),
+            Task::Email { .. } | Task::RemoveEmail { .. } => Err(
+                "plain servers have no mail system Kor manages; use the panel or mail provider"
+                    .into(),
+            ),
+            other => Err(format!(
+                "{} is not available on plain SSH servers",
+                other.id()
+            )),
         }
     }
 
@@ -582,9 +713,19 @@ fastcgi_pass unix:/run/php/php8.1-fpm.sock;\n@@apache\n@@db\nshop\nmysql\n@@cert
         });
         let p = Plain::new("vps", sh.clone());
         let inv = p.inventory().await.unwrap();
-        let ctx = ApplyCtx { inv: &inv, email: None, password: Some("S3cret") };
+        let ctx = ApplyCtx {
+            inv: &inv,
+            email: None,
+            password: Some("S3cret"),
+        };
         let a = p
-            .apply(&Task::Database { name: "shop2".into(), user: "shop2".into() }, &ctx)
+            .apply(
+                &Task::Database {
+                    name: "shop2".into(),
+                    user: "shop2".into(),
+                },
+                &ctx,
+            )
             .await
             .unwrap();
         assert!(matches!(a.undo, Some(Task::RemoveDatabase { .. })));
@@ -593,7 +734,15 @@ fastcgi_pass unix:/run/php/php8.1-fpm.sock;\n@@apache\n@@db\nshop\nmysql\n@@cert
         assert_eq!(cmd, "sudo -n mysql");
         assert!(stdin.as_deref().unwrap().contains("S3cret"));
         assert!(!log.iter().any(|(c, _)| c.contains("S3cret")));
-        let a = p.apply(&Task::Perms { path: "~/public_html".into() }, &ctx).await.unwrap();
+        let a = p
+            .apply(
+                &Task::Perms {
+                    path: "~/public_html".into(),
+                },
+                &ctx,
+            )
+            .await
+            .unwrap();
         assert!(a.summary.contains("42"));
         assert!(matches!(a.undo, Some(Task::RestoreModes { .. })));
         assert!(sh.commands().iter().any(|c| c.contains("chmod 755")));
@@ -602,20 +751,53 @@ fastcgi_pass unix:/run/php/php8.1-fpm.sock;\n@@apache\n@@db\nshop\nmysql\n@@cert
     #[tokio::test]
     async fn clean_only_deletes_listed_candidates() {
         let sh = Arc::new(FakeShell {
-            answers: vec![("du -sm", 0, "120 /home/u/tmp\n300 /home/u/logs/old.log\n".into())],
+            answers: vec![(
+                "du -sm",
+                0,
+                "120 /home/u/tmp\n300 /home/u/logs/old.log\n".into(),
+            )],
             ..FakeShell::default()
         });
         let inv = Inventory::default();
-        let ctx = ApplyCtx { inv: &inv, email: None, password: None };
-        let list = generic(sh.as_ref(), &Task::Clean { paths: vec![] }, &ctx).await.unwrap().unwrap();
-        assert_eq!(list.output.len(), 2);
-        assert!(generic(sh.as_ref(), &Task::Clean { paths: vec!["/etc".into()] }, &ctx).await.unwrap().is_err());
-        let done = generic(sh.as_ref(), &Task::Clean { paths: vec!["/home/u/logs/old.log".into()] }, &ctx)
+        let ctx = ApplyCtx {
+            inv: &inv,
+            email: None,
+            password: None,
+        };
+        let list = generic(sh.as_ref(), &Task::Clean { paths: vec![] }, &ctx)
             .await
             .unwrap()
             .unwrap();
+        assert_eq!(list.output.len(), 2);
+        assert!(
+            generic(
+                sh.as_ref(),
+                &Task::Clean {
+                    paths: vec!["/etc".into()]
+                },
+                &ctx
+            )
+            .await
+            .unwrap()
+            .is_err()
+        );
+        let done = generic(
+            sh.as_ref(),
+            &Task::Clean {
+                paths: vec!["/home/u/logs/old.log".into()],
+            },
+            &ctx,
+        )
+        .await
+        .unwrap()
+        .unwrap();
         assert!(done.summary.contains("300"));
-        assert!(sh.commands().last().unwrap().contains("rm -f '/home/u/logs/old.log'"));
+        assert!(
+            sh.commands()
+                .last()
+                .unwrap()
+                .contains("rm -f '/home/u/logs/old.log'")
+        );
     }
 
     #[test]

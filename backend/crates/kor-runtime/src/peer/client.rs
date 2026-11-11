@@ -76,8 +76,13 @@ pub fn advertised_addrs(listen: &str) -> Vec<String> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Route {
     /// `kind` is `tailscale` or `direct`.
-    Tcp { addr: String, kind: &'static str },
-    Ssh { target: String },
+    Tcp {
+        addr: String,
+        kind: &'static str,
+    },
+    Ssh {
+        target: String,
+    },
 }
 
 impl Route {
@@ -185,9 +190,16 @@ pub async fn dial(node: &Node, e: &PeerEntry) -> Result<(Link, String), String> 
         }
     }
     if errors.is_empty() {
-        return Err(format!("{} has no address; pair again or set its ssh target", e.name));
+        return Err(format!(
+            "{} has no address; pair again or set its ssh target",
+            e.name
+        ));
     }
-    Err(format!("could not reach {} ({})", e.name, errors.join("; ")))
+    Err(format!(
+        "could not reach {} ({})",
+        e.name,
+        errors.join("; ")
+    ))
 }
 
 /// Object-safe stream for routes of different types.
@@ -281,7 +293,9 @@ pub async fn run(node: &Node, e: &PeerEntry, text: &str, ws: &Workspace) -> Resu
         json!({ "prompt": kor_agent::audit::clip(text), "route": route,
                 "workspace": match ws { Workspace::Snapshot { bundle } => format!("snapshot ({} files)", bundle.files.len()), Workspace::Dir { path } => path.clone() } }),
     );
-    link.send(json!({ "type": "open", "channel": "tasks", "new": { "text": text, "workspace": ws } }))?;
+    link.send(
+        json!({ "type": "open", "channel": "tasks", "new": { "text": text, "workspace": ws } }),
+    )?;
     Ok(link)
 }
 
@@ -289,7 +303,12 @@ pub async fn run(node: &Node, e: &PeerEntry, text: &str, ws: &Workspace) -> Resu
 ///
 /// # Errors
 /// When the peer cannot be reached.
-pub async fn attach(node: &Node, e: &PeerEntry, task: Option<&str>, from: u64) -> Result<Link, String> {
+pub async fn attach(
+    node: &Node,
+    e: &PeerEntry,
+    task: Option<&str>,
+    from: u64,
+) -> Result<Link, String> {
     let (link, _) = dial(node, e).await?;
     link.send(json!({ "type": "open", "channel": "tasks", "attach": task, "from": from }))?;
     Ok(link)
@@ -308,7 +327,12 @@ pub struct TaskResult {
 /// # Errors
 /// When the peer cannot be reached or has no such task.
 pub async fn result(node: &Node, e: &PeerEntry, task: &str) -> Result<TaskResult, String> {
-    let v = request(node, e, json!({ "type": "open", "channel": "result", "task": task })).await?;
+    let v = request(
+        node,
+        e,
+        json!({ "type": "open", "channel": "result", "task": task }),
+    )
+    .await?;
     serde_json::from_value(v["result"].clone()).map_err(|err| err.to_string())
 }
 
@@ -375,7 +399,11 @@ mod tests {
         let r = routes(&e, true);
         assert_eq!(
             r.iter().map(Route::label).collect::<Vec<_>>(),
-            ["tailscale 100.64.0.9:47321", "direct 10.0.0.2:47321", "ssh me@srv"]
+            [
+                "tailscale 100.64.0.9:47321",
+                "direct 10.0.0.2:47321",
+                "ssh me@srv"
+            ]
         );
         assert_eq!(routes(&e, false).len(), 2);
         let l = |tasks, busy| Load {

@@ -76,7 +76,10 @@ fn print_sync(l: &Localizer, r: &korfolder::SyncReport) {
         )
     );
     for p in &r.kept {
-        println!("  {}", l.t_args("folder-kept", &args!("path" => p.display().to_string())));
+        println!(
+            "  {}",
+            l.t_args("folder-kept", &args!("path" => p.display().to_string()))
+        );
     }
     for n in &r.notes {
         eprintln!("  ! {n}");
@@ -88,12 +91,21 @@ pub fn run(ctx: &Ctx, cmd: FolderCmd) -> anyhow::Result<bool> {
     let lay = layout()?;
     match cmd {
         FolderCmd::Init { yes } => {
-            let q = l.t_args("folder-init-ask", &args!("path" => lay.root.display().to_string()));
+            let q = l.t_args(
+                "folder-init-ask",
+                &args!("path" => lay.root.display().to_string()),
+            );
             if !lay.enabled() && !crate::shell_cmd::confirm(l, &q, yes) {
                 return Ok(false);
             }
             let r = korfolder::enable(&lay, cwd_project().as_deref())?;
-            println!("{}", l.t_args("folder-ready", &args!("path" => lay.root.display().to_string())));
+            println!(
+                "{}",
+                l.t_args(
+                    "folder-ready",
+                    &args!("path" => lay.root.display().to_string())
+                )
+            );
             print_sync(l, &r);
             Ok(true)
         }
@@ -103,14 +115,23 @@ pub fn run(ctx: &Ctx, cmd: FolderCmd) -> anyhow::Result<bool> {
                 println!("{}", l.t("folder-off"));
                 return Ok(true);
             }
-            println!("{}", l.t_args("folder-on", &args!("path" => s.path.display().to_string())));
+            println!(
+                "{}",
+                l.t_args("folder-on", &args!("path" => s.path.display().to_string()))
+            );
             for i in &s.items {
                 match &i.target {
                     Some(t) => println!("  {}  → {}", i.name, t.display()),
                     None => println!("  {}/", i.name),
                 }
             }
-            println!("{}", l.t_args("folder-waiting", &args!("inbox" => s.inbox, "tasks" => s.tasks)));
+            println!(
+                "{}",
+                l.t_args(
+                    "folder-waiting",
+                    &args!("inbox" => s.inbox, "tasks" => s.tasks)
+                )
+            );
             Ok(true)
         }
         FolderCmd::Sync => {
@@ -145,9 +166,15 @@ pub fn run(ctx: &Ctx, cmd: FolderCmd) -> anyhow::Result<bool> {
                 return Ok(false);
             }
             let r = korfolder::disable(&lay)?;
-            println!("{}", l.t_args("folder-removed", &args!("count" => r.removed.len())));
+            println!(
+                "{}",
+                l.t_args("folder-removed", &args!("count" => r.removed.len()))
+            );
             for p in &r.kept {
-                println!("  {}", l.t_args("folder-kept", &args!("path" => p.display().to_string())));
+                println!(
+                    "  {}",
+                    l.t_args("folder-kept", &args!("path" => p.display().to_string()))
+                );
             }
             Ok(true)
         }
@@ -175,7 +202,10 @@ pub fn mount(ctx: &Ctx, a: &MountArgs) -> anyhow::Result<bool> {
             .ok()
             .and_then(|b| serde_json::from_slice(&b).ok())
             .ok_or_else(|| anyhow::anyhow!(l.t("mount-none")))?;
-        let (url, at) = (rec["url"].as_str().unwrap_or(""), rec["at"].as_str().unwrap_or(""));
+        let (url, at) = (
+            rec["url"].as_str().unwrap_or(""),
+            rec["at"].as_str().unwrap_or(""),
+        );
         kor_platform::mount::unmount(url, at)?;
         let _ = std::fs::remove_file(mount_record(&lay));
         println!("{}", l.t("mount-unmounted"));
@@ -238,9 +268,18 @@ mod tests {
 
     #[test]
     fn parses_and_localizes() {
-        assert!(matches!(F::try_parse_from(["folder", "init", "--yes"]).unwrap().c, FolderCmd::Init { yes: true }));
-        assert!(matches!(F::try_parse_from(["folder", "sync"]).unwrap().c, FolderCmd::Sync));
-        assert!(matches!(F::try_parse_from(["folder", "remove"]).unwrap().c, FolderCmd::Remove { yes: false }));
+        assert!(matches!(
+            F::try_parse_from(["folder", "init", "--yes"]).unwrap().c,
+            FolderCmd::Init { yes: true }
+        ));
+        assert!(matches!(
+            F::try_parse_from(["folder", "sync"]).unwrap().c,
+            FolderCmd::Sync
+        ));
+        assert!(matches!(
+            F::try_parse_from(["folder", "remove"]).unwrap().c,
+            FolderCmd::Remove { yes: false }
+        ));
         assert!(F::try_parse_from(["folder", "sil"]).is_err());
         let m = M::try_parse_from(["mount", "--at", "K:"]).unwrap();
         assert_eq!(m.a.at.as_deref(), Some("K:"));

@@ -176,7 +176,7 @@ async fn explain_call(args: &[Value], dir: &Path) -> Res {
     // Gizlilik kipinde yerel olmayan sağlayıcıyı `oneshot_provider` reddeder.
     let (text, err) = match kor_runtime::oneshot_provider(&l, &loaded, None) {
         Ok((provider, model)) => {
-            let source = std::fs::read_to_string(dir.join(&arch.file)).unwrap_or_default();
+            let source = tokio::fs::read_to_string(dir.join(&arch.file)).await.unwrap_or_default();
             let prompt = explain::prompt(&arch, lv, language, &source);
             match kor_agent::gitflow::ask(&provider, &model, prompt, 1500).await {
                 Ok(t) => (Some(t), None),
@@ -196,8 +196,8 @@ async fn comment_call(args: &[Value], dir: &Path) -> Res {
     }
     let (missing, only, write) = (b(args, 2), b(args, 3), b(args, 4));
     // SECURITY FIX: CWE-22 — yalnızca proje kökü içindeki dosyalar okunur/yazılır.
-    let base = std::fs::canonicalize(dir).map_err(|e| e.to_string())?;
-    let file = std::fs::canonicalize(dir.join(rel)).map_err(|e| format!("{rel}: {e}"))?;
+    let base = tokio::fs::canonicalize(dir).await.map_err(|e| e.to_string())?;
+    let file = tokio::fs::canonicalize(dir.join(rel)).await.map_err(|e| format!("{rel}: {e}"))?;
     if !file.starts_with(&base) || !file.is_file() {
         return Err(format!("{rel}: proje klasöründe bir dosya değil"));
     }
@@ -206,14 +206,14 @@ async fn comment_call(args: &[Value], dir: &Path) -> Res {
         .and_then(|e| e.to_str())
         .and_then(kor_graph::lang::Lang::from_ext)
         .ok_or_else(|| format!("{rel}: bu dil desteklenmiyor"))?;
-    let src = std::fs::read_to_string(&file).map_err(|e| e.to_string())?;
+    let src = tokio::fs::read_to_string(&file).await.map_err(|e| e.to_string())?;
     let l = localizer(dir);
     let loaded = crate::bridge::load_config(dir)?;
     let (provider, model) = kor_runtime::oneshot_provider(&l, &loaded, None)?;
     let out = kor_runtime::comment::run(&provider, &model, lang, &src, &target, !only, missing || only).await?;
     let changed = out.text != src;
     if write && changed {
-        std::fs::write(&file, &out.text).map_err(|e| e.to_string())?;
+        tokio::fs::write(&file, &out.text).await.map_err(|e| e.to_string())?;
     }
     Ok(json!({
         "diff": if changed { kor_agent::port::unified_diff(rel, &src, &out.text) } else { String::new() },

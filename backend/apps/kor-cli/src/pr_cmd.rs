@@ -94,7 +94,10 @@ pub(crate) fn model(ctx: &Ctx, m: Option<&str>) -> Option<(Arc<dyn Provider>, St
     let loaded = match &ctx.config {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("{}", l.t_args("error-generic", &args!("error" => e.to_string())));
+            eprintln!(
+                "{}",
+                l.t_args("error-generic", &args!("error" => e.to_string()))
+            );
             return None;
         }
     };
@@ -102,7 +105,10 @@ pub(crate) fn model(ctx: &Ctx, m: Option<&str>) -> Option<(Arc<dyn Provider>, St
         Ok(p) => {
             eprintln!(
                 "{}",
-                l.t_args("pr-sending", &args!("provider" => p.0.manifest().name.clone()))
+                l.t_args(
+                    "pr-sending",
+                    &args!("provider" => p.0.manifest().name.clone())
+                )
             );
             Some(p)
         }
@@ -116,7 +122,10 @@ pub(crate) fn model(ctx: &Ctx, m: Option<&str>) -> Option<(Arc<dyn Provider>, St
 fn number(l: &Localizer, target: &str) -> Option<u64> {
     let n = forge::pr_number(target);
     if n.is_none() {
-        eprintln!("{}", l.t_args("pr-bad-target", &args!("target" => target.to_owned())));
+        eprintln!(
+            "{}",
+            l.t_args("pr-bad-target", &args!("target" => target.to_owned()))
+        );
     }
     n
 }
@@ -134,13 +143,30 @@ pub fn run(ctx: &Ctx, cmd: PrCmd) -> anyhow::Result<bool> {
             title,
             yes,
             model: m,
-        } => Ok(create(ctx, &rt, &root, base, draft, title, yes, m.as_deref())),
+        } => Ok(create(
+            ctx,
+            &rt,
+            &root,
+            base,
+            draft,
+            title,
+            yes,
+            m.as_deref(),
+        )),
         PrCmd::Review {
             target,
             persona,
             yes,
             model: m,
-        } => Ok(pr_review(ctx, &rt, &root, &target, persona.as_deref(), yes, m.as_deref())),
+        } => Ok(pr_review(
+            ctx,
+            &rt,
+            &root,
+            &target,
+            persona.as_deref(),
+            yes,
+            m.as_deref(),
+        )),
         PrCmd::Respond {
             target,
             yes,
@@ -163,7 +189,10 @@ pub fn run(ctx: &Ctx, cmd: PrCmd) -> anyhow::Result<bool> {
             if !json {
                 for p in &prs {
                     let draft = if p.draft { " [draft]" } else { "" };
-                    println!("#{:<5} {}{draft}  {} → {}  @{}", p.number, p.title, p.head, p.base, p.author);
+                    println!(
+                        "#{:<5} {}{draft}  {} → {}  @{}",
+                        p.number, p.title, p.head, p.base, p.author
+                    );
                 }
             }
             Ok(true)
@@ -241,7 +270,10 @@ fn create(
         Err(e) => return fail(l, &e),
     };
     if let Some(err) = model_err {
-        eprintln!("{}", l.t_args("pr-description-fallback", &args!("error" => err)));
+        eprintln!(
+            "{}",
+            l.t_args("pr-description-fallback", &args!("error" => err))
+        );
     }
     if let Some(custom) = title.filter(|t| !t.trim().is_empty()) {
         custom.trim().clone_into(&mut desc.title);
@@ -251,7 +283,10 @@ fn create(
     if !diagrams.is_empty() {
         desc.body.push_str("\n\n### Diagrams\n");
         for d in &diagrams {
-            desc.body.push_str(&format!("- {}\n", l.t_args("diagram-updated", &args!("summary" => d.clone()))));
+            desc.body.push_str(&format!(
+                "- {}\n",
+                l.t_args("diagram-updated", &args!("summary" => d.clone()))
+            ));
         }
     }
     println!(
@@ -272,7 +307,10 @@ fn create(
     if !crate::shell_cmd::confirm(l, &question, yes) {
         return false;
     }
-    eprintln!("{}", l.t_args("pr-pushing", &args!("branch" => branch.clone())));
+    eprintln!(
+        "{}",
+        l.t_args("pr-pushing", &args!("branch" => branch.clone()))
+    );
     if let Err(e) = forge::push(root, &branch) {
         return fail(l, &e);
     }
@@ -285,7 +323,13 @@ fn create(
     };
     match rt.block_on(client.create(&req)) {
         Ok(created) => {
-            println!("{}", l.t_args("pr-created", &args!("number" => created.number, "url" => created.url)));
+            println!(
+                "{}",
+                l.t_args(
+                    "pr-created",
+                    &args!("number" => created.number, "url" => created.url)
+                )
+            );
             true
         }
         Err(e) => fail(l, &e),
@@ -337,7 +381,11 @@ pub(crate) fn pr_review(
         &diff,
     ));
     println!("{}", review::markdown(l, &report));
-    if !crate::shell_cmd::confirm(l, &l.t_args("pr-review-confirm", &args!("number" => num)), yes) {
+    if !crate::shell_cmd::confirm(
+        l,
+        &l.t_args("pr-review-confirm", &args!("number" => num)),
+        yes,
+    ) {
         return false;
     }
     let (body, notes) = review::to_notes(l, &report);
@@ -345,7 +393,10 @@ pub(crate) fn pr_review(
         Ok(posted) => {
             println!(
                 "{}",
-                l.t_args("pr-review-posted", &args!("inline" => posted.inline, "folded" => posted.folded))
+                l.t_args(
+                    "pr-review-posted",
+                    &args!("inline" => posted.inline, "folded" => posted.folded)
+                )
             );
             true
         }
@@ -361,7 +412,10 @@ fn decide(l: &Localizer, p: &kor_agent::Proposal, yes: bool) -> Option<String> {
     if yes {
         return Some(after);
     }
-    print!("{} ", l.t_args("perm-file", &args!("path" => p.path.clone())));
+    print!(
+        "{} ",
+        l.t_args("perm-file", &args!("path" => p.path.clone()))
+    );
     let _ = std::io::stdout().flush();
     let mut line = String::new();
     if std::io::stdin().read_line(&mut line).is_err() {
@@ -372,7 +426,10 @@ fn decide(l: &Localizer, p: &kor_agent::Proposal, yes: bool) -> Option<String> {
         "e" | "E" => match crate::tui::review::edit_in_editor(&p.path, &after) {
             Ok(text) => Some(text),
             Err(error) => {
-                eprintln!("{}", l.t_args("perm-editor-failed", &args!("error" => error)));
+                eprintln!(
+                    "{}",
+                    l.t_args("perm-editor-failed", &args!("error" => error))
+                );
                 None
             }
         },
@@ -396,7 +453,9 @@ fn respond(
         Ok(client) => client,
         Err(e) => return fail(l, &e),
     };
-    let fetched = rt.block_on(async { Ok::<_, ForgeError>((client.get(num).await?, client.comments(num).await?)) });
+    let fetched = rt.block_on(async {
+        Ok::<_, ForgeError>((client.get(num).await?, client.comments(num).await?))
+    });
     let (pr, comments) = match fetched {
         Ok(both) => both,
         Err(e) => return fail(l, &e),
@@ -406,7 +465,10 @@ fn respond(
         Err(e) => return fail(l, &e),
     };
     if branch != pr.head {
-        eprintln!("{}", l.t_args("pr-respond-wrong-branch", &args!("head" => pr.head.clone())));
+        eprintln!(
+            "{}",
+            l.t_args("pr-respond-wrong-branch", &args!("head" => pr.head.clone()))
+        );
         return false;
     }
     if comments.is_empty() {
@@ -416,7 +478,9 @@ fn respond(
     let Some((provider, model_id)) = model(ctx, model_arg) else {
         return false;
     };
-    let resp = match rt.block_on(forge::respond::draft(&provider, &model_id, root, &pr, &comments)) {
+    let resp = match rt.block_on(forge::respond::draft(
+        &provider, &model_id, root, &pr, &comments,
+    )) {
         Ok(drafted) => drafted,
         Err(e) => return fail(l, &e),
     };
@@ -431,7 +495,11 @@ fn respond(
     for reply in &resp.replies {
         let comment = comments.iter().find(|c| c.id == reply.id);
         let at = comment
-            .and_then(|c| c.path.as_ref().map(|path| format!("{path}:{}", c.line.unwrap_or(0))))
+            .and_then(|c| {
+                c.path
+                    .as_ref()
+                    .map(|path| format!("{path}:{}", c.line.unwrap_or(0)))
+            })
             .unwrap_or_default();
         println!(
             "\n> {} {at}\n{}",
@@ -449,7 +517,13 @@ fn respond(
     if !accepted.is_empty() {
         let files: Vec<String> = accepted.iter().map(|(path, _)| path.clone()).collect();
         let done = forge::respond::write(root, &accepted)
-            .and_then(|()| forge::respond::commit(root, &files, &format!("fix: address review comments on #{num}")))
+            .and_then(|()| {
+                forge::respond::commit(
+                    root,
+                    &files,
+                    &format!("fix: address review comments on #{num}"),
+                )
+            })
             .and_then(|commit| forge::push(root, &branch).map(|_| commit));
         match done {
             Ok(commit) => println!("{commit}"),
@@ -467,7 +541,10 @@ fn respond(
             }
         }
     }
-    println!("{}", l.t_args("pr-respond-done", &args!("count" => sent, "number" => num)));
+    println!(
+        "{}",
+        l.t_args("pr-respond-done", &args!("count" => sent, "number" => num))
+    );
     sent == resp.replies.len()
 }
 
@@ -486,7 +563,8 @@ mod tests {
     #[test]
     fn parses() {
         Cli::command().debug_assert();
-        let c = Cli::try_parse_from(["pr", "create", "--base", "dev", "--draft", "--title", "T"]).unwrap();
+        let c = Cli::try_parse_from(["pr", "create", "--base", "dev", "--draft", "--title", "T"])
+            .unwrap();
         assert!(matches!(c.pr, PrCmd::Create { draft: true, base: Some(b), .. } if b == "dev"));
         let c = Cli::try_parse_from(["pr", "review", "12", "--persona", "security"]).unwrap();
         assert!(matches!(c.pr, PrCmd::Review { target, persona: Some(_), .. } if target == "12"));

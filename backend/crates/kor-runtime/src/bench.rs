@@ -493,7 +493,10 @@ async fn shell(
     confine: Option<&kor_tools::ToolCtx>,
 ) -> Result<bool, String> {
     let kind = confine.map_or(kor_sandbox::SandboxKind::None, |c| c.sandbox);
-    let policy = confine.map_or_else(|| kor_sandbox::Policy::new(dir), kor_tools::ToolCtx::sandbox_policy);
+    let policy = confine.map_or_else(
+        || kor_sandbox::Policy::new(dir),
+        kor_tools::ToolCtx::sandbox_policy,
+    );
     let sh = if kind == kor_sandbox::SandboxKind::Docker {
         kor_tools::Shell::container()
     } else {

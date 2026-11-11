@@ -116,9 +116,9 @@ fn add_reasoning(body: &mut Value, req: &ChatRequest) -> bool {
         (Some(0), _) | (None, None) => false,
         (Some(b), _) => {
             let budget = b.max(MIN_THINKING_BUDGET);
-            let max = body["max_tokens"].as_u64().map_or(DEFAULT_MAX_TOKENS, |m| {
-                u32::try_from(m).unwrap_or(u32::MAX)
-            });
+            let max = body["max_tokens"]
+                .as_u64()
+                .map_or(DEFAULT_MAX_TOKENS, |m| u32::try_from(m).unwrap_or(u32::MAX));
             if max <= budget {
                 body["max_tokens"] = budget.saturating_add(max).into();
             }

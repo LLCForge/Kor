@@ -36,7 +36,12 @@ fn path_arg(p: &Path) -> String {
 pub fn branch_exists(root: &Path, branch: &str) -> bool {
     git(
         root,
-        &["rev-parse", "--verify", "--quiet", &format!("refs/heads/{branch}")],
+        &[
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            &format!("refs/heads/{branch}"),
+        ],
     )
     .is_ok()
 }
@@ -90,7 +95,10 @@ pub fn remove_worktree(root: &Path, path: &Path, branch: Option<&str>) {
 
 fn remove_locked(root: &Path, path: &Path, branch: Option<&str>) {
     if path.exists() {
-        let _ = git(root, &["worktree", "remove", "--force", "--force", &path_arg(path)]);
+        let _ = git(
+            root,
+            &["worktree", "remove", "--force", "--force", &path_arg(path)],
+        );
         let _ = std::fs::remove_dir_all(path);
     }
     let _ = git(root, &["worktree", "prune"]);

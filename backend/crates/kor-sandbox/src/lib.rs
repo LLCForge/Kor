@@ -305,7 +305,10 @@ enum Inner {
 }
 
 /// Read `r` to the end, keeping every byte and passing each finished line to `on_line`.
-async fn pump(r: Option<impl tokio::io::AsyncRead + Unpin>, on_line: &(dyn Fn(&str) + Sync)) -> io::Result<Vec<u8>> {
+async fn pump(
+    r: Option<impl tokio::io::AsyncRead + Unpin>,
+    on_line: &(dyn Fn(&str) + Sync),
+) -> io::Result<Vec<u8>> {
     use tokio::io::AsyncReadExt as _;
     let mut all = Vec::new();
     let Some(mut r) = r else { return Ok(all) };
@@ -328,16 +331,27 @@ async fn pump(r: Option<impl tokio::io::AsyncRead + Unpin>, on_line: &(dyn Fn(&s
     Ok(all)
 }
 
-async fn stream_process(mut c: tokio::process::Child, on_line: &(dyn Fn(&str) + Sync)) -> io::Result<Output> {
+async fn stream_process(
+    mut c: tokio::process::Child,
+    on_line: &(dyn Fn(&str) + Sync),
+) -> io::Result<Output> {
     let (out, err) = (c.stdout.take(), c.stderr.take());
-    let (stdout, stderr, status) = tokio::try_join!(pump(out, on_line), pump(err, on_line), c.wait())?;
-    Ok(Output { status, stdout, stderr })
+    let (stdout, stderr, status) =
+        tokio::try_join!(pump(out, on_line), pump(err, on_line), c.wait())?;
+    Ok(Output {
+        status,
+        stdout,
+        stderr,
+    })
 }
 
 impl Child {
     /// Like [`Child::wait_with_output`], and each output line (stdout or stderr) goes to
     /// `on_line` as it arrives, for a live view. An `AppContainer` child reports at the end.
-    pub async fn wait_with_output_streaming(self, on_line: &(dyn Fn(&str) + Sync)) -> io::Result<Output> {
+    pub async fn wait_with_output_streaming(
+        self,
+        on_line: &(dyn Fn(&str) + Sync),
+    ) -> io::Result<Output> {
         match self.0 {
             Inner::Process(c) => Box::pin(stream_process(c, on_line)).await,
             Inner::Container(c) => c.wait_with_output().await,
@@ -610,7 +624,10 @@ mod tests {
             a.iter()
                 .any(|s| s == "ulimit -d 8388608 2>/dev/null; exec \"$@\"")
         );
-        assert_eq!(&a[a.len() - 7..], ["kor-sandbox", "nice", "-n", "5", "sh", "-c", "ls"]);
+        assert_eq!(
+            &a[a.len() - 7..],
+            ["kor-sandbox", "nice", "-n", "5", "sh", "-c", "ls"]
+        );
 
         let mut open = policy(true);
         open.options.memory_mb = 0;

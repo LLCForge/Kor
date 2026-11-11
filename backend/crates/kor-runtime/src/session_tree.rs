@@ -64,7 +64,11 @@ pub fn meta_path() -> Option<PathBuf> {
 
 /// A session id is a transcript file stem: letters, digits, `-` and `_` only.
 pub fn valid_id(id: &str) -> bool {
-    !id.is_empty() && id.len() <= 100 && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    !id.is_empty()
+        && id.len() <= 100
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
 }
 
 /// `#Auth` → `auth`; `None` when nothing valid is left.
@@ -72,7 +76,8 @@ pub fn normalize_tag(tag: &str) -> Option<String> {
     let t: String = tag.trim().trim_start_matches('#').to_lowercase();
     let ok = !t.is_empty()
         && t.chars().count() <= MAX_TAG
-        && t.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_');
+        && t.chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '_');
     ok.then_some(t)
 }
 
@@ -92,13 +97,19 @@ fn write(path: &Path, v: &Value) -> Result<(), TreeError> {
         std::fs::create_dir_all(d)?;
     }
     let tmp = path.with_extension("json.tmp");
-    std::fs::write(&tmp, serde_json::to_vec_pretty(v).map_err(std::io::Error::other)?)?;
+    std::fs::write(
+        &tmp,
+        serde_json::to_vec_pretty(v).map_err(std::io::Error::other)?,
+    )?;
     std::fs::rename(&tmp, path)?;
     Ok(())
 }
 
 /// Read, change, write `desktop.json` under its lock file.
-fn update<T>(path: &Path, f: impl FnOnce(&mut Map<String, Value>) -> Result<T, TreeError>) -> Result<T, TreeError> {
+fn update<T>(
+    path: &Path,
+    f: impl FnOnce(&mut Map<String, Value>) -> Result<T, TreeError>,
+) -> Result<T, TreeError> {
     if let Some(d) = path.parent() {
         std::fs::create_dir_all(d)?;
     }
@@ -131,7 +142,9 @@ fn session<'a>(root: &'a mut Map<String, Value>, id: &str) -> &'a mut Map<String
 /// Drop a record that has nothing left (the desktop's `tidy`).
 fn tidy(root: &mut Map<String, Value>, id: &str) {
     if let Some(Value::Object(s)) = root.get_mut("sessions")
-        && s.get(id).and_then(Value::as_object).is_some_and(Map::is_empty)
+        && s.get(id)
+            .and_then(Value::as_object)
+            .is_some_and(Map::is_empty)
     {
         s.remove(id);
     }
@@ -158,7 +171,16 @@ fn first_user_line(messages: &[Message]) -> String {
     messages
         .iter()
         .find(|m| m.role == Role::User)
-        .map(|m| m.plain_text().lines().map(str::trim).find(|l| !l.is_empty()).unwrap_or("").chars().take(80).collect())
+        .map(|m| {
+            m.plain_text()
+                .lines()
+                .map(str::trim)
+                .find(|l| !l.is_empty())
+                .unwrap_or("")
+                .chars()
+                .take(80)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -167,7 +189,9 @@ fn sections(root: &Map<String, Value>) -> BTreeMap<String, String> {
         .and_then(Value::as_array)
         .map(|a| {
             a.iter()
-                .filter_map(|s| Some((s["id"].as_str()?.to_owned(), s["name"].as_str()?.to_owned())))
+                .filter_map(|s| {
+                    Some((s["id"].as_str()?.to_owned(), s["name"].as_str()?.to_owned()))
+                })
                 .collect()
         })
         .unwrap_or_default()
@@ -175,7 +199,11 @@ fn sections(root: &Map<String, Value>) -> BTreeMap<String, String> {
 
 fn strings(v: &Value) -> Vec<String> {
     v.as_array()
-        .map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_owned)).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(|x| x.as_str().map(str::to_owned))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -188,13 +216,22 @@ pub fn list(sessions_dir: &Path, meta: &Path, filter: &Filter) -> Result<Vec<Ent
     let root = root.as_object().cloned().unwrap_or_default();
     let secs = sections(&root);
     let empty = Map::new();
-    let records = root.get("sessions").and_then(Value::as_object).unwrap_or(&empty);
+    let records = root
+        .get("sessions")
+        .and_then(Value::as_object)
+        .unwrap_or(&empty);
     let mut out = Vec::new();
     for p in kor_agent::session::list(sessions_dir) {
-        let Some(id) = p.file_stem().map(|s| s.to_string_lossy().into_owned()) else { continue };
+        let Some(id) = p.file_stem().map(|s| s.to_string_lossy().into_owned()) else {
+            continue;
+        };
         let r = records.get(&id).cloned().unwrap_or_else(|| json!({}));
         let title = r["customTitle"].as_str().map_or_else(
-            || kor_agent::session::load(&p).map(|m| first_user_line(&m)).unwrap_or_default(),
+            || {
+                kor_agent::session::load(&p)
+                    .map(|m| first_user_line(&m))
+                    .unwrap_or_default()
+            },
             str::to_owned,
         );
         let e = Entry {
@@ -213,10 +250,11 @@ pub fn list(sessions_dir: &Path, meta: &Path, filter: &Filter) -> Result<Vec<Ent
             .as_deref()
             .and_then(normalize_tag)
             .is_none_or(|t| e.tags.contains(&t));
-        let folder_ok = filter
-            .folder
-            .as_deref()
-            .is_none_or(|f| e.folder.as_deref().is_some_and(|ef| ef.eq_ignore_ascii_case(f)));
+        let folder_ok = filter.folder.as_deref().is_none_or(|f| {
+            e.folder
+                .as_deref()
+                .is_some_and(|ef| ef.eq_ignore_ascii_case(f))
+        });
         if tag_ok && folder_ok && (!filter.pinned || e.pinned) && (filter.archived || !e.archived) {
             out.push(e);
         }
@@ -229,9 +267,20 @@ pub fn list(sessions_dir: &Path, meta: &Path, filter: &Filter) -> Result<Vec<Ent
 ///
 /// # Errors
 /// Unknown session, invalid tag, too many tags, or the file cannot be written.
-pub fn tag(sessions_dir: &Path, meta: &Path, id: &str, add: &[String], remove: &[String]) -> Result<Vec<String>, TreeError> {
+pub fn tag(
+    sessions_dir: &Path,
+    meta: &Path,
+    id: &str,
+    add: &[String],
+    remove: &[String],
+) -> Result<Vec<String>, TreeError> {
     check_session(sessions_dir, id)?;
-    let norm = |t: &String| normalize_tag(t).ok_or_else(|| TreeError::Invalid { what: "tag", value: t.clone() });
+    let norm = |t: &String| {
+        normalize_tag(t).ok_or_else(|| TreeError::Invalid {
+            what: "tag",
+            value: t.clone(),
+        })
+    };
     let add = add.iter().map(norm).collect::<Result<Vec<_>, _>>()?;
     let remove = remove.iter().map(norm).collect::<Result<Vec<_>, _>>()?;
     update(meta, |root| {
@@ -244,7 +293,10 @@ pub fn tag(sessions_dir: &Path, meta: &Path, id: &str, add: &[String], remove: &
             }
         }
         if tags.len() > MAX_TAGS {
-            return Err(TreeError::Invalid { what: "tag count", value: tags.len().to_string() });
+            return Err(TreeError::Invalid {
+                what: "tag count",
+                value: tags.len().to_string(),
+            });
         }
         if tags.is_empty() {
             s.remove("tags");
@@ -260,17 +312,28 @@ pub fn tag(sessions_dir: &Path, meta: &Path, id: &str, add: &[String], remove: &
 ///
 /// # Errors
 /// Unknown session, invalid folder name, or the file cannot be written.
-pub fn move_to(sessions_dir: &Path, meta: &Path, id: &str, folder: Option<&str>) -> Result<(), TreeError> {
+pub fn move_to(
+    sessions_dir: &Path,
+    meta: &Path,
+    id: &str,
+    folder: Option<&str>,
+) -> Result<(), TreeError> {
     check_session(sessions_dir, id)?;
     let folder = folder.map(str::trim).filter(|f| !f.is_empty());
     if let Some(f) = folder
         && (f.chars().count() > MAX_FOLDER || f.chars().any(char::is_control))
     {
-        return Err(TreeError::Invalid { what: "folder", value: f.to_owned() });
+        return Err(TreeError::Invalid {
+            what: "folder",
+            value: f.to_owned(),
+        });
     }
     update(meta, |root| {
         let section_id = folder.map(|name| {
-            if let Some((sid, _)) = sections(root).into_iter().find(|(_, n)| n.eq_ignore_ascii_case(name)) {
+            if let Some((sid, _)) = sections(root)
+                .into_iter()
+                .find(|(_, n)| n.eq_ignore_ascii_case(name))
+            {
                 return sid;
             }
             let sid = new_id();
@@ -298,7 +361,13 @@ pub fn move_to(sessions_dir: &Path, meta: &Path, id: &str, folder: Option<&str>)
 }
 
 /// One boolean or text field of a session record (`pinned`, `archived`, `color`, `customTitle`).
-fn set_field(sessions_dir: &Path, meta: &Path, id: &str, key: &str, value: Option<Value>) -> Result<(), TreeError> {
+fn set_field(
+    sessions_dir: &Path,
+    meta: &Path,
+    id: &str,
+    key: &str,
+    value: Option<Value>,
+) -> Result<(), TreeError> {
     check_session(sessions_dir, id)?;
     update(meta, |root| {
         let s = session(root, id);
@@ -329,25 +398,47 @@ pub fn archive(sessions_dir: &Path, meta: &Path, id: &str, on: bool) -> Result<(
 
 /// # Errors
 /// Unknown session, a colour not in [`COLORS`], or the file cannot be written.
-pub fn color(sessions_dir: &Path, meta: &Path, id: &str, color: Option<&str>) -> Result<(), TreeError> {
+pub fn color(
+    sessions_dir: &Path,
+    meta: &Path,
+    id: &str,
+    color: Option<&str>,
+) -> Result<(), TreeError> {
     if let Some(c) = color
         && !COLORS.contains(&c)
     {
-        return Err(TreeError::Invalid { what: "color", value: c.to_owned() });
+        return Err(TreeError::Invalid {
+            what: "color",
+            value: c.to_owned(),
+        });
     }
     set_field(sessions_dir, meta, id, "color", color.map(|c| json!(c)))
 }
 
 /// # Errors
 /// Unknown session, a title too long, or the file cannot be written.
-pub fn rename(sessions_dir: &Path, meta: &Path, id: &str, title: Option<&str>) -> Result<(), TreeError> {
+pub fn rename(
+    sessions_dir: &Path,
+    meta: &Path,
+    id: &str,
+    title: Option<&str>,
+) -> Result<(), TreeError> {
     let title = title.map(str::trim).filter(|t| !t.is_empty());
     if let Some(t) = title
         && t.chars().count() > MAX_TITLE
     {
-        return Err(TreeError::Invalid { what: "title", value: t.chars().take(40).collect() });
+        return Err(TreeError::Invalid {
+            what: "title",
+            value: t.chars().take(40).collect(),
+        });
     }
-    set_field(sessions_dir, meta, id, "customTitle", title.map(|t| json!(t)))
+    set_field(
+        sessions_dir,
+        meta,
+        id,
+        "customTitle",
+        title.map(|t| json!(t)),
+    )
 }
 
 fn now_ms() -> u64 {
@@ -371,7 +462,14 @@ fn new_id() -> String {
         let _ = write!(out, "{x:02x}");
         out
     });
-    format!("{}-{}-{}-{}-{}", &h[..8], &h[8..12], &h[12..16], &h[16..20], &h[20..])
+    format!(
+        "{}-{}-{}-{}-{}",
+        &h[..8],
+        &h[8..12],
+        &h[12..16],
+        &h[16..20],
+        &h[20..]
+    )
 }
 
 /// A search result.
@@ -392,7 +490,12 @@ fn snippet(text: &str, term: &str) -> String {
     let lower = text.to_lowercase();
     let at = lower.find(term).map_or(0, |b| lower[..b].chars().count());
     let start = at.saturating_sub(40);
-    let s: String = text.chars().skip(start).take(140).map(|c| if c.is_whitespace() { ' ' } else { c }).collect();
+    let s: String = text
+        .chars()
+        .skip(start)
+        .take(140)
+        .map(|c| if c.is_whitespace() { ' ' } else { c })
+        .collect();
     format!("{}{}", if start > 0 { "…" } else { "" }, s.trim())
 }
 
@@ -400,7 +503,11 @@ fn cosine(a: &[f32], b: &[f32]) -> f32 {
     let dot: f32 = a.iter().zip(b).map(|(x, y)| x * y).sum();
     let na: f32 = a.iter().map(|x| x * x).sum::<f32>().sqrt();
     let nb: f32 = b.iter().map(|x| x * x).sum::<f32>().sqrt();
-    if na == 0.0 || nb == 0.0 { 0.0 } else { dot / (na * nb) }
+    if na == 0.0 || nb == 0.0 {
+        0.0
+    } else {
+        dot / (na * nb)
+    }
 }
 
 /// Full-text search over titles, tags and transcripts; with an embedder (the local model, never
@@ -416,24 +523,57 @@ pub fn search(
     limit: usize,
     embed: Option<&dyn kor_memory::Embed>,
 ) -> Result<Vec<Hit>, TreeError> {
-    let terms: Vec<String> = query.split_whitespace().map(str::to_lowercase).filter(|t| t.chars().count() >= 2).collect();
+    let terms: Vec<String> = query
+        .split_whitespace()
+        .map(str::to_lowercase)
+        .filter(|t| t.chars().count() >= 2)
+        .collect();
     if terms.is_empty() {
         return Ok(Vec::new());
     }
-    let entries = list(sessions_dir, meta, &Filter { archived: true, ..Filter::default() })?;
+    let entries = list(
+        sessions_dir,
+        meta,
+        &Filter {
+            archived: true,
+            ..Filter::default()
+        },
+    )?;
     let mut hits = Vec::new();
     let mut docs = Vec::new();
     for e in entries.into_iter().take(500) {
         let text = kor_agent::session::load(&sessions_dir.join(format!("{}.jsonl", e.id)))
-            .map(|m| m.iter().filter(|m| matches!(m.role, Role::User | Role::Assistant)).map(Message::plain_text).collect::<Vec<_>>().join("\n"))
+            .map(|m| {
+                m.iter()
+                    .filter(|m| matches!(m.role, Role::User | Role::Assistant))
+                    .map(Message::plain_text)
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            })
             .unwrap_or_default();
         let hay = format!("{} {} {}", e.title, e.tags.join(" "), text).to_lowercase();
         let matched: Vec<&String> = terms.iter().filter(|t| hay.contains(t.as_str())).collect();
-        let doc: String = format!("{}\n{}", e.title, text).chars().take(1500).collect();
+        let doc: String = format!("{}\n{}", e.title, text)
+            .chars()
+            .take(1500)
+            .collect();
         #[allow(clippy::cast_precision_loss)]
-        let score = matched.len() as f32 + if e.tags.iter().any(|t| terms.contains(t)) { 0.5 } else { 0.0 };
-        let snip = matched.first().map_or_else(|| text.chars().take(140).collect(), |t| snippet(&text, t));
-        hits.push(Hit { id: e.id, title: e.title, snippet: snip, score, semantic: false });
+        let score = matched.len() as f32
+            + if e.tags.iter().any(|t| terms.contains(t)) {
+                0.5
+            } else {
+                0.0
+            };
+        let snip = matched
+            .first()
+            .map_or_else(|| text.chars().take(140).collect(), |t| snippet(&text, t));
+        hits.push(Hit {
+            id: e.id,
+            title: e.title,
+            snippet: snip,
+            score,
+            semantic: false,
+        });
         docs.push(doc);
     }
     if let Some(m) = embed
@@ -466,16 +606,88 @@ pub struct Suggestion {
 
 pub fn suggest(messages: &[Message]) -> Suggestion {
     const TOPICS: &[(&str, &[&str])] = &[
-        ("bug", &["bug", "hata", "fix", "düzelt", "crash", "çök", "erreur", "panic", "broken", "bozuk"]),
-        ("auth", &["auth", "login", "oturum aç", "giriş", "token", "oauth", "password", "şifre", "connexion"]),
-        ("test", &["test", "spec", "vitest", "jest", "pytest", "cargo test"]),
-        ("refactor", &["refactor", "yeniden düzenle", "clean up", "temizle", "rename"]),
-        ("docs", &["readme", "docs", "documentation", "doküman", "belge"]),
-        ("perf", &["perf", "slow", "yavaş", "latency", "optimiz", "lent"]),
-        ("db", &["sql", "database", "veritabanı", "migration", "postgres", "sqlite", "redis"]),
-        ("ui", &["css", "button", "buton", "layout", "ui", "tasarım", "component"]),
-        ("deploy", &["deploy", "release", "yayın", "docker", "ci", "pipeline"]),
-        ("security", &["security", "güvenlik", "xss", "injection", "cve", "vulnerab"]),
+        (
+            "bug",
+            &[
+                "bug", "hata", "fix", "düzelt", "crash", "çök", "erreur", "panic", "broken",
+                "bozuk",
+            ],
+        ),
+        (
+            "auth",
+            &[
+                "auth",
+                "login",
+                "oturum aç",
+                "giriş",
+                "token",
+                "oauth",
+                "password",
+                "şifre",
+                "connexion",
+            ],
+        ),
+        (
+            "test",
+            &["test", "spec", "vitest", "jest", "pytest", "cargo test"],
+        ),
+        (
+            "refactor",
+            &[
+                "refactor",
+                "yeniden düzenle",
+                "clean up",
+                "temizle",
+                "rename",
+            ],
+        ),
+        (
+            "docs",
+            &["readme", "docs", "documentation", "doküman", "belge"],
+        ),
+        (
+            "perf",
+            &["perf", "slow", "yavaş", "latency", "optimiz", "lent"],
+        ),
+        (
+            "db",
+            &[
+                "sql",
+                "database",
+                "veritabanı",
+                "migration",
+                "postgres",
+                "sqlite",
+                "redis",
+            ],
+        ),
+        (
+            "ui",
+            &[
+                "css",
+                "button",
+                "buton",
+                "layout",
+                "ui",
+                "tasarım",
+                "component",
+            ],
+        ),
+        (
+            "deploy",
+            &["deploy", "release", "yayın", "docker", "ci", "pipeline"],
+        ),
+        (
+            "security",
+            &[
+                "security",
+                "güvenlik",
+                "xss",
+                "injection",
+                "cve",
+                "vulnerab",
+            ],
+        ),
     ];
     let first = first_user_line(messages);
     let text: String = messages
@@ -506,11 +718,25 @@ pub fn suggest(messages: &[Message]) -> Suggestion {
 /// # Errors
 /// When `desktop.json` is corrupt or a file cannot be written.
 pub fn export_markdown(sessions_dir: &Path, meta: &Path, out: &Path) -> Result<usize, TreeError> {
-    let entries = list(sessions_dir, meta, &Filter { archived: true, ..Filter::default() })?;
+    let entries = list(
+        sessions_dir,
+        meta,
+        &Filter {
+            archived: true,
+            ..Filter::default()
+        },
+    )?;
     let mut n = 0;
     for e in entries {
-        let Ok(messages) = kor_agent::session::load(&sessions_dir.join(format!("{}.jsonl", e.id))) else { continue };
-        let dir = out.join(e.folder.as_deref().map_or_else(|| "_".to_owned(), safe_name));
+        let Ok(messages) = kor_agent::session::load(&sessions_dir.join(format!("{}.jsonl", e.id)))
+        else {
+            continue;
+        };
+        let dir = out.join(
+            e.folder
+                .as_deref()
+                .map_or_else(|| "_".to_owned(), safe_name),
+        );
         std::fs::create_dir_all(&dir)?;
         let file = dir.join(format!("{}-{}.md", kor_tools::plans::slug(&e.title), e.id));
         std::fs::write(file, to_markdown(&e, &messages))?;
@@ -520,7 +746,16 @@ pub fn export_markdown(sessions_dir: &Path, meta: &Path, out: &Path) -> Result<u
 }
 
 fn safe_name(s: &str) -> String {
-    let s: String = s.chars().map(|c| if c.is_alphanumeric() || " -_".contains(c) { c } else { '_' }).collect();
+    let s: String = s
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || " -_".contains(c) {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
     let s = s.trim().trim_start_matches('.').to_owned();
     if s.is_empty() { "_".into() } else { s }
 }
@@ -556,14 +791,25 @@ pub fn to_markdown(e: &Entry, messages: &[Message]) -> String {
 /// When the file is not an export, or a file cannot be written.
 pub fn import_markdown(sessions_dir: &Path, meta: &Path, file: &Path) -> Result<String, TreeError> {
     let text = std::fs::read_to_string(file)?.replace("\r\n", "\n");
-    let bad = || TreeError::Invalid { what: "session export", value: file.display().to_string() };
+    let bad = || TreeError::Invalid {
+        what: "session export",
+        value: file.display().to_string(),
+    };
     let rest = text.strip_prefix("---\n").ok_or_else(bad)?;
     let (head, body) = rest.split_once("\n---\n").ok_or_else(bad)?;
-    let field = |k: &str| head.lines().find_map(|l| l.strip_prefix(&format!("{k}: ")).map(str::trim)).unwrap_or("");
+    let field = |k: &str| {
+        head.lines()
+            .find_map(|l| l.strip_prefix(&format!("{k}: ")).map(str::trim))
+            .unwrap_or("")
+    };
     let mut messages = Vec::new();
     for block in body.split("\n## ").skip(1) {
         let (who, text) = block.split_once('\n').unwrap_or((block, ""));
-        let role = if who.trim() == "user" { Role::User } else { Role::Assistant };
+        let role = if who.trim() == "user" {
+            Role::User
+        } else {
+            Role::Assistant
+        };
         messages.push(Message::text(role, text.trim().to_owned()));
     }
     if messages.is_empty() {
@@ -577,7 +823,13 @@ pub fn import_markdown(sessions_dir: &Path, meta: &Path, file: &Path) -> Result<
         format!("import-{}", now_ms())
     };
     kor_agent::session::save(&sessions_dir.join(format!("{id}.jsonl")), &messages)?;
-    let tags: Vec<String> = field("tags").trim_matches(['[', ']']).split(',').map(str::trim).filter(|t| !t.is_empty()).map(str::to_owned).collect();
+    let tags: Vec<String> = field("tags")
+        .trim_matches(['[', ']'])
+        .split(',')
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_owned)
+        .collect();
     if !tags.is_empty() {
         tag(sessions_dir, meta, &id, &tags, &[])?;
     }
@@ -607,23 +859,37 @@ mod tests {
         let t = tempfile::tempdir().unwrap();
         let sessions = t.path().join("sessions");
         std::fs::create_dir_all(&sessions).unwrap();
-        for (id, text) in [("a1", "Fix the login bug in auth"), ("b2", "redis timeout keeps happening"), ("c3", "write docs")] {
+        for (id, text) in [
+            ("a1", "Fix the login bug in auth"),
+            ("b2", "redis timeout keeps happening"),
+            ("c3", "write docs"),
+        ] {
             kor_agent::session::save(
                 &sessions.join(format!("{id}.jsonl")),
-                &[Message::text(Role::User, text), Message::text(Role::Assistant, "ok")],
+                &[
+                    Message::text(Role::User, text),
+                    Message::text(Role::Assistant, "ok"),
+                ],
             )
             .unwrap();
         }
         let meta = t.path().join("desktop.json");
         // The desktop's own keys must survive our edits.
-        std::fs::write(&meta, r#"{"version":1,"theme":"dark","sessions":{"c3":{"model":"x/y"}}}"#).unwrap();
+        std::fs::write(
+            &meta,
+            r#"{"version":1,"theme":"dark","sessions":{"c3":{"model":"x/y"}}}"#,
+        )
+        .unwrap();
         (t, sessions, meta)
     }
 
     #[test]
     fn tags_folders_pins_and_filters_share_desktop_json() {
         let (_t, s, m) = setup();
-        assert_eq!(tag(&s, &m, "a1", &["#Auth".into(), "bug".into()], &[]).unwrap(), ["auth", "bug"]);
+        assert_eq!(
+            tag(&s, &m, "a1", &["#Auth".into(), "bug".into()], &[]).unwrap(),
+            ["auth", "bug"]
+        );
         assert!(tag(&s, &m, "a1", &["no spaces".into()], &[]).is_err());
         assert!(tag(&s, &m, "zz", &["x".into()], &[]).is_err());
         assert!(tag(&s, &m, "../x", &["x".into()], &[]).is_err());
@@ -635,11 +901,39 @@ mod tests {
         archive(&s, &m, "c3", true).unwrap();
 
         let all = list(&s, &m, &Filter::default()).unwrap();
-        assert_eq!(all.iter().map(|e| e.id.as_str()).collect::<Vec<_>>(), ["b2", "a1"], "pinned first, archived hidden");
-        assert_eq!(all[0].folder.as_deref(), Some("Backend"), "one folder, matched case-insensitively");
-        let auth = list(&s, &m, &Filter { tag: Some("#auth".into()), ..Filter::default() }).unwrap();
+        assert_eq!(
+            all.iter().map(|e| e.id.as_str()).collect::<Vec<_>>(),
+            ["b2", "a1"],
+            "pinned first, archived hidden"
+        );
+        assert_eq!(
+            all[0].folder.as_deref(),
+            Some("Backend"),
+            "one folder, matched case-insensitively"
+        );
+        let auth = list(
+            &s,
+            &m,
+            &Filter {
+                tag: Some("#auth".into()),
+                ..Filter::default()
+            },
+        )
+        .unwrap();
         assert_eq!(auth.len(), 1);
-        assert_eq!(list(&s, &m, &Filter { archived: true, ..Filter::default() }).unwrap().len(), 3);
+        assert_eq!(
+            list(
+                &s,
+                &m,
+                &Filter {
+                    archived: true,
+                    ..Filter::default()
+                }
+            )
+            .unwrap()
+            .len(),
+            3
+        );
 
         let raw: Value = serde_json::from_slice(&std::fs::read(&m).unwrap()).unwrap();
         assert_eq!(raw["theme"], "dark");
@@ -660,12 +954,23 @@ mod tests {
         fn min_similarity(&self) -> f32 {
             0.5
         }
-        fn embed(&self, texts: &[String], _k: kor_memory::embed::Kind) -> Result<Vec<Vec<f32>>, String> {
+        fn embed(
+            &self,
+            texts: &[String],
+            _k: kor_memory::embed::Kind,
+        ) -> Result<Vec<Vec<f32>>, String> {
             // "cache" and "redis" mean the same thing to this model.
-            Ok(texts.iter().map(|t| {
-                let t = t.to_lowercase();
-                vec![f32::from(u8::from(t.contains("redis") || t.contains("cache"))), f32::from(u8::from(t.contains("login"))), 0.1]
-            }).collect())
+            Ok(texts
+                .iter()
+                .map(|t| {
+                    let t = t.to_lowercase();
+                    vec![
+                        f32::from(u8::from(t.contains("redis") || t.contains("cache"))),
+                        f32::from(u8::from(t.contains("login"))),
+                        0.1,
+                    ]
+                })
+                .collect())
         }
     }
 
@@ -692,13 +997,26 @@ mod tests {
         move_to(&s, &m, "a1", Some("Backend")).unwrap();
         let out = t.path().join("export");
         assert_eq!(export_markdown(&s, &m, &out).unwrap(), 3);
-        let file = std::fs::read_dir(out.join("Backend")).unwrap().next().unwrap().unwrap().path();
+        let file = std::fs::read_dir(out.join("Backend"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
         let s2 = t.path().join("sessions2");
         let m2 = t.path().join("desktop2.json");
         let id = import_markdown(&s2, &m2, &file).unwrap();
         assert_eq!(id, "a1");
         let e = &list(&s2, &m2, &Filter::default()).unwrap()[0];
-        assert_eq!((e.folder.as_deref(), e.tags.clone()), (Some("Backend"), vec!["auth".to_owned()]));
-        assert_eq!(kor_agent::session::load(&s2.join("a1.jsonl")).unwrap().len(), 2);
+        assert_eq!(
+            (e.folder.as_deref(), e.tags.clone()),
+            (Some("Backend"), vec!["auth".to_owned()])
+        );
+        assert_eq!(
+            kor_agent::session::load(&s2.join("a1.jsonl"))
+                .unwrap()
+                .len(),
+            2
+        );
     }
 }

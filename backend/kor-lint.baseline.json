@@ -7,7 +7,6 @@
     "../frontend/src-tauri/src/ns/eco.rs": 3,
     "../frontend/src-tauri/src/ns/files.rs": 2,
     "../frontend/src-tauri/src/ns/local.rs": 4,
-    "../frontend/src-tauri/src/ns/metrics.rs": 1,
     "../frontend/src-tauri/src/ns/seo.rs": 11,
     "../frontend/src-tauri/src/ns/web.rs": 2,
     "../frontend/src-tauri/src/ns/webview.rs": 2,

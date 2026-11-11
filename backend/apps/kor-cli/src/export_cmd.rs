@@ -26,7 +26,10 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
 
 pub fn run(ctx: &Ctx, a: &ExportArgs) -> anyhow::Result<bool> {
     let l = &ctx.l;
-    let out = a.out.clone().unwrap_or_else(|| PathBuf::from(kor_runtime::export::default_name()));
+    let out = a
+        .out
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(kor_runtime::export::default_name()));
     match kor_runtime::export::export_all(&out, env!("CARGO_PKG_VERSION")) {
         Ok(s) => {
             println!(

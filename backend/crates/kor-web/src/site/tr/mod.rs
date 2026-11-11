@@ -70,13 +70,23 @@ pub fn slug_redirects(paths: &[String]) -> Vec<(String, String)> {
     paths
         .iter()
         .filter_map(|p| {
-            let decoded = url::form_urlencoded::parse(format!("x={}", p.replace('+', "%2B")).as_bytes())
-                .next()
-                .map(|(_, v)| v.into_owned())?;
+            let decoded =
+                url::form_urlencoded::parse(format!("x={}", p.replace('+', "%2B")).as_bytes())
+                    .next()
+                    .map(|(_, v)| v.into_owned())?;
             if decoded.is_ascii() {
                 return None;
             }
-            let ascii: Vec<String> = decoded.split('/').map(|seg| if seg.is_empty() { String::new() } else { slug(seg) }).collect();
+            let ascii: Vec<String> = decoded
+                .split('/')
+                .map(|seg| {
+                    if seg.is_empty() {
+                        String::new()
+                    } else {
+                        slug(seg)
+                    }
+                })
+                .collect();
             let target = ascii.join("/");
             (target != *p).then(|| (p.clone(), target))
         })
@@ -84,26 +94,72 @@ pub fn slug_redirects(paths: &[String]) -> Vec<(String, String)> {
 }
 
 const STOPWORDS: &[&str] = &[
-    "acaba", "ama", "ancak", "artık", "bana", "bazı", "belki", "ben", "beni", "benim", "bile", "bir", "biraz", "birçok", "biz", "bize",
-    "bizim", "bu", "buna", "bunu", "bunun", "da", "daha", "de", "değil", "diye", "en", "gibi", "göre", "hem", "hep", "her", "hiç",
-    "için", "ile", "ise", "işte", "kadar", "ki", "kim", "mi", "mı", "mu", "mü", "nasıl", "ne", "neden", "o", "olan", "olarak",
-    "olduğu", "on", "onlar", "onu", "onun", "sen", "siz", "şey", "şu", "tüm", "ve", "veya", "ya", "yani", "çok", "çünkü", "sonra",
-    "önce", "üzere", "var", "yok", "gerek", "aynı", "the", "and", "for", "with",
+    "acaba", "ama", "ancak", "artık", "bana", "bazı", "belki", "ben", "beni", "benim", "bile",
+    "bir", "biraz", "birçok", "biz", "bize", "bizim", "bu", "buna", "bunu", "bunun", "da", "daha",
+    "de", "değil", "diye", "en", "gibi", "göre", "hem", "hep", "her", "hiç", "için", "ile", "ise",
+    "işte", "kadar", "ki", "kim", "mi", "mı", "mu", "mü", "nasıl", "ne", "neden", "o", "olan",
+    "olarak", "olduğu", "on", "onlar", "onu", "onun", "sen", "siz", "şey", "şu", "tüm", "ve",
+    "veya", "ya", "yani", "çok", "çünkü", "sonra", "önce", "üzere", "var", "yok", "gerek", "aynı",
+    "the", "and", "for", "with",
 ];
 
 /// Inflectional suffixes stripped (longest first) so `ayakkabılar`, `ayakkabıları`, `ayakkabının`
 /// count as `ayakkabı`. A light stemmer: the stem keeps at least four letters.
 const SUFFIXES: &[&str] = &[
-    "larından", "lerinden", "larında", "lerinde", "larının", "lerinin", "ları", "leri", "ların", "lerin", "lara", "lere", "lar", "ler",
-    "ından", "inden", "undan", "ünden", "ında", "inde", "unda", "ünde", "dan", "den", "tan", "ten", "nın", "nin", "nun", "nün",
-    "da", "de", "ta", "te", "ın", "in", "un", "ün", "yı", "yi", "yu", "yü", "ya", "ye",
+    "larından",
+    "lerinden",
+    "larında",
+    "lerinde",
+    "larının",
+    "lerinin",
+    "ları",
+    "leri",
+    "ların",
+    "lerin",
+    "lara",
+    "lere",
+    "lar",
+    "ler",
+    "ından",
+    "inden",
+    "undan",
+    "ünden",
+    "ında",
+    "inde",
+    "unda",
+    "ünde",
+    "dan",
+    "den",
+    "tan",
+    "ten",
+    "nın",
+    "nin",
+    "nun",
+    "nün",
+    "da",
+    "de",
+    "ta",
+    "te",
+    "ın",
+    "in",
+    "un",
+    "ün",
+    "yı",
+    "yi",
+    "yu",
+    "yü",
+    "ya",
+    "ye",
 ];
 
 pub fn stem(word: &str) -> String {
     // Case after plural (`ayakkabı-lar-da`): strip at most two suffixes.
     let mut w = word.to_owned();
     for _ in 0..2 {
-        match SUFFIXES.iter().find_map(|s| w.strip_suffix(s).filter(|b| b.chars().count() >= 4)) {
+        match SUFFIXES
+            .iter()
+            .find_map(|s| w.strip_suffix(s).filter(|b| b.chars().count() >= 4))
+        {
             Some(base) => w = base.to_owned(),
             None => break,
         }
@@ -115,7 +171,8 @@ pub fn stem(word: &str) -> String {
 pub fn keywords(text: &str, top: usize) -> Vec<(String, usize)> {
     let mut counts: BTreeMap<String, usize> = BTreeMap::new();
     for w in lower_tr(text).split(|c: char| !c.is_alphanumeric()) {
-        if w.chars().count() < 3 || STOPWORDS.contains(&w) || w.chars().all(|c| c.is_ascii_digit()) {
+        if w.chars().count() < 3 || STOPWORDS.contains(&w) || w.chars().all(|c| c.is_ascii_digit())
+        {
             continue;
         }
         *counts.entry(stem(w)).or_default() += 1;
@@ -144,7 +201,12 @@ pub fn try_format(kurus: i64) -> String {
 
 /// Parse `1.234,56`, `1234.56`, `1234` (TL) → kuruş.
 pub fn parse_try(s: &str) -> Option<i64> {
-    let t = s.trim().trim_end_matches(['₺', ' ']).trim_end_matches("TL").trim().replace(' ', "");
+    let t = s
+        .trim()
+        .trim_end_matches(['₺', ' '])
+        .trim_end_matches("TL")
+        .trim()
+        .replace(' ', "");
     let (int, frac) = if let Some((a, b)) = t.rsplit_once(',') {
         (a.replace('.', ""), b.to_owned())
     } else if let Some((a, b)) = t.rsplit_once('.').filter(|(_, b)| b.len() <= 2) {
@@ -204,10 +266,32 @@ fn has_any(hay: &str, needles: &[&str]) -> bool {
 /// KVKK art. 10 disclosure items and the words that show each is covered.
 const KVKK_ITEMS: &[(&str, &[&str])] = &[
     ("tr-kvkk-controller", &["veri sorumlusu"]),
-    ("tr-kvkk-purpose", &["amaç", "amacı", "amaçları", "amaçlarla"]),
+    (
+        "tr-kvkk-purpose",
+        &["amaç", "amacı", "amaçları", "amaçlarla"],
+    ),
     ("tr-kvkk-transfer", &["aktarıl", "aktarım"]),
-    ("tr-kvkk-method", &["toplama yöntemi", "toplanma yöntemi", "yöntemle", "hukuki sebeb", "hukuki sebep"]),
-    ("tr-kvkk-rights", &["11. madde", "11 inci madde", "11. maddesi", "haklarınız", "bilgi talep", "başvuru"]),
+    (
+        "tr-kvkk-method",
+        &[
+            "toplama yöntemi",
+            "toplanma yöntemi",
+            "yöntemle",
+            "hukuki sebeb",
+            "hukuki sebep",
+        ],
+    ),
+    (
+        "tr-kvkk-rights",
+        &[
+            "11. madde",
+            "11 inci madde",
+            "11. maddesi",
+            "haklarınız",
+            "bilgi talep",
+            "başvuru",
+        ],
+    ),
 ];
 
 const CMPS: &[(&str, &str)] = &[
@@ -237,7 +321,10 @@ const TRACKERS: &[(&str, &str)] = &[
 pub const PAYMENTS: &[(&str, &[&str])] = &[
     ("iyzico", &["iyzipay", "iyzico"]),
     ("PayTR", &["paytr"]),
-    ("Param", &["param.com.tr", "parampos", "param-pos", "turkpos"]),
+    (
+        "Param",
+        &["param.com.tr", "parampos", "param-pos", "turkpos"],
+    ),
     ("Sipay", &["sipay"]),
 ];
 
@@ -250,7 +337,8 @@ pub const CARGO: &[(&str, &[&str])] = &[
 ];
 
 static HREF: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
-    regex::Regex::new(r#"(?is)<a\s[^>]*href\s*=\s*["']([^"'#]+)["'][^>]*>(.*?)</a>"#).unwrap_or_else(|_| unreachable!())
+    regex::Regex::new(r#"(?is)<a\s[^>]*href\s*=\s*["']([^"'#]+)["'][^>]*>(.*?)</a>"#)
+        .unwrap_or_else(|_| unreachable!())
 });
 
 /// The disclosure-text check on one page's text (lower-cased Turkish).
@@ -270,33 +358,88 @@ pub fn kvkk_items(text: &str, source: &str) -> Vec<Item> {
 /// Locale checks on the home page HTML.
 pub fn locale_items(html: &str, url: &str) -> Vec<Item> {
     let h = html.to_ascii_lowercase();
-    let item = |id: &str, ok: bool, detail: String| Item { id: id.into(), status: if ok { "ok" } else { "warn" }.into(), detail, source: url.into() };
+    let item = |id: &str, ok: bool, detail: String| Item {
+        id: id.into(),
+        status: if ok { "ok" } else { "warn" }.into(),
+        detail,
+        source: url.into(),
+    };
     let lang = regex::Regex::new(r#"<html[^>]*\slang\s*=\s*["']([^"']+)"#)
         .ok()
         .and_then(|r| r.captures(&h).map(|c| c[1].to_owned()));
     let mut v = vec![
-        item("tr-lang", lang.as_deref().is_some_and(|l| l.starts_with("tr")), lang.unwrap_or_default()),
-        item("tr-og-locale", h.contains("og:locale") && h.contains("tr_tr"), String::new()),
-        item("tr-charset", h.contains("charset=utf-8") || h.contains("charset=\"utf-8\""), String::new()),
-        item("tr-hreflang", !h.contains("hreflang") || h.contains("hreflang=\"tr") || h.contains("hreflang='tr"), String::new()),
-        item("tr-yandex", h.contains("yandex-verification"), String::new()),
+        item(
+            "tr-lang",
+            lang.as_deref().is_some_and(|l| l.starts_with("tr")),
+            lang.unwrap_or_default(),
+        ),
+        item(
+            "tr-og-locale",
+            h.contains("og:locale") && h.contains("tr_tr"),
+            String::new(),
+        ),
+        item(
+            "tr-charset",
+            h.contains("charset=utf-8") || h.contains("charset=\"utf-8\""),
+            String::new(),
+        ),
+        item(
+            "tr-hreflang",
+            !h.contains("hreflang") || h.contains("hreflang=\"tr") || h.contains("hreflang='tr"),
+            String::new(),
+        ),
+        item(
+            "tr-yandex",
+            h.contains("yandex-verification"),
+            String::new(),
+        ),
     ];
     // UTF-8 read as Latin-1: "Ä±" (ı), "ÅŸ" (ş), "Ã§" (ç), "Ã¼" (ü), "Ã¶" (ö), "ÄŸ" (ğ).
-    let damaged = ["Ä±", "ÅŸ", "Ã§", "Ã¼", "Ã¶", "ÄŸ", "Ä°"].iter().filter(|m| html.contains(*m)).count();
-    v.push(item("tr-mojibake", damaged == 0, if damaged > 0 { format!("{damaged}") } else { String::new() }));
+    let damaged = ["Ä±", "ÅŸ", "Ã§", "Ã¼", "Ã¶", "ÄŸ", "Ä°"]
+        .iter()
+        .filter(|m| html.contains(*m))
+        .count();
+    v.push(item(
+        "tr-mojibake",
+        damaged == 0,
+        if damaged > 0 {
+            format!("{damaged}")
+        } else {
+            String::new()
+        },
+    ));
     let non_ascii_links = HREF
         .captures_iter(html)
         .filter(|c| {
             let u = &c[1];
-            u.starts_with('/') && (!u.is_ascii() || has_any(&u.to_ascii_uppercase(), &["%C4%B1", "%C5%9F", "%C4%9F", "%C3%BC", "%C3%B6", "%C3%A7", "%C4%B0"]))
+            u.starts_with('/')
+                && (!u.is_ascii()
+                    || has_any(
+                        &u.to_ascii_uppercase(),
+                        &[
+                            "%C4%B1", "%C5%9F", "%C4%9F", "%C3%BC", "%C3%B6", "%C3%A7", "%C4%B0",
+                        ],
+                    ))
         })
         .count();
-    v.push(item("tr-url-chars", non_ascii_links == 0, if non_ascii_links > 0 { format!("{non_ascii_links}") } else { String::new() }));
+    v.push(item(
+        "tr-url-chars",
+        non_ascii_links == 0,
+        if non_ascii_links > 0 {
+            format!("{non_ascii_links}")
+        } else {
+            String::new()
+        },
+    ));
     v
 }
 
 fn detect(hay: &str, table: &[(&str, &[&str])]) -> Vec<String> {
-    table.iter().filter(|(_, n)| has_any(hay, n)).map(|(name, _)| (*name).to_owned()).collect()
+    table
+        .iter()
+        .filter(|(_, n)| has_any(hay, n))
+        .map(|(name, _)| (*name).to_owned())
+        .collect()
 }
 
 /// Every check on a live site. `plugins`: WordPress plugin slugs when known.
@@ -308,79 +451,176 @@ pub async fn check(http: &Http, url: &str, plugins: &[String]) -> super::Result<
         return Err(format!("{base}: HTTP {}", home.status));
     }
     let lower = lower_tr(&home.body);
-    let mut rep = Report { url: base.to_owned(), ..Report::default() };
+    let mut rep = Report {
+        url: base.to_owned(),
+        ..Report::default()
+    };
     // KVKK disclosure page: link text or address naming it.
     let kvkk_link = HREF.captures_iter(&home.body).find_map(|c| {
         let (href, text) = (c[1].to_owned(), lower_tr(&c[2]));
         let h = href.to_ascii_lowercase();
-        let hit = has_any(&text, &["kvkk", "aydınlatma", "kişisel veri"]) || has_any(&h, &["kvkk", "aydinlatma", "kisisel-veri"]);
+        let hit = has_any(&text, &["kvkk", "aydınlatma", "kişisel veri"])
+            || has_any(&h, &["kvkk", "aydinlatma", "kisisel-veri"]);
         hit.then_some(href)
     });
     let privacy_link = HREF.captures_iter(&home.body).find_map(|c| {
         let (href, text) = (c[1].to_owned(), lower_tr(&c[2]));
-        (has_any(&text, &["gizlilik", "çerez politika"]) || has_any(&href.to_ascii_lowercase(), &["gizlilik", "privacy", "cerez"])).then_some(href)
+        (has_any(&text, &["gizlilik", "çerez politika"])
+            || has_any(
+                &href.to_ascii_lowercase(),
+                &["gizlilik", "privacy", "cerez"],
+            ))
+        .then_some(href)
     });
     match kvkk_link.or(privacy_link.clone()) {
         Some(href) => {
-            let target = url::Url::parse(&format!("{base}/")).and_then(|b| b.join(&href)).map(|u| u.to_string()).unwrap_or(href);
-            rep.items.push(Item { id: "tr-kvkk-page".into(), status: "ok".into(), detail: target.clone(), source: format!("{base}/") });
+            let target = url::Url::parse(&format!("{base}/"))
+                .and_then(|b| b.join(&href))
+                .map(|u| u.to_string())
+                .unwrap_or(href);
+            rep.items.push(Item {
+                id: "tr-kvkk-page".into(),
+                status: "ok".into(),
+                detail: target.clone(),
+                source: format!("{base}/"),
+            });
             match http.follow(&target).await {
-                Ok((_, page)) if page.ok() => rep.items.extend(kvkk_items(&strip_tags(&page.body), &target)),
-                Ok((_, page)) => rep.items.push(Item { id: "tr-kvkk-page".into(), status: "fail".into(), detail: format!("HTTP {}", page.status), source: target }),
-                Err(e) => rep.items.push(Item { id: "tr-kvkk-page".into(), status: "fail".into(), detail: e, source: target }),
+                Ok((_, page)) if page.ok() => rep
+                    .items
+                    .extend(kvkk_items(&strip_tags(&page.body), &target)),
+                Ok((_, page)) => rep.items.push(Item {
+                    id: "tr-kvkk-page".into(),
+                    status: "fail".into(),
+                    detail: format!("HTTP {}", page.status),
+                    source: target,
+                }),
+                Err(e) => rep.items.push(Item {
+                    id: "tr-kvkk-page".into(),
+                    status: "fail".into(),
+                    detail: e,
+                    source: target,
+                }),
             }
         }
-        None => rep.items.push(Item { id: "tr-kvkk-page".into(), status: "fail".into(), detail: String::new(), source: format!("{base}/") }),
+        None => rep.items.push(Item {
+            id: "tr-kvkk-page".into(),
+            status: "fail".into(),
+            detail: String::new(),
+            source: format!("{base}/"),
+        }),
     }
     // Cookie notice: a consent tool, or banner text.
     let hay = format!("{}\n{}", home.body.to_ascii_lowercase(), plugins.join("\n"));
-    let cmp: Vec<&str> = CMPS.iter().filter(|(n, _)| hay.contains(n)).map(|(_, name)| *name).collect();
+    let cmp: Vec<&str> = CMPS
+        .iter()
+        .filter(|(n, _)| hay.contains(n))
+        .map(|(_, name)| *name)
+        .collect();
     let banner = lower.contains("çerez") && has_any(&lower, &["kabul", "onay", "reddet", "tercih"]);
     rep.items.push(Item {
         id: "tr-cookie-notice".into(),
-        status: if !cmp.is_empty() || banner { "ok" } else { "fail" }.into(),
+        status: if !cmp.is_empty() || banner {
+            "ok"
+        } else {
+            "fail"
+        }
+        .into(),
         detail: cmp.join(", "),
         source: format!("{base}/"),
     });
     rep.items.push(Item {
         id: "tr-cookie-policy".into(),
-        status: if lower.contains("çerez politika") || hay.contains("cerez-politika") || hay.contains("cookie-policy") { "ok" } else { "warn" }.into(),
+        status: if lower.contains("çerez politika")
+            || hay.contains("cerez-politika")
+            || hay.contains("cookie-policy")
+        {
+            "ok"
+        } else {
+            "warn"
+        }
+        .into(),
         detail: String::new(),
         source: format!("{base}/"),
     });
-    let trackers: Vec<&str> = TRACKERS.iter().filter(|(n, _)| hay.contains(n)).map(|(_, name)| *name).collect();
+    let trackers: Vec<&str> = TRACKERS
+        .iter()
+        .filter(|(n, _)| hay.contains(n))
+        .map(|(_, name)| *name)
+        .collect();
     if !trackers.is_empty() && cmp.is_empty() {
-        rep.items.push(Item { id: "tr-trackers-no-consent".into(), status: "warn".into(), detail: trackers.join(", "), source: format!("{base}/") });
+        rep.items.push(Item {
+            id: "tr-trackers-no-consent".into(),
+            status: "warn".into(),
+            detail: trackers.join(", "),
+            source: format!("{base}/"),
+        });
     }
-    rep.items.push(Item { id: "tr-verbis".into(), status: "info".into(), detail: "https://verbis.kvkk.gov.tr".into(), source: "KVKK".into() });
-    rep.items.extend(locale_items(&home.body, &format!("{base}/")));
+    rep.items.push(Item {
+        id: "tr-verbis".into(),
+        status: "info".into(),
+        detail: "https://verbis.kvkk.gov.tr".into(),
+        source: "KVKK".into(),
+    });
+    rep.items
+        .extend(locale_items(&home.body, &format!("{base}/")));
     rep.payments = detect(&hay, PAYMENTS);
     rep.cargo = detect(&hay, CARGO);
-    let ecommerce = plugins.iter().any(|p| p == "woocommerce") || has_any(&lower, &["sepete ekle", "sepetim", "add-to-cart"]);
+    let ecommerce = plugins.iter().any(|p| p == "woocommerce")
+        || has_any(&lower, &["sepete ekle", "sepetim", "add-to-cart"]);
     if ecommerce {
         rep.items.push(Item {
             id: "tr-payments".into(),
-            status: if rep.payments.is_empty() { "warn" } else { "ok" }.into(),
+            status: if rep.payments.is_empty() {
+                "warn"
+            } else {
+                "ok"
+            }
+            .into(),
             detail: rep.payments.join(", "),
             source: format!("{base}/"),
         });
         // Distance sales (Law 6502 / Distance Contracts Regulation): pre-information and contract texts.
-        let ds = has_any(&lower, &["mesafeli satış", "mesafeli satis", "ön bilgilendirme"]) || has_any(&hay, &["mesafeli-satis", "on-bilgilendirme"]);
-        rep.items.push(Item { id: "tr-distance-sales".into(), status: if ds { "ok" } else { "warn" }.into(), detail: String::new(), source: format!("{base}/") });
+        let ds = has_any(
+            &lower,
+            &["mesafeli satış", "mesafeli satis", "ön bilgilendirme"],
+        ) || has_any(&hay, &["mesafeli-satis", "on-bilgilendirme"]);
+        rep.items.push(Item {
+            id: "tr-distance-sales".into(),
+            status: if ds { "ok" } else { "warn" }.into(),
+            detail: String::new(),
+            source: format!("{base}/"),
+        });
     }
     Ok(rep)
 }
 
 pub fn strip_tags(html: &str) -> String {
     let no_scripts = regex::Regex::new(r"(?is)<(script|style)[^>]*>.*?</(script|style)>")
-        .map_or_else(|_| html.to_owned(), |r| r.replace_all(html, " ").into_owned());
-    let text = regex::Regex::new(r"(?s)<[^>]+>").map_or(no_scripts.clone(), |r| r.replace_all(&no_scripts, " ").into_owned());
-    text.replace("&nbsp;", " ").replace("&amp;", "&").replace("&#8217;", "'")
+        .map_or_else(
+            |_| html.to_owned(),
+            |r| r.replace_all(html, " ").into_owned(),
+        );
+    let text = regex::Regex::new(r"(?s)<[^>]+>").map_or(no_scripts.clone(), |r| {
+        r.replace_all(&no_scripts, " ").into_owned()
+    });
+    text.replace("&nbsp;", " ")
+        .replace("&amp;", "&")
+        .replace("&#8217;", "'")
 }
 
 pub fn render(l: &Localizer, rep: &Report) -> String {
-    let mut o = format!("# {}\n\n", l.t_args("tr-title", &args!("url" => rep.url.clone())));
-    let _ = writeln!(o, "| {} | {} | {} | {} |\n|---|---|---|---|", l.t("tr-col-check"), l.t("tr-col-status"), l.t("tr-col-detail"), l.t("tr-col-source"));
+    let mut o = format!(
+        "# {}\n\n",
+        l.t_args("tr-title", &args!("url" => rep.url.clone()))
+    );
+    let _ = writeln!(
+        o,
+        "| {} | {} | {} | {} |\n|---|---|---|---|",
+        l.t("tr-col-check"),
+        l.t("tr-col-status"),
+        l.t("tr-col-detail"),
+        l.t("tr-col-source")
+    );
     for i in &rep.items {
         let _ = writeln!(
             o,
@@ -396,9 +636,17 @@ pub fn render(l: &Localizer, rep: &Report) -> String {
         o,
         "\n- {}: {}\n- {}: {}\n\n> {}",
         l.t("tr-payments-found"),
-        if rep.payments.is_empty() { none() } else { rep.payments.join(", ") },
+        if rep.payments.is_empty() {
+            none()
+        } else {
+            rep.payments.join(", ")
+        },
         l.t("tr-cargo-found"),
-        if rep.cargo.is_empty() { none() } else { rep.cargo.join(", ") },
+        if rep.cargo.is_empty() {
+            none()
+        } else {
+            rep.cargo.join(", ")
+        },
         l.t("tr-verbis-note")
     );
     o
@@ -425,10 +673,16 @@ pub struct KvkkInput {
 /// Disclosure text per KVKK art. 10 with the art. 11 rights, and a cookie policy; Markdown in Turkish.
 /// Not legal advice: the text says so and should be reviewed by a lawyer.
 pub fn kvkk_text(i: &KvkkInput) -> (String, String) {
-    let list = |v: &[String], fallback: &str| if v.is_empty() { format!("- {fallback}\n") } else { v.iter().fold(String::new(), |mut o, x| {
-        let _ = writeln!(o, "- {x}");
-        o
-    }) };
+    let list = |v: &[String], fallback: &str| {
+        if v.is_empty() {
+            format!("- {fallback}\n")
+        } else {
+            v.iter().fold(String::new(), |mut o, x| {
+                let _ = writeln!(o, "- {x}");
+                o
+            })
+        }
+    };
     let disclosure = format!(
         "# Kişisel Verilerin İşlenmesine İlişkin Aydınlatma Metni\n\n\
 > Bu metin Kor tarafından şablondan üretilmiştir; hukuki görüş değildir. Yayımlamadan önce bir hukukçuya kontrol ettiriniz.\n\n\
@@ -443,12 +697,21 @@ Başvurularınızı Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebli�
         e = i.email,
         w = i.website,
         data = list(&i.data, "Kimlik, iletişim ve müşteri işlem bilgileri"),
-        purp = list(&i.purposes, "Ürün ve hizmetlerin sunulması, sözleşme süreçlerinin yürütülmesi"),
-        rec = list(&i.recipients, "Yetkili kamu kurum ve kuruluşları, iş ortakları ve tedarikçiler"),
+        purp = list(
+            &i.purposes,
+            "Ürün ve hizmetlerin sunulması, sözleşme süreçlerinin yürütülmesi"
+        ),
+        rec = list(
+            &i.recipients,
+            "Yetkili kamu kurum ve kuruluşları, iş ortakları ve tedarikçiler"
+        ),
         abroad = if i.abroad.is_empty() {
             String::new()
         } else {
-            format!("Yurt dışına aktarım (KVKK m. 9): {}\n\n", i.abroad.join(", "))
+            format!(
+                "Yurt dışına aktarım (KVKK m. 9): {}\n\n",
+                i.abroad.join(", ")
+            )
         },
     );
     let mut cookies = format!(
@@ -458,7 +721,13 @@ Başvurularınızı Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebli�
         w = i.website
     );
     for (n, p, d) in &i.cookies {
-        let _ = writeln!(cookies, "| {} | {} | {} |", super::cell(n), super::cell(p), super::cell(d));
+        let _ = writeln!(
+            cookies,
+            "| {} | {} | {} |",
+            super::cell(n),
+            super::cell(p),
+            super::cell(d)
+        );
     }
     let _ = write!(cookies, "\nVeri sorumlusu: {} — {}\n", i.company, i.email);
     (disclosure, cookies)
@@ -472,13 +741,29 @@ mod tests {
 
     #[test]
     fn turkish_slugs_and_keywords() {
-        assert_eq!(slug("İstanbul'da Şık Çantalar & Ayakkabılar"), "istanbul-da-sik-cantalar-ayakkabilar");
+        assert_eq!(
+            slug("İstanbul'da Şık Çantalar & Ayakkabılar"),
+            "istanbul-da-sik-cantalar-ayakkabilar"
+        );
         assert_eq!(slug("IĞDIR ÜRÜNLERİ"), "igdir-urunleri");
         assert_eq!(lower_tr("IŞIK İNCE"), "ışık ince");
-        let k = keywords("Ayakkabılar ve ayakkabıların bakımı: ayakkabı fiyatları. Ayakkabılarda indirim!", 3);
+        let k = keywords(
+            "Ayakkabılar ve ayakkabıların bakımı: ayakkabı fiyatları. Ayakkabılarda indirim!",
+            3,
+        );
         assert_eq!(k[0], ("ayakkabı".into(), 4));
-        let r = slug_redirects(&["/kategori/%C3%A7anta".into(), "/ascii/yol".into(), "/ürün/kırmızı".into()]);
-        assert_eq!(r, vec![("/kategori/%C3%A7anta".into(), "/kategori/canta".into()), ("/ürün/kırmızı".into(), "/urun/kirmizi".into())]);
+        let r = slug_redirects(&[
+            "/kategori/%C3%A7anta".into(),
+            "/ascii/yol".into(),
+            "/ürün/kırmızı".into(),
+        ]);
+        assert_eq!(
+            r,
+            vec![
+                ("/kategori/%C3%A7anta".into(), "/kategori/canta".into()),
+                ("/ürün/kırmızı".into(), "/urun/kirmizi".into())
+            ]
+        );
     }
 
     #[test]
@@ -503,7 +788,11 @@ mod tests {
             cookies: vec![("_ga".into(), "Analiz".into(), "2 yıl".into())],
             ..KvkkInput::default()
         });
-        assert!(kvkk_items(&d, "x").iter().all(|i| i.status == "ok"), "{:?}", kvkk_items(&d, "x"));
+        assert!(
+            kvkk_items(&d, "x").iter().all(|i| i.status == "ok"),
+            "{:?}",
+            kvkk_items(&d, "x")
+        );
         assert!(c.contains("| _ga | Analiz | 2 yıl |"));
         assert!(d.contains("hukuki görüş değildir"));
     }
@@ -514,11 +803,24 @@ mod tests {
         let home = r#"<html lang="tr"><head><meta charset="utf-8"><meta property="og:locale" content="tr_TR">
 <script src="https://www.googletagmanager.com/gtag/js?id=G-X"></script><script src="https://static.iyzipay.com/checkout.js"></script></head>
 <body><a href="/kvkk-aydinlatma-metni">KVKK Aydınlatma Metni</a><a href="/ürün/çanta">Çanta</a> Sepete ekle. Bu sitede çerez kullanılır, kabul et.</body></html>"#;
-        Mock::given(path("/")).respond_with(ResponseTemplate::new(200).set_body_string(home)).mount(&s).await;
-        Mock::given(path("/kvkk-aydinlatma-metni")).respond_with(ResponseTemplate::new(200).set_body_string(
-            "<h1>Aydınlatma</h1><p>Veri sorumlusu Acme. İşlenme amaçları. Hukuki sebep.</p>")).mount(&s).await;
+        Mock::given(path("/"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(home))
+            .mount(&s)
+            .await;
+        Mock::given(path("/kvkk-aydinlatma-metni"))
+            .respond_with(ResponseTemplate::new(200).set_body_string(
+                "<h1>Aydınlatma</h1><p>Veri sorumlusu Acme. İşlenme amaçları. Hukuki sebep.</p>",
+            ))
+            .mount(&s)
+            .await;
         let rep = check(&Http::new().unwrap(), &s.uri(), &[]).await.unwrap();
-        let st = |id: &str| rep.items.iter().find(|i| i.id == id).map(|i| i.status.clone()).unwrap_or_default();
+        let st = |id: &str| {
+            rep.items
+                .iter()
+                .find(|i| i.id == id)
+                .map(|i| i.status.clone())
+                .unwrap_or_default()
+        };
         assert_eq!(st("tr-kvkk-page"), "ok");
         assert_eq!(st("tr-kvkk-controller"), "ok");
         assert_eq!(st("tr-kvkk-transfer"), "fail");

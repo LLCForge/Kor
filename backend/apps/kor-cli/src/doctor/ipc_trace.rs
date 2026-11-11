@@ -29,8 +29,20 @@ pub fn run(ctx: &Ctx, out: Option<&Path>) -> bool {
     let l = &ctx.l;
     match run_inner(out) {
         Ok(r) => {
-            println!("{}", l.t_args("doctor-ipc-trace-file", &args!("path" => r.trace.display().to_string())));
-            println!("  {}", l.t_args("doctor-ipc-trace-records", &args!("count" => r.records, "calls" => r.slowest.len())));
+            println!(
+                "{}",
+                l.t_args(
+                    "doctor-ipc-trace-file",
+                    &args!("path" => r.trace.display().to_string())
+                )
+            );
+            println!(
+                "  {}",
+                l.t_args(
+                    "doctor-ipc-trace-records",
+                    &args!("count" => r.records, "calls" => r.slowest.len())
+                )
+            );
             for (name, ms) in &r.slowest {
                 println!("    {ms:>9.1} ms  {name}");
             }
@@ -38,21 +50,36 @@ pub fn run(ctx: &Ctx, out: Option<&Path>) -> bool {
                 println!("  ✓ {}", l.t("doctor-ipc-trace-schema-ok"));
             } else {
                 for v in &r.violations {
-                    println!("  ✗ {}", l.t_args("doctor-ipc-trace-schema-bad", &args!("detail" => v.clone())));
+                    println!(
+                        "  ✗ {}",
+                        l.t_args("doctor-ipc-trace-schema-bad", &args!("detail" => v.clone()))
+                    );
                 }
             }
             if r.problems.is_empty() {
                 println!("  ✓ {}", l.t("doctor-ipc-trace-scenario-ok"));
             } else {
                 for p in &r.problems {
-                    println!("  ✗ {}", l.t_args("doctor-ipc-trace-scenario-bad", &args!("detail" => p.clone())));
+                    println!(
+                        "  ✗ {}",
+                        l.t_args(
+                            "doctor-ipc-trace-scenario-bad",
+                            &args!("detail" => p.clone())
+                        )
+                    );
                 }
             }
             println!("  {}", l.t("doctor-ipc-trace-hint"));
             r.violations.is_empty() && r.problems.is_empty()
         }
         Err(e) => {
-            println!("  ✗ {}", l.t_args("doctor-ipc-trace-failed", &args!("error" => format!("{e:#}"))));
+            println!(
+                "  ✗ {}",
+                l.t_args(
+                    "doctor-ipc-trace-failed",
+                    &args!("error" => format!("{e:#}"))
+                )
+            );
             false
         }
     }
@@ -68,7 +95,9 @@ struct Report {
 }
 
 fn default_file() -> anyhow::Result<PathBuf> {
-    let ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_millis());
+    let ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis());
     Ok(kor_runtime::kor_home()
         .ok_or_else(|| anyhow::anyhow!("no Kor data folder"))?
         .join("logs")
@@ -111,7 +140,13 @@ fn run_inner(out: Option<&Path>) -> anyhow::Result<Report> {
         .into_iter()
         .map(|(n, e)| format!("{n}: {}", e.join("; ")))
         .collect();
-    Ok(Report { trace: target, records: records.len(), slowest: timed, violations, problems: outcome.problems })
+    Ok(Report {
+        trace: target,
+        records: records.len(),
+        slowest: timed,
+        violations,
+        problems: outcome.problems,
+    })
 }
 
 /// What a user types for the scenario's steps: each prompt, each approval (`y`/`a`/`n`).
@@ -162,7 +197,11 @@ fn drive(exe: &Path, env: &e2e::IsolatedEnv, input: &str) -> anyhow::Result<Stri
         std::thread::sleep(Duration::from_millis(50));
     }
     let out = child.wait_with_output()?;
-    Ok(format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr)))
+    Ok(format!(
+        "{}{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    ))
 }
 
 #[cfg(test)]

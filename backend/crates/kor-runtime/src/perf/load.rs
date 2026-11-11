@@ -33,10 +33,14 @@ pub struct LoadStats {
 pub fn check_target(url: &str, allow_hosts: &[String]) -> Result<(), String> {
     let lower = url.to_ascii_lowercase();
     if !(lower.starts_with("http://") || lower.starts_with("https://")) {
-        return Err(format!("{url}: only http:// and https:// URLs can be load-tested"));
+        return Err(format!(
+            "{url}: only http:// and https:// URLs can be load-tested"
+        ));
     }
     let host = kor_core::net::url_host(url).ok_or_else(|| format!("{url}: no host"))?;
-    if !kor_core::net::is_loopback_host(&host) && !allow_hosts.iter().any(|h| h.eq_ignore_ascii_case(&host)) {
+    if !kor_core::net::is_loopback_host(&host)
+        && !allow_hosts.iter().any(|h| h.eq_ignore_ascii_case(&host))
+    {
         return Err(format!(
             "{host} is not this computer; Kor only sends load to loopback hosts unless you pass --allow-host {host}"
         ));
@@ -55,7 +59,12 @@ fn percentile(sorted: &[Duration], p: f64) -> f64 {
 }
 
 /// Send `requests` GETs to `url`, `concurrency` at a time.
-pub async fn run(url: &str, requests: u32, concurrency: u32, allow_hosts: &[String]) -> Result<LoadStats, String> {
+pub async fn run(
+    url: &str,
+    requests: u32,
+    concurrency: u32,
+    allow_hosts: &[String],
+) -> Result<LoadStats, String> {
     check_target(url, allow_hosts)?;
     let requests = requests.clamp(1, MAX_REQUESTS);
     let concurrency = concurrency.clamp(1, MAX_CONCURRENCY).min(requests);
@@ -111,7 +120,11 @@ pub async fn run(url: &str, requests: u32, concurrency: u32, allow_hosts: &[Stri
     all.sort_unstable();
     stats.requests = stats.ok + stats.errors;
     stats.wall_ms = wall * 1e3;
-    stats.rps = if wall > 0.0 { f64::from(stats.requests) / wall } else { 0.0 };
+    stats.rps = if wall > 0.0 {
+        f64::from(stats.requests) / wall
+    } else {
+        0.0
+    };
     stats.p50_ms = percentile(&all, 0.50);
     stats.p95_ms = percentile(&all, 0.95);
     stats.max_ms = all.last().map_or(0.0, |d| d.as_secs_f64() * 1e3);
@@ -120,7 +133,10 @@ pub async fn run(url: &str, requests: u32, concurrency: u32, allow_hosts: &[Stri
 
 /// Wait until `url` answers (any HTTP status) or `timeout` passes.
 pub async fn wait_ready(url: &str, timeout: Duration) -> bool {
-    let Ok(client) = kor_core::net::client_builder().timeout(Duration::from_secs(2)).build() else {
+    let Ok(client) = kor_core::net::client_builder()
+        .timeout(Duration::from_secs(2))
+        .build()
+    else {
         return false;
     };
     let end = Instant::now() + timeout;
@@ -153,16 +169,33 @@ mod tests {
     #[tokio::test]
     async fn sends_n_requests_and_measures() {
         let server = MockServer::start().await;
-        Mock::given(method("GET")).and(path("/hot")).respond_with(ResponseTemplate::new(200).set_body_string("ok")).expect(40).mount(&server).await;
-        Mock::given(method("GET")).and(path("/bad")).respond_with(ResponseTemplate::new(503)).mount(&server).await;
+        Mock::given(method("GET"))
+            .and(path("/hot"))
+            .respond_with(ResponseTemplate::new(200).set_body_string("ok"))
+            .expect(40)
+            .mount(&server)
+            .await;
+        Mock::given(method("GET"))
+            .and(path("/bad"))
+            .respond_with(ResponseTemplate::new(503))
+            .mount(&server)
+            .await;
         let url = format!("{}/hot", server.uri());
         assert!(wait_ready(&server.uri(), Duration::from_secs(5)).await);
         let s = run(&url, 40, 8, &[]).await.unwrap();
         assert_eq!((s.requests, s.ok, s.errors), (40, 40, 0));
-        assert!(s.rps > 0.0 && s.p50_ms <= s.p95_ms && s.p95_ms <= s.max_ms, "{s:?}");
-        let bad = run(&format!("{}/bad", server.uri()), 3, 2, &[]).await.unwrap();
+        assert!(
+            s.rps > 0.0 && s.p50_ms <= s.p95_ms && s.p95_ms <= s.max_ms,
+            "{s:?}"
+        );
+        let bad = run(&format!("{}/bad", server.uri()), 3, 2, &[])
+            .await
+            .unwrap();
         assert_eq!((bad.ok, bad.errors), (0, 3));
-        assert_eq!(bad.first_error.as_deref(), Some("HTTP 503 Service Unavailable"));
+        assert_eq!(
+            bad.first_error.as_deref(),
+            Some("HTTP 503 Service Unavailable")
+        );
         server.verify().await;
     }
 }

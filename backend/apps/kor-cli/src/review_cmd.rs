@@ -61,7 +61,14 @@ pub fn run(ctx: &Ctx, a: &ReviewArgs) -> anyhow::Result<bool> {
     };
     if a.list_personas {
         for p in review::personas(&root) {
-            let first = p.prompt.lines().next().unwrap_or_default().trim_start_matches('#').trim().to_owned();
+            let first = p
+                .prompt
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .trim_start_matches('#')
+                .trim()
+                .to_owned();
             println!("{:<18} {:<8} {first}", p.name, p.source);
         }
         return Ok(true);
@@ -69,20 +76,37 @@ pub fn run(ctx: &Ctx, a: &ReviewArgs) -> anyhow::Result<bool> {
     let rt = crate::providers::runtime()?;
     if a.post {
         let target = a.pr.as_deref().unwrap_or_default();
-        return Ok(crate::pr_cmd::pr_review(ctx, &rt, &root, target, a.persona.as_deref(), a.yes, a.model.as_deref()));
+        return Ok(crate::pr_cmd::pr_review(
+            ctx,
+            &rt,
+            &root,
+            target,
+            a.persona.as_deref(),
+            a.yes,
+            a.model.as_deref(),
+        ));
     }
     let name = a.persona.as_deref().unwrap_or(review::DEFAULT_PERSONA);
     let Some(persona) = review::persona(&root, name) else {
-        let all: Vec<String> = review::personas(&root).into_iter().map(|p| p.name).collect();
+        let all: Vec<String> = review::personas(&root)
+            .into_iter()
+            .map(|p| p.name)
+            .collect();
         eprintln!(
             "{}",
-            l.t_args("review-unknown-persona", &args!("name" => name.to_owned(), "list" => all.join(", ")))
+            l.t_args(
+                "review-unknown-persona",
+                &args!("name" => name.to_owned(), "list" => all.join(", "))
+            )
         );
         return Ok(false);
     };
     let diff = if let Some(target) = &a.pr {
         let Some(num) = forge::pr_number(target) else {
-            eprintln!("{}", l.t_args("pr-bad-target", &args!("target" => target.clone())));
+            eprintln!(
+                "{}",
+                l.t_args("pr-bad-target", &args!("target" => target.clone()))
+            );
             return Ok(false);
         };
         match Forge::open(&root) {
@@ -141,7 +165,15 @@ mod tests {
 
     #[test]
     fn parses() {
-        let c = Cli::try_parse_from(["review", "--persona", "security", "--staged", "--format", "json"]).unwrap();
+        let c = Cli::try_parse_from([
+            "review",
+            "--persona",
+            "security",
+            "--staged",
+            "--format",
+            "json",
+        ])
+        .unwrap();
         assert!(c.a.staged && c.a.format == Format::Json);
         assert!(Cli::try_parse_from(["review", "--range", "a..b"]).is_ok());
         assert!(Cli::try_parse_from(["review", "--pr", "4", "--post", "-y"]).is_ok());

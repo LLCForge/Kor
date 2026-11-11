@@ -28,11 +28,20 @@ fn files_in(root: &Path, dir: &str) -> Vec<String> {
         .build()
         .flatten()
         .filter(|e| e.file_type().is_some_and(|t| t.is_file()))
-        .filter_map(|e| e.path().strip_prefix(root).ok().map(|p| p.to_string_lossy().replace('\\', "/")))
+        .filter_map(|e| {
+            e.path()
+                .strip_prefix(root)
+                .ok()
+                .map(|p| p.to_string_lossy().replace('\\', "/"))
+        })
         .filter(|p| {
-            let ext = Path::new(p).extension().map(std::ffi::OsStr::to_ascii_lowercase);
-            !matches!(ext.as_deref().and_then(std::ffi::OsStr::to_str), Some("md" | "lock"))
-                && !p.contains("__pycache__")
+            let ext = Path::new(p)
+                .extension()
+                .map(std::ffi::OsStr::to_ascii_lowercase);
+            !matches!(
+                ext.as_deref().and_then(std::ffi::OsStr::to_str),
+                Some("md" | "lock")
+            ) && !p.contains("__pycache__")
                 && !p.ends_with("__init__.py")
                 && !p.ends_with("migration_lock.toml")
         })
@@ -48,15 +57,24 @@ pub fn slug(desc: &str) -> String {
         .chars()
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
         .collect();
-    let s = s.split('_').filter(|p| !p.is_empty()).collect::<Vec<_>>().join("_");
+    let s = s
+        .split('_')
+        .filter(|p| !p.is_empty())
+        .collect::<Vec<_>>()
+        .join("_");
     s.chars().take(60).collect()
 }
 
 fn camel(desc: &str) -> String {
-    slug(desc).split('_').map(|w| {
-        let mut c = w.chars();
-        c.next().map(|f| f.to_ascii_uppercase().to_string() + c.as_str()).unwrap_or_default()
-    }).collect()
+    slug(desc)
+        .split('_')
+        .map(|w| {
+            let mut c = w.chars();
+            c.next()
+                .map(|f| f.to_ascii_uppercase().to_string() + c.as_str())
+                .unwrap_or_default()
+        })
+        .collect()
 }
 
 fn exists(root: &Path, p: &str) -> bool {
@@ -64,7 +82,11 @@ fn exists(root: &Path, p: &str) -> bool {
 }
 
 fn glob_root(root: &Path, ext: &str) -> Option<PathBuf> {
-    std::fs::read_dir(root).ok()?.flatten().map(|e| e.path()).find(|p| p.extension().is_some_and(|x| x == ext))
+    std::fs::read_dir(root)
+        .ok()?
+        .flatten()
+        .map(|e| e.path())
+        .find(|p| p.extension().is_some_and(|x| x == ext))
 }
 
 /// Detect how this project writes migrations.
@@ -77,10 +99,18 @@ pub fn migration_style(root: &Path, desc: &str) -> MigrationStyle {
         examples: files_in(root, dir).into_iter().rev().take(2).collect(),
     };
     if exists(root, "prisma/schema.prisma") {
-        return pick("prisma", "prisma/migrations", Some(format!("npx prisma migrate dev --create-only --name {s}")));
+        return pick(
+            "prisma",
+            "prisma/migrations",
+            Some(format!("npx prisma migrate dev --create-only --name {s}")),
+        );
     }
     if exists(root, "db/migrate") && exists(root, "Gemfile") {
-        return pick("rails", "db/migrate", Some(format!("bin/rails generate migration {c}")));
+        return pick(
+            "rails",
+            "db/migrate",
+            Some(format!("bin/rails generate migration {c}")),
+        );
     }
     if exists(root, "manage.py") {
         let dir = ignore::WalkBuilder::new(root)
@@ -88,30 +118,74 @@ pub fn migration_style(root: &Path, desc: &str) -> MigrationStyle {
             .build()
             .flatten()
             .find(|e| e.file_name() == "migrations" && e.path().is_dir())
-            .and_then(|e| e.path().strip_prefix(root).ok().map(|p| p.to_string_lossy().replace('\\', "/")))
+            .and_then(|e| {
+                e.path()
+                    .strip_prefix(root)
+                    .ok()
+                    .map(|p| p.to_string_lossy().replace('\\', "/"))
+            })
             .unwrap_or_else(|| "migrations".into());
-        return pick("django", &dir, Some(format!("python manage.py makemigrations --name {s}")));
+        return pick(
+            "django",
+            &dir,
+            Some(format!("python manage.py makemigrations --name {s}")),
+        );
     }
     if exists(root, "alembic.ini") {
-        let dir = if exists(root, "alembic/versions") { "alembic/versions" } else { "migrations/versions" };
-        return pick("alembic", dir, Some(format!("alembic revision -m \"{}\"", desc.replace('"', "'"))));
+        let dir = if exists(root, "alembic/versions") {
+            "alembic/versions"
+        } else {
+            "migrations/versions"
+        };
+        return pick(
+            "alembic",
+            dir,
+            Some(format!(
+                "alembic revision -m \"{}\"",
+                desc.replace('"', "'")
+            )),
+        );
     }
     if exists(root, "artisan") {
-        return pick("laravel", "database/migrations", Some(format!("php artisan make:migration {s}")));
+        return pick(
+            "laravel",
+            "database/migrations",
+            Some(format!("php artisan make:migration {s}")),
+        );
     }
-    if ["knexfile.js", "knexfile.ts", "knexfile.cjs", "knexfile.mjs"].iter().any(|f| exists(root, f)) {
-        return pick("knex", "migrations", Some(format!("npx knex migrate:make {s}")));
+    if ["knexfile.js", "knexfile.ts", "knexfile.cjs", "knexfile.mjs"]
+        .iter()
+        .any(|f| exists(root, f))
+    {
+        return pick(
+            "knex",
+            "migrations",
+            Some(format!("npx knex migrate:make {s}")),
+        );
     }
     if glob_root(root, "csproj").is_some() && exists(root, "Migrations") {
-        return pick("ef-core", "Migrations", Some(format!("dotnet ef migrations add {c}")));
+        return pick(
+            "ef-core",
+            "Migrations",
+            Some(format!("dotnet ef migrations add {c}")),
+        );
     }
     if exists(root, "diesel.toml") {
-        return pick("diesel", "migrations", Some(format!("diesel migration generate {s}")));
+        return pick(
+            "diesel",
+            "migrations",
+            Some(format!("diesel migration generate {s}")),
+        );
     }
-    let dir = ["migrations", "db/migrations", "sql/migrations", "database/migrations"]
-        .into_iter()
-        .find(|d| exists(root, d))
-        .unwrap_or("migrations");
+    let dir = [
+        "migrations",
+        "db/migrations",
+        "sql/migrations",
+        "database/migrations",
+    ]
+    .into_iter()
+    .find(|d| exists(root, d))
+    .unwrap_or("migrations");
     pick("sql", dir, None)
 }
 
@@ -123,8 +197,14 @@ pub fn migration_prompt(style: &MigrationStyle, desc: &str) -> String {
         style.examples.join(", ")
     };
     let how = match &style.generator {
-        Some(g) => format!("Create it with the framework's generator (`{g}`) when that tool is installed; otherwise write the file by hand with the same name pattern and content shape."),
-        None => format!("Write plain SQL in `{}/`, named like the existing files (next number or a UTC timestamp, then `_{}`); add a matching down/rollback file if the existing ones have one.", style.dir, slug(desc)),
+        Some(g) => format!(
+            "Create it with the framework's generator (`{g}`) when that tool is installed; otherwise write the file by hand with the same name pattern and content shape."
+        ),
+        None => format!(
+            "Write plain SQL in `{}/`, named like the existing files (next number or a UTC timestamp, then `_{}`); add a matching down/rollback file if the existing ones have one.",
+            style.dir,
+            slug(desc)
+        ),
     };
     format!(
         "Write a database migration: {desc}\n\n\
@@ -154,7 +234,10 @@ static FILTER_COL: LazyLock<Regex> = LazyLock::new(|| {
 fn leading(indexes: &[String]) -> Vec<String> {
     indexes
         .iter()
-        .filter_map(|i| i.split_once('(').and_then(|(_, r)| r.split([',', ')']).next()))
+        .filter_map(|i| {
+            i.split_once('(')
+                .and_then(|(_, r)| r.split([',', ')']).next())
+        })
         .map(|c| c.trim().to_ascii_lowercase())
         .collect()
 }
@@ -166,11 +249,22 @@ pub fn suggest_indexes(snaps: &[DbSnapshot]) -> Vec<IndexSuggestion> {
     for s in snaps {
         for t in &s.tables {
             let lead = leading(&t.indexes);
-            let cols: Vec<String> = t.columns.iter().filter_map(|c| c.split_whitespace().next()).map(str::to_ascii_lowercase).collect();
+            let cols: Vec<String> = t
+                .columns
+                .iter()
+                .filter_map(|c| c.split_whitespace().next())
+                .map(str::to_ascii_lowercase)
+                .collect();
             let short = t.name.rsplit('.').next().unwrap_or(&t.name);
             let mut add = |col: &str, reason: String| {
                 let col = col.to_ascii_lowercase();
-                if lead.contains(&col) || out.iter().any(|o| o.connection == s.connection && o.table == t.name && o.columns == [col.clone()]) {
+                if lead.contains(&col)
+                    || out.iter().any(|o| {
+                        o.connection == s.connection
+                            && o.table == t.name
+                            && o.columns == [col.clone()]
+                    })
+                {
                     return;
                 }
                 out.push(IndexSuggestion {
@@ -182,16 +276,29 @@ pub fn suggest_indexes(snaps: &[DbSnapshot]) -> Vec<IndexSuggestion> {
                 });
             };
             for fk in &t.fk_columns {
-                add(fk, "foreign key without an index (joins and ON DELETE scan the table)".into());
+                add(
+                    fk,
+                    "foreign key without an index (joins and ON DELETE scan the table)".into(),
+                );
             }
             let key = kor_graph::db::table_key(&t.name);
-            for q in s.slow_queries.iter().filter(|q| kor_graph::db::mentions_table(&q.query, &key)) {
+            for q in s
+                .slow_queries
+                .iter()
+                .filter(|q| kor_graph::db::mentions_table(&q.query, &key))
+            {
                 for c in FILTER_COL.captures_iter(&q.query).filter_map(|c| c.get(1)) {
                     let col = c.as_str().to_ascii_lowercase();
                     if cols.contains(&col) {
                         #[allow(clippy::cast_precision_loss)]
                         let ms = q.mean_us as f64 / 1000.0;
-                        add(&col, format!("filtered by a slow query ({ms:.1} ms average, {} calls)", q.calls));
+                        add(
+                            &col,
+                            format!(
+                                "filtered by a slow query ({ms:.1} ms average, {} calls)",
+                                q.calls
+                            ),
+                        );
                     }
                 }
             }
@@ -215,13 +322,19 @@ mod tests {
         std::fs::write(r.join("db/migrate/20240101_create_users.rb"), "").unwrap();
         let s = migration_style(r, "Add email to users!");
         assert_eq!(s.framework, "rails");
-        assert_eq!(s.generator.as_deref(), Some("bin/rails generate migration AddEmailToUsers"));
+        assert_eq!(
+            s.generator.as_deref(),
+            Some("bin/rails generate migration AddEmailToUsers")
+        );
         assert_eq!(s.examples, vec!["db/migrate/20240101_create_users.rb"]);
         let p = migration_prompt(&s, "Add email to users!");
         assert!(p.contains("Never apply") && p.contains("db/migrate"));
         std::fs::create_dir_all(r.join("prisma")).unwrap();
         std::fs::write(r.join("prisma/schema.prisma"), "").unwrap();
-        assert_eq!(migration_style(r, "a b").generator.as_deref(), Some("npx prisma migrate dev --create-only --name a_b"));
+        assert_eq!(
+            migration_style(r, "a b").generator.as_deref(),
+            Some("npx prisma migrate dev --create-only --name a_b")
+        );
     }
 
     #[test]
@@ -230,18 +343,34 @@ mod tests {
             connection: "main".into(),
             tables: vec![LiveTable {
                 name: "public.orders".into(),
-                columns: vec!["id int".into(), "user_id int".into(), "status text".into(), "shop_id int".into()],
-                indexes: vec!["orders_pkey (id) unique".into(), "orders_shop (shop_id,id)".into()],
+                columns: vec![
+                    "id int".into(),
+                    "user_id int".into(),
+                    "status text".into(),
+                    "shop_id int".into(),
+                ],
+                indexes: vec![
+                    "orders_pkey (id) unique".into(),
+                    "orders_shop (shop_id,id)".into(),
+                ],
                 fk_columns: vec!["user_id".into(), "shop_id".into()],
                 ..LiveTable::default()
             }],
-            slow_queries: vec![SlowQuery { query: "SELECT * FROM orders o WHERE o.status = $1 AND id > $2".into(), calls: 9, mean_us: 120_000, total_us: 0 }],
+            slow_queries: vec![SlowQuery {
+                query: "SELECT * FROM orders o WHERE o.status = $1 AND id > $2".into(),
+                calls: 9,
+                mean_us: 120_000,
+                total_us: 0,
+            }],
             ..DbSnapshot::default()
         };
         let s = suggest_indexes(&[snap]);
         let cols: Vec<&str> = s.iter().map(|x| x.columns[0].as_str()).collect();
         assert_eq!(cols, vec!["user_id", "status"]);
-        assert_eq!(s[0].sql, "CREATE INDEX idx_orders_user_id ON public.orders (user_id);");
+        assert_eq!(
+            s[0].sql,
+            "CREATE INDEX idx_orders_user_id ON public.orders (user_id);"
+        );
         assert!(s[1].reason.contains("120.0 ms"));
     }
 }

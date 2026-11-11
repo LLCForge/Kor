@@ -40,7 +40,8 @@ impl TurnRunner for Scripted {
             ..PermissionRequest::default()
         };
         if approver.review(&req).await.reply != PermissionReply::Deny {
-            std::fs::write(self.root.join("note.txt"), "done by the peer\n").map_err(|e| e.to_string())?;
+            std::fs::write(self.root.join("note.txt"), "done by the peer\n")
+                .map_err(|e| e.to_string())?;
         }
         Ok(None)
     }
@@ -104,14 +105,20 @@ async fn two_peers_pair_delegate_hand_off_and_merge() {
     let mut wrong = code.clone();
     wrong.secret = "0".repeat(16);
     assert!(pair::join(&b, &wrong, None).await.is_err());
-    assert!(!pair::is_pending(&a.dir, code.id), "a failed attempt uses the code up");
+    assert!(
+        !pair::is_pending(&a.dir, code.id),
+        "a failed attempt uses the code up"
+    );
     let code = pair::create(&a.dir, vec![addr.clone()]).unwrap();
     let srv = pair::join(&b, &code, None).await.unwrap();
     assert_eq!(srv.name, "server");
     assert_eq!(srv.key_bytes(), Some(a.identity.public));
     tokio::time::sleep(Duration::from_millis(300)).await;
     let a_book = Book::load(&a.dir).unwrap();
-    let lap = a_book.get("laptop").expect("server stored the laptop").clone();
+    let lap = a_book
+        .get("laptop")
+        .expect("server stored the laptop")
+        .clone();
     assert_eq!(lap.grant, Grant::default(), "read-only by default");
     // The code's address is where the laptop reaches the server.
     let mut bb = Book::load(&b.dir).unwrap();
@@ -152,8 +159,15 @@ async fn two_peers_pair_delegate_hand_off_and_merge() {
     // --- reattach, replay, approve ---
     let mut link = client::attach(&b, &srv, Some(&task), 0).await.unwrap();
     until(&mut link, "confirm").await;
-    link.send(serde_json::to_value(Command::Approve { id: "c1".into(), approval: "yes".into(), files: None }).unwrap())
-        .unwrap();
+    link.send(
+        serde_json::to_value(Command::Approve {
+            id: "c1".into(),
+            approval: "yes".into(),
+            files: None,
+        })
+        .unwrap(),
+    )
+    .unwrap();
     until(&mut link, "done").await;
     drop(link);
     let res = client::result(&b, &srv, &task).await.unwrap();
@@ -169,41 +183,62 @@ async fn two_peers_pair_delegate_hand_off_and_merge() {
         &b,
         &srv,
         "look around",
-        &Workspace::Dir { path: peer_dir.path().display().to_string() },
+        &Workspace::Dir {
+            path: peer_dir.path().display().to_string(),
+        },
     )
     .await
     .unwrap();
     let v = until(&mut link, "error").await;
-    assert!(v.last().unwrap()["message"].as_str().unwrap().contains("does not grant"));
+    assert!(
+        v.last().unwrap()["message"]
+            .as_str()
+            .unwrap()
+            .contains("does not grant")
+    );
     // Granted now: the same request starts a task in that directory.
     let mut ab = Book::load(&a.dir).unwrap();
-    ab.peers.iter_mut().find(|p| p.name == "laptop").unwrap().grant.dirs =
-        vec![peer_dir.path().display().to_string()];
+    ab.peers
+        .iter_mut()
+        .find(|p| p.name == "laptop")
+        .unwrap()
+        .grant
+        .dirs = vec![peer_dir.path().display().to_string()];
     ab.save(&a.dir).unwrap();
     let mut link = client::run(
         &b,
         &srv,
         "look around",
-        &Workspace::Dir { path: peer_dir.path().display().to_string() },
+        &Workspace::Dir {
+            path: peer_dir.path().display().to_string(),
+        },
     )
     .await
     .unwrap();
     until(&mut link, "confirm").await;
-    link.send(serde_json::to_value(Command::Abort).unwrap()).unwrap();
+    link.send(serde_json::to_value(Command::Abort).unwrap())
+        .unwrap();
     until(&mut link, "done").await;
     drop(link);
 
     // --- handoff: a mirrored, unfinished session continues on the server after its lease ---
     std::fs::create_dir_all(&b.sessions).unwrap();
     let tpath = b.sessions.join("s-1.jsonl");
-    kor_agent::session::save(&tpath, &[kor_core::Message::text(kor_core::Role::User, "refactor")]).unwrap();
+    kor_agent::session::save(
+        &tpath,
+        &[kor_core::Message::text(kor_core::Role::User, "refactor")],
+    )
+    .unwrap();
     let mut m = standby::Mirror {
         session: "s-1".into(),
         transcript: tpath,
         project: proj.path().to_path_buf(),
         sent_digest: None,
     };
-    assert_eq!(standby::renew(&b, &srv, &mut m).await.unwrap(), standby::Renewed::Held);
+    assert_eq!(
+        standby::renew(&b, &srv, &mut m).await.unwrap(),
+        standby::Renewed::Held
+    );
     assert!(m.sent_digest.is_some());
     assert!(standby::scan(&a).is_empty(), "the lease is still valid");
     // The laptop closes: no renewal; the lease runs out.
@@ -213,7 +248,10 @@ async fn two_peers_pair_delegate_hand_off_and_merge() {
     std::fs::write(&lease_file, lease.to_string()).unwrap();
     let ids = standby::scan(&a);
     assert_eq!(ids.len(), 1);
-    assert!(a.sessions.join(format!("{}.jsonl", ids[0])).is_file(), "checkpoint resumed");
+    assert!(
+        a.sessions.join(format!("{}.jsonl", ids[0])).is_file(),
+        "checkpoint resumed"
+    );
     // The laptop wakes up: the renewal learns where the session went.
     assert_eq!(
         standby::renew(&b, &srv, &mut m).await.unwrap(),
@@ -229,7 +267,12 @@ async fn two_peers_pair_delegate_hand_off_and_merge() {
         summary: summary.into(),
         ..kor_memory::Record::default()
     };
-    let kb = |n: &Node| kor_memory::Knowledge::open(&kor_memory::knowledge_path(n.knowledge_home.as_deref().unwrap())).unwrap();
+    let kb = |n: &Node| {
+        kor_memory::Knowledge::open(&kor_memory::knowledge_path(
+            n.knowledge_home.as_deref().unwrap(),
+        ))
+        .unwrap()
+    };
     {
         let (ka, kbb) = (kb(&a), kb(&b));
         ka.record(rec("shared", "one\ntwo")).unwrap();
@@ -243,10 +286,20 @@ async fn two_peers_pair_delegate_hand_off_and_merge() {
     let r = client::sync(&b, &srv).await.unwrap();
     assert!(!r.remote_applied);
     assert_eq!(r.records, 3);
-    assert_eq!(merge::local_records(a.knowledge_home.as_deref().unwrap()).unwrap().len(), 2);
+    assert_eq!(
+        merge::local_records(a.knowledge_home.as_deref().unwrap())
+            .unwrap()
+            .len(),
+        2
+    );
     // With memory granted, both sides converge.
     let mut ab = Book::load(&a.dir).unwrap();
-    ab.peers.iter_mut().find(|p| p.name == "laptop").unwrap().grant.memory = true;
+    ab.peers
+        .iter_mut()
+        .find(|p| p.name == "laptop")
+        .unwrap()
+        .grant
+        .memory = true;
     ab.save(&a.dir).unwrap();
     let r = client::sync(&b, &srv).await.unwrap();
     assert!(r.remote_applied && r.conflicts.is_empty());
@@ -256,7 +309,13 @@ async fn two_peers_pair_delegate_hand_off_and_merge() {
     // Both edit the same line of the shared record: a conflict, both versions kept.
     for (n, s) in [(&a, "one\nSERVER"), (&b, "one\nLAPTOP")] {
         let k = kb(n);
-        let id = k.recent(None, 10).unwrap().into_iter().find(|r| r.task == "shared").unwrap().id;
+        let id = k
+            .recent(None, 10)
+            .unwrap()
+            .into_iter()
+            .find(|r| r.task == "shared")
+            .unwrap()
+            .id;
         k.forget(id).unwrap();
         k.record(rec("shared", s)).unwrap();
         k.flush().unwrap();

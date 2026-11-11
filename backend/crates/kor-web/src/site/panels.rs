@@ -81,13 +81,30 @@ macro_rules! maps {
 }
 
 const MAPS: &[&str] = maps!(
-    "cpanel", "whm", "plesk", "directadmin", "cyberpanel", "hestia", "cloudflare", "natro", "turhost", "guzelhosting", "hostinger",
-    "namecheap", "godaddy"
+    "cpanel",
+    "whm",
+    "plesk",
+    "directadmin",
+    "cyberpanel",
+    "hestia",
+    "cloudflare",
+    "natro",
+    "turhost",
+    "guzelhosting",
+    "hostinger",
+    "namecheap",
+    "godaddy"
 );
 
-static PANELS: LazyLock<Vec<PanelMap>> = LazyLock::new(|| MAPS.iter().filter_map(|t| serde_json::from_str(t).ok()).collect());
-static COMMON: LazyLock<Common> =
-    LazyLock::new(|| serde_json::from_str(include_str!("../../../../../assets/panels/_common.json")).unwrap_or_default());
+static PANELS: LazyLock<Vec<PanelMap>> = LazyLock::new(|| {
+    MAPS.iter()
+        .filter_map(|t| serde_json::from_str(t).ok())
+        .collect()
+});
+static COMMON: LazyLock<Common> = LazyLock::new(|| {
+    serde_json::from_str(include_str!("../../../../../assets/panels/_common.json"))
+        .unwrap_or_default()
+});
 
 pub fn maps() -> &'static [PanelMap] {
     &PANELS
@@ -100,9 +117,12 @@ pub fn detect(url: &str, title: &str) -> Option<&'static PanelMap> {
     let port = u.port_or_known_default();
     let path = u.path().to_owned() + "?" + u.query().unwrap_or("");
     let title = title.to_lowercase();
-    let by_host = PANELS
-        .iter()
-        .find(|p| p.matcher.hosts.iter().any(|h| host == *h || host.ends_with(&format!(".{h}"))));
+    let by_host = PANELS.iter().find(|p| {
+        p.matcher
+            .hosts
+            .iter()
+            .any(|h| host == *h || host.ends_with(&format!(".{h}")))
+    });
     by_host.or_else(|| {
         PANELS.iter().find(|p| {
             let m = &p.matcher;
@@ -120,18 +140,28 @@ pub fn profile_for(base: &Path, url: &str) -> Option<String> {
     host::list(base).into_iter().find_map(|(name, p)| {
         let p = p.ok()?;
         let pu = url::Url::parse(p.url.as_deref()?).ok()?;
-        (pu.host_str() == u.host_str() && pu.port_or_known_default() == u.port_or_known_default()).then_some(name)
+        (pu.host_str() == u.host_str() && pu.port_or_known_default() == u.port_or_known_default())
+            .then_some(name)
     })
 }
 
 fn pick(texts: &BTreeMap<String, String>, lang: &str) -> String {
-    texts.get(lang).or_else(|| texts.get("en")).cloned().unwrap_or_default()
+    texts
+        .get(lang)
+        .or_else(|| texts.get("en"))
+        .cloned()
+        .unwrap_or_default()
 }
 
 /// Notes for what the screen shows: known errors and risky settings.
 pub fn explain(text: &str, lang: &str) -> Vec<String> {
     let t = text.to_lowercase();
-    let mut out: Vec<String> = COMMON.errors.iter().filter(|n| t.contains(&n.matcher)).map(|n| pick(&n.text, lang)).collect();
+    let mut out: Vec<String> = COMMON
+        .errors
+        .iter()
+        .filter(|n| t.contains(&n.matcher))
+        .map(|n| pick(&n.text, lang))
+        .collect();
     for s in &COMMON.settings {
         if t.contains(&s.matcher) && s.risky.iter().any(|r| t.contains(r.as_str())) {
             let note = pick(&s.text, lang);
@@ -144,30 +174,74 @@ pub fn explain(text: &str, lang: &str) -> Vec<String> {
 }
 
 fn val<'a>(values: &'a BTreeMap<String, String>, k: &str) -> Result<&'a str> {
-    values.get(k).map(|s| s.trim()).filter(|s| !s.is_empty()).ok_or_else(|| format!("missing value: {k}"))
+    values
+        .get(k)
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| format!("missing value: {k}"))
 }
 
 /// A `kor host` task from a command id and form values (side panel, desktop).
 pub fn task_from(id: &str, values: &BTreeMap<String, String>) -> Result<Task> {
     let v = |k| val(values, k).map(str::to_owned);
     Ok(match id {
-        "ssl" => Task::Ssl { domain: v("domain")? },
-        "php" => Task::Php { domain: v("domain")?, version: v("version")? },
-        "php-ini" => Task::PhpIni { domain: v("domain")?, key: v("key")?, value: v("value")? },
-        "backup" => Task::Backup { domain: v("domain").ok() },
-        "restore" => Task::Restore { archive: v("archive")?, domain: v("domain")? },
-        "subdomain" => Task::Subdomain { sub: v("sub")?, domain: v("domain")?, dir: v("dir").ok() },
-        "db" => Task::Database { name: v("name")?, user: v("user")? },
+        "ssl" => Task::Ssl {
+            domain: v("domain")?,
+        },
+        "php" => Task::Php {
+            domain: v("domain")?,
+            version: v("version")?,
+        },
+        "php-ini" => Task::PhpIni {
+            domain: v("domain")?,
+            key: v("key")?,
+            value: v("value")?,
+        },
+        "backup" => Task::Backup {
+            domain: v("domain").ok(),
+        },
+        "restore" => Task::Restore {
+            archive: v("archive")?,
+            domain: v("domain")?,
+        },
+        "subdomain" => Task::Subdomain {
+            sub: v("sub")?,
+            domain: v("domain")?,
+            dir: v("dir").ok(),
+        },
+        "db" => Task::Database {
+            name: v("name")?,
+            user: v("user")?,
+        },
         "email" => Task::Email {
             address: v("address")?,
-            quota_mb: values.get("quota").and_then(|q| q.trim().parse().ok()).unwrap_or(1024),
+            quota_mb: values
+                .get("quota")
+                .and_then(|q| q.trim().parse().ok())
+                .unwrap_or(1024),
         },
-        "cron" => Task::Cron { schedule: v("schedule")?, command: v("command")? },
+        "cron" => Task::Cron {
+            schedule: v("schedule")?,
+            command: v("command")?,
+        },
         "perms" => Task::Perms { path: v("path")? },
         "clean" => Task::Clean {
-            paths: values.get("paths").map(|p| p.lines().map(str::trim).filter(|x| !x.is_empty()).map(str::to_owned).collect()).unwrap_or_default(),
+            paths: values
+                .get("paths")
+                .map(|p| {
+                    p.lines()
+                        .map(str::trim)
+                        .filter(|x| !x.is_empty())
+                        .map(str::to_owned)
+                        .collect()
+                })
+                .unwrap_or_default(),
         },
-        "sftp" => Task::Sftp { user: v("user")?, path: v("path")?, domain: v("domain").ok() },
+        "sftp" => Task::Sftp {
+            user: v("user")?,
+            path: v("path")?,
+            domain: v("domain").ok(),
+        },
         other => return Err(format!("unknown task `{other}`")),
     })
 }
@@ -185,13 +259,23 @@ fn values_of(v: &Value) -> BTreeMap<String, String> {
         .as_object()
         .into_iter()
         .flatten()
-        .filter_map(|(k, x)| x.as_str().map(|s| (k.clone(), s.chars().take(500).collect())))
+        .filter_map(|(k, x)| {
+            x.as_str()
+                .map(|s| (k.clone(), s.chars().take(500).collect()))
+        })
         .collect()
 }
 
 fn find(panel: &str, command: &str) -> Result<(&'static PanelMap, &'static Command)> {
-    let p = PANELS.iter().find(|p| p.id == panel).ok_or_else(|| format!("unknown panel `{panel}`"))?;
-    let c = p.commands.iter().find(|c| c.id == command).ok_or_else(|| format!("unknown command `{command}`"))?;
+    let p = PANELS
+        .iter()
+        .find(|p| p.id == panel)
+        .ok_or_else(|| format!("unknown panel `{panel}`"))?;
+    let c = p
+        .commands
+        .iter()
+        .find(|c| c.id == command)
+        .ok_or_else(|| format!("unknown command `{command}`"))?;
     Ok((p, c))
 }
 
@@ -203,23 +287,40 @@ pub fn fill(panel: &str, command: &str, values: &BTreeMap<String, String>) -> Re
     }
     c.fields
         .iter()
-        .filter_map(|f| values.get(&f.value).filter(|v| !v.trim().is_empty()).map(|v| Ok(Field { labels: f.labels.clone(), value: v.trim().to_owned() })))
+        .filter_map(|f| {
+            values
+                .get(&f.value)
+                .filter(|v| !v.trim().is_empty())
+                .map(|v| {
+                    Ok(Field {
+                        labels: f.labels.clone(),
+                        value: v.trim().to_owned(),
+                    })
+                })
+        })
         .collect()
 }
 
 async fn run(base: &Path, v: &Value) -> Result<Value> {
     let lang = v["lang"].as_str().unwrap_or("tr");
     let l = Localizer::new(lang_of(lang));
-    let (_, c) = find(v["panel"].as_str().unwrap_or(""), v["command"].as_str().unwrap_or(""))?;
+    let (_, c) = find(
+        v["panel"].as_str().unwrap_or(""),
+        v["command"].as_str().unwrap_or(""),
+    )?;
     if c.action != "api" {
         return Err(format!("`{}` does not run through the panel API", c.id));
     }
-    let profile = v["profile"].as_str().ok_or_else(|| l.t("web-panel-no-profile"))?;
+    let profile = v["profile"]
+        .as_str()
+        .ok_or_else(|| l.t("web-panel-no-profile"))?;
     let store = super::vault().ok();
     let (prof, panel) = host::connect(base, profile, store.as_deref(), None)?;
     let Some(task_id) = &c.task else {
         let inv = host::inventory(panel.as_ref()).await?;
-        return Ok(json!({ "markdown": host::inventory_markdown(&l, &inv, super::now()), "inventory": inv }));
+        return Ok(
+            json!({ "markdown": host::inventory_markdown(&l, &inv, super::now()), "inventory": inv }),
+        );
     };
     let task = task_from(task_id, &values_of(v))?;
     task.validate()?;
@@ -227,8 +328,25 @@ async fn run(base: &Path, v: &Value) -> Result<Value> {
         let inv = host::inventory(panel.as_ref()).await?;
         return Ok(json!({ "needsApproval": true, "plan": host::plan(&l, &task, &inv, &[]) }));
     }
-    let rep = host::run(&l, profile, &prof, panel.as_ref(), task, &[], store.as_deref(), &|_| true).await;
-    super::client::log_auto(base, prof.client.as_deref(), &format!("host-{task_id}"), profile, rep.applied.as_deref().unwrap_or(""), rep.secs);
+    let rep = host::run(
+        &l,
+        profile,
+        &prof,
+        panel.as_ref(),
+        task,
+        &[],
+        store.as_deref(),
+        &|_| true,
+    )
+    .await;
+    super::client::log_auto(
+        base,
+        prof.client.as_deref(),
+        &format!("host-{task_id}"),
+        profile,
+        rep.applied.as_deref().unwrap_or(""),
+        rep.secs,
+    );
     serde_json::to_value(&rep).map_err(|e| e.to_string())
 }
 
@@ -255,12 +373,22 @@ pub async fn handle(v: Value) -> Value {
             })
         }
         "explain" => {
-            let text = format!("{}\n{}", v["title"].as_str().unwrap_or(""), v["text"].as_str().unwrap_or(""));
+            let text = format!(
+                "{}\n{}",
+                v["title"].as_str().unwrap_or(""),
+                v["text"].as_str().unwrap_or("")
+            );
             let notes = explain(&text.chars().take(20_000).collect::<String>(), &lang);
-            Ok(json!({ "notes": notes, "none": Localizer::new(lang_of(&lang)).t("web-panel-explain-none") }))
+            Ok(
+                json!({ "notes": notes, "none": Localizer::new(lang_of(&lang)).t("web-panel-explain-none") }),
+            )
         }
-        "fill" => fill(v["panel"].as_str().unwrap_or(""), v["command"].as_str().unwrap_or(""), &values_of(&v))
-            .map(|f| json!({ "fields": f })),
+        "fill" => fill(
+            v["panel"].as_str().unwrap_or(""),
+            v["command"].as_str().unwrap_or(""),
+            &values_of(&v),
+        )
+        .map(|f| json!({ "fields": f })),
         "run" => run(&base, &v).await,
         other => Err(format!("unknown op `{other}`")),
     };
@@ -282,9 +410,19 @@ mod tests {
         for p in maps() {
             assert!(p.commands.iter().any(|c| c.action == "explain"), "{}", p.id);
             for c in &p.commands {
-                assert!(c.label.contains_key("tr") && c.label.contains_key("en") && c.label.contains_key("fr"), "{}/{}", p.id, c.id);
-                if c.action == "api" && let Some(t) = &c.task {
-                    let values: BTreeMap<String, String> = c.needs.iter().map(|n| (n.clone(), "x".into())).collect();
+                assert!(
+                    c.label.contains_key("tr")
+                        && c.label.contains_key("en")
+                        && c.label.contains_key("fr"),
+                    "{}/{}",
+                    p.id,
+                    c.id
+                );
+                if c.action == "api"
+                    && let Some(t) = &c.task
+                {
+                    let values: BTreeMap<String, String> =
+                        c.needs.iter().map(|n| (n.clone(), "x".into())).collect();
                     assert!(task_from(t, &values).is_ok(), "{}/{}", p.id, c.id);
                 }
             }
@@ -295,11 +433,32 @@ mod tests {
     #[test]
     fn detects_panels() {
         let id = |u: &str, t: &str| detect(u, t).map(|p| p.id.clone());
-        assert_eq!(id("https://srv.example.com:2083/cpsess123/frontend/jupiter/index.html", "cPanel"), Some("cpanel".into()));
-        assert_eq!(id("https://srv.example.com:8443/smb/web/view", "Plesk Obsidian"), Some("plesk".into()));
-        assert_eq!(id("https://dash.cloudflare.com/abc/example.com/dns", ""), Some("cloudflare".into()));
-        assert_eq!(id("https://www.natro.com/musteri/alan-adi", ""), Some("natro".into()));
-        assert_eq!(id("https://srv.example.com:2222/evo/user", "DirectAdmin"), Some("directadmin".into()));
+        assert_eq!(
+            id(
+                "https://srv.example.com:2083/cpsess123/frontend/jupiter/index.html",
+                "cPanel"
+            ),
+            Some("cpanel".into())
+        );
+        assert_eq!(
+            id(
+                "https://srv.example.com:8443/smb/web/view",
+                "Plesk Obsidian"
+            ),
+            Some("plesk".into())
+        );
+        assert_eq!(
+            id("https://dash.cloudflare.com/abc/example.com/dns", ""),
+            Some("cloudflare".into())
+        );
+        assert_eq!(
+            id("https://www.natro.com/musteri/alan-adi", ""),
+            Some("natro".into())
+        );
+        assert_eq!(
+            id("https://srv.example.com:2222/evo/user", "DirectAdmin"),
+            Some("directadmin".into())
+        );
         assert_eq!(id("https://example.com/", "Blog"), None);
     }
 
@@ -325,9 +484,14 @@ mod tests {
 
     #[tokio::test]
     async fn handler_answers_detect_and_errors() {
-        let r = handle(json!({"op": "detect", "url": "https://dash.cloudflare.com/x", "lang": "en"})).await;
+        let r =
+            handle(json!({"op": "detect", "url": "https://dash.cloudflare.com/x", "lang": "en"}))
+                .await;
         assert_eq!(r["panel"]["id"], "cloudflare");
-        assert_eq!(r["panel"]["commands"][0]["label"], "Fill in the DNS record form");
+        assert_eq!(
+            r["panel"]["commands"][0]["label"],
+            "Fill in the DNS record form"
+        );
         let r = handle(json!({"op": "nope"})).await;
         assert!(r["error"].is_string());
     }

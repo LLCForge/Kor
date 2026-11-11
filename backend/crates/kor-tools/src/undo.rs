@@ -49,7 +49,18 @@ pub struct Journal {
 }
 
 /// Folders whose contents are not listed when they already exist (only their creation is tracked).
-const HEAVY_DIRS: &[&str] = &["node_modules", "target", ".venv", "venv", "__pycache__", ".next", "dist", "build", ".gradle", "vendor"];
+const HEAVY_DIRS: &[&str] = &[
+    "node_modules",
+    "target",
+    ".venv",
+    "venv",
+    "__pycache__",
+    ".next",
+    "dist",
+    "build",
+    ".gradle",
+    "vendor",
+];
 /// Listing stops after this many entries or this long (the shell journal is then skipped).
 const SCAN_MAX_ENTRIES: usize = 200_000;
 const SCAN_MAX_TIME: std::time::Duration = std::time::Duration::from_millis(2_000);
@@ -76,7 +87,13 @@ pub struct ShellChanges {
     pub unrestorable: Vec<PathBuf>,
 }
 
-fn listing(root: &Path) -> (std::collections::HashMap<PathBuf, (u64, Option<std::time::SystemTime>)>, HashSet<PathBuf>, bool) {
+fn listing(
+    root: &Path,
+) -> (
+    std::collections::HashMap<PathBuf, (u64, Option<std::time::SystemTime>)>,
+    HashSet<PathBuf>,
+    bool,
+) {
     let started = std::time::Instant::now();
     let (mut files, mut dirs) = (std::collections::HashMap::new(), HashSet::new());
     let mut stack = vec![root.to_path_buf()];
@@ -128,10 +145,21 @@ pub fn scan_before(root: &Path) -> Before {
         .map(|o| PathBuf::from(String::from_utf8_lossy(&o).trim()))
         .filter(|p| !p.as_os_str().is_empty());
     let snapshot = repo.as_ref().and_then(|r| {
-        let s = git(r, &["stash", "create", "kor undo"]).map(|o| String::from_utf8_lossy(&o).trim().to_owned()).filter(|s| !s.is_empty());
-        s.or_else(|| git(r, &["rev-parse", "HEAD"]).map(|o| String::from_utf8_lossy(&o).trim().to_owned()))
+        let s = git(r, &["stash", "create", "kor undo"])
+            .map(|o| String::from_utf8_lossy(&o).trim().to_owned())
+            .filter(|s| !s.is_empty());
+        s.or_else(|| {
+            git(r, &["rev-parse", "HEAD"]).map(|o| String::from_utf8_lossy(&o).trim().to_owned())
+        })
     });
-    Before { root: root.to_path_buf(), files, dirs, snapshot, repo, complete }
+    Before {
+        root: root.to_path_buf(),
+        files,
+        dirs,
+        snapshot,
+        repo,
+        complete,
+    }
 }
 
 /// Lexical normalization (`a/./b/../c` → `a/c`) without touching the file system.
@@ -200,13 +228,20 @@ impl Journal {
         let new_dirs: Vec<&PathBuf> = dirs.iter().filter(|d| !before.dirs.contains(*d)).collect();
         let mut created: Vec<PathBuf> = new_dirs
             .iter()
-            .filter(|d| d.parent().is_none_or(|p| p == before.root || before.dirs.contains(p)))
+            .filter(|d| {
+                d.parent()
+                    .is_none_or(|p| p == before.root || before.dirs.contains(p))
+            })
             .map(|d| (*d).clone())
             .collect();
         created.extend(
             files
                 .keys()
-                .filter(|f| !before.files.contains_key(*f) && f.parent().is_none_or(|p| p == before.root || before.dirs.contains(p)))
+                .filter(|f| {
+                    !before.files.contains_key(*f)
+                        && f.parent()
+                            .is_none_or(|p| p == before.root || before.dirs.contains(p))
+                })
                 .cloned(),
         );
         created.sort();
@@ -215,7 +250,12 @@ impl Journal {
             if self.seen.contains(&p) || !self.roots.iter().any(|r| p.starts_with(r)) {
                 continue;
             }
-            self.append(&Entry { path: p.clone(), blob: None, skipped: false, created_dirs: Vec::new() })?;
+            self.append(&Entry {
+                path: p.clone(),
+                blob: None,
+                skipped: false,
+                created_dirs: Vec::new(),
+            })?;
             self.seen.insert(p.clone());
             out.created.push(p);
         }
@@ -235,13 +275,30 @@ impl Journal {
             // `<rev>:./path` resolves against `git -C <root>`; git's own top-level path may be
             // spelled differently (`C:/…` vs `\\?\C:\…`), the project root is not.
             let bytes = match (&before.repo, &before.snapshot) {
-                (Some(_), Some(snap)) => np
-                    .strip_prefix(normalize(&before.root))
-                    .ok()
-                    .and_then(|rel| git(&before.root, &["show", &format!("{snap}:./{}", rel.to_string_lossy().replace('\\', "/"))])),
+                (Some(_), Some(snap)) => {
+                    np.strip_prefix(normalize(&before.root))
+                        .ok()
+                        .and_then(|rel| {
+                            git(
+                                &before.root,
+                                &[
+                                    "show",
+                                    &format!(
+                                        "{snap}:./{}",
+                                        rel.to_string_lossy().replace('\\', "/")
+                                    ),
+                                ],
+                            )
+                        })
+                }
                 _ => None,
             };
-            let mut entry = Entry { path: np.clone(), blob: None, skipped: false, created_dirs: Vec::new() };
+            let mut entry = Entry {
+                path: np.clone(),
+                blob: None,
+                skipped: false,
+                created_dirs: Vec::new(),
+            };
             match bytes {
                 Some(b) if (b.len() as u64) <= MAX_BLOB_BYTES => {
                     fs::create_dir_all(self.dir.join("blobs"))?;
@@ -264,8 +321,15 @@ impl Journal {
 
     fn append(&self, entry: &Entry) -> std::io::Result<()> {
         fs::create_dir_all(&self.dir)?;
-        let mut f = fs::OpenOptions::new().create(true).append(true).open(self.dir.join("manifest.jsonl"))?;
-        writeln!(f, "{}", serde_json::to_string(entry).map_err(std::io::Error::other)?)
+        let mut f = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(self.dir.join("manifest.jsonl"))?;
+        writeln!(
+            f,
+            "{}",
+            serde_json::to_string(entry).map_err(std::io::Error::other)?
+        )
     }
 
     /// Record the current state of `raw` (relative to `cwd`) unless already recorded.
@@ -330,11 +394,15 @@ impl Journal {
 /// `Some(Some(bytes))` = its bytes; `None` = never recorded or too large to have been copied.
 pub fn original(dir: &Path, path: &Path) -> Option<Option<Vec<u8>>> {
     let want = normalize(path);
-    let e = read_entries(dir).into_iter().find(|e| normalize(&e.path) == want)?;
+    let e = read_entries(dir)
+        .into_iter()
+        .find(|e| normalize(&e.path) == want)?;
     match (e.blob, e.skipped) {
         (_, true) => None,
         (None, false) => Some(None),
-        (Some(n), false) => fs::read(dir.join("blobs").join(n.to_string())).ok().map(Some),
+        (Some(n), false) => fs::read(dir.join("blobs").join(n.to_string()))
+            .ok()
+            .map(Some),
     }
 }
 
@@ -488,7 +556,14 @@ mod tests {
     }
 
     fn git(dir: &Path, args: &[&str]) {
-        let ok = std::process::Command::new("git").arg("-C").arg(dir).args(args).output().unwrap().status.success();
+        let ok = std::process::Command::new("git")
+            .arg("-C")
+            .arg(dir)
+            .args(args)
+            .output()
+            .unwrap()
+            .status
+            .success();
         assert!(ok, "git {args:?}");
     }
 
@@ -502,7 +577,18 @@ mod tests {
         fs::write(root.join("src/app.js"), "v1").unwrap();
         fs::write(root.join("old.txt"), "keep me").unwrap();
         git(&root, &["add", "."]);
-        git(&root, &["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "init"]);
+        git(
+            &root,
+            &[
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "commit",
+                "-qm",
+                "init",
+            ],
+        );
         fs::write(root.join("notes.txt"), "untracked").unwrap();
         let root = fs::canonicalize(&root).unwrap();
         let base = tmp.path().join("undo");
@@ -519,7 +605,15 @@ mod tests {
         fs::write(root.join("notes.txt"), "untracked, changed").unwrap();
         let ch = j.record_shell(&before).unwrap();
         let rel = |v: &[PathBuf]| -> Vec<String> {
-            let mut r: Vec<String> = v.iter().map(|p| p.strip_prefix(&root).unwrap().to_string_lossy().replace('\\', "/")).collect();
+            let mut r: Vec<String> = v
+                .iter()
+                .map(|p| {
+                    p.strip_prefix(&root)
+                        .unwrap()
+                        .to_string_lossy()
+                        .replace('\\', "/")
+                })
+                .collect();
             r.sort();
             r
         };
@@ -531,7 +625,10 @@ mod tests {
         assert!(!root.join("node_modules").exists() && !root.join("src/new.js").exists());
         assert_eq!(fs::read_to_string(root.join("src/app.js")).unwrap(), "v1");
         assert_eq!(fs::read_to_string(root.join("old.txt")).unwrap(), "keep me");
-        assert_eq!(fs::read_to_string(root.join("notes.txt")).unwrap(), "untracked, changed");
+        assert_eq!(
+            fs::read_to_string(root.join("notes.txt")).unwrap(),
+            "untracked, changed"
+        );
         assert_eq!(r.skipped.len(), 1);
     }
 }

@@ -581,7 +581,12 @@ impl Tool for WriteFile {
         if let Some(b) = before.as_deref().filter(|b| !b.trim().is_empty()) {
             require_fresh_read(ctx, &path, b).ok()?;
         }
-        Some(vec![super::review::proposal(ctx, &path, before, Some(a.content))])
+        Some(vec![super::review::proposal(
+            ctx,
+            &path,
+            before,
+            Some(a.content),
+        )])
     }
     async fn call(&self, input: Value, ctx: &ToolCtx) -> ToolOutput {
         let a: WriteIn = match parse(input) {
@@ -694,7 +699,12 @@ impl Tool for Edit {
             }
             _ => return None,
         };
-        Some(vec![super::review::proposal(ctx, &path, before, Some(after))])
+        Some(vec![super::review::proposal(
+            ctx,
+            &path,
+            before,
+            Some(after),
+        )])
     }
     async fn call(&self, input: Value, ctx: &ToolCtx) -> ToolOutput {
         let a: EditIn = match parse(input) {

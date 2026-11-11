@@ -125,10 +125,14 @@ mod tests {
     fn seconds_are_bounded() {
         let Sub::Voice(a) = Cli::try_parse_from(["kor", "voice"]).unwrap().cmd;
         assert_eq!((a.seconds, a.yes), (10, false));
-        let Sub::Voice(a) = Cli::try_parse_from(["kor", "voice", "--seconds", "30", "--language", "tr", "-y"])
-            .unwrap()
-            .cmd;
-        assert_eq!((a.seconds, a.language.as_deref(), a.yes), (30, Some("tr"), true));
+        let Sub::Voice(a) =
+            Cli::try_parse_from(["kor", "voice", "--seconds", "30", "--language", "tr", "-y"])
+                .unwrap()
+                .cmd;
+        assert_eq!(
+            (a.seconds, a.language.as_deref(), a.yes),
+            (30, Some("tr"), true)
+        );
         assert!(Cli::try_parse_from(["kor", "voice", "--seconds", "0"]).is_err());
         assert!(Cli::try_parse_from(["kor", "voice", "--seconds", "121"]).is_err());
     }

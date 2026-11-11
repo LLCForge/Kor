@@ -46,7 +46,10 @@ fn s(p: &Path) -> String {
 
 /// POSIX shell single-quoted word.
 pub fn sh_quote(v: &str) -> String {
-    if !v.is_empty() && v.chars().all(|c| c.is_ascii_alphanumeric() || "-_./=:@%+,".contains(c)) {
+    if !v.is_empty()
+        && v.chars()
+            .all(|c| c.is_ascii_alphanumeric() || "-_./=:@%+,".contains(c))
+    {
         return v.to_owned();
     }
     format!("'{}'", v.replace('\'', r"'\''"))
@@ -81,7 +84,11 @@ pub fn command(os: Os, id: &str, root: &Path, kor: &Path, args: &[String]) -> Op
     let shell_line = format!(
         "cd {} && {}",
         sh_quote(&s(root)),
-        run_line.iter().map(|a| sh_quote(a)).collect::<Vec<_>>().join(" ")
+        run_line
+            .iter()
+            .map(|a| sh_quote(a))
+            .collect::<Vec<_>>()
+            .join(" ")
     );
     let l = |program: &str, a: Vec<String>, new_console: bool| Launch {
         program: program.to_owned(),
@@ -101,20 +108,35 @@ pub fn command(os: Os, id: &str, root: &Path, kor: &Path, args: &[String]) -> Op
                 .collect::<Vec<_>>()
                 .join(" ");
             l(
-                if id == "pwsh" { "pwsh.exe" } else { "powershell.exe" },
+                if id == "pwsh" {
+                    "pwsh.exe"
+                } else {
+                    "powershell.exe"
+                },
                 vec!["-NoExit".into(), "-Command".into(), line],
                 true,
             )
         }
         "cmd" => {
-            let line = run_line.iter().map(|a| cmd_quote(a)).collect::<Vec<_>>().join(" ");
-            l("cmd.exe", vec!["/s".into(), "/k".into(), format!("\"{line}\"")], true)
+            let line = run_line
+                .iter()
+                .map(|a| cmd_quote(a))
+                .collect::<Vec<_>>()
+                .join(" ");
+            l(
+                "cmd.exe",
+                vec!["/s".into(), "/k".into(), format!("\"{line}\"")],
+                true,
+            )
         }
         "terminal" => l(
             "osascript",
             vec![
                 "-e".into(),
-                format!("tell application \"Terminal\" to do script {}", as_quote(&shell_line)),
+                format!(
+                    "tell application \"Terminal\" to do script {}",
+                    as_quote(&shell_line)
+                ),
                 "-e".into(),
                 "tell application \"Terminal\" to activate".into(),
             ],
@@ -126,7 +148,10 @@ pub fn command(os: Os, id: &str, root: &Path, kor: &Path, args: &[String]) -> Op
                 "-e".into(),
                 format!(
                     "tell application \"iTerm\" to create window with default profile command {}",
-                    as_quote(&format!("/bin/zsh -lc {}", sh_quote(&format!("{shell_line}; exec $SHELL"))))
+                    as_quote(&format!(
+                        "/bin/zsh -lc {}",
+                        sh_quote(&format!("{shell_line}; exec $SHELL"))
+                    ))
                 ),
                 "-e".into(),
                 "tell application \"iTerm\" to activate".into(),
@@ -150,7 +175,16 @@ pub fn command(os: Os, id: &str, root: &Path, kor: &Path, args: &[String]) -> Op
         }
         "tilix" => l(
             "tilix",
-            vec!["-w".into(), s(root), "-e".into(), run_line.iter().map(|a| sh_quote(a)).collect::<Vec<_>>().join(" ")],
+            vec![
+                "-w".into(),
+                s(root),
+                "-e".into(),
+                run_line
+                    .iter()
+                    .map(|a| sh_quote(a))
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            ],
             false,
         ),
         "x-terminal-emulator" | "xterm" => {
@@ -161,17 +195,41 @@ pub fn command(os: Os, id: &str, root: &Path, kor: &Path, args: &[String]) -> Op
         "kitty" => {
             let mut a = vec!["--directory".into(), s(root)];
             a.extend(run_line);
-            l(if os == Os::Windows { "kitty.exe" } else { "kitty" }, a, false)
+            l(
+                if os == Os::Windows {
+                    "kitty.exe"
+                } else {
+                    "kitty"
+                },
+                a,
+                false,
+            )
         }
         "alacritty" => {
             let mut a = vec!["--working-directory".into(), s(root), "-e".into()];
             a.extend(run_line);
-            l(if os == Os::Windows { "alacritty.exe" } else { "alacritty" }, a, false)
+            l(
+                if os == Os::Windows {
+                    "alacritty.exe"
+                } else {
+                    "alacritty"
+                },
+                a,
+                false,
+            )
         }
         "wezterm" => {
             let mut a = vec!["start".into(), "--cwd".into(), s(root), "--".into()];
             a.extend(run_line);
-            l(if os == Os::Windows { "wezterm.exe" } else { "wezterm" }, a, false)
+            l(
+                if os == Os::Windows {
+                    "wezterm.exe"
+                } else {
+                    "wezterm"
+                },
+                a,
+                false,
+            )
         }
         _ => return None,
     })
@@ -193,9 +251,15 @@ fn present(os: Os, id: &str) -> bool {
     match (os, id) {
         (Os::Windows, "cmd" | "powershell") | (Os::Mac, "terminal") => true,
         (Os::Mac, "iterm") => Path::new("/Applications/iTerm.app").is_dir(),
-        (Os::Mac, "kitty") => Path::new("/Applications/kitty.app").is_dir() || crate::on_path::which(id).is_some(),
-        (Os::Mac, "alacritty") => Path::new("/Applications/Alacritty.app").is_dir() || crate::on_path::which(id).is_some(),
-        (Os::Mac, "wezterm") => Path::new("/Applications/WezTerm.app").is_dir() || crate::on_path::which(id).is_some(),
+        (Os::Mac, "kitty") => {
+            Path::new("/Applications/kitty.app").is_dir() || crate::on_path::which(id).is_some()
+        }
+        (Os::Mac, "alacritty") => {
+            Path::new("/Applications/Alacritty.app").is_dir() || crate::on_path::which(id).is_some()
+        }
+        (Os::Mac, "wezterm") => {
+            Path::new("/Applications/WezTerm.app").is_dir() || crate::on_path::which(id).is_some()
+        }
         (_, "wt") => crate::on_path::which("wt").is_some(),
         _ => crate::on_path::which(id).is_some(),
     }
@@ -212,7 +276,9 @@ impl Env {
                 .filter(|(id, _, _)| present(os, id))
                 .map(|(id, _, _)| (*id).to_owned())
                 .collect(),
-            terminal_var: std::env::var("TERMINAL").ok().filter(|v| !v.trim().is_empty()),
+            terminal_var: std::env::var("TERMINAL")
+                .ok()
+                .filter(|v| !v.trim().is_empty()),
             desktop: std::env::var("XDG_CURRENT_DESKTOP").ok(),
         }
     }
@@ -230,7 +296,11 @@ pub fn choose(os: Os, preferred: Option<&str>, env: &Env) -> Option<String> {
         Os::Windows => vec!["wt", "pwsh", "cmd"],
         Os::Mac => vec!["terminal"],
         _ => {
-            let de = env.desktop.as_deref().unwrap_or_default().to_ascii_uppercase();
+            let de = env
+                .desktop
+                .as_deref()
+                .unwrap_or_default()
+                .to_ascii_uppercase();
             let mut v: Vec<&str> = Vec::new();
             if let Some(t) = env.terminal_var.as_deref()
                 && let Some(name) = Path::new(t).file_name().and_then(|n| n.to_str())
@@ -244,7 +314,17 @@ pub fn choose(os: Os, preferred: Option<&str>, env: &Env) -> Option<String> {
             if de.contains("XFCE") {
                 v.push("xfce4-terminal");
             }
-            v.extend(["gnome-terminal", "konsole", "xfce4-terminal", "tilix", "kitty", "alacritty", "wezterm", "x-terminal-emulator", "xterm"]);
+            v.extend([
+                "gnome-terminal",
+                "konsole",
+                "xfce4-terminal",
+                "tilix",
+                "kitty",
+                "alacritty",
+                "wezterm",
+                "x-terminal-emulator",
+                "xterm",
+            ]);
             v
         }
     };
@@ -264,8 +344,12 @@ pub fn open(root: &Path, preferred: Option<&str>, kor: &Path, args: &[String]) -
     let os = crate::os();
     let id = choose(os, preferred, &Env::current())
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "no known terminal is installed"))?;
-    let launch = command(os, &id, root, kor, args)
-        .ok_or_else(|| io::Error::new(io::ErrorKind::Unsupported, format!("terminal `{id}` is not supported here")))?;
+    let launch = command(os, &id, root, kor, args).ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::Unsupported,
+            format!("terminal `{id}` is not supported here"),
+        )
+    })?;
     spawn(&launch)
 }
 
@@ -280,7 +364,11 @@ fn spawn(l: &Launch) -> io::Result<()> {
     {
         use std::os::windows::process::CommandExt as _;
         // CREATE_NEW_CONSOLE: a console of its own (the user's default terminal on Windows 11).
-        c.creation_flags(if l.new_console { 0x0000_0010 } else { 0x0800_0000 });
+        c.creation_flags(if l.new_console {
+            0x0000_0010
+        } else {
+            0x0800_0000
+        });
     }
     c.spawn().map(drop)
 }
@@ -290,7 +378,10 @@ mod tests {
     use super::*;
 
     fn env(ids: &[&str]) -> Env {
-        Env { installed: ids.iter().map(|s| (*s).to_owned()).collect(), ..Env::default() }
+        Env {
+            installed: ids.iter().map(|s| (*s).to_owned()).collect(),
+            ..Env::default()
+        }
     }
 
     #[test]
@@ -311,25 +402,75 @@ mod tests {
 
     #[test]
     fn commands_quote_paths_and_arguments() {
-        let gt = command(Os::Linux, "gnome-terminal", Path::new("/a b"), Path::new("/k"), &["x y".into()]).unwrap();
+        let gt = command(
+            Os::Linux,
+            "gnome-terminal",
+            Path::new("/a b"),
+            Path::new("/k"),
+            &["x y".into()],
+        )
+        .unwrap();
         assert_eq!(gt.args, vec!["--working-directory=/a b", "--", "/k", "x y"]);
-        let t = command(Os::Mac, "terminal", Path::new("/it's"), Path::new("/k"), &[]).unwrap();
-        assert_eq!(t.args[1], r#"tell application "Terminal" to do script "cd '/it'\\''s' && /k""#);
-        let cmd = command(Os::Windows, "cmd", Path::new(r"C:\p"), Path::new(r"C:\K\kor.exe"), &["50%".into()]).unwrap();
+        let t = command(
+            Os::Mac,
+            "terminal",
+            Path::new("/it's"),
+            Path::new("/k"),
+            &[],
+        )
+        .unwrap();
+        assert_eq!(
+            t.args[1],
+            r#"tell application "Terminal" to do script "cd '/it'\\''s' && /k""#
+        );
+        let cmd = command(
+            Os::Windows,
+            "cmd",
+            Path::new(r"C:\p"),
+            Path::new(r"C:\K\kor.exe"),
+            &["50%".into()],
+        )
+        .unwrap();
         assert_eq!(cmd.args[2], r#"""C:\K\kor.exe" "50%%"""#);
         assert!(cmd.new_console);
-        let wt = command(Os::Windows, "wt", Path::new(r"C:\p"), Path::new(r"C:\K\kor.exe"), &[]).unwrap();
+        let wt = command(
+            Os::Windows,
+            "wt",
+            Path::new(r"C:\p"),
+            Path::new(r"C:\K\kor.exe"),
+            &[],
+        )
+        .unwrap();
         assert_eq!(wt.args, vec!["-d", r"C:\p", r"C:\K\kor.exe"]);
-        let ps = command(Os::Windows, "pwsh", Path::new(r"C:\p"), Path::new(r"C:\it's\kor.exe"), &[]).unwrap();
+        let ps = command(
+            Os::Windows,
+            "pwsh",
+            Path::new(r"C:\p"),
+            Path::new(r"C:\it's\kor.exe"),
+            &[],
+        )
+        .unwrap();
         assert_eq!(ps.args[2], r"& 'C:\it''s\kor.exe'");
     }
 
     #[test]
     fn choice_prefers_the_setting_then_the_platform_default() {
-        assert_eq!(choose(Os::Windows, Some("pwsh"), &env(&["wt", "pwsh", "cmd"])).as_deref(), Some("pwsh"));
-        assert_eq!(choose(Os::Windows, Some("alacritty"), &env(&["cmd"])).as_deref(), Some("cmd"));
-        assert_eq!(choose(Os::Windows, None, &env(&["wt", "cmd"])).as_deref(), Some("wt"));
-        assert_eq!(choose(Os::Mac, None, &env(&["terminal", "iterm"])).as_deref(), Some("terminal"));
+        assert_eq!(
+            choose(Os::Windows, Some("pwsh"), &env(&["wt", "pwsh", "cmd"])).as_deref(),
+            Some("pwsh")
+        );
+        assert_eq!(
+            choose(Os::Windows, Some("alacritty"), &env(&["cmd"])).as_deref(),
+            Some("cmd")
+        );
+        assert_eq!(
+            choose(Os::Windows, None, &env(&["wt", "cmd"])).as_deref(),
+            Some("wt")
+        );
+        assert_eq!(
+            choose(Os::Mac, None, &env(&["terminal", "iterm"])).as_deref(),
+            Some("terminal")
+        );
         let mut kde = env(&["gnome-terminal", "konsole"]);
         kde.desktop = Some("KDE".into());
         assert_eq!(choose(Os::Linux, None, &kde).as_deref(), Some("konsole"));

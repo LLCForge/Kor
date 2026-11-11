@@ -83,7 +83,11 @@ const RECEIPT: &str = ".kor-files.json";
 /// Every file under `dir` as `/`-separated relative path → (size, sha256), the receipt itself
 /// left out.
 fn record(dir: &Path) -> Result<std::collections::BTreeMap<String, (u64, String)>, String> {
-    fn walk(base: &Path, dir: &Path, out: &mut std::collections::BTreeMap<String, (u64, String)>) -> Result<(), String> {
+    fn walk(
+        base: &Path,
+        dir: &Path,
+        out: &mut std::collections::BTreeMap<String, (u64, String)>,
+    ) -> Result<(), String> {
         for e in std::fs::read_dir(dir).map_err(|e| e.to_string())? {
             let e = e.map_err(|e| e.to_string())?;
             let p = e.path();
@@ -91,7 +95,11 @@ fn record(dir: &Path) -> Result<std::collections::BTreeMap<String, (u64, String)
             if ft.is_dir() {
                 walk(base, &p, out)?;
             } else if ft.is_file() {
-                let rel = p.strip_prefix(base).map_err(|e| e.to_string())?.to_string_lossy().replace('\\', "/");
+                let rel = p
+                    .strip_prefix(base)
+                    .map_err(|e| e.to_string())?
+                    .to_string_lossy()
+                    .replace('\\', "/");
                 if rel != RECEIPT {
                     let size = e.metadata().map_err(|e| e.to_string())?.len();
                     out.insert(rel, (size, fetch::sha256_file(&p)?));
@@ -109,13 +117,16 @@ fn record(dir: &Path) -> Result<std::collections::BTreeMap<String, (u64, String)
 /// size are checked (cheap enough for every `ensure`, even for multi-GB models).
 fn check_dir(dir: &Path, deep: bool) -> Option<Vec<String>> {
     let text = std::fs::read_to_string(dir.join(RECEIPT)).ok()?;
-    let files: std::collections::BTreeMap<String, (u64, String)> = serde_json::from_str(&text).ok()?;
+    let files: std::collections::BTreeMap<String, (u64, String)> =
+        serde_json::from_str(&text).ok()?;
     let bad = files
         .iter()
         .filter(|(rel, (size, sum))| {
             let p = native(dir, rel);
             match std::fs::metadata(&p) {
-                Ok(m) if m.len() == *size => deep && fetch::sha256_file(&p).ok().as_deref() != Some(sum.as_str()),
+                Ok(m) if m.len() == *size => {
+                    deep && fetch::sha256_file(&p).ok().as_deref() != Some(sum.as_str())
+                }
                 _ => true,
             }
         })
@@ -226,7 +237,9 @@ impl Store {
             if check_dir(&dir, false).is_none_or(|bad| bad.is_empty()) {
                 return Ok(p);
             }
-            std::fs::remove_dir_all(&dir).map_err(|e| e.to_string())?;
+            tokio::fs::remove_dir_all(&dir)
+                .await
+                .map_err(|e| e.to_string())?;
         }
         let (c, a) = self.build(name, target)?;
         if self.offline || privacy() {
@@ -368,8 +381,11 @@ impl Store {
             }
             kor_platform::make_executable(&exe).map_err(|e| e.to_string())?;
             let files = record(&tmp)?;
-            std::fs::write(tmp.join(RECEIPT), serde_json::to_vec(&files).map_err(|e| e.to_string())?)
-                .map_err(|e| e.to_string())?;
+            std::fs::write(
+                tmp.join(RECEIPT),
+                serde_json::to_vec(&files).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
             let fin = self.version_dir(c);
             if fin.exists() {
                 std::fs::remove_dir_all(&fin).map_err(|e| e.to_string())?;
@@ -472,7 +488,8 @@ impl Store {
 
 /// `dir` + a `/`-separated manifest path, with the platform's separators.
 fn native(dir: &Path, rel: &str) -> PathBuf {
-    rel.split('/').fold(dir.to_path_buf(), |p, part| p.join(part))
+    rel.split('/')
+        .fold(dir.to_path_buf(), |p, part| p.join(part))
 }
 
 /// Antivirus scanners briefly hold freshly written files on Windows; retry the rename.
@@ -546,7 +563,9 @@ pub fn verify(name: &str) -> Result<Health, String> {
 
 /// Components with an older version installed.
 pub fn outdated() -> Vec<String> {
-    Store::open().map(|s| s.outdated(&target())).unwrap_or_default()
+    Store::open()
+        .map(|s| s.outdated(&target()))
+        .unwrap_or_default()
 }
 
 #[cfg(test)]

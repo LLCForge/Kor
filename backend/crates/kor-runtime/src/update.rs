@@ -18,7 +18,9 @@ use serde::Deserialize;
 /// `owner/name` on GitHub, from `branding.toml` `[urls] repository` (the one place to change it).
 pub fn repo() -> &'static str {
     let url = kor_platform::brand().urls.repository.as_str();
-    url.strip_prefix("https://github.com/").unwrap_or(url).trim_end_matches('/')
+    url.strip_prefix("https://github.com/")
+        .unwrap_or(url)
+        .trim_end_matches('/')
 }
 /// Minisign public key of the release signer, baked in by the release build.
 pub const PUBLIC_KEY: Option<&str> = option_env!("KOR_UPDATE_PUBKEY");
@@ -182,7 +184,10 @@ fn client() -> Result<reqwest::Client, String> {
 /// # Errors
 /// On network or HTTP errors.
 pub async fn releases() -> Result<Vec<Release>, String> {
-    let url = format!("https://api.github.com/repos/{}/releases?per_page=30", repo());
+    let url = format!(
+        "https://api.github.com/repos/{}/releases?per_page=30",
+        repo()
+    );
     let res = client()?
         .get(url)
         .header("Accept", "application/vnd.github+json")
@@ -197,7 +202,11 @@ pub async fn releases() -> Result<Vec<Release>, String> {
 }
 
 async fn download(url: &str, max: usize) -> Result<Vec<u8>, String> {
-    let res = client()?.get(url).send().await.map_err(|e| kor_core::net::describe(&e))?;
+    let res = client()?
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| kor_core::net::describe(&e))?;
     if !res.status().is_success() {
         return Err(format!("download: HTTP {}", res.status().as_u16()));
     }
@@ -275,7 +284,10 @@ fn bundled_cli(file: &Path) -> Result<(Vec<u8>, String), String> {
     let m = bundle::read_manifest(file)?;
     let here = kor_components::target();
     if m.platform != here.trim_end_matches("-musl") {
-        return Err(format!("this bundle is for {}, this computer is {here}", m.platform));
+        return Err(format!(
+            "this bundle is for {}, this computer is {here}",
+            m.platform
+        ));
     }
     let name = format!("bin/kor{}", std::env::consts::EXE_SUFFIX);
     let data = bundle::read_file(file, &name, MAX_BINARY as u64)?;
@@ -442,12 +454,22 @@ mod tests {
             bundle::write(&out, meta, &files, &|_| {}).unwrap();
             out
         };
-        let here = kor_components::target().trim_end_matches("-musl").to_owned();
+        let here = kor_components::target()
+            .trim_end_matches("-musl")
+            .to_owned();
         let (data, sig) = bundled_cli(&make(&here, true)).unwrap();
         assert_eq!(data, b"binary");
         assert!(sig.ends_with("sig"));
-        assert!(bundled_cli(&make(&here, false)).unwrap_err().contains("signature"));
-        assert!(bundled_cli(&make("plan9-mips", true)).unwrap_err().contains("bundle is for"));
+        assert!(
+            bundled_cli(&make(&here, false))
+                .unwrap_err()
+                .contains("signature")
+        );
+        assert!(
+            bundled_cli(&make("plan9-mips", true))
+                .unwrap_err()
+                .contains("bundle is for")
+        );
         // The signature check itself still runs: a fake one never installs.
         assert!(install_from(&make(&here, true)).is_err());
     }

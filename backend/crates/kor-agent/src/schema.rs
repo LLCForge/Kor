@@ -151,7 +151,11 @@ fn check(value: &Value, schema: &Value, path: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn check_object(obj: &Map<String, Value>, s: &Map<String, Value>, path: &str) -> Result<(), String> {
+fn check_object(
+    obj: &Map<String, Value>,
+    s: &Map<String, Value>,
+    path: &str,
+) -> Result<(), String> {
     let join = |k: &str| {
         if path.is_empty() {
             k.to_owned()
@@ -306,7 +310,10 @@ mod tests {
         assert!(validate(&json!({"file_path": "a"}), &s).is_ok());
         let e = |v: Value| validate(&v, &s).unwrap_err();
         assert_eq!(e(json!({})), "missing required field `file_path`");
-        assert_eq!(e(json!({"file_path": 3})), "`file_path` must be string, got number");
+        assert_eq!(
+            e(json!({"file_path": 3})),
+            "`file_path` must be string, got number"
+        );
         assert!(e(json!({"file_path": "a", "x": 1})).starts_with("unknown field `x`"));
         assert!(e(json!({"file_path": "a".repeat(21)})).contains("at most 20 characters"));
         assert!(e(json!({"file_path": "a", "mode": "c"})).contains("one of \"a\", \"b\""));
@@ -317,8 +324,20 @@ mod tests {
             e(json!({"file_path": "a", "edits": [{"old_string": "x"}, {"old": "y"}]})),
             "missing required field `edits[1].old_string`"
         );
-        assert!(validate(&json!(["x", null]), &json!({"type": "array", "items": {"type": ["string", "null"]}})).is_ok());
-        assert!(validate(&json!(5), &json!({"anyOf": [{"type": "string"}, {"type": "integer"}]})).is_ok());
+        assert!(
+            validate(
+                &json!(["x", null]),
+                &json!({"type": "array", "items": {"type": ["string", "null"]}})
+            )
+            .is_ok()
+        );
+        assert!(
+            validate(
+                &json!(5),
+                &json!({"anyOf": [{"type": "string"}, {"type": "integer"}]})
+            )
+            .is_ok()
+        );
     }
 
     #[test]
@@ -336,6 +355,9 @@ mod tests {
         assert!(!coerce(&mut ok, &s), "valid input is left alone");
         let mut bad = json!({"file_path": "a", "limit": "many"});
         coerce(&mut bad, &s);
-        assert!(validate(&bad, &s).is_err(), "unconvertible values still fail");
+        assert!(
+            validate(&bad, &s).is_err(),
+            "unconvertible values still fail"
+        );
     }
 }

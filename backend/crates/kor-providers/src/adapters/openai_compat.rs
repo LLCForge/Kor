@@ -308,8 +308,10 @@ mod usage_tests {
             events.extend(m.frame(frame(&chunk)).unwrap());
         }
         events.extend(
-            m.frame(frame(r#"{"choices":[{"delta":{},"finish_reason":"stop"}]}"#))
-                .unwrap(),
+            m.frame(frame(
+                r#"{"choices":[{"delta":{},"finish_reason":"stop"}]}"#,
+            ))
+            .unwrap(),
         );
         events.extend(m.finish().unwrap());
         let usages: Vec<&Usage> = events

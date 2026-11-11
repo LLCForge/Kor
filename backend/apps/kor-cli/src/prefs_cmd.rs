@@ -32,7 +32,10 @@ pub fn explain(ctx: &Ctx, section: &str) -> bool {
         "auto" => {
             println!("{}", l.t("config-auto-header"));
             for r in kor_runtime::prefs::auto_rows(loaded) {
-                let layer = loaded.settings.get(&format!("auto.{}", r.key)).map_or(Layer::Default, |s| s.layer);
+                let layer = loaded
+                    .settings
+                    .get(&format!("auto.{}", r.key))
+                    .map_or(Layer::Default, |s| s.layer);
                 println!(
                     "  {}",
                     l.t_args(
@@ -56,7 +59,13 @@ pub fn explain(ctx: &Ctx, section: &str) -> bool {
             let root = crate::graph_cmd::root().unwrap_or_default();
             let km = kor_runtime::prefs::load_keymap(&root);
             let mode = km.mode.unwrap_or_else(|| loaded.config.key_mode());
-            println!("{}", l.t_args("config-keys-mode", &args!("mode" => format!("{mode:?}").to_lowercase())));
+            println!(
+                "{}",
+                l.t_args(
+                    "config-keys-mode",
+                    &args!("mode" => format!("{mode:?}").to_lowercase())
+                )
+            );
             for p in kor_runtime::prefs::keymap_paths(&root) {
                 let state = if km.files.contains(&p) { "✓" } else { "-" };
                 println!("  {state} {}", p.display());
@@ -75,7 +84,11 @@ pub fn explain(ctx: &Ctx, section: &str) -> bool {
         prefix => {
             let p = format!("{prefix}.");
             let mut any = false;
-            for (key, s) in loaded.settings.iter().filter(|(k, _)| k.starts_with(&p) || *k == prefix) {
+            for (key, s) in loaded
+                .settings
+                .iter()
+                .filter(|(k, _)| k.starts_with(&p) || *k == prefix)
+            {
                 any = true;
                 println!(
                     "  {}",
@@ -86,7 +99,13 @@ pub fn explain(ctx: &Ctx, section: &str) -> bool {
                 );
             }
             if !any {
-                eprintln!("{}", l.t_args("config-explain-none", &args!("section" => prefix.to_owned())));
+                eprintln!(
+                    "{}",
+                    l.t_args(
+                        "config-explain-none",
+                        &args!("section" => prefix.to_owned())
+                    )
+                );
             }
             any
         }

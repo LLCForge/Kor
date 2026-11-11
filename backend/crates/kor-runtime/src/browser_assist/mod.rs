@@ -44,10 +44,33 @@ const UI: &[(&str, &str)] = &[
 ];
 
 const FRAMEWORKS: &[&str] = &[
-    "next", "nuxt", "@sveltejs/kit", "astro", "remix", "@remix-run/react", "vite", "tailwindcss",
-    "@tauri-apps/api", "tauri", "axum", "actix-web", "django", "flask", "fastapi", "laravel/framework",
-    "symfony/framework-bundle", "express", "@nestjs/core", "@mui/material", "@chakra-ui/react",
-    "antd", "@radix-ui/react-slot", "storybook", "@storybook/react", "vitest", "jest",
+    "next",
+    "nuxt",
+    "@sveltejs/kit",
+    "astro",
+    "remix",
+    "@remix-run/react",
+    "vite",
+    "tailwindcss",
+    "@tauri-apps/api",
+    "tauri",
+    "axum",
+    "actix-web",
+    "django",
+    "flask",
+    "fastapi",
+    "laravel/framework",
+    "symfony/framework-bundle",
+    "express",
+    "@nestjs/core",
+    "@mui/material",
+    "@chakra-ui/react",
+    "antd",
+    "@radix-ui/react-slot",
+    "storybook",
+    "@storybook/react",
+    "vitest",
+    "jest",
     "@playwright/test",
 ];
 
@@ -61,7 +84,11 @@ impl Stack {
             let lang = match p.ecosystem {
                 deps::Ecosystem::Cargo => "rust",
                 deps::Ecosystem::Npm => {
-                    if root.join("tsconfig.json").is_file() { "typescript" } else { "javascript" }
+                    if root.join("tsconfig.json").is_file() {
+                        "typescript"
+                    } else {
+                        "javascript"
+                    }
                 }
                 deps::Ecosystem::PyPI => "python",
                 deps::Ecosystem::Go => "go",
@@ -80,10 +107,16 @@ impl Stack {
         {
             for section in ["dependencies", "devDependencies"] {
                 for (k, ver) in v[section].as_object().into_iter().flatten() {
-                    s.deps.entry(k.clone()).or_insert_with(|| ver.as_str().unwrap_or("").to_owned());
+                    s.deps
+                        .entry(k.clone())
+                        .or_insert_with(|| ver.as_str().unwrap_or("").to_owned());
                 }
             }
-            let lang = if root.join("tsconfig.json").is_file() { "typescript" } else { "javascript" };
+            let lang = if root.join("tsconfig.json").is_file() {
+                "typescript"
+            } else {
+                "javascript"
+            };
             if !s.languages.iter().any(|l| l == lang) {
                 s.languages.push(lang.to_owned());
             }
@@ -92,8 +125,16 @@ impl Stack {
             && let Ok(v) = text.parse::<toml::Table>()
         {
             for section in ["dependencies", "dev-dependencies"] {
-                for (k, ver) in v.get(section).and_then(toml::Value::as_table).into_iter().flatten() {
-                    let ver = ver.as_str().or_else(|| ver.get("version").and_then(toml::Value::as_str)).unwrap_or("");
+                for (k, ver) in v
+                    .get(section)
+                    .and_then(toml::Value::as_table)
+                    .into_iter()
+                    .flatten()
+                {
+                    let ver = ver
+                        .as_str()
+                        .or_else(|| ver.get("version").and_then(toml::Value::as_str))
+                        .unwrap_or("");
                     s.deps.entry(k.clone()).or_insert_with(|| ver.to_owned());
                 }
             }
@@ -116,14 +157,28 @@ impl Stack {
 
     /// One line for prompts: `typescript; UI react 19.1.0; next 15.0.0, tailwindcss 4.0.0`.
     pub fn summary(&self) -> String {
-        let v = |n: &str| self.deps.get(n).filter(|v| !v.is_empty()).map(|v| format!(" {v}")).unwrap_or_default();
+        let v = |n: &str| {
+            self.deps
+                .get(n)
+                .filter(|v| !v.is_empty())
+                .map(|v| format!(" {v}"))
+                .unwrap_or_default()
+        };
         let ui = UI.iter().find(|(_, u)| *u == self.ui).map(|(d, _)| *d);
-        let mut out = if self.languages.is_empty() { "unknown language".to_owned() } else { self.languages.join(", ") };
+        let mut out = if self.languages.is_empty() {
+            "unknown language".to_owned()
+        } else {
+            self.languages.join(", ")
+        };
         if let Some(d) = ui {
             out.push_str(&format!("; UI {}{}", self.ui, v(d)));
         }
         if !self.frameworks.is_empty() {
-            let list: Vec<String> = self.frameworks.iter().map(|f| format!("{f}{}", v(f))).collect();
+            let list: Vec<String> = self
+                .frameworks
+                .iter()
+                .map(|f| format!("{f}{}", v(f)))
+                .collect();
             out.push_str(&format!("; {}", list.join(", ")));
         }
         out
@@ -155,7 +210,10 @@ mod tests {
         let s = Stack::detect(dir.path());
         assert_eq!(s.ui, "react");
         assert_eq!(s.languages, ["typescript"]);
-        assert!(s.frameworks.contains(&"next".to_owned()) && s.frameworks.contains(&"tailwindcss".to_owned()));
+        assert!(
+            s.frameworks.contains(&"next".to_owned())
+                && s.frameworks.contains(&"tailwindcss".to_owned())
+        );
         let line = s.summary();
         assert!(line.starts_with("typescript; UI react"), "{line}");
     }

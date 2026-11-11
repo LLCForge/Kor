@@ -183,7 +183,10 @@ pub async fn with_pasted_images(
         .iter()
         .map(|(name, url)| Picture::from_data_url(name, url).map_err(|e| format!("{name}: {e}")))
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(format!("{text}{}", image_context(&pics, ocr, cancel).await?))
+    Ok(format!(
+        "{text}{}",
+        image_context(&pics, ocr, cancel).await?
+    ))
 }
 
 /// The image on the clipboard as PNG; `None` when the clipboard holds no image.
@@ -228,7 +231,11 @@ impl std::str::FromStr for Target {
             "svelte" => Self::Svelte,
             "tauri" => Self::Tauri,
             "html" => Self::Html,
-            other => return Err(format!("unknown target `{other}` (react, svelte, tauri, html)")),
+            other => {
+                return Err(format!(
+                    "unknown target `{other}` (react, svelte, tauri, html)"
+                ));
+            }
         })
     }
 }
@@ -243,7 +250,9 @@ impl Target {
             Self::Tauri => {
                 "the web front end of a Tauri 2 app: React 19 + TypeScript components (.tsx) and CSS; no Rust unless the image shows native behaviour"
             }
-            Self::Html => "semantic HTML5 with one CSS file and, only if needed, one small vanilla JS file",
+            Self::Html => {
+                "semantic HTML5 with one CSS file and, only if needed, one small vanilla JS file"
+            }
         }
     }
 }

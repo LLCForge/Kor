@@ -252,7 +252,14 @@ impl Tool for Bash {
             let mut env = ctx.env.clone();
             env.extend(scoped);
             let cwd = lock(&ctx.cwd).clone();
-            let run = editor.run(&program, &args, &cwd, &env, Duration::from_millis(ms), &ctx.cancel);
+            let run = editor.run(
+                &program,
+                &args,
+                &cwd,
+                &env,
+                Duration::from_millis(ms),
+                &ctx.cancel,
+            );
             return editor_output(run.await, env_warning);
         }
         let policy = ctx.sandbox_policy();
@@ -315,18 +322,26 @@ impl Tool for Bash {
 }
 
 /// The result of a command the ACP editor ran in its terminal, shaped like a local run.
-fn editor_output(r: Result<(String, Option<i32>), String>, env_warning: Option<String>) -> ToolOutput {
+fn editor_output(
+    r: Result<(String, Option<i32>), String>,
+    env_warning: Option<String>,
+) -> ToolOutput {
     let (text, code) = match r {
         Ok(x) => x,
         Err(e) => return ToolOutput::err(e),
     };
     let code_s = code.map_or_else(|| "killed by signal".into(), |c| c.to_string());
-    let mut body = format!("{}
-[exit code: {code_s}]", truncate(text.trim_end(), MAX_OUTPUT));
+    let mut body = format!(
+        "{}
+[exit code: {code_s}]",
+        truncate(text.trim_end(), MAX_OUTPUT)
+    );
     if let Some(w) = env_warning {
-        body.push_str("
+        body.push_str(
+            "
 
-");
+",
+        );
         body.push_str(&w);
     }
     if code == Some(0) {
@@ -413,7 +428,11 @@ mod tests {
         );
 
         // A variable every session has; scrubbing it must hide it from the child.
-        let var = if kor_platform::os() == kor_platform::Os::Windows { "USERNAME" } else { "HOME" };
+        let var = if kor_platform::os() == kor_platform::Os::Windows {
+            "USERNAME"
+        } else {
+            "HOME"
+        };
         assert!(std::env::var_os(var).is_some());
         ctx.scrub_env = vec![var.into()];
         let probe = if powershell() {
@@ -466,7 +485,11 @@ mod tests {
         let cmd = format!("Set-Content -LiteralPath '{}' -Value x", target.display());
         let denied = bash().call(json!({"command": cmd}), &ctx).await;
         assert!(denied.is_error && !target.exists(), "{}", denied.content);
-        assert!(denied.content.contains("[sandbox] blocked by appcontainer"), "{}", denied.content);
+        assert!(
+            denied.content.contains("[sandbox] blocked by appcontainer"),
+            "{}",
+            denied.content
+        );
         assert_eq!(lock(&ctx.sandbox_denials).len(), 1);
     }
 

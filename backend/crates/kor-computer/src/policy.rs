@@ -80,32 +80,146 @@ impl Class {
 
 const KOR: &[&str] = &["kor", "kor-desktop"];
 const TERMINALS: &[&str] = &[
-    "cmd", "powershell", "pwsh", "windowsterminal", "wt", "conhost", "openconsole", "mintty", "putty",
-    "terminal", "iterm", "iterm2", "alacritty", "kitty", "wezterm", "wezterm-gui", "hyper", "warp",
-    "ghostty", "tabby", "gnome-terminal", "gnome-terminal-server", "kgx", "konsole", "xterm", "tilix",
-    "terminator", "xfce4-terminal", "foot", "st", "urxvt", "rxvt", "terminology", "termius",
+    "cmd",
+    "powershell",
+    "pwsh",
+    "windowsterminal",
+    "wt",
+    "conhost",
+    "openconsole",
+    "mintty",
+    "putty",
+    "terminal",
+    "iterm",
+    "iterm2",
+    "alacritty",
+    "kitty",
+    "wezterm",
+    "wezterm-gui",
+    "hyper",
+    "warp",
+    "ghostty",
+    "tabby",
+    "gnome-terminal",
+    "gnome-terminal-server",
+    "kgx",
+    "konsole",
+    "xterm",
+    "tilix",
+    "terminator",
+    "xfce4-terminal",
+    "foot",
+    "st",
+    "urxvt",
+    "rxvt",
+    "terminology",
+    "termius",
 ];
 const PASSWORD_MANAGERS: &[&str] = &[
-    "1password", "keepass", "keepassxc", "bitwarden", "lastpass", "dashlane", "enpass", "keeper",
-    "nordpass", "proton pass", "passwords", "keychain access", "seahorse", "kwalletmanager5",
-    "roboform", "authy", "authy desktop",
+    "1password",
+    "keepass",
+    "keepassxc",
+    "bitwarden",
+    "lastpass",
+    "dashlane",
+    "enpass",
+    "keeper",
+    "nordpass",
+    "proton pass",
+    "passwords",
+    "keychain access",
+    "seahorse",
+    "kwalletmanager5",
+    "roboform",
+    "authy",
+    "authy desktop",
 ];
 const BANKING_WORDS: &[&str] = &[
-    "bank", "banka", "ziraat", "isbank", "garanti", "akbank", "yapikredi", "halkbank", "vakifbank",
-    "denizbank", "enpara", "papara", "paypal", "revolut", "wise", "n26", "monzo", "coinbase",
-    "binance", "kraken", "ledger live", "trezor suite", "exodus", "electrum", "metamask", "wallet",
+    "bank",
+    "banka",
+    "ziraat",
+    "isbank",
+    "garanti",
+    "akbank",
+    "yapikredi",
+    "halkbank",
+    "vakifbank",
+    "denizbank",
+    "enpara",
+    "papara",
+    "paypal",
+    "revolut",
+    "wise",
+    "n26",
+    "monzo",
+    "coinbase",
+    "binance",
+    "kraken",
+    "ledger live",
+    "trezor suite",
+    "exodus",
+    "electrum",
+    "metamask",
+    "wallet",
 ];
 const BROWSERS: &[&str] = &[
-    "chrome", "google chrome", "google-chrome", "chromium", "chromium-browser", "msedge",
-    "microsoft edge", "firefox", "safari", "brave", "brave browser", "opera", "vivaldi", "arc",
-    "librewolf", "waterfox", "zen", "yandex", "orion",
+    "chrome",
+    "google chrome",
+    "google-chrome",
+    "chromium",
+    "chromium-browser",
+    "msedge",
+    "microsoft edge",
+    "firefox",
+    "safari",
+    "brave",
+    "brave browser",
+    "opera",
+    "vivaldi",
+    "arc",
+    "librewolf",
+    "waterfox",
+    "zen",
+    "yandex",
+    "orion",
 ];
 const IDES: &[&str] = &[
-    "code", "code - insiders", "visual studio code", "cursor", "windsurf", "zed", "idea", "idea64",
-    "intellij idea", "pycharm", "pycharm64", "webstorm", "webstorm64", "clion", "clion64", "goland",
-    "goland64", "rider", "rider64", "rustrover", "rustrover64", "phpstorm", "phpstorm64", "devenv",
-    "xcode", "sublime_text", "sublime text", "notepad++", "studio64", "android studio", "eclipse",
-    "fleet", "nvim-qt", "neovide", "emacs", "gvim",
+    "code",
+    "code - insiders",
+    "visual studio code",
+    "cursor",
+    "windsurf",
+    "zed",
+    "idea",
+    "idea64",
+    "intellij idea",
+    "pycharm",
+    "pycharm64",
+    "webstorm",
+    "webstorm64",
+    "clion",
+    "clion64",
+    "goland",
+    "goland64",
+    "rider",
+    "rider64",
+    "rustrover",
+    "rustrover64",
+    "phpstorm",
+    "phpstorm64",
+    "devenv",
+    "xcode",
+    "sublime_text",
+    "sublime text",
+    "notepad++",
+    "studio64",
+    "android studio",
+    "eclipse",
+    "fleet",
+    "nvim-qt",
+    "neovide",
+    "emacs",
+    "gvim",
 ];
 
 /// The class of an app by its (normalised) name.
@@ -168,7 +282,9 @@ pub fn config_key(app: &str) -> Result<String, String> {
     let a = kor_platform::desktop_probe::app_name(app);
     if a.is_empty()
         || a.len() > 64
-        || !a.chars().all(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_' | '+'))
+        || !a
+            .chars()
+            .all(|c| c.is_alphanumeric() || matches!(c, ' ' | '-' | '_' | '+'))
     {
         return Err(format!("invalid app name `{app}`"));
     }
@@ -281,16 +397,38 @@ mod tests {
         c.apps.insert("mspaint".into(), Tier::Blocked);
         let p = Policy::from_config(&c);
         assert_eq!(p.tier("chrome"), (Tier::Full, Source::Config));
-        assert_eq!(verdict(&p, Some("chrome"), Action::Type, false), Verdict::Allow);
-        assert_eq!(verdict(&p, Some("chrome"), Action::Type, true), Verdict::Ask);
-        assert!(matches!(verdict(&p, Some("mspaint"), Action::Observe, false), Verdict::Refuse(m) if m.contains("your setting")));
+        assert_eq!(
+            verdict(&p, Some("chrome"), Action::Type, false),
+            Verdict::Allow
+        );
+        assert_eq!(
+            verdict(&p, Some("chrome"), Action::Type, true),
+            Verdict::Ask
+        );
+        assert!(
+            matches!(verdict(&p, Some("mspaint"), Action::Observe, false), Verdict::Refuse(m) if m.contains("your setting"))
+        );
 
         let d = Policy::default();
-        assert_eq!(verdict(&d, Some("firefox"), Action::Observe, false), Verdict::Ask);
-        assert!(matches!(verdict(&d, Some("firefox"), Action::Click, false), Verdict::Refuse(m) if m.contains("default for a browser")));
-        assert_eq!(verdict(&d, Some("code"), Action::Click, false), Verdict::Ask);
-        assert!(matches!(verdict(&d, Some("code"), Action::Type, false), Verdict::Refuse(_)));
-        assert!(matches!(verdict(&d, Some("pwsh"), Action::Observe, false), Verdict::Refuse(_)));
+        assert_eq!(
+            verdict(&d, Some("firefox"), Action::Observe, false),
+            Verdict::Ask
+        );
+        assert!(
+            matches!(verdict(&d, Some("firefox"), Action::Click, false), Verdict::Refuse(m) if m.contains("default for a browser"))
+        );
+        assert_eq!(
+            verdict(&d, Some("code"), Action::Click, false),
+            Verdict::Ask
+        );
+        assert!(matches!(
+            verdict(&d, Some("code"), Action::Type, false),
+            Verdict::Refuse(_)
+        ));
+        assert!(matches!(
+            verdict(&d, Some("pwsh"), Action::Observe, false),
+            Verdict::Refuse(_)
+        ));
         assert_eq!(verdict(&d, None, Action::Type, false), Verdict::Ask);
         assert_eq!(rows(&p).len(), 2);
     }
@@ -305,15 +443,26 @@ mod tests {
         kor_config::set_string(&f, &key, "full").unwrap();
         kor_config::set_string(&f, &config_key("mspaint").unwrap(), "blocked").unwrap();
         assert!(kor_config::set_string(&f, &config_key("x").unwrap(), "sometimes").is_err());
-        let paths = kor_config::Paths { system: None, user: Some(f.clone()), project: None };
-        let c = kor_config::load(&paths, std::iter::empty(), &[]).unwrap().config;
+        let paths = kor_config::Paths {
+            system: None,
+            user: Some(f.clone()),
+            project: None,
+        };
+        let c = kor_config::load(&paths, std::iter::empty(), &[])
+            .unwrap()
+            .config;
         let p = Policy::from_config(&c.computer);
         assert_eq!(p.tier("visual studio code"), (Tier::Full, Source::Config));
         assert_eq!(p.tier("mspaint").0, Tier::Blocked);
         assert_eq!(c.health, kor_config::Health::default());
         kor_config::unset(&f, &config_key("mspaint").unwrap()).unwrap();
         kor_config::unset(&f, "computer.apps.never-set").unwrap();
-        let c = kor_config::load(&paths, std::iter::empty(), &[]).unwrap().config;
-        assert_eq!(Policy::from_config(&c.computer).tier("mspaint"), (Tier::Ask, Source::Default));
+        let c = kor_config::load(&paths, std::iter::empty(), &[])
+            .unwrap()
+            .config;
+        assert_eq!(
+            Policy::from_config(&c.computer).tier("mspaint"),
+            (Tier::Ask, Source::Default)
+        );
     }
 }

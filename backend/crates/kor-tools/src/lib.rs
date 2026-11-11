@@ -26,20 +26,20 @@ use serde_json::Value;
 use tokio_util::sync::CancellationToken;
 
 pub use jail::{resolve, without_verbatim};
-pub use secret_scan::scan as scan_secrets;
-pub use secret_scan::redact as redact_secrets;
 pub use secret_scan::find as find_secrets;
+pub use secret_scan::redact as redact_secrets;
+pub use secret_scan::scan as scan_secrets;
 
 /// Rule ids from the team-memory secret scan. Empty when the text is clean.
 pub fn secret_labels(content: &str) -> Vec<&'static str> {
     secret_scan::scan(content)
 }
-pub use tools::chrome;
-pub use tools::browser::{html_screenshot, html_to_pdf, lab_vitals};
-pub use tools::ocr::image_text;
-pub use tools::shell::Shell;
-pub use tools::review::{Proposal, review_risk, write_reviewed};
 pub use param_card::{ParamAnswer, ParamCard, ParamField};
+pub use tools::browser::{html_screenshot, html_to_pdf, lab_vitals};
+pub use tools::chrome;
+pub use tools::ocr::image_text;
+pub use tools::review::{Proposal, review_risk, write_reviewed};
+pub use tools::shell::Shell;
 
 /// What a tool does, for permission defaults.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -238,7 +238,11 @@ fn command_programs(command: &str) -> Vec<String> {
         .filter_map(|seg| seg.split_whitespace().find(|w| !w.contains('=')))
         .map(|w| {
             let w = w.trim_matches(['"', '\'']);
-            let base = w.rsplit(['/', '\\']).next().unwrap_or(w).to_ascii_lowercase();
+            let base = w
+                .rsplit(['/', '\\'])
+                .next()
+                .unwrap_or(w)
+                .to_ascii_lowercase();
             [".exe", ".cmd", ".bat"]
                 .iter()
                 .find_map(|x| base.strip_suffix(x).map(str::to_owned))
@@ -313,7 +317,12 @@ impl ToolCtx {
 
     /// Find sandbox blocks in a command's `output`, say so at the end of `text` (the tool result)
     /// and keep them for the agent's audit log (ADR 0033).
-    pub fn note_sandbox_blocks(&self, policy: &kor_sandbox::Policy, output: &str, text: &mut String) {
+    pub fn note_sandbox_blocks(
+        &self,
+        policy: &kor_sandbox::Policy,
+        output: &str,
+        text: &mut String,
+    ) {
         let found = kor_sandbox::denials(self.sandbox, policy, output);
         if found.is_empty() {
             return;
@@ -335,16 +344,22 @@ impl ToolCtx {
             return None;
         }
         let root = self.root.clone();
-        tokio::task::spawn_blocking(move || undo::scan_before(&root)).await.ok()
+        tokio::task::spawn_blocking(move || undo::scan_before(&root))
+            .await
+            .ok()
     }
 
     /// After a shell command: record what it created or changed since `before`.
     pub async fn shell_after(&self, before: undo::Before) -> Option<undo::ShellChanges> {
         let journal = Arc::clone(&self.undo);
-        tokio::task::spawn_blocking(move || lock(&journal).as_mut().and_then(|j| j.record_shell(&before).ok()))
-            .await
-            .ok()
-            .flatten()
+        tokio::task::spawn_blocking(move || {
+            lock(&journal)
+                .as_mut()
+                .and_then(|j| j.record_shell(&before).ok())
+        })
+        .await
+        .ok()
+        .flatten()
     }
 
     /// Record the first state of `paths` in the undo journal before a tool changes them.
@@ -590,7 +605,11 @@ pub fn computer_auto_allowed(name: &str, input: &Value) -> bool {
         return false;
     }
     let (action, destructive) = tools::computer::action_of(name, input);
-    kor_computer::auto_allowed(action, kor_computer::target_app(None).as_deref(), destructive)
+    kor_computer::auto_allowed(
+        action,
+        kor_computer::target_app(None).as_deref(),
+        destructive,
+    )
 }
 
 /// §19.1 "human first": the user moved the mouse or pressed a key while Kor acted; the next
@@ -631,7 +650,12 @@ tokio::task_local! {
 /// Run `fut` (one tool call) with `sink` receiving its [`report_progress`] lines. The agent wraps
 /// each call so its existing `ToolProgress` event carries them; parallel calls get their own sink.
 pub async fn with_progress<F: std::future::Future>(sink: ProgressSink, fut: F) -> F::Output {
-    PROGRESS.scope(sink, PROGRESS_LINES.scope(std::sync::atomic::AtomicUsize::new(0), fut)).await
+    PROGRESS
+        .scope(
+            sink,
+            PROGRESS_LINES.scope(std::sync::atomic::AtomicUsize::new(0), fut),
+        )
+        .await
 }
 
 /// Report a progress line for the tool call running in this task; a no-op outside one (CLI and
@@ -644,7 +668,9 @@ pub fn report_progress(line: impl Into<String>) {
 /// prints a flood (a full build log) only shows its first lines live; the result keeps them all.
 pub(crate) fn live_line(line: &str) {
     const MAX_LIVE_LINES: usize = 2_000;
-    let seen = PROGRESS_LINES.try_with(|n| n.fetch_add(1, std::sync::atomic::Ordering::Relaxed)).unwrap_or(0);
+    let seen = PROGRESS_LINES
+        .try_with(|n| n.fetch_add(1, std::sync::atomic::Ordering::Relaxed))
+        .unwrap_or(0);
     if seen < MAX_LIVE_LINES {
         report_progress(line);
     }
@@ -688,12 +714,23 @@ mod tests {
     fn vault_scope_matches_programs_of_the_command_line() {
         let scoped = vec![
             ("DB_URL".to_owned(), "x".to_owned(), vec!["psql".to_owned()]),
-            ("NPM_TOKEN".to_owned(), "y".to_owned(), vec!["npm".to_owned(), "pnpm".to_owned()]),
+            (
+                "NPM_TOKEN".to_owned(),
+                "y".to_owned(),
+                vec!["npm".to_owned(), "pnpm".to_owned()],
+            ),
             ("NONE".to_owned(), "z".to_owned(), Vec::new()),
         ];
-        let names = |c: &str| scoped_env_for(c, &scoped).map(|(k, _)| k).collect::<Vec<_>>();
+        let names = |c: &str| {
+            scoped_env_for(c, &scoped)
+                .map(|(k, _)| k)
+                .collect::<Vec<_>>()
+        };
         assert_eq!(names("psql -c 'select 1'"), ["DB_URL"]);
-        assert_eq!(names("cd db && PGHOST=x /usr/bin/psql -f a.sql"), ["DB_URL"]);
+        assert_eq!(
+            names("cd db && PGHOST=x /usr/bin/psql -f a.sql"),
+            ["DB_URL"]
+        );
         assert_eq!(names("C:\\tools\\NPM.CMD publish | tee log"), ["NPM_TOKEN"]);
         assert!(names("cargo test; echo psql").is_empty());
         assert!(names("curl https://x").is_empty());

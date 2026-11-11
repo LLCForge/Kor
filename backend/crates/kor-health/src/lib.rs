@@ -87,7 +87,11 @@ pub fn check_now(
 
 /// One line for a terminal task start (§19.3): the most serious of the fast checks (disks,
 /// memory, battery; no CPU sampling, no cache walk), `None` when all is well.
-pub fn quick_line(t: &kor_config::Health, project: &Path, l: &kor_i18n::Localizer) -> Option<String> {
+pub fn quick_line(
+    t: &kor_config::Health,
+    project: &Path,
+    l: &kor_i18n::Localizer,
+) -> Option<String> {
     use sysinfo::System;
     let mut sys = System::new();
     sys.refresh_memory();

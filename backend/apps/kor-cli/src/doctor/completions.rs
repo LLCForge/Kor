@@ -30,7 +30,9 @@ fn nushell(cmd: &mut clap::Command) -> String {
     let mut defs = String::new();
     let mut externs = String::new();
     walk(cmd, "kor", &mut defs, &mut externs);
-    format!("# kor completions for nushell (kor completions nushell)\nmodule kor-completions {{\n{defs}{externs}}}\n\nexport use kor-completions *\n")
+    format!(
+        "# kor completions for nushell (kor completions nushell)\nmodule kor-completions {{\n{defs}{externs}}}\n\nexport use kor-completions *\n"
+    )
 }
 
 fn walk(cmd: &clap::Command, path: &str, defs: &mut String, externs: &mut String) {
@@ -38,20 +40,37 @@ fn walk(cmd: &clap::Command, path: &str, defs: &mut String, externs: &mut String
     let mut params = Vec::new();
     for a in cmd.get_arguments().filter(|a| !a.is_hide_set()) {
         let id = a.get_id().as_str();
-        let takes = a.get_num_args().is_some_and(|n| n.takes_values()) && a.get_action().takes_values();
-        let values: Vec<String> = a.get_possible_values().iter().map(|v| v.get_name().to_owned()).collect();
+        let takes =
+            a.get_num_args().is_some_and(|n| n.takes_values()) && a.get_action().takes_values();
+        let values: Vec<String> = a
+            .get_possible_values()
+            .iter()
+            .map(|v| v.get_name().to_owned())
+            .collect();
         let ty = if values.is_empty() {
             "string".to_owned()
         } else {
             let name = format!("nu-complete {path} {id}");
             let list: Vec<String> = values.iter().map(|v| format!("\"{}\"", quote(v))).collect();
-            let _ = writeln!(defs, "  def \"{}\" [] {{ [{}] }}", quote(&name), list.join(" "));
+            let _ = writeln!(
+                defs,
+                "  def \"{}\" [] {{ [{}] }}",
+                quote(&name),
+                list.join(" ")
+            );
             format!("string@\"{}\"", quote(&name))
         };
-        let help = a.get_help().map(|h| format!("  # {}", h.to_string().replace('\n', " "))).unwrap_or_default();
+        let help = a
+            .get_help()
+            .map(|h| format!("  # {}", h.to_string().replace('\n', " ")))
+            .unwrap_or_default();
         if let Some(long) = a.get_long() {
             let short = a.get_short().map(|s| format!("(-{s})")).unwrap_or_default();
-            let kind = if takes { format!(": {ty}") } else { String::new() };
+            let kind = if takes {
+                format!(": {ty}")
+            } else {
+                String::new()
+            };
             params.push(format!("    --{long}{short}{kind}{help}"));
         } else if a.is_positional() {
             let many = a.get_num_args().is_some_and(|n| n.max_values() > 1);
@@ -63,7 +82,12 @@ fn walk(cmd: &clap::Command, path: &str, defs: &mut String, externs: &mut String
             });
         }
     }
-    let _ = writeln!(externs, "  export extern \"{}\" [\n{}\n  ]", quote(path), params.join("\n"));
+    let _ = writeln!(
+        externs,
+        "  export extern \"{}\" [\n{}\n  ]",
+        quote(path),
+        params.join("\n")
+    );
     for sub in cmd.get_subcommands().filter(|s| !s.is_hide_set()) {
         walk(sub, &format!("{path} {}", sub.get_name()), defs, externs);
     }
@@ -78,8 +102,15 @@ pub fn detected() -> Vec<Shell> {
     Shell::ALL
         .into_iter()
         .filter(|s| {
-            let names: &[&str] = if *s == Shell::PowerShell { &["pwsh", "powershell"] } else { &[s.program()] };
-            names.iter().any(|n| dirs.iter().any(|d| d.join(kor_platform::exe(n)).is_file() || d.join(n).is_file()))
+            let names: &[&str] = if *s == Shell::PowerShell {
+                &["pwsh", "powershell"]
+            } else {
+                &[s.program()]
+            };
+            names.iter().any(|n| {
+                dirs.iter()
+                    .any(|d| d.join(kor_platform::exe(n)).is_file() || d.join(n).is_file())
+            })
         })
         .collect()
 }
@@ -93,7 +124,10 @@ pub fn confirm(question: &str) -> bool {
     let _ = std::io::stdout().flush();
     let mut line = String::new();
     let _ = std::io::stdin().lock().read_line(&mut line);
-    matches!(line.trim(), "y" | "Y" | "e" | "E" | "o" | "O" | "yes" | "evet" | "oui")
+    matches!(
+        line.trim(),
+        "y" | "Y" | "e" | "E" | "o" | "O" | "yes" | "evet" | "oui"
+    )
 }
 
 /// Install completions for `shell`, asking before a profile change unless `yes`.
@@ -117,14 +151,22 @@ pub fn install_one(l: &Localizer, cmd: clap::Command, shell: Shell, yes: bool) -
         Ok(()) => {
             println!(
                 "{}",
-                l.t_args("completions-installed", &args!("shell" => shell.name(), "path" => plan.file.display().to_string()))
+                l.t_args(
+                    "completions-installed",
+                    &args!("shell" => shell.name(), "path" => plan.file.display().to_string())
+                )
             );
             true
         }
         Err(e) => {
-            eprintln!("{}", l.t_args("completions-failed", &args!("shell" => shell.name(), "error" => e.to_string())));
+            eprintln!(
+                "{}",
+                l.t_args(
+                    "completions-failed",
+                    &args!("shell" => shell.name(), "error" => e.to_string())
+                )
+            );
             false
         }
     }
 }
-

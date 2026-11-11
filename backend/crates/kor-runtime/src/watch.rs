@@ -18,7 +18,9 @@ use std::time::Duration;
 use kor_platform::NoWindow as _;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncBufReadExt as _, AsyncReadExt as _, AsyncSeekExt as _, AsyncWriteExt as _, BufReader};
+use tokio::io::{
+    AsyncBufReadExt as _, AsyncReadExt as _, AsyncSeekExt as _, AsyncWriteExt as _, BufReader,
+};
 use tokio::sync::mpsc::UnboundedSender;
 /// Stops [`watch`] (re-exported so front ends need no `tokio-util`).
 pub use tokio_util::sync::CancellationToken;
@@ -28,7 +30,17 @@ const CONTEXT: usize = 20;
 const MAX_INCIDENTS: usize = 200;
 const MAX_BODY: usize = 1024 * 1024;
 const DEFAULT_PORT: u16 = 7391;
-const ERROR_LEVELS: [&str; 9] = ["error", "err", "fatal", "critical", "crit", "panic", "alert", "emerg", "emergency"];
+const ERROR_LEVELS: [&str; 9] = [
+    "error",
+    "err",
+    "fatal",
+    "critical",
+    "crit",
+    "panic",
+    "alert",
+    "emerg",
+    "emergency",
+];
 
 // ---------------------------------------------------------------------------------------------
 // Sources and configuration
@@ -53,7 +65,8 @@ fn name_ok(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 128
         && !s.starts_with('-')
-        && s.chars().all(|c| c.is_ascii_alphanumeric() || "._-@:".contains(c))
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || "._-@:".contains(c))
 }
 
 impl Source {
@@ -65,14 +78,21 @@ impl Source {
             "sentry" => return Ok(Self::Webhook(Hook::Sentry)),
             "datadog" => return Ok(Self::Webhook(Hook::Datadog)),
             "journald" => return Ok(Self::Journald(None)),
-            "" => return Err("give a log source: a file, journald[:unit], docker:<container>, sentry or datadog".into()),
+            "" => return Err(
+                "give a log source: a file, journald[:unit], docker:<container>, sentry or datadog"
+                    .into(),
+            ),
             _ => {}
         }
         if let Some(u) = t.strip_prefix("journald:") {
-            return name_ok(u).then(|| Self::Journald(Some(u.to_owned()))).ok_or_else(|| format!("invalid journald unit `{u}`"));
+            return name_ok(u)
+                .then(|| Self::Journald(Some(u.to_owned())))
+                .ok_or_else(|| format!("invalid journald unit `{u}`"));
         }
         if let Some(c) = t.strip_prefix("docker:") {
-            return name_ok(c).then(|| Self::Docker(c.to_owned())).ok_or_else(|| format!("invalid container `{c}`"));
+            return name_ok(c)
+                .then(|| Self::Docker(c.to_owned()))
+                .ok_or_else(|| format!("invalid container `{c}`"));
         }
         Ok(Self::File(root.join(t.strip_prefix("file:").unwrap_or(t))))
     }
@@ -80,7 +100,10 @@ impl Source {
     pub fn label(&self) -> String {
         match self {
             Self::File(p) => p.display().to_string(),
-            Self::Journald(u) => format!("journald{}", u.as_deref().map(|u| format!(":{u}")).unwrap_or_default()),
+            Self::Journald(u) => format!(
+                "journald{}",
+                u.as_deref().map(|u| format!(":{u}")).unwrap_or_default()
+            ),
             Self::Docker(c) => format!("docker:{c}"),
             Self::Webhook(Hook::Sentry) => "sentry".into(),
             Self::Webhook(Hook::Datadog) => "datadog".into(),
@@ -130,11 +153,18 @@ impl Line {
     /// A raw line; JSON lines give their `level` / `severity` / `lvl` / `log.level` field.
     pub fn raw(text: &str) -> Self {
         let text: String = text.trim_end().chars().take(MAX_LINE).collect();
-        let level = serde_json::from_str::<serde_json::Value>(&text).ok().and_then(|v| {
-            ["level", "severity", "lvl", "log.level", "levelname"]
-                .iter()
-                .find_map(|k| v.get(*k).or_else(|| v.get("log").and_then(|l| l.get("level"))).and_then(|x| x.as_str()).map(str::to_ascii_lowercase))
-        });
+        let level = serde_json::from_str::<serde_json::Value>(&text)
+            .ok()
+            .and_then(|v| {
+                ["level", "severity", "lvl", "log.level", "levelname"]
+                    .iter()
+                    .find_map(|k| {
+                        v.get(*k)
+                            .or_else(|| v.get("log").and_then(|l| l.get("level")))
+                            .and_then(|x| x.as_str())
+                            .map(str::to_ascii_lowercase)
+                    })
+            });
         Self { text, level }
     }
 }
@@ -191,12 +221,19 @@ static NOISE: LazyLock<Regex> = LazyLock::new(|| {
 pub fn fingerprint(text: &str) -> String {
     use sha2::Digest as _;
     // A timestamp prefix and the variable parts must not split one error into many.
-    let t = NOISE.replace_all(&text.to_lowercase(), "#").split_whitespace().collect::<Vec<_>>().join(" ");
-    sha2::Sha256::digest(t.as_bytes()).iter().take(6).fold(String::new(), |mut s, b| {
-        use std::fmt::Write as _;
-        let _ = write!(s, "{b:02x}");
-        s
-    })
+    let t = NOISE
+        .replace_all(&text.to_lowercase(), "#")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    sha2::Sha256::digest(t.as_bytes())
+        .iter()
+        .take(6)
+        .fold(String::new(), |mut s, b| {
+            use std::fmt::Write as _;
+            let _ = write!(s, "{b:02x}");
+            s
+        })
 }
 
 #[derive(Debug)]
@@ -212,7 +249,10 @@ pub struct Detector {
 }
 
 fn pattern(p: &str) -> Result<Regex, String> {
-    regex::RegexBuilder::new(p).size_limit(1 << 20).build().map_err(|e| format!("pattern `{p}`: {e}"))
+    regex::RegexBuilder::new(p)
+        .size_limit(1 << 20)
+        .build()
+        .map_err(|e| format!("pattern `{p}`: {e}"))
 }
 
 impl Detector {
@@ -223,7 +263,11 @@ impl Detector {
         }
         Ok(Self {
             patterns,
-            ignore: cfg.ignore.iter().map(|p| pattern(p)).collect::<Result<_, _>>()?,
+            ignore: cfg
+                .ignore
+                .iter()
+                .map(|p| pattern(p))
+                .collect::<Result<_, _>>()?,
             window: cfg.window_secs.unwrap_or(600),
             per_minute: cfg.max_per_minute.unwrap_or(10).max(1),
             seen: BTreeMap::new(),
@@ -254,7 +298,11 @@ impl Detector {
                     Verdict::Repeat(id, *count)
                 }
                 _ => {
-                    while self.recent.front().is_some_and(|t| now.saturating_sub(*t) >= 60) {
+                    while self
+                        .recent
+                        .front()
+                        .is_some_and(|t| now.saturating_sub(*t) >= 60)
+                    {
                         self.recent.pop_front();
                     }
                     if self.recent.len() >= self.per_minute as usize {
@@ -299,7 +347,10 @@ fn store(root: &Path) -> PathBuf {
 }
 
 pub fn incidents(root: &Path) -> Vec<Incident> {
-    std::fs::read_to_string(store(root)).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default()
+    std::fs::read_to_string(store(root))
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or_default()
 }
 
 fn save(root: &Path, list: &[Incident]) -> Result<(), String> {
@@ -308,7 +359,11 @@ fn save(root: &Path, list: &[Incident]) -> Result<(), String> {
         std::fs::create_dir_all(d).map_err(|e| e.to_string())?;
     }
     let tmp = p.with_extension("json.tmp");
-    std::fs::write(&tmp, serde_json::to_string_pretty(list).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
+    std::fs::write(
+        &tmp,
+        serde_json::to_string_pretty(list).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
     std::fs::rename(&tmp, &p).map_err(|e| e.to_string())
 }
 
@@ -344,7 +399,11 @@ pub fn incident(root: &Path, id: &str) -> Option<Incident> {
 /// Remove one incident, or all with `None`.
 pub fn clear(root: &Path, id: Option<&str>) -> Result<usize, String> {
     let list = incidents(root);
-    let keep: Vec<Incident> = list.iter().filter(|i| id.is_some_and(|id| i.id != id)).cloned().collect();
+    let keep: Vec<Incident> = list
+        .iter()
+        .filter(|i| id.is_some_and(|id| i.id != id))
+        .cloned()
+        .collect();
     save(root, &keep)?;
     Ok(list.len() - keep.len())
 }
@@ -354,17 +413,28 @@ pub fn clear(root: &Path, id: Option<&str>) -> Result<usize, String> {
 // ---------------------------------------------------------------------------------------------
 
 fn s<'a>(v: &'a serde_json::Value, path: &[&str]) -> Option<&'a str> {
-    path.iter().try_fold(v, |v, k| v.get(*k))?.as_str().filter(|s| !s.is_empty())
+    path.iter()
+        .try_fold(v, |v, k| v.get(*k))?
+        .as_str()
+        .filter(|s| !s.is_empty())
 }
 
 /// Lines from a Sentry (issue alert / legacy webhook plugin) or Datadog (webhook integration)
 /// payload. Unknown shapes give nothing.
 pub fn webhook_lines(kind: Hook, body: &[u8]) -> Vec<Line> {
-    let Ok(v) = serde_json::from_slice::<serde_json::Value>(body) else { return Vec::new() };
+    let Ok(v) = serde_json::from_slice::<serde_json::Value>(body) else {
+        return Vec::new();
+    };
     let (title, level, extra) = match kind {
         Hook::Sentry => (
-            s(&v, &["data", "event", "title"]).or_else(|| s(&v, &["data", "issue", "title"])).or_else(|| s(&v, &["message"])).or_else(|| s(&v, &["event", "title"])),
-            s(&v, &["data", "event", "level"]).or_else(|| s(&v, &["data", "issue", "level"])).or_else(|| s(&v, &["level"])).unwrap_or("error"),
+            s(&v, &["data", "event", "title"])
+                .or_else(|| s(&v, &["data", "issue", "title"]))
+                .or_else(|| s(&v, &["message"]))
+                .or_else(|| s(&v, &["event", "title"])),
+            s(&v, &["data", "event", "level"])
+                .or_else(|| s(&v, &["data", "issue", "level"]))
+                .or_else(|| s(&v, &["level"]))
+                .unwrap_or("error"),
             [
                 s(&v, &["data", "event", "culprit"]).or_else(|| s(&v, &["culprit"])),
                 s(&v, &["data", "event", "web_url"]).or_else(|| s(&v, &["url"])),
@@ -376,12 +446,23 @@ pub fn webhook_lines(kind: Hook, body: &[u8]) -> Vec<Line> {
                 "warning" | "info" | "success" => "info",
                 _ => "error",
             },
-            [s(&v, &["body"]).or_else(|| s(&v, &["text"])), s(&v, &["link"]).or_else(|| s(&v, &["url"]))],
+            [
+                s(&v, &["body"]).or_else(|| s(&v, &["text"])),
+                s(&v, &["link"]).or_else(|| s(&v, &["url"])),
+            ],
         ),
     };
-    let Some(title) = title else { return Vec::new() };
-    let mut out = vec![Line { text: title.chars().take(MAX_LINE).collect(), level: Some(level.to_ascii_lowercase()) }];
-    out.extend(extra.into_iter().flatten().map(|e| Line { text: e.chars().take(MAX_LINE).collect(), level: Some("info".into()) }));
+    let Some(title) = title else {
+        return Vec::new();
+    };
+    let mut out = vec![Line {
+        text: title.chars().take(MAX_LINE).collect(),
+        level: Some(level.to_ascii_lowercase()),
+    }];
+    out.extend(extra.into_iter().flatten().map(|e| Line {
+        text: e.chars().take(MAX_LINE).collect(),
+        level: Some("info".into()),
+    }));
     out
 }
 
@@ -390,8 +471,14 @@ fn ct_eq(a: &str, b: &str) -> bool {
     a.len() == b.len() && bool::from(a.as_bytes().ct_eq(b.as_bytes()))
 }
 
-async fn serve_one(mut sock: tokio::net::TcpStream, kind: Hook, token: &str, tx: &UnboundedSender<Line>) {
-    let reply = |code: &str| format!("HTTP/1.1 {code}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+async fn serve_one(
+    mut sock: tokio::net::TcpStream,
+    kind: Hook,
+    token: &str,
+    tx: &UnboundedSender<Line>,
+) {
+    let reply =
+        |code: &str| format!("HTTP/1.1 {code}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
     let work = async {
         let mut buf = Vec::new();
         let mut chunk = [0u8; 4096];
@@ -410,15 +497,31 @@ async fn serve_one(mut sock: tokio::net::TcpStream, kind: Hook, token: &str, tx:
         };
         let head = String::from_utf8_lossy(&buf[..head_end]).into_owned();
         let mut first = head.lines().next().unwrap_or_default().split_whitespace();
-        let (method, path) = (first.next().unwrap_or_default(), first.next().unwrap_or_default());
-        let want = format!("/{}/", if kind == Hook::Sentry { "sentry" } else { "datadog" });
-        let ok_path = path.strip_prefix(&want).is_some_and(|t| ct_eq(t.split('?').next().unwrap_or_default(), token));
+        let (method, path) = (
+            first.next().unwrap_or_default(),
+            first.next().unwrap_or_default(),
+        );
+        let want = format!(
+            "/{}/",
+            if kind == Hook::Sentry {
+                "sentry"
+            } else {
+                "datadog"
+            }
+        );
+        let ok_path = path
+            .strip_prefix(&want)
+            .is_some_and(|t| ct_eq(t.split('?').next().unwrap_or_default(), token));
         if method != "POST" || !ok_path {
             return Some("404 Not Found");
         }
         let len: usize = head
             .lines()
-            .find_map(|l| l.split_once(':').filter(|(k, _)| k.trim().eq_ignore_ascii_case("content-length")).map(|(_, v)| v.trim().parse().unwrap_or(usize::MAX)))
+            .find_map(|l| {
+                l.split_once(':')
+                    .filter(|(k, _)| k.trim().eq_ignore_ascii_case("content-length"))
+                    .map(|(_, v)| v.trim().parse().unwrap_or(usize::MAX))
+            })
             .unwrap_or(0);
         if len > MAX_BODY {
             return Some("413 Payload Too Large");
@@ -441,18 +544,29 @@ async fn serve_one(mut sock: tokio::net::TcpStream, kind: Hook, token: &str, tx:
         }
         Some("204 No Content")
     };
-    let code = tokio::time::timeout(Duration::from_secs(10), work).await.ok().flatten();
+    let code = tokio::time::timeout(Duration::from_secs(10), work)
+        .await
+        .ok()
+        .flatten();
     if let Some(code) = code {
         let _ = sock.write_all(reply(code).as_bytes()).await;
     }
 }
 
 /// Bind the webhook listener on 127.0.0.1 (`port` 0: any free port). Returns the bound port.
-pub async fn listen(kind: Hook, port: u16, token: String, tx: UnboundedSender<Line>, cancel: CancellationToken) -> Result<u16, String> {
+pub async fn listen(
+    kind: Hook,
+    port: u16,
+    token: String,
+    tx: UnboundedSender<Line>,
+    cancel: CancellationToken,
+) -> Result<u16, String> {
     if token.len() < 16 {
         return Err("the webhook token must have at least 16 characters".into());
     }
-    let l = tokio::net::TcpListener::bind(("127.0.0.1", port)).await.map_err(|e| format!("127.0.0.1:{port}: {e}"))?;
+    let l = tokio::net::TcpListener::bind(("127.0.0.1", port))
+        .await
+        .map_err(|e| format!("127.0.0.1:{port}: {e}"))?;
     let bound = l.local_addr().map_err(|e| e.to_string())?.port();
     let token = std::sync::Arc::new(token);
     tokio::spawn(async move {
@@ -488,7 +602,11 @@ async fn follow_file(path: PathBuf, tx: UnboundedSender<Line>, cancel: Cancellat
             && let Ok(f) = tokio::fs::File::open(&path).await
         {
             let mut r = BufReader::new(f);
-            let pos = if first { r.seek(std::io::SeekFrom::End(0)).await.unwrap_or(0) } else { 0 };
+            let pos = if first {
+                r.seek(std::io::SeekFrom::End(0)).await.unwrap_or(0)
+            } else {
+                0
+            };
             file = Some((r, pos));
         }
         first = false;
@@ -528,16 +646,33 @@ async fn follow_file(path: PathBuf, tx: UnboundedSender<Line>, cancel: Cancellat
     }
 }
 
-async fn follow_command(program: &str, args: Vec<String>, json: bool, tx: UnboundedSender<Line>, cancel: CancellationToken) -> Result<(), String> {
-    let exe = crate::deploy::which(program).ok_or_else(|| format!("`{program}` is not installed or not on PATH"))?;
+async fn follow_command(
+    program: &str,
+    args: Vec<String>,
+    json: bool,
+    tx: UnboundedSender<Line>,
+    cancel: CancellationToken,
+) -> Result<(), String> {
+    let exe = crate::deploy::which(program)
+        .ok_or_else(|| format!("`{program}` is not installed or not on PATH"))?;
     let mut cmd = tokio::process::Command::new(exe);
-    cmd.args(&args).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped()).kill_on_drop(true);
+    cmd.args(&args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
     cmd.no_window();
-    let mut child = cmd.spawn().map_err(|e| format!("could not start {program}: {e}"))?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("could not start {program}: {e}"))?;
     let pump = |r: Box<dyn tokio::io::AsyncRead + Unpin + Send>, tx: UnboundedSender<Line>| async move {
         let mut lines = BufReader::new(r).lines();
         while let Ok(Some(l)) = lines.next_line().await {
-            let line = if json { journal_line(&l) } else { Some(Line::raw(&l)) };
+            let line = if json {
+                journal_line(&l)
+            } else {
+                Some(Line::raw(&l))
+            };
             if let Some(line) = line
                 && tx.send(line).is_err()
             {
@@ -568,14 +703,36 @@ pub fn journal_line(json: &str) -> Option<Line> {
     let msg = match v.get("MESSAGE")? {
         serde_json::Value::String(s) => s.clone(),
         // Binary messages are byte arrays.
-        serde_json::Value::Array(a) => a.iter().filter_map(serde_json::Value::as_u64).filter_map(|b| u8::try_from(b).ok()).map(char::from).collect(),
+        serde_json::Value::Array(a) => a
+            .iter()
+            .filter_map(serde_json::Value::as_u64)
+            .filter_map(|b| u8::try_from(b).ok())
+            .map(char::from)
+            .collect(),
         _ => return None,
     };
-    let prio = v.get("PRIORITY").and_then(|p| p.as_str()).and_then(|p| p.parse::<u8>().ok()).unwrap_or(6);
-    let unit = v.get("_SYSTEMD_UNIT").and_then(|u| u.as_str()).map(|u| format!("{u}: ")).unwrap_or_default();
+    let prio = v
+        .get("PRIORITY")
+        .and_then(|p| p.as_str())
+        .and_then(|p| p.parse::<u8>().ok())
+        .unwrap_or(6);
+    let unit = v
+        .get("_SYSTEMD_UNIT")
+        .and_then(|u| u.as_str())
+        .map(|u| format!("{u}: "))
+        .unwrap_or_default();
     Some(Line {
         text: format!("{unit}{msg}").chars().take(MAX_LINE).collect(),
-        level: Some(if prio <= 3 { "error" } else if prio == 4 { "warning" } else { "info" }.into()),
+        level: Some(
+            if prio <= 3 {
+                "error"
+            } else if prio == 4 {
+                "warning"
+            } else {
+                "info"
+            }
+            .into(),
+        ),
     })
 }
 
@@ -587,19 +744,38 @@ pub fn journal_line(json: &str) -> Option<Line> {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Event {
     /// Webhook listener ready: the URL to give Sentry/Datadog (through a tunnel).
-    Listening { url: String },
-    Incident { incident: Incident },
-    Repeat { id: String, count: u64 },
-    Limited { total: u64 },
-    Ended { error: Option<String> },
+    Listening {
+        url: String,
+    },
+    Incident {
+        incident: Incident,
+    },
+    Repeat {
+        id: String,
+        count: u64,
+    },
+    Limited {
+        total: u64,
+    },
+    Ended {
+        error: Option<String>,
+    },
 }
 
 fn now() -> u64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs())
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
 }
 
 /// Follow `source` until `cancel`; every detected error goes to the incident store and `on`.
-pub async fn watch(root: &Path, source: &Source, cfg: &Config, on: &(dyn Fn(&Event) + Send + Sync), cancel: CancellationToken) -> Result<(), String> {
+pub async fn watch(
+    root: &Path,
+    source: &Source,
+    cfg: &Config,
+    on: &(dyn Fn(&Event) + Send + Sync),
+    cancel: CancellationToken,
+) -> Result<(), String> {
     let mut det = Detector::new(cfg)?;
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<Line>();
     let label = source.label();
@@ -612,7 +788,10 @@ pub async fn watch(root: &Path, source: &Source, cfg: &Config, on: &(dyn Fn(&Eve
             })
         }
         Source::Journald(unit) => {
-            let mut args: Vec<String> = ["-f", "-n", "0", "-o", "json"].iter().map(|s| (*s).to_owned()).collect();
+            let mut args: Vec<String> = ["-f", "-n", "0", "-o", "json"]
+                .iter()
+                .map(|s| (*s).to_owned())
+                .collect();
             if let Some(u) = unit {
                 args.extend(["-u".to_owned(), u]);
             }
@@ -629,9 +808,22 @@ pub async fn watch(root: &Path, source: &Source, cfg: &Config, on: &(dyn Fn(&Eve
                 Some(t) => t.clone(),
                 None => crate::triggers::notify::random_hex(16)?,
             };
-            let port = listen(kind, cfg.port.unwrap_or(DEFAULT_PORT), token.clone(), tx, cancel.clone()).await?;
-            let path = if kind == Hook::Sentry { "sentry" } else { "datadog" };
-            on(&Event::Listening { url: format!("http://127.0.0.1:{port}/{path}/{token}") });
+            let port = listen(
+                kind,
+                cfg.port.unwrap_or(DEFAULT_PORT),
+                token.clone(),
+                tx,
+                cancel.clone(),
+            )
+            .await?;
+            let path = if kind == Hook::Sentry {
+                "sentry"
+            } else {
+                "datadog"
+            };
+            on(&Event::Listening {
+                url: format!("http://127.0.0.1:{port}/{path}/{token}"),
+            });
             let c = cancel.clone();
             tokio::spawn(async move {
                 c.cancelled().await;
@@ -665,7 +857,9 @@ pub async fn watch(root: &Path, source: &Source, cfg: &Config, on: &(dyn Fn(&Eve
     } else {
         task.await.map_err(|e| e.to_string()).and_then(|r| r)
     };
-    on(&Event::Ended { error: r.as_ref().err().cloned() });
+    on(&Event::Ended {
+        error: r.as_ref().err().cloned(),
+    });
     r
 }
 
@@ -681,7 +875,11 @@ fn git(root: &Path, args: &[&str]) -> Result<String, String> {
     if out.status.success() {
         Ok(String::from_utf8_lossy(&out.stdout).trim().to_owned())
     } else {
-        Err(format!("git {}: {}", args.first().copied().unwrap_or_default(), String::from_utf8_lossy(&out.stderr).trim()))
+        Err(format!(
+            "git {}: {}",
+            args.first().copied().unwrap_or_default(),
+            String::from_utf8_lossy(&out.stderr).trim()
+        ))
     }
 }
 
@@ -711,11 +909,23 @@ pub fn fix_prompt(i: &Incident) -> String {
 /// Open (or switch to) `kor/fix-<id>` from the current branch and remember both.
 pub fn fix_start(root: &Path, id: &str) -> Result<(Incident, String), String> {
     let mut list = incidents(root);
-    let i = list.iter_mut().find(|i| i.id == id).ok_or_else(|| format!("no incident `{id}`"))?;
+    let i = list
+        .iter_mut()
+        .find(|i| i.id == id)
+        .ok_or_else(|| format!("no incident `{id}`"))?;
     let branch = format!("kor/fix-{}", i.id);
     let current = git(root, &["rev-parse", "--abbrev-ref", "HEAD"])?;
     if current != branch {
-        let exists = git(root, &["rev-parse", "--verify", "--quiet", &format!("refs/heads/{branch}")]).is_ok();
+        let exists = git(
+            root,
+            &[
+                "rev-parse",
+                "--verify",
+                "--quiet",
+                &format!("refs/heads/{branch}"),
+            ],
+        )
+        .is_ok();
         if exists {
             git(root, &["switch", &branch])?;
         } else {
@@ -723,8 +933,16 @@ pub fn fix_start(root: &Path, id: &str) -> Result<(Incident, String), String> {
         }
     }
     let base = i.fix.as_ref().map_or(current.clone(), |f| f.base.clone());
-    let base = if base == branch || base == "HEAD" { current } else { base };
-    i.fix = Some(Fix { branch, base, pr: None });
+    let base = if base == branch || base == "HEAD" {
+        current
+    } else {
+        base
+    };
+    i.fix = Some(Fix {
+        branch,
+        base,
+        pr: None,
+    });
     let out = i.clone();
     save(root, &list)?;
     let prompt = fix_prompt(&out);
@@ -734,22 +952,44 @@ pub fn fix_start(root: &Path, id: &str) -> Result<(Incident, String), String> {
 /// Files the fix changed (what the commit will hold).
 pub fn fix_files(root: &Path) -> Result<Vec<String>, String> {
     let s = git(root, &["status", "--porcelain", "--untracked-files=all"])?;
-    Ok(s.lines().filter_map(|l| l.get(3..)).map(|p| p.trim_matches('"').to_owned()).collect())
+    Ok(s.lines()
+        .filter_map(|l| l.get(3..))
+        .map(|p| p.trim_matches('"').to_owned())
+        .collect())
 }
 
 /// Commit the fix, push the branch and open a draft pull request against the base branch.
 pub async fn fix_finish(root: &Path, id: &str) -> Result<crate::forge::PrRef, String> {
     let i = incident(root, id).ok_or_else(|| format!("no incident `{id}`"))?;
-    let fix = i.fix.clone().ok_or("start the fix first (kor watch fix <id>)")?;
+    let fix = i
+        .fix
+        .clone()
+        .ok_or("start the fix first (kor watch fix <id>)")?;
     if git(root, &["rev-parse", "--abbrev-ref", "HEAD"])? != fix.branch {
         return Err(format!("switch to {} first", fix.branch));
     }
     let title: String = format!("fix: {}", i.title).chars().take(72).collect();
     if !fix_files(root)?.is_empty() {
         git(root, &["add", "-A"])?;
-        git(root, &["commit", "-m", &title, "-m", &format!("Error seen in {} ({}x). Found by kor watch, incident {}.", i.source, i.count, i.id)])?;
+        git(
+            root,
+            &[
+                "commit",
+                "-m",
+                &title,
+                "-m",
+                &format!(
+                    "Error seen in {} ({}x). Found by kor watch, incident {}.",
+                    i.source, i.count, i.id
+                ),
+            ],
+        )?;
     }
-    if git(root, &["rev-list", "--count", &format!("{}..HEAD", fix.base)])? == "0" {
+    if git(
+        root,
+        &["rev-list", "--count", &format!("{}..HEAD", fix.base)],
+    )? == "0"
+    {
         return Err("the fix branch has no commits: nothing to propose".into());
     }
     git(root, &["push", "-u", "origin", &fix.branch])?;
@@ -757,17 +997,33 @@ pub async fn fix_finish(root: &Path, id: &str) -> Result<crate::forge::PrRef, St
         "Kor watched `{}` and saw this error {} time(s):\n\n```\n{}\n```\n\nThe agent's root-cause analysis and fix are in the commits. Review before merging.",
         i.source,
         i.count,
-        i.context.iter().rev().take(10).rev().cloned().collect::<Vec<_>>().join("\n")
+        i.context
+            .iter()
+            .rev()
+            .take(10)
+            .rev()
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("\n")
     );
     let pr = crate::forge::create_pull_request(
         root,
-        &crate::forge::PrRequest { head: fix.branch.clone(), base: fix.base.clone(), title, body, draft: true },
+        &crate::forge::PrRequest {
+            head: fix.branch.clone(),
+            base: fix.base.clone(),
+            title,
+            body,
+            draft: true,
+        },
     )
     .await
     .map_err(|e| e.to_string())?;
     let mut list = incidents(root);
     if let Some(x) = list.iter_mut().find(|x| x.id == id) {
-        x.fix = Some(Fix { pr: Some(pr.url.clone()), ..fix });
+        x.fix = Some(Fix {
+            pr: Some(pr.url.clone()),
+            ..fix
+        });
     }
     save(root, &list)?;
     Ok(pr)
@@ -780,44 +1036,112 @@ mod tests {
     #[test]
     fn sources_parse() {
         let r = Path::new("/p");
-        assert_eq!(Source::parse("sentry", r), Ok(Source::Webhook(Hook::Sentry)));
+        assert_eq!(
+            Source::parse("sentry", r),
+            Ok(Source::Webhook(Hook::Sentry))
+        );
         assert_eq!(Source::parse("journald", r), Ok(Source::Journald(None)));
-        assert_eq!(Source::parse("journald:nginx", r), Ok(Source::Journald(Some("nginx".into()))));
-        assert_eq!(Source::parse("docker:web", r), Ok(Source::Docker("web".into())));
+        assert_eq!(
+            Source::parse("journald:nginx", r),
+            Ok(Source::Journald(Some("nginx".into())))
+        );
+        assert_eq!(
+            Source::parse("docker:web", r),
+            Ok(Source::Docker("web".into()))
+        );
         assert!(Source::parse("docker:--privileged", r).is_err());
-        assert_eq!(Source::parse("file:logs/a.log", r), Ok(Source::File(r.join("logs/a.log"))));
+        assert_eq!(
+            Source::parse("file:logs/a.log", r),
+            Ok(Source::File(r.join("logs/a.log")))
+        );
     }
 
     #[test]
     fn detection_dedup_and_rate_limit() {
-        let mut d = Detector::new(&Config { ignore: vec!["healthz".into()], max_per_minute: Some(2), ..Config::default() }).unwrap();
+        let mut d = Detector::new(&Config {
+            ignore: vec!["healthz".into()],
+            max_per_minute: Some(2),
+            ..Config::default()
+        })
+        .unwrap();
         assert_eq!(d.feed("f", &Line::raw("GET / 200"), 0), Verdict::Quiet);
-        assert_eq!(d.feed("f", &Line::raw("ERROR healthz probe"), 0), Verdict::Quiet);
-        let Verdict::New(i) = d.feed("f", &Line::raw("2024-01-01 ERROR user 42 not found"), 1) else { panic!() };
+        assert_eq!(
+            d.feed("f", &Line::raw("ERROR healthz probe"), 0),
+            Verdict::Quiet
+        );
+        let Verdict::New(i) = d.feed("f", &Line::raw("2024-01-01 ERROR user 42 not found"), 1)
+        else {
+            panic!()
+        };
         assert_eq!(i.context.len(), 3);
         assert!(i.context.contains(&"GET / 200".to_owned()));
-        assert_eq!(d.feed("f", &Line::raw("2024-01-02 ERROR user 77 not found"), 2), Verdict::Repeat(i.id.clone(), 2));
-        assert!(matches!(d.feed("f", &Line::raw("panic: index out of range"), 3), Verdict::New(_)));
-        assert_eq!(d.feed("f", &Line::raw("Exception: other"), 4), Verdict::Limited);
-        assert!(matches!(d.feed("f", &Line::raw("Exception: other"), 70), Verdict::New(_)));
+        assert_eq!(
+            d.feed("f", &Line::raw("2024-01-02 ERROR user 77 not found"), 2),
+            Verdict::Repeat(i.id.clone(), 2)
+        );
+        assert!(matches!(
+            d.feed("f", &Line::raw("panic: index out of range"), 3),
+            Verdict::New(_)
+        ));
+        assert_eq!(
+            d.feed("f", &Line::raw("Exception: other"), 4),
+            Verdict::Limited
+        );
+        assert!(matches!(
+            d.feed("f", &Line::raw("Exception: other"), 70),
+            Verdict::New(_)
+        ));
         // Level fields win over words.
-        assert_eq!(d.feed("f", &Line::raw(r#"{"level":"info","msg":"error count reset"}"#), 80), Verdict::Quiet);
-        assert!(matches!(d.feed("f", &Line::raw(r#"{"level":"ERROR","msg":"db down"}"#), 80), Verdict::New(_)));
-        assert!(matches!(d.feed("f", &Line::raw(r#"1.2.3.4 - - "GET /x HTTP/1.1" 502 0"#), 200), Verdict::New(_)));
+        assert_eq!(
+            d.feed(
+                "f",
+                &Line::raw(r#"{"level":"info","msg":"error count reset"}"#),
+                80
+            ),
+            Verdict::Quiet
+        );
+        assert!(matches!(
+            d.feed("f", &Line::raw(r#"{"level":"ERROR","msg":"db down"}"#), 80),
+            Verdict::New(_)
+        ));
+        assert!(matches!(
+            d.feed(
+                "f",
+                &Line::raw(r#"1.2.3.4 - - "GET /x HTTP/1.1" 502 0"#),
+                200
+            ),
+            Verdict::New(_)
+        ));
         assert_eq!(fingerprint("id 1 'a'"), fingerprint("id 22 'bbb'"));
     }
 
     #[test]
     fn journald_and_webhooks() {
-        let l = journal_line(r#"{"MESSAGE":"segfault at 0","PRIORITY":"2","_SYSTEMD_UNIT":"app.service"}"#).unwrap();
-        assert_eq!((l.text.as_str(), l.level.as_deref()), ("app.service: segfault at 0", Some("error")));
-        assert_eq!(journal_line(r#"{"MESSAGE":"hi","PRIORITY":"6"}"#).unwrap().level.as_deref(), Some("info"));
+        let l = journal_line(
+            r#"{"MESSAGE":"segfault at 0","PRIORITY":"2","_SYSTEMD_UNIT":"app.service"}"#,
+        )
+        .unwrap();
+        assert_eq!(
+            (l.text.as_str(), l.level.as_deref()),
+            ("app.service: segfault at 0", Some("error"))
+        );
+        assert_eq!(
+            journal_line(r#"{"MESSAGE":"hi","PRIORITY":"6"}"#)
+                .unwrap()
+                .level
+                .as_deref(),
+            Some("info")
+        );
         let sentry = br#"{"action":"triggered","data":{"event":{"title":"ZeroDivisionError: division by zero","level":"error","culprit":"app.views.pay","web_url":"https://sentry.io/x"}}}"#;
         let ls = webhook_lines(Hook::Sentry, sentry);
         assert_eq!(ls[0].text, "ZeroDivisionError: division by zero");
         assert_eq!(ls.len(), 3);
-        let dd = br#"{"title":"[Triggered] 5xx rate high","body":"web 5xx > 5%","alert_type":"error"}"#;
-        assert_eq!(webhook_lines(Hook::Datadog, dd)[0].level.as_deref(), Some("error"));
+        let dd =
+            br#"{"title":"[Triggered] 5xx rate high","body":"web 5xx > 5%","alert_type":"error"}"#;
+        assert_eq!(
+            webhook_lines(Hook::Datadog, dd)[0].level.as_deref(),
+            Some("error")
+        );
         assert!(webhook_lines(Hook::Datadog, b"not json").is_empty());
     }
 
@@ -832,7 +1156,11 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(600)).await;
         let append = |t: &str| {
             use std::io::Write as _;
-            let mut w = std::fs::OpenOptions::new().append(true).create(true).open(&f).unwrap();
+            let mut w = std::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(&f)
+                .unwrap();
             w.write_all(t.as_bytes()).unwrap();
         };
         append("one\n");
@@ -860,19 +1188,45 @@ mod tests {
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         let c = CancellationToken::new();
         let token = "0123456789abcdef0123".to_owned();
-        let port = listen(Hook::Sentry, 0, token.clone(), tx, c.clone()).await.unwrap();
+        let port = listen(Hook::Sentry, 0, token.clone(), tx, c.clone())
+            .await
+            .unwrap();
         let send = |path: String, body: &'static str| async move {
-            let mut s = tokio::net::TcpStream::connect(("127.0.0.1", port)).await.unwrap();
-            s.write_all(format!("POST {path} HTTP/1.1\r\nHost: x\r\nContent-Length: {}\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+            let mut s = tokio::net::TcpStream::connect(("127.0.0.1", port))
+                .await
+                .unwrap();
+            s.write_all(
+                format!(
+                    "POST {path} HTTP/1.1\r\nHost: x\r\nContent-Length: {}\r\n\r\n{body}",
+                    body.len()
+                )
+                .as_bytes(),
+            )
+            .await
+            .unwrap();
             let mut out = String::new();
             let _ = s.read_to_string(&mut out).await;
             out
         };
         let body = r#"{"message":"KeyError: 'x'","level":"error"}"#;
-        assert!(send("/sentry/wrong-token-0000000".into(), body).await.contains("404"));
+        assert!(
+            send("/sentry/wrong-token-0000000".into(), body)
+                .await
+                .contains("404")
+        );
         assert!(send(format!("/sentry/{token}"), body).await.contains("204"));
         assert_eq!(rx.recv().await.unwrap().text, "KeyError: 'x'");
-        assert!(listen(Hook::Sentry, 0, "short".into(), tokio::sync::mpsc::unbounded_channel().0, c.clone()).await.is_err());
+        assert!(
+            listen(
+                Hook::Sentry,
+                0,
+                "short".into(),
+                tokio::sync::mpsc::unbounded_channel().0,
+                c.clone()
+            )
+            .await
+            .is_err()
+        );
         c.cancel();
     }
 
@@ -887,7 +1241,10 @@ mod tests {
         let got = incident(dir.path(), &i.id).unwrap();
         assert_eq!((got.count, got.last_at), (2, 9));
         assert!(fix_prompt(&got).contains("untrusted"));
-        assert!(fix_start(dir.path(), &i.id).is_err(), "not a git repository");
+        assert!(
+            fix_start(dir.path(), &i.id).is_err(),
+            "not a git repository"
+        );
         assert_eq!(clear(dir.path(), None).unwrap(), 1);
     }
 }

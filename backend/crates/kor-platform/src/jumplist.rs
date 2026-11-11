@@ -247,8 +247,14 @@ mod tests {
                 args: vec!["kor://open?path=/home/u/my%20app".into()],
             }],
             tasks: vec![
-                Item { title: "Yeni görev".into(), args: vec!["kor://new".into()] },
-                Item { title: "Çalışan görevler".into(), args: vec!["kor://running".into()] },
+                Item {
+                    title: "Yeni görev".into(),
+                    args: vec!["kor://new".into()],
+                },
+                Item {
+                    title: "Çalışan görevler".into(),
+                    args: vec!["kor://running".into()],
+                },
             ],
         }
     }
@@ -260,7 +266,10 @@ mod tests {
         assert_eq!(quote_windows_arg(r"C:\a b\"), r#""C:\a b\\""#);
         assert_eq!(quote_windows_arg(r#"x"y"#), r#""x\"y""#);
         assert_eq!(quote_windows_arg(""), "\"\"");
-        assert_eq!(windows_args(&["--open".into(), "C:\\p q".into()]), "--open \"C:\\p q\"");
+        assert_eq!(
+            windows_args(&["--open".into(), "C:\\p q".into()]),
+            "--open \"C:\\p q\""
+        );
     }
 
     #[test]
@@ -269,17 +278,29 @@ mod tests {
         let exe = Path::new("/opt/Kor/kor-desktop");
         let once = linux_actions(base, exe, &list());
         assert_eq!(linux_actions(&once, exe, &list()), once, "idempotent");
-        assert!(once.contains("Actions=other;kor-recent-0;kor-task-0;kor-task-1;\n"), "{once}");
+        assert!(
+            once.contains("Actions=other;kor-recent-0;kor-task-0;kor-task-1;\n"),
+            "{once}"
+        );
         assert!(once.contains("[Desktop Action other]\nName=Other\nExec=x\n"));
         assert!(!once.contains("kor-recent-9") && !once.contains("Name=Old"));
-        assert!(once.contains("Exec=/opt/Kor/kor-desktop \"kor://open?path=/home/u/my%%20app\"\n"), "{once}");
+        assert!(
+            once.contains("Exec=/opt/Kor/kor-desktop \"kor://open?path=/home/u/my%%20app\"\n"),
+            "{once}"
+        );
         assert!(once.contains("[Desktop Action kor-task-1]\nName=Çalışan görevler\nExec=/opt/Kor/kor-desktop kor://running\n"));
         // An empty list removes Kor's groups and keeps the rest.
         let empty = linux_actions(&once, exe, &List::default());
-        assert!(empty.contains("Actions=other;\n") && !empty.contains("Action kor-"), "{empty}");
+        assert!(
+            empty.contains("Actions=other;\n") && !empty.contains("Action kor-"),
+            "{empty}"
+        );
         // An entry without an Actions= line gets one inside [Desktop Entry].
         let added = linux_actions("[Desktop Entry]\nName=Kor\n", exe, &list());
-        assert!(added.starts_with("[Desktop Entry]\nName=Kor\nActions=kor-recent-0;"), "{added}");
+        assert!(
+            added.starts_with("[Desktop Entry]\nName=Kor\nActions=kor-recent-0;"),
+            "{added}"
+        );
     }
 
     #[test]

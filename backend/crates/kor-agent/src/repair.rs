@@ -299,9 +299,15 @@ mod tests {
             (r#"{"a": {"b": [1, 2"#, json!({"a": {"b": [1, 2]}})),
             (r#"{"a": "unterminated"#, json!({"a": "unterminated"})),
             ("{'a': 'it\\'s \"q\"'}", json!({"a": "it's \"q\""})),
-            (r#"{"a": True, "b": None, "c": [1,],}"#, json!({"a": true, "b": null, "c": [1]})),
+            (
+                r#"{"a": True, "b": None, "c": [1,],}"#,
+                json!({"a": true, "b": null, "c": [1]}),
+            ),
             (r#"{file_path: "x.rs"}"#, json!({"file_path": "x.rs"})),
-            ("Sure! {\"a\": \"line\nbreak\"}", json!({"a": "line\nbreak"})),
+            (
+                "Sure! {\"a\": \"line\nbreak\"}",
+                json!({"a": "line\nbreak"}),
+            ),
         ];
         for (src, want) in cases {
             assert_eq!(lenient(src), Some(want), "{src}");

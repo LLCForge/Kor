@@ -26,7 +26,10 @@ pub enum ComputerCmd {
 
 pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
     c.about(l.t("cmd-computer"))
-        .mut_subcommand("status", |s| s.about(l.t("cmd-computer-status")).mut_arg("json", |a| a.help(l.t("arg-json"))))
+        .mut_subcommand("status", |s| {
+            s.about(l.t("cmd-computer-status"))
+                .mut_arg("json", |a| a.help(l.t("arg-json")))
+        })
         .mut_subcommand("on", |s| s.about(l.t("cmd-computer-on")))
         .mut_subcommand("off", |s| s.about(l.t("cmd-computer-off")))
         .mut_subcommand("allow", |s| {
@@ -34,7 +37,10 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
                 .mut_arg("app", |a| a.help(l.t("arg-computer-app")))
                 .mut_arg("tier", |a| a.help(l.t("arg-computer-tier")))
         })
-        .mut_subcommand("reset", |s| s.about(l.t("cmd-computer-reset")).mut_arg("app", |a| a.help(l.t("arg-computer-app"))))
+        .mut_subcommand("reset", |s| {
+            s.about(l.t("cmd-computer-reset"))
+                .mut_arg("app", |a| a.help(l.t("arg-computer-app")))
+        })
 }
 
 fn tier_label(l: &Localizer, t: Tier) -> String {
@@ -50,7 +56,11 @@ fn user_file(l: &Localizer, ctx: &Ctx) -> anyhow::Result<std::path::PathBuf> {
 
 pub fn run(ctx: &Ctx, cmd: ComputerCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
-    let config = ctx.config.as_ref().map(|c| c.config.computer.clone()).unwrap_or_default();
+    let config = ctx
+        .config
+        .as_ref()
+        .map(|c| c.config.computer.clone())
+        .unwrap_or_default();
     match cmd {
         ComputerCmd::Status { json } => {
             let p = Policy::from_config(&config);
@@ -71,14 +81,42 @@ pub fn run(ctx: &Ctx, cmd: ComputerCmd) -> anyhow::Result<bool> {
                 println!("{}", serde_json::to_string_pretty(&v)?);
                 return Ok(true);
             }
-            println!("{}", l.t(if enabled { "computer-status-on" } else { "computer-status-off" }));
+            println!(
+                "{}",
+                l.t(if enabled {
+                    "computer-status-on"
+                } else {
+                    "computer-status-off"
+                })
+            );
             if let Some(a) = &front {
                 let (t, _) = p.tier(a);
-                println!("{}", l.t_args("computer-front", &args!("app" => a.clone(), "tier" => tier_label(l, t))));
+                println!(
+                    "{}",
+                    l.t_args(
+                        "computer-front",
+                        &args!("app" => a.clone(), "tier" => tier_label(l, t))
+                    )
+                );
             }
-            println!("{}", l.t(if watching { "computer-watch-on" } else { "computer-watch-off" }));
+            println!(
+                "{}",
+                l.t(if watching {
+                    "computer-watch-on"
+                } else {
+                    "computer-watch-off"
+                })
+            );
             println!("{}", l.t("computer-defaults"));
-            for c in [Class::Kor, Class::Terminal, Class::PasswordManager, Class::Banking, Class::Browser, Class::Ide, Class::Other] {
+            for c in [
+                Class::Kor,
+                Class::Terminal,
+                Class::PasswordManager,
+                Class::Banking,
+                Class::Browser,
+                Class::Ide,
+                Class::Other,
+            ] {
                 println!(
                     "  {}",
                     l.t_args(
@@ -97,8 +135,19 @@ pub fn run(ctx: &Ctx, cmd: ComputerCmd) -> anyhow::Result<bool> {
         }
         ComputerCmd::On | ComputerCmd::Off => {
             let on = matches!(cmd, ComputerCmd::On);
-            kor_config::set_scalar(&user_file(l, ctx)?, "computer.enabled", if on { "true" } else { "false" })?;
-            println!("{}", l.t(if on { "computer-status-on" } else { "computer-status-off" }));
+            kor_config::set_scalar(
+                &user_file(l, ctx)?,
+                "computer.enabled",
+                if on { "true" } else { "false" },
+            )?;
+            println!(
+                "{}",
+                l.t(if on {
+                    "computer-status-on"
+                } else {
+                    "computer-status-off"
+                })
+            );
             Ok(true)
         }
         ComputerCmd::Allow { app, tier } => {
@@ -119,7 +168,13 @@ pub fn run(ctx: &Ctx, cmd: ComputerCmd) -> anyhow::Result<bool> {
             kor_config::unset(&user_file(l, ctx)?, &key)?;
             let name = kor_platform::desktop_probe::app_name(&app);
             let t = policy::classify(&name).default_tier();
-            println!("{}", l.t_args("computer-tier-reset", &args!("app" => name, "tier" => tier_label(l, t))));
+            println!(
+                "{}",
+                l.t_args(
+                    "computer-tier-reset",
+                    &args!("app" => name, "tier" => tier_label(l, t))
+                )
+            );
             Ok(true)
         }
     }
@@ -139,9 +194,18 @@ mod tests {
 
     #[test]
     fn parses() {
-        assert!(matches!(T::parse_from(["t", "status", "--json"]).c, ComputerCmd::Status { json: true }));
-        assert!(matches!(T::parse_from(["t", "allow", "chrome", "full"]).c, ComputerCmd::Allow { .. }));
-        assert!(matches!(T::parse_from(["t", "reset", "chrome"]).c, ComputerCmd::Reset { .. }));
+        assert!(matches!(
+            T::parse_from(["t", "status", "--json"]).c,
+            ComputerCmd::Status { json: true }
+        ));
+        assert!(matches!(
+            T::parse_from(["t", "allow", "chrome", "full"]).c,
+            ComputerCmd::Allow { .. }
+        ));
+        assert!(matches!(
+            T::parse_from(["t", "reset", "chrome"]).c,
+            ComputerCmd::Reset { .. }
+        ));
         assert!(matches!(T::parse_from(["t", "on"]).c, ComputerCmd::On));
         let l = Localizer::new(kor_i18n::Lang::Tr);
         let _ = localize(<T as clap::CommandFactory>::command(), &l);

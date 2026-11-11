@@ -53,7 +53,10 @@ impl Session for Scripted {
             return Ok(StopReason::Cancelled);
         }
         let seen = if self.editor.can_read() {
-            self.editor.read_text(&self.cwd.join("in.txt")).await.unwrap_or_default()
+            self.editor
+                .read_text(&self.cwd.join("in.txt"))
+                .await
+                .unwrap_or_default()
         } else {
             String::new()
         };
@@ -76,7 +79,9 @@ impl Session for Scripted {
         };
         let allowed = approver.review(&req).await.reply != PermissionReply::Deny;
         if allowed {
-            self.editor.write_text(&self.cwd.join("a.txt"), "new text").await?;
+            self.editor
+                .write_text(&self.cwd.join("a.txt"), "new text")
+                .await?;
         }
         let _ = events.send(AgentEvent::ToolEnd {
             id: "t1".into(),
@@ -182,7 +187,9 @@ async fn acp_client_harness_against_kor() {
     let mut h = Harness::start();
 
     // Before initialize everything but initialize is refused.
-    let id = h.call("session/new", json!({ "cwd": cwd, "mcpServers": [] })).await;
+    let id = h
+        .call("session/new", json!({ "cwd": cwd, "mcpServers": [] }))
+        .await;
     assert_eq!(h.until(id).await.1["error"]["code"], -32_600);
 
     // Version negotiation: a newer client gets Kor's version back.
@@ -196,14 +203,24 @@ async fn acp_client_harness_against_kor() {
     let init = h.until(id).await.1["result"].clone();
     assert_eq!(init["protocolVersion"], 1);
     assert_eq!(init["agentCapabilities"]["loadSession"], true);
-    assert_eq!(init["agentCapabilities"]["promptCapabilities"]["embeddedContext"], true);
+    assert_eq!(
+        init["agentCapabilities"]["promptCapabilities"]["embeddedContext"],
+        true
+    );
     assert_eq!(init["agentInfo"]["name"], "kor");
     assert!(init["authMethods"].as_array().unwrap().is_empty());
 
     // Sessions need an absolute, existing cwd.
-    let id = h.call("session/new", json!({ "cwd": "relative/dir", "mcpServers": [] })).await;
+    let id = h
+        .call(
+            "session/new",
+            json!({ "cwd": "relative/dir", "mcpServers": [] }),
+        )
+        .await;
     assert_eq!(h.until(id).await.1["error"]["code"], -32_602);
-    let id = h.call("session/new", json!({ "cwd": cwd, "mcpServers": [] })).await;
+    let id = h
+        .call("session/new", json!({ "cwd": cwd, "mcpServers": [] }))
+        .await;
     let new = h.until(id).await.1["result"].clone();
     let sid = new["sessionId"].as_str().unwrap().to_owned();
     assert_eq!(new["modes"]["currentModeId"], "default");
@@ -222,7 +239,10 @@ async fn acp_client_harness_against_kor() {
     let read = h.recv().await;
     assert_eq!(read["method"], "fs/read_text_file");
     assert_eq!(read["params"]["sessionId"], sid.as_str());
-    h.send(json!({ "jsonrpc": "2.0", "id": read["id"], "result": { "content": "unsaved buffer" } })).await;
+    h.send(
+        json!({ "jsonrpc": "2.0", "id": read["id"], "result": { "content": "unsaved buffer" } }),
+    )
+    .await;
     let mut updates = Vec::new();
     let perm = loop {
         let v = h.recv().await;
@@ -231,30 +251,55 @@ async fn acp_client_harness_against_kor() {
         }
         updates.push(v);
     };
-    let chunk = updates.iter().find(|u| u["params"]["update"]["sessionUpdate"] == "agent_message_chunk").unwrap();
-    let text = chunk["params"]["update"]["content"]["text"].as_str().unwrap();
-    assert!(text.contains("hello") && text.contains("ctx") && text.contains("unsaved buffer"), "{text}");
-    let call = updates.iter().find(|u| u["params"]["update"]["sessionUpdate"] == "tool_call").unwrap();
+    let chunk = updates
+        .iter()
+        .find(|u| u["params"]["update"]["sessionUpdate"] == "agent_message_chunk")
+        .unwrap();
+    let text = chunk["params"]["update"]["content"]["text"]
+        .as_str()
+        .unwrap();
+    assert!(
+        text.contains("hello") && text.contains("ctx") && text.contains("unsaved buffer"),
+        "{text}"
+    );
+    let call = updates
+        .iter()
+        .find(|u| u["params"]["update"]["sessionUpdate"] == "tool_call")
+        .unwrap();
     assert_eq!(call["params"]["update"]["kind"], "edit");
     let p = &perm["params"];
     assert_eq!(p["toolCall"]["toolCallId"], "t1");
     assert_eq!(p["toolCall"]["content"][0]["type"], "diff");
     assert_eq!(p["toolCall"]["content"][0]["newText"], "new text");
     assert!(p["toolCall"]["content"][0]["oldText"].is_null());
-    let kinds: Vec<&str> = p["options"].as_array().unwrap().iter().map(|o| o["kind"].as_str().unwrap()).collect();
+    let kinds: Vec<&str> = p["options"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|o| o["kind"].as_str().unwrap())
+        .collect();
     assert_eq!(kinds, ["allow_once", "allow_always", "reject_once"]);
     h.send(json!({ "jsonrpc": "2.0", "id": perm["id"], "result": { "outcome": { "outcome": "selected", "optionId": "allow" } } })).await;
     let write = h.recv().await;
     assert_eq!(write["method"], "fs/write_text_file");
     assert_eq!(write["params"]["content"], "new text");
-    h.send(json!({ "jsonrpc": "2.0", "id": write["id"], "result": {} })).await;
+    h.send(json!({ "jsonrpc": "2.0", "id": write["id"], "result": {} }))
+        .await;
     let (updates_after, response) = h.until(id).await;
     assert_eq!(response["result"]["stopReason"], "end_turn");
-    let done = updates_after.iter().find(|u| u["params"]["update"]["sessionUpdate"] == "tool_call_update").unwrap();
+    let done = updates_after
+        .iter()
+        .find(|u| u["params"]["update"]["sessionUpdate"] == "tool_call_update")
+        .unwrap();
     assert_eq!(done["params"]["update"]["status"], "completed");
 
     // Rejected: nothing written, the tool call fails.
-    let id = h.call("session/prompt", json!({ "sessionId": sid, "prompt": [{ "type": "text", "text": "again" }] })).await;
+    let id = h
+        .call(
+            "session/prompt",
+            json!({ "sessionId": sid, "prompt": [{ "type": "text", "text": "again" }] }),
+        )
+        .await;
     let read2 = h.recv().await;
     h.send(json!({ "jsonrpc": "2.0", "id": read2["id"], "error": { "code": -32_002, "message": "not open" } })).await;
     let asked = loop {
@@ -266,29 +311,62 @@ async fn acp_client_harness_against_kor() {
     h.send(json!({ "jsonrpc": "2.0", "id": asked["id"], "result": { "outcome": { "outcome": "cancelled" } } })).await;
     let (after, answer) = h.until(id).await;
     assert_eq!(answer["result"]["stopReason"], "end_turn");
-    assert!(after.iter().any(|u| u["params"]["update"]["status"] == "failed"));
+    assert!(
+        after
+            .iter()
+            .any(|u| u["params"]["update"]["status"] == "failed")
+    );
     assert!(!after.iter().any(|u| u["method"] == "fs/write_text_file"));
 
     // Cancellation: `session/cancel` ends the turn with `cancelled`.
-    let id = h.call("session/prompt", json!({ "sessionId": sid, "prompt": [{ "type": "text", "text": "wait here" }] })).await;
+    let id = h
+        .call(
+            "session/prompt",
+            json!({ "sessionId": sid, "prompt": [{ "type": "text", "text": "wait here" }] }),
+        )
+        .await;
     tokio::time::sleep(Duration::from_millis(100)).await;
-    h.send(json!({ "jsonrpc": "2.0", "method": "session/cancel", "params": { "sessionId": sid } })).await;
+    h.send(json!({ "jsonrpc": "2.0", "method": "session/cancel", "params": { "sessionId": sid } }))
+        .await;
     assert_eq!(h.until(id).await.1["result"]["stopReason"], "cancelled");
 
     // Modes.
-    let id = h.call("session/set_mode", json!({ "sessionId": sid, "modeId": "plan" })).await;
+    let id = h
+        .call(
+            "session/set_mode",
+            json!({ "sessionId": sid, "modeId": "plan" }),
+        )
+        .await;
     let (n, r) = h.until(id).await;
     assert!(r.get("result").is_some());
     assert_eq!(n[0]["params"]["update"]["currentModeId"], "plan");
-    let id = h.call("session/set_mode", json!({ "sessionId": sid, "modeId": "yolo" })).await;
+    let id = h
+        .call(
+            "session/set_mode",
+            json!({ "sessionId": sid, "modeId": "yolo" }),
+        )
+        .await;
     assert_eq!(h.until(id).await.1["error"]["code"], -32_602);
 
     // Load replays history; unknown sessions and methods are errors.
-    let id = h.call("session/load", json!({ "sessionId": "s-1", "cwd": cwd, "mcpServers": [] })).await;
+    let id = h
+        .call(
+            "session/load",
+            json!({ "sessionId": "s-1", "cwd": cwd, "mcpServers": [] }),
+        )
+        .await;
     let (n, r) = h.until(id).await;
     assert_eq!(r["result"]["modes"]["currentModeId"], "default");
-    assert_eq!(n[0]["params"]["update"]["sessionUpdate"], "user_message_chunk");
-    let id = h.call("session/prompt", json!({ "sessionId": "nope", "prompt": [] })).await;
+    assert_eq!(
+        n[0]["params"]["update"]["sessionUpdate"],
+        "user_message_chunk"
+    );
+    let id = h
+        .call(
+            "session/prompt",
+            json!({ "sessionId": "nope", "prompt": [] }),
+        )
+        .await;
     assert_eq!(h.until(id).await.1["error"]["code"], -32_002);
     let id = h.call("session/fly", json!({})).await;
     assert_eq!(h.until(id).await.1["error"]["code"], -32_601);

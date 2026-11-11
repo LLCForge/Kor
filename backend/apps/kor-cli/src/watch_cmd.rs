@@ -53,7 +53,10 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
 }
 
 fn err(l: &Localizer, e: impl std::fmt::Display) -> bool {
-    eprintln!("{}", l.t_args("watch-error", &args!("error" => e.to_string())));
+    eprintln!(
+        "{}",
+        l.t_args("watch-error", &args!("error" => e.to_string()))
+    );
     false
 }
 
@@ -68,7 +71,12 @@ pub fn run(ctx: &Ctx, cmd: &WatchCmd) -> anyhow::Result<bool> {
                 println!("{}", l.t("watch-no-incidents"));
             }
             for i in list {
-                let pr = i.fix.as_ref().and_then(|f| f.pr.clone()).map(|u| format!("  PR {u}")).unwrap_or_default();
+                let pr = i
+                    .fix
+                    .as_ref()
+                    .and_then(|f| f.pr.clone())
+                    .map(|u| format!("  PR {u}"))
+                    .unwrap_or_default();
                 println!("{}  {:>5}x  {}  {}{pr}", i.id, i.count, i.source, i.title);
             }
             true
@@ -94,20 +102,39 @@ fn logs(l: &Localizer, root: &std::path::Path, source: &str) -> anyhow::Result<b
         Ok(c) => c,
         Err(e) => return Ok(err(l, e)),
     };
-    println!("{}", l.t_args("watch-started", &args!("source" => src.label())));
+    println!(
+        "{}",
+        l.t_args("watch-started", &args!("source" => src.label()))
+    );
     let rt = crate::providers::runtime()?;
     let cancel = watch::CancellationToken::new();
     let on = |e: &Event| match e {
-        Event::Listening { url } => println!("{}", l.t_args("watch-listening", &args!("url" => url.clone()))),
+        Event::Listening { url } => println!(
+            "{}",
+            l.t_args("watch-listening", &args!("url" => url.clone()))
+        ),
         Event::Incident { incident } => {
             println!("\n[{}] {}", incident.id, incident.title);
-            println!("{}", l.t_args("watch-suggest-fix", &args!("id" => incident.id.clone())));
+            println!(
+                "{}",
+                l.t_args("watch-suggest-fix", &args!("id" => incident.id.clone()))
+            );
         }
         Event::Repeat { id, count } if count.is_power_of_two() => {
-            println!("{}", l.t_args("watch-repeat", &args!("id" => id.clone(), "count" => *count)));
+            println!(
+                "{}",
+                l.t_args(
+                    "watch-repeat",
+                    &args!("id" => id.clone(), "count" => *count)
+                )
+            );
         }
-        Event::Limited { total } => println!("{}", l.t_args("watch-limited", &args!("count" => *total))),
-        Event::Ended { error: Some(e) } => eprintln!("{}", l.t_args("watch-error", &args!("error" => e.clone()))),
+        Event::Limited { total } => {
+            println!("{}", l.t_args("watch-limited", &args!("count" => *total)))
+        }
+        Event::Ended { error: Some(e) } => {
+            eprintln!("{}", l.t_args("watch-error", &args!("error" => e.clone())))
+        }
         _ => {}
     };
     let result = rt.block_on(async {
@@ -152,7 +179,10 @@ fn pr(l: &Localizer, root: &std::path::Path, id: &str, yes: bool) -> anyhow::Res
         Ok(f) => f,
         Err(e) => return Ok(err(l, e)),
     };
-    println!("{}", l.t_args("watch-pr-files", &args!("count" => files.len())));
+    println!(
+        "{}",
+        l.t_args("watch-pr-files", &args!("count" => files.len()))
+    );
     for f in &files {
         println!("  {f}");
     }
@@ -162,7 +192,13 @@ fn pr(l: &Localizer, root: &std::path::Path, id: &str, yes: bool) -> anyhow::Res
     let rt = crate::providers::runtime()?;
     match rt.block_on(watch::fix_finish(root, id)) {
         Ok(pr) => {
-            println!("{}", l.t_args("watch-pr-opened", &args!("url" => pr.url, "forge" => pr.forge)));
+            println!(
+                "{}",
+                l.t_args(
+                    "watch-pr-opened",
+                    &args!("url" => pr.url, "forge" => pr.forge)
+                )
+            );
             Ok(true)
         }
         Err(e) => Ok(err(l, e)),

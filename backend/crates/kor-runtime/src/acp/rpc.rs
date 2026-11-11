@@ -154,7 +154,8 @@ where
             while let Some(v) = out_rx.recv().await {
                 let mut line = v.to_string();
                 line.push('\n');
-                if writer.write_all(line.as_bytes()).await.is_err() || writer.flush().await.is_err() {
+                if writer.write_all(line.as_bytes()).await.is_err() || writer.flush().await.is_err()
+                {
                     break;
                 }
             }
@@ -165,7 +166,10 @@ where
                 continue;
             }
             if line.len() > MAX_LINE {
-                r.answer(&Value::Null, Err(RpcError::new(INVALID_REQUEST, "message too large")));
+                r.answer(
+                    &Value::Null,
+                    Err(RpcError::new(INVALID_REQUEST, "message too large")),
+                );
                 continue;
             }
             let v: Value = match serde_json::from_str(&line) {
@@ -191,7 +195,10 @@ where
                 }
                 (None, Some(_)) => r.resolve(&v),
                 (None, None) => {
-                    r.answer(&Value::Null, Err(RpcError::new(INVALID_REQUEST, "not a JSON-RPC message")));
+                    r.answer(
+                        &Value::Null,
+                        Err(RpcError::new(INVALID_REQUEST, "not a JSON-RPC message")),
+                    );
                 }
             }
         }

@@ -1439,7 +1439,10 @@ mod tests {
         let users = g.table("users").expect("users");
         assert_eq!(users.indexes, vec!["users_email (email) unique"]);
         assert_eq!(users.slow_queries.len(), 1);
-        assert!(g.table("sessions").is_some_and(|t| t.slow_queries.is_empty()));
+        assert!(
+            g.table("sessions")
+                .is_some_and(|t| t.slow_queries.is_empty())
+        );
         assert!(mentions_table("select 1 from public.users u", "users"));
         assert!(!mentions_table("select 1 from users_old", "users"));
         assert_eq!(

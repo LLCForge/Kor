@@ -72,7 +72,11 @@ mod imp {
     static N: AtomicU32 = AtomicU32::new(0);
 
     fn token() -> String {
-        format!("kor_{}_{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed))
+        format!(
+            "kor_{}_{}",
+            std::process::id(),
+            N.fetch_add(1, Ordering::Relaxed)
+        )
     }
 
     type Results = HashMap<String, OwnedValue>;
@@ -85,10 +89,18 @@ mod imp {
         Fut: Future<Output = zbus::Result<zbus::Message>>,
     {
         let tok = token();
-        let unique = conn.unique_name().map(ToString::to_string).unwrap_or_default();
-        let proxy = zbus::Proxy::new(conn, DEST, request_path(&unique, &tok), "org.freedesktop.portal.Request")
-            .await
-            .map_err(err)?;
+        let unique = conn
+            .unique_name()
+            .map(ToString::to_string)
+            .unwrap_or_default();
+        let proxy = zbus::Proxy::new(
+            conn,
+            DEST,
+            request_path(&unique, &tok),
+            "org.freedesktop.portal.Request",
+        )
+        .await
+        .map_err(err)?;
         let mut responses = proxy.receive_signal("Response").await.map_err(err)?;
         call(tok).await.map_err(err)?;
         let msg = responses.next().await.ok_or_else(|| err("portal closed"))?;
@@ -100,17 +112,31 @@ mod imp {
     }
 
     /// `CreateSession` → `Select…` → `Start` on a session portal (`ScreenCast`, `RemoteDesktop`).
-    async fn session(conn: &Connection, iface: &'static str, select: &'static str, types: u32) -> io::Result<Outcome> {
-        let name = if iface.ends_with("ScreenCast") { "screencast" } else { "remote-desktop" };
+    async fn session(
+        conn: &Connection,
+        iface: &'static str,
+        select: &'static str,
+        types: u32,
+    ) -> io::Result<Outcome> {
+        let name = if iface.ends_with("ScreenCast") {
+            "screencast"
+        } else {
+            "remote-desktop"
+        };
         let (code, res) = request(conn, |t| async move {
             let mut o = opts(t);
             o.insert("session_handle_token", Value::from(token()));
-            conn.call_method(Some(DEST), PATH, Some(iface), "CreateSession", &(o,)).await
+            conn.call_method(Some(DEST), PATH, Some(iface), "CreateSession", &(o,))
+                .await
         })
         .await?;
         let handle = res.get("session_handle").and_then(text);
         let (true, Some(handle)) = (granted(code), handle) else {
-            return Ok(Outcome { portal: name, granted: false, detail: None });
+            return Ok(Outcome {
+                portal: name,
+                granted: false,
+                detail: None,
+            });
         };
         let path = ObjectPath::try_from(handle.as_str()).map_err(err)?;
         let (code, _) = request(conn, |t| {
@@ -122,22 +148,36 @@ mod imp {
                 if select == "SelectSources" {
                     o.insert("multiple", Value::from(false));
                 }
-                conn.call_method(Some(DEST), PATH, Some(iface), select, &(path, o)).await
+                conn.call_method(Some(DEST), PATH, Some(iface), select, &(path, o))
+                    .await
             }
         })
         .await?;
-        let mut out = Outcome { portal: name, granted: false, detail: None };
+        let mut out = Outcome {
+            portal: name,
+            granted: false,
+            detail: None,
+        };
         if granted(code) {
             let (code, res) = request(conn, |t| {
                 let path = path.clone();
-                async move { conn.call_method(Some(DEST), PATH, Some(iface), "Start", &(path, "", opts(t))).await }
+                async move {
+                    conn.call_method(Some(DEST), PATH, Some(iface), "Start", &(path, "", opts(t)))
+                        .await
+                }
             })
             .await?;
             out.granted = granted(code);
             out.detail = res.get("restore_token").and_then(text);
         }
         let _ = conn
-            .call_method(Some(DEST), &path, Some("org.freedesktop.portal.Session"), "Close", &())
+            .call_method(
+                Some(DEST),
+                &path,
+                Some("org.freedesktop.portal.Session"),
+                "Close",
+                &(),
+            )
             .await;
         Ok(out)
     }
@@ -146,9 +186,21 @@ mod imp {
         let conn = Connection::session().await.map_err(err)?;
         let mut out = vec![
             // Monitor (1) | window (2).
-            session(&conn, "org.freedesktop.portal.ScreenCast", "SelectSources", 3).await?,
+            session(
+                &conn,
+                "org.freedesktop.portal.ScreenCast",
+                "SelectSources",
+                3,
+            )
+            .await?,
             // Keyboard (1) | pointer (2).
-            session(&conn, "org.freedesktop.portal.RemoteDesktop", "SelectDevices", 3).await?,
+            session(
+                &conn,
+                "org.freedesktop.portal.RemoteDesktop",
+                "SelectDevices",
+                3,
+            )
+            .await?,
         ];
         let title = t.folder_title.clone();
         let (code, res) = request(&conn, |tok| {
@@ -156,8 +208,14 @@ mod imp {
             async move {
                 let mut o = opts(tok);
                 o.insert("directory", Value::from(true));
-                conn.call_method(Some(DEST), PATH, Some("org.freedesktop.portal.FileChooser"), "OpenFile", &("", title.as_str(), o))
-                    .await
+                conn.call_method(
+                    Some(DEST),
+                    PATH,
+                    Some("org.freedesktop.portal.FileChooser"),
+                    "OpenFile",
+                    &("", title.as_str(), o),
+                )
+                .await
             }
         })
         .await?;
@@ -165,15 +223,29 @@ mod imp {
             .get("uris")
             .and_then(|v| <Vec<String>>::try_from(v.try_clone().ok()?).ok())
             .and_then(|u| u.into_iter().next());
-        out.push(Outcome { portal: "file-chooser", granted: granted(code) && folder.is_some(), detail: folder });
+        out.push(Outcome {
+            portal: "file-chooser",
+            granted: granted(code) && folder.is_some(),
+            detail: folder,
+        });
         let note = HashMap::from([
             ("title", Value::from(t.notify_title.as_str())),
             ("body", Value::from(t.notify_body.as_str())),
         ]);
         let sent = conn
-            .call_method(Some(DEST), PATH, Some("org.freedesktop.portal.Notification"), "AddNotification", &("kor-portals", note))
+            .call_method(
+                Some(DEST),
+                PATH,
+                Some("org.freedesktop.portal.Notification"),
+                "AddNotification",
+                &("kor-portals", note),
+            )
             .await;
-        out.push(Outcome { portal: "notification", granted: sent.is_ok(), detail: sent.err().map(|e| e.to_string()) });
+        out.push(Outcome {
+            portal: "notification",
+            granted: sent.is_ok(),
+            detail: sent.err().map(|e| e.to_string()),
+        });
         Ok(out)
     }
 }
@@ -184,7 +256,10 @@ mod imp {
 
     #[allow(clippy::unused_async)] // same signature as the Linux one
     pub async fn request_all(_: &Texts) -> std::io::Result<Vec<Outcome>> {
-        Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "Linux only"))
+        Err(std::io::Error::new(
+            std::io::ErrorKind::Unsupported,
+            "Linux only",
+        ))
     }
 }
 
@@ -200,9 +275,16 @@ mod tests {
 
     #[test]
     fn request_paths_follow_the_portal_spec() {
-        assert_eq!(request_path(":1.42", "kor_7_0"), "/org/freedesktop/portal/desktop/request/1_42/kor_7_0");
+        assert_eq!(
+            request_path(":1.42", "kor_7_0"),
+            "/org/freedesktop/portal/desktop/request/1_42/kor_7_0"
+        );
         assert!(granted(0) && !granted(1) && !granted(2));
-        let o = Outcome { portal: "screencast", granted: true, detail: Some("tok".into()) };
+        let o = Outcome {
+            portal: "screencast",
+            granted: true,
+            detail: Some("tok".into()),
+        };
         assert_eq!(serde_json::to_value(&o).unwrap()["portal"], "screencast");
     }
 }

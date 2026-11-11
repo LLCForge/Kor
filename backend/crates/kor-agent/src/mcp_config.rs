@@ -123,14 +123,35 @@ fn same_path(a: &str, b: &Path) -> bool {
 /// only, never written; they load first, so Claude Code, Kor and the project shadow them. VS Code
 /// entries that prompt for `${input:…}` values are left out (only VS Code can answer them).
 /// `app_config` is the OS config folder (`%APPDATA%`, `~/Library/Application Support`, `~/.config`).
-pub fn other_tools(home: &Path, app_config: Option<&Path>) -> Vec<(&'static str, Map<String, Value>)> {
+pub fn other_tools(
+    home: &Path,
+    app_config: Option<&Path>,
+) -> Vec<(&'static str, Map<String, Value>)> {
     let mut files: Vec<(&'static str, PathBuf, &str)> = vec![
-        ("Cursor", home.join(".cursor").join("mcp.json"), "mcpServers"),
-        ("Windsurf", home.join(".codeium").join("windsurf").join("mcp_config.json"), "mcpServers"),
+        (
+            "Cursor",
+            home.join(".cursor").join("mcp.json"),
+            "mcpServers",
+        ),
+        (
+            "Windsurf",
+            home.join(".codeium")
+                .join("windsurf")
+                .join("mcp_config.json"),
+            "mcpServers",
+        ),
     ];
     if let Some(c) = app_config {
-        files.push(("Claude Desktop", c.join("Claude").join("claude_desktop_config.json"), "mcpServers"));
-        files.push(("VS Code", c.join("Code").join("User").join("mcp.json"), "servers"));
+        files.push((
+            "Claude Desktop",
+            c.join("Claude").join("claude_desktop_config.json"),
+            "mcpServers",
+        ));
+        files.push((
+            "VS Code",
+            c.join("Code").join("User").join("mcp.json"),
+            "servers",
+        ));
     }
     files
         .into_iter()
@@ -503,16 +524,29 @@ mod tests {
             std::fs::create_dir_all(p.parent().unwrap()).unwrap();
             std::fs::write(p, t).unwrap();
         };
-        w(home.join(".cursor/mcp.json"), r#"{"mcpServers":{"gh":{"command":"gh-mcp"}}}"#);
+        w(
+            home.join(".cursor/mcp.json"),
+            r#"{"mcpServers":{"gh":{"command":"gh-mcp"}}}"#,
+        );
         w(
             cfg.join("Code/User/mcp.json"),
             r#"{"servers":{"db":{"type":"stdio","command":"db-mcp"},"ask":{"command":"x","env":{"K":"${input:key}"}}}}"#,
         );
         w(cfg.join("Claude/claude_desktop_config.json"), "not json");
         let got = other_tools(&home, Some(&cfg));
-        let names: Vec<(&str, Vec<&String>)> = got.iter().map(|(l, s)| (*l, s.keys().collect())).collect();
-        assert_eq!(names, [("Cursor", vec![&"gh".to_owned()]), ("VS Code", vec![&"db".to_owned()])]);
-        assert!(other_tools_for(&home).is_empty(), "a test home never sees the real user's tools");
+        let names: Vec<(&str, Vec<&String>)> =
+            got.iter().map(|(l, s)| (*l, s.keys().collect())).collect();
+        assert_eq!(
+            names,
+            [
+                ("Cursor", vec![&"gh".to_owned()]),
+                ("VS Code", vec![&"db".to_owned()])
+            ]
+        );
+        assert!(
+            other_tools_for(&home).is_empty(),
+            "a test home never sees the real user's tools"
+        );
     }
 
     fn loc(dir: &Path) -> Locations {

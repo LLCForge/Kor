@@ -70,7 +70,12 @@ pub fn build_ranked(
         .enumerate()
         .map(|(i, f)| (f.as_str(), i))
         .collect();
-    let key = |rel: &str| (pos.get(rel).copied().unwrap_or(usize::MAX), rel.matches('/').count());
+    let key = |rel: &str| {
+        (
+            pos.get(rel).copied().unwrap_or(usize::MAX),
+            rel.matches('/').count(),
+        )
+    };
     files.sort_by(|a, b| (key(&a.0), &a.0).cmp(&(key(&b.0), &b.0)));
     let header = if rank.is_some() {
         "\n# Repository map\nSignatures only (≈), most connected files first (project graph). Ask the graph tools before reading a file.\n"
@@ -166,7 +171,10 @@ mod tests {
 
         // Graph ranking puts the hot file first, whatever its depth.
         let ranked = build_ranked(root, None, 10_000, Some(&["web/app.ts".to_owned()]));
-        assert!(ranked.find("web/app.ts").unwrap() < ranked.find("lib.rs").unwrap(), "{ranked}");
+        assert!(
+            ranked.find("web/app.ts").unwrap() < ranked.find("lib.rs").unwrap(),
+            "{ranked}"
+        );
         assert!(ranked.contains("project graph"));
     }
 }

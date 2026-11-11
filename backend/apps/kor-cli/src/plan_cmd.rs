@@ -22,8 +22,14 @@ pub enum PlanCmd {
 pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
     c.about(l.t("cmd-plan"))
         .mut_subcommand("list", |s| s.about(l.t("cmd-plan-list")))
-        .mut_subcommand("show", |s| s.about(l.t("cmd-plan-show")).mut_arg("id", |a| a.help(l.t("arg-plan-id"))))
-        .mut_subcommand("approve", |s| s.about(l.t("cmd-plan-approve")).mut_arg("id", |a| a.help(l.t("arg-plan-id"))))
+        .mut_subcommand("show", |s| {
+            s.about(l.t("cmd-plan-show"))
+                .mut_arg("id", |a| a.help(l.t("arg-plan-id")))
+        })
+        .mut_subcommand("approve", |s| {
+            s.about(l.t("cmd-plan-approve"))
+                .mut_arg("id", |a| a.help(l.t("arg-plan-id")))
+        })
 }
 
 fn status(l: &Localizer, s: Status) -> String {
@@ -33,14 +39,25 @@ fn status(l: &Localizer, s: Status) -> String {
     })
 }
 
-fn pick(l: &Localizer, root: &std::path::Path, id: Option<&str>, draft: bool) -> Option<plans::Plan> {
+fn pick(
+    l: &Localizer,
+    root: &std::path::Path,
+    id: Option<&str>,
+    draft: bool,
+) -> Option<plans::Plan> {
     let p = match id {
         Some(id) => plans::find(root, id),
         None if draft => plans::latest_draft(root, None),
         None => plans::list(root).into_iter().next(),
     };
     if p.is_none() {
-        eprintln!("{}", l.t_args("plan-not-found", &args!("id" => id.unwrap_or("-").to_owned())));
+        eprintln!(
+            "{}",
+            l.t_args(
+                "plan-not-found",
+                &args!("id" => id.unwrap_or("-").to_owned())
+            )
+        );
     }
     p
 }
@@ -60,14 +77,30 @@ pub fn run(ctx: &Ctx, cmd: Option<&PlanCmd>) -> anyhow::Result<bool> {
             Ok(true)
         }
         PlanCmd::Show { id } => {
-            let Some(p) = pick(l, &root, id.as_deref(), false) else { return Ok(false) };
-            println!("# {}  [{}]\n{}\n\n{}", p.title, status(l, p.status), kor_tools::display_path(&p.path), p.body);
+            let Some(p) = pick(l, &root, id.as_deref(), false) else {
+                return Ok(false);
+            };
+            println!(
+                "# {}  [{}]\n{}\n\n{}",
+                p.title,
+                status(l, p.status),
+                kor_tools::display_path(&p.path),
+                p.body
+            );
             Ok(true)
         }
         PlanCmd::Approve { id } => {
-            let Some(p) = pick(l, &root, id.as_deref(), true) else { return Ok(false) };
+            let Some(p) = pick(l, &root, id.as_deref(), true) else {
+                return Ok(false);
+            };
             let p = plans::approve(&root, &p.id)?;
-            println!("{}", l.t_args("plan-approved", &args!("id" => p.id.clone(), "title" => p.title.clone())));
+            println!(
+                "{}",
+                l.t_args(
+                    "plan-approved",
+                    &args!("id" => p.id.clone(), "title" => p.title.clone())
+                )
+            );
             Ok(true)
         }
     }
@@ -97,11 +130,19 @@ mod tests {
     fn parses_plan_commands() {
         let Top::Plan { command } = Cli::try_parse_from(["kor", "plan"]).unwrap().cmd;
         assert!(command.is_none());
-        let Top::Plan { command } = Cli::try_parse_from(["kor", "plan", "approve", "2026-11"]).unwrap().cmd;
+        let Top::Plan { command } = Cli::try_parse_from(["kor", "plan", "approve", "2026-11"])
+            .unwrap()
+            .cmd;
         assert!(matches!(command, Some(PlanCmd::Approve { id: Some(ref i) }) if i == "2026-11"));
         let Top::Plan { command } = Cli::try_parse_from(["kor", "plan", "show"]).unwrap().cmd;
         assert!(matches!(command, Some(PlanCmd::Show { id: None })));
         let l = Localizer::new(kor_i18n::Lang::Tr);
-        let _ = localize(<Cli as clap::CommandFactory>::command().find_subcommand("plan").unwrap().clone(), &l);
+        let _ = localize(
+            <Cli as clap::CommandFactory>::command()
+                .find_subcommand("plan")
+                .unwrap()
+                .clone(),
+            &l,
+        );
     }
 }

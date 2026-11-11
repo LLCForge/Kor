@@ -50,10 +50,14 @@ pub struct WpSite {
 
 impl WpSite {
     pub fn validate(&mut self) -> Result<()> {
-        let mut u = url::Url::parse(&self.url).map_err(|e| format!("invalid URL {}: {e}", self.url))?;
+        let mut u =
+            url::Url::parse(&self.url).map_err(|e| format!("invalid URL {}: {e}", self.url))?;
         let local = u.host_str().is_some_and(kor_core::net::is_loopback_host);
         if u.scheme() != "https" && !local && self.secret.is_some() {
-            return Err("the site URL must use https (the application password is sent with every request)".into());
+            return Err(
+                "the site URL must use https (the application password is sent with every request)"
+                    .into(),
+            );
         }
         u.set_query(None);
         u.as_str().trim_end_matches('/').clone_into(&mut self.url);
@@ -100,7 +104,9 @@ pub fn load(base: &Path, name: &str) -> Result<WpSite> {
     check_name(name)?;
     let p = sites_dir(base).join(format!("{name}.toml"));
     if !p.is_file() {
-        return Err(format!("no WordPress site `{name}` (kor wp connect {name} …)"));
+        return Err(format!(
+            "no WordPress site `{name}` (kor wp connect {name} …)"
+        ));
     }
     super::load_toml(&p)
 }
@@ -170,7 +176,10 @@ pub struct Wp {
 
 impl std::fmt::Debug for Wp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Wp").field("name", &self.name).field("url", &self.site.url).finish_non_exhaustive()
+        f.debug_struct("Wp")
+            .field("name", &self.name)
+            .field("url", &self.site.url)
+            .finish_non_exhaustive()
     }
 }
 
@@ -188,12 +197,19 @@ pub fn slug_of(plugin: &str) -> String {
 
 /// `<meta name="generator" content="WordPress 6.6.2">` or the feed's `?v=6.6.2`.
 pub fn generator_version(html: &str) -> Option<String> {
-    let re = regex::Regex::new(r#"(?i)(?:content="WordPress\s+|wordpress\.org/\?v=)([0-9][0-9.]*)"#).ok()?;
+    let re =
+        regex::Regex::new(r#"(?i)(?:content="WordPress\s+|wordpress\.org/\?v=)([0-9][0-9.]*)"#)
+            .ok()?;
     re.captures(html).map(|c| c[1].to_owned())
 }
 
 impl Wp {
-    pub fn new(name: &str, site: WpSite, password: Option<String>, sh: Option<Arc<dyn Shell>>) -> Result<Self> {
+    pub fn new(
+        name: &str,
+        site: WpSite,
+        password: Option<String>,
+        sh: Option<Arc<dyn Shell>>,
+    ) -> Result<Self> {
         let auth = match (&site.user, password) {
             (Some(u), Some(p)) => Some(format!(
                 "Basic {}",
@@ -201,7 +217,13 @@ impl Wp {
             )),
             _ => None,
         };
-        Ok(Self { name: name.to_owned(), site, http: Http::new()?, auth, sh })
+        Ok(Self {
+            name: name.to_owned(),
+            site,
+            http: Http::new()?,
+            auth,
+            sh,
+        })
     }
 
     pub fn shell(&self) -> Option<&Arc<dyn Shell>> {
@@ -213,18 +235,30 @@ impl Wp {
     }
 
     fn root(&self) -> Result<&str> {
-        self.site.path.as_deref().ok_or_else(|| "this site has no WP-CLI path (--ssh/--path)".into())
+        self.site
+            .path
+            .as_deref()
+            .ok_or_else(|| "this site has no WP-CLI path (--ssh/--path)".into())
     }
 
     /// `wp --path=<root> …` (or another root, for staging).
     pub async fn cli_at(&self, root: &str, args: &str) -> Result<String> {
-        let sh = self.sh.as_ref().ok_or("WP-CLI needs SSH (kor wp connect … --ssh … --path …)")?;
-        let out = sh.run(&format!("wp --path={} {args}", q(root)), None, T).await?;
+        let sh = self
+            .sh
+            .as_ref()
+            .ok_or("WP-CLI needs SSH (kor wp connect … --ssh … --path …)")?;
+        let out = sh
+            .run(&format!("wp --path={} {args}", q(root)), None, T)
+            .await?;
         if out.ok() {
             Ok(out.text())
         } else {
             let e = out.error();
-            Err(format!("wp {}: {}", args.split_whitespace().next().unwrap_or(""), if e.trim().is_empty() { out.text() } else { e }.trim()))
+            Err(format!(
+                "wp {}: {}",
+                args.split_whitespace().next().unwrap_or(""),
+                if e.trim().is_empty() { out.text() } else { e }.trim()
+            ))
         }
     }
 
@@ -242,7 +276,10 @@ impl Wp {
         let url = format!("{}/wp-json/{}", self.site.url, path.trim_start_matches('/'));
         let r = self.http.get_with(&url, &h).await?;
         if r.status == 401 || r.status == 403 {
-            return Err(format!("{path}: WordPress refused the application password (HTTP {})", r.status));
+            return Err(format!(
+                "{path}: WordPress refused the application password (HTTP {})",
+                r.status
+            ));
         }
         if !r.ok() {
             return Err(format!("{path}: HTTP {}", r.status));
@@ -253,7 +290,11 @@ impl Wp {
 
     #[allow(clippy::too_many_lines)]
     pub async fn inventory(&self) -> Result<WpInventory> {
-        let mut inv = WpInventory { site: self.name.clone(), url: self.site.url.clone(), ..WpInventory::default() };
+        let mut inv = WpInventory {
+            site: self.name.clone(),
+            url: self.site.url.clone(),
+            ..WpInventory::default()
+        };
         let mut got_any = false;
         if self.sh.is_some() && self.site.path.is_some() {
             match self.cli("core version").await {
@@ -264,9 +305,10 @@ impl Wp {
                 Err(e) => inv.notes.push(e),
             }
             if let Ok(o) = self.cli("core check-update --format=json").await {
-                inv.core_update = serde_json::from_str::<Value>(o.trim())
-                    .ok()
-                    .and_then(|v| v.get(0).and_then(|x| x["version"].as_str().map(str::to_owned)));
+                inv.core_update = serde_json::from_str::<Value>(o.trim()).ok().and_then(|v| {
+                    v.get(0)
+                        .and_then(|x| x["version"].as_str().map(str::to_owned))
+                });
             }
             for (what, out) in [("plugin", &mut inv.plugins), ("theme", &mut inv.themes)] {
                 match self.cli(&format!("{what} list --format=json --fields=name,title,status,version,update_version")).await {
@@ -326,7 +368,11 @@ impl Wp {
                             .flatten()
                             .map(|t| Plugin {
                                 slug: t["stylesheet"].as_str().unwrap_or_default().to_owned(),
-                                name: t["name"]["raw"].as_str().or(t["name"]["rendered"].as_str()).unwrap_or_default().to_owned(),
+                                name: t["name"]["raw"]
+                                    .as_str()
+                                    .or(t["name"]["rendered"].as_str())
+                                    .unwrap_or_default()
+                                    .to_owned(),
                                 version: t["version"].as_str().unwrap_or_default().to_owned(),
                                 active: t["status"] == "active",
                                 update: None,
@@ -344,7 +390,10 @@ impl Wp {
             }
         }
         // WooCommerce: from the plugin list, then counts (REST, else WP-CLI).
-        inv.woocommerce = inv.plugins.iter().any(|p| p.slug == "woocommerce" && p.active);
+        inv.woocommerce = inv
+            .plugins
+            .iter()
+            .any(|p| p.slug == "woocommerce" && p.active);
         if inv.woocommerce {
             if self.auth.is_some() {
                 if let Ok((_, t)) = self.rest("wc/v3/products?per_page=1").await {
@@ -355,13 +404,21 @@ impl Wp {
                 }
             }
             if inv.products.is_none() && self.sh.is_some() {
-                inv.products = self.cli("post list --post_type=product --post_status=any --format=count").await.ok().and_then(|o| o.trim().parse().ok());
+                inv.products = self
+                    .cli("post list --post_type=product --post_status=any --format=count")
+                    .await
+                    .ok()
+                    .and_then(|o| o.trim().parse().ok());
             }
             if inv.orders.is_none() && self.sh.is_some() {
                 // HPOS stores orders in wc_orders; older shops as shop_order posts.
                 let prefix = self.cli("db prefix").await.unwrap_or_default();
                 let prefix = prefix.trim();
-                if prefix.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') && !prefix.is_empty() {
+                if prefix
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+                    && !prefix.is_empty()
+                {
                     inv.orders = self
                         .cli(&format!("db query \"SELECT COUNT(*) FROM {prefix}wc_orders\" --skip-column-names"))
                         .await
@@ -369,7 +426,11 @@ impl Wp {
                         .and_then(|o| o.trim().parse().ok());
                 }
                 if inv.orders.is_none() {
-                    inv.orders = self.cli("post list --post_type=shop_order --post_status=any --format=count").await.ok().and_then(|o| o.trim().parse().ok());
+                    inv.orders = self
+                        .cli("post list --post_type=shop_order --post_status=any --format=count")
+                        .await
+                        .ok()
+                        .and_then(|o| o.trim().parse().ok());
                 }
             }
         }
@@ -411,21 +472,42 @@ pub async fn health(wp: &Wp) -> Vec<Check> {
         label,
         source: "http".into(),
     };
-    for (id, path) in [("home", "/"), ("login", "/wp-login.php"), ("rest", "/wp-json/")] {
+    for (id, path) in [
+        ("home", "/"),
+        ("login", "/wp-login.php"),
+        ("rest", "/wp-json/"),
+    ] {
         match wp.http.follow(&format!("{}{path}", wp.site.url)).await {
             Ok((hops, r)) => {
                 let fatal = super::host::fatal_text(&r.body);
                 out.push(page(
                     id,
                     r.status < 400 && !fatal,
-                    format!("{path}: HTTP {} · {} ms{}{}", r.status, r.ms, if hops.is_empty() { String::new() } else { format!(" · {} redirect(s)", hops.len()) }, if fatal { " · fatal error" } else { "" }),
+                    format!(
+                        "{path}: HTTP {} · {} ms{}{}",
+                        r.status,
+                        r.ms,
+                        if hops.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" · {} redirect(s)", hops.len())
+                        },
+                        if fatal { " · fatal error" } else { "" }
+                    ),
                 ));
             }
             Err(e) => out.push(page(id, false, format!("{path}: {e}"))),
         }
     }
     if wp.auth.is_some() {
-        for t in ["background-updates", "loopback-requests", "https-status", "dotorg-communication", "authorization-header", "page-cache"] {
+        for t in [
+            "background-updates",
+            "loopback-requests",
+            "https-status",
+            "dotorg-communication",
+            "authorization-header",
+            "page-cache",
+        ] {
             match wp.rest(&format!("wp-site-health/v1/tests/{t}")).await {
                 Ok((v, _)) => out.push(Check {
                     id: t.into(),
@@ -433,7 +515,12 @@ pub async fn health(wp: &Wp) -> Vec<Check> {
                     label: v["label"].as_str().unwrap_or(t).into(),
                     source: "site-health".into(),
                 }),
-                Err(e) => out.push(Check { id: t.into(), status: "recommended".into(), label: e, source: "site-health".into() }),
+                Err(e) => out.push(Check {
+                    id: t.into(),
+                    status: "recommended".into(),
+                    label: e,
+                    source: "site-health".into(),
+                }),
             }
         }
     }
@@ -442,7 +529,12 @@ pub async fn health(wp: &Wp) -> Vec<Check> {
         out.push(Check {
             id: "core-checksums".into(),
             status: if r.is_ok() { "good" } else { "critical" }.into(),
-            label: r.unwrap_or_else(|e| e).lines().take(5).collect::<Vec<_>>().join(" "),
+            label: r
+                .unwrap_or_else(|e| e)
+                .lines()
+                .take(5)
+                .collect::<Vec<_>>()
+                .join(" "),
             source: "wp-cli".into(),
         });
     }
@@ -465,7 +557,10 @@ pub async fn smoke(wp: &Wp, base: &str, woocommerce: bool) -> Vec<Smoke> {
     let mut pages = vec![("home".to_owned(), format!("{base}/"))];
     if woocommerce {
         let product = if wp.auth.is_some() {
-            wp.rest("wc/v3/products?per_page=1&status=publish").await.ok().and_then(|(v, _)| v.get(0)?["permalink"].as_str().map(str::to_owned))
+            wp.rest("wc/v3/products?per_page=1&status=publish")
+                .await
+                .ok()
+                .and_then(|(v, _)| v.get(0)?["permalink"].as_str().map(str::to_owned))
         } else {
             None
         };
@@ -482,7 +577,10 @@ pub async fn smoke(wp: &Wp, base: &str, woocommerce: bool) -> Vec<Smoke> {
         if let Some(p) = product {
             pages.push(("product".into(), p));
         }
-        pages.push(("cart".into(), format!("{base}/?wc-ajax=get_refreshed_fragments")));
+        pages.push((
+            "cart".into(),
+            format!("{base}/?wc-ajax=get_refreshed_fragments"),
+        ));
         pages.push(("cart-page".into(), format!("{base}/cart/")));
         pages.push(("checkout".into(), format!("{base}/checkout/")));
     }
@@ -496,10 +594,20 @@ pub async fn smoke(wp: &Wp, base: &str, woocommerce: bool) -> Vec<Smoke> {
                     url,
                     status: r.status,
                     ok: r.status < 400 && !fatal,
-                    note: if fatal { "fatal error on page".into() } else { format!("{} ms", r.ms) },
+                    note: if fatal {
+                        "fatal error on page".into()
+                    } else {
+                        format!("{} ms", r.ms)
+                    },
                 }
             }
-            Err(e) => Smoke { page, url, ok: false, note: e, ..Smoke::default() },
+            Err(e) => Smoke {
+                page,
+                url,
+                ok: false,
+                note: e,
+                ..Smoke::default()
+            },
         };
         out.push(s);
     }
@@ -512,7 +620,11 @@ pub async fn create_staging(wp: &Wp) -> Result<String> {
     let st = format!("{root}/kor-staging");
     let url = format!("{}/kor-staging", wp.site.url);
     let prefix = wp.cli("db prefix").await?.trim().to_owned();
-    if prefix.is_empty() || !prefix.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
+    if prefix.is_empty()
+        || !prefix
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+    {
         return Err(format!("unexpected table prefix `{prefix}`"));
     }
     let sh = wp.sh.as_ref().ok_or("staging needs SSH")?;
@@ -573,7 +685,9 @@ pub struct UpdateReport {
 /// Files + database into `~/kor-backups/` before anything changes.
 pub async fn backup(wp: &Wp, root: &str, label: &str) -> Result<Vec<String>> {
     let sh = wp.sh.as_ref().ok_or("updates need SSH (WP-CLI)")?;
-    super::host::shell::backup(sh.as_ref(), label, Some(root)).await.map(|a| a.output)
+    super::host::shell::backup(sh.as_ref(), label, Some(root))
+        .await
+        .map(|a| a.output)
 }
 
 /// What can be updated, from WP-CLI.
@@ -594,21 +708,48 @@ pub fn pending(inv: &WpInventory) -> Vec<(String, String, String, String)> {
 
 /// Update items one by one on `root` (live or staging) and smoke-test `base` after each; a failing
 /// plugin or theme is put back at its old version (`--version=<old> --force`). `only` limits the run.
-pub async fn update(wp: &Wp, root: &str, base: &str, inv: &WpInventory, only: &[String]) -> Result<UpdateReport> {
-    let label = format!("{}{}", wp.site.domain(), if root.ends_with("kor-staging") { "-staging" } else { "" });
-    let mut rep = UpdateReport { target: base.to_owned(), backup: backup(wp, root, &label).await?, items: Vec::new() };
+pub async fn update(
+    wp: &Wp,
+    root: &str,
+    base: &str,
+    inv: &WpInventory,
+    only: &[String],
+) -> Result<UpdateReport> {
+    let label = format!(
+        "{}{}",
+        wp.site.domain(),
+        if root.ends_with("kor-staging") {
+            "-staging"
+        } else {
+            ""
+        }
+    );
+    let mut rep = UpdateReport {
+        target: base.to_owned(),
+        backup: backup(wp, root, &label).await?,
+        items: Vec::new(),
+    };
     for (kind, slug, from, to) in pending(inv) {
         if !only.is_empty() && !only.contains(&slug) {
             continue;
         }
-        if !slug.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.')) {
+        if !slug
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.'))
+        {
             continue;
         }
         let cmd = match kind.as_str() {
             "core" => format!("core update --version={to}"),
             k => format!("{k} update {slug}"),
         };
-        let mut item = Updated { kind: kind.clone(), slug: slug.clone(), from: from.clone(), to, ..Updated::default() };
+        let mut item = Updated {
+            kind: kind.clone(),
+            slug: slug.clone(),
+            from: from.clone(),
+            to,
+            ..Updated::default()
+        };
         if let Err(e) = wp.cli_at(root, &cmd).await {
             item.result = "failed".into();
             item.note = e;
@@ -623,10 +764,21 @@ pub async fn update(wp: &Wp, root: &str, base: &str, inv: &WpInventory, only: &[
                 } else if kind == "core" {
                     // Core is not downgraded automatically: the backup is the way back.
                     item.result = "failed".into();
-                    item.note = "smoke test failed after the core update; restore the backup".into();
+                    item.note =
+                        "smoke test failed after the core update; restore the backup".into();
                 } else {
-                    let back = wp.cli_at(root, &format!("{kind} install {slug} --version={from} --force")).await;
-                    item.result = if back.is_ok() { "rolled-back" } else { "failed" }.into();
+                    let back = wp
+                        .cli_at(
+                            root,
+                            &format!("{kind} install {slug} --version={from} --force"),
+                        )
+                        .await;
+                    item.result = if back.is_ok() {
+                        "rolled-back"
+                    } else {
+                        "failed"
+                    }
+                    .into();
                     item.note = back.err().unwrap_or_default();
                 }
             }
@@ -652,23 +804,48 @@ pub struct Integrity {
 
 /// Patterns common in injected PHP (deterministic; the model only explains them).
 const SUSPICIOUS: &[(&str, &str)] = &[
-    (r"eval\s*\(\s*(base64_decode|gzinflate|gzuncompress|str_rot13|strrev)", "eval of decoded data"),
-    (r"(base64_decode|gzinflate)\s*\(\s*['\x22][A-Za-z0-9+/=]{200,}", "long encoded payload"),
-    (r"\$_(POST|GET|REQUEST|COOKIE)\s*\[[^\]]+\]\s*\(", "request value called as a function"),
-    (r"assert\s*\(\s*\$_(POST|GET|REQUEST)", "assert on request data"),
+    (
+        r"eval\s*\(\s*(base64_decode|gzinflate|gzuncompress|str_rot13|strrev)",
+        "eval of decoded data",
+    ),
+    (
+        r"(base64_decode|gzinflate)\s*\(\s*['\x22][A-Za-z0-9+/=]{200,}",
+        "long encoded payload",
+    ),
+    (
+        r"\$_(POST|GET|REQUEST|COOKIE)\s*\[[^\]]+\]\s*\(",
+        "request value called as a function",
+    ),
+    (
+        r"assert\s*\(\s*\$_(POST|GET|REQUEST)",
+        "assert on request data",
+    ),
     (r"preg_replace\s*\(\s*['\x22].*/e['\x22]", "preg_replace /e"),
-    (r"(shell_exec|passthru|system|proc_open|popen)\s*\(\s*\$_(POST|GET|REQUEST)", "shell call with request data"),
+    (
+        r"(shell_exec|passthru|system|proc_open|popen)\s*\(\s*\$_(POST|GET|REQUEST)",
+        "shell call with request data",
+    ),
     (r"create_function\s*\(", "create_function"),
-    (r"\\x[0-9a-fA-F]{2}(\\x[0-9a-fA-F]{2}){30,}", "hex-escaped string"),
+    (
+        r"\\x[0-9a-fA-F]{2}(\\x[0-9a-fA-F]{2}){30,}",
+        "hex-escaped string",
+    ),
 ];
 
 pub fn scan_code(file: &str, text: &str) -> Vec<(String, u32, String)> {
-    let res: Vec<(regex::Regex, &str)> = SUSPICIOUS.iter().filter_map(|(p, why)| regex::Regex::new(p).ok().map(|r| (r, *why))).collect();
+    let res: Vec<(regex::Regex, &str)> = SUSPICIOUS
+        .iter()
+        .filter_map(|(p, why)| regex::Regex::new(p).ok().map(|r| (r, *why)))
+        .collect();
     let mut out = Vec::new();
     for (i, line) in text.lines().enumerate() {
         for (re, why) in &res {
             if re.is_match(line) {
-                out.push((file.to_owned(), u32::try_from(i + 1).unwrap_or(u32::MAX), (*why).to_owned()));
+                out.push((
+                    file.to_owned(),
+                    u32::try_from(i + 1).unwrap_or(u32::MAX),
+                    (*why).to_owned(),
+                ));
             }
         }
     }
@@ -678,18 +855,31 @@ pub fn scan_code(file: &str, text: &str) -> Vec<(String, u32, String)> {
 /// Compare core files with `api.wordpress.org/core/checksums/1.0`, plugin checksums, and scan the
 /// changed/unknown files and PHP in uploads.
 pub async fn integrity(wp: &Wp) -> Result<Integrity> {
-    let sh = wp.sh.as_ref().ok_or("the integrity check needs SSH (WP-CLI)")?;
+    let sh = wp
+        .sh
+        .as_ref()
+        .ok_or("the integrity check needs SSH (WP-CLI)")?;
     let root = wp.root()?.trim_end_matches('/').to_owned();
     let version = wp.cli("core version").await?.trim().to_owned();
-    let locale = wp.cli("eval 'echo get_locale();'").await.unwrap_or_else(|_| "en_US".into()).trim().to_owned();
+    let locale = wp
+        .cli("eval 'echo get_locale();'")
+        .await
+        .unwrap_or_else(|_| "en_US".into())
+        .trim()
+        .to_owned();
     let url = format!(
         "https://api.wordpress.org/core/checksums/1.0/?{}",
         super::http::form(&[("version", &version), ("locale", &locale)])
     );
     let r = wp.http.get(&url).await?;
     let sums = r.json()?;
-    let sums = sums["checksums"].get(&version).unwrap_or(&sums["checksums"]).clone();
-    let sums = sums.as_object().ok_or("WordPress.org has no checksums for this version")?;
+    let sums = sums["checksums"]
+        .get(&version)
+        .unwrap_or(&sums["checksums"])
+        .clone();
+    let sums = sums
+        .as_object()
+        .ok_or("WordPress.org has no checksums for this version")?;
     let listing = exec(
         sh.as_ref(),
         &format!(
@@ -699,35 +889,84 @@ pub async fn integrity(wp: &Wp) -> Result<Integrity> {
         None,
     )
     .await?;
-    let mut out = Integrity { version, source: "api.wordpress.org/core/checksums".into(), ..Integrity::default() };
+    let mut out = Integrity {
+        version,
+        source: "api.wordpress.org/core/checksums".into(),
+        ..Integrity::default()
+    };
     for l in listing.lines() {
-        let Some((sum, file)) = l.split_once("  ") else { continue };
+        let Some((sum, file)) = l.split_once("  ") else {
+            continue;
+        };
         match sums.get(file).and_then(Value::as_str) {
             Some(s) if s == sum => {}
             Some(_) => out.modified.push(file.to_owned()),
-            None if std::path::Path::new(file).extension().is_some_and(|e| e.eq_ignore_ascii_case("php")) && file != "wp-config.php" => out.unknown.push(file.to_owned()),
+            None if std::path::Path::new(file)
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("php"))
+                && file != "wp-config.php" =>
+            {
+                out.unknown.push(file.to_owned())
+            }
             None => {}
         }
     }
-    out.uploads_php = exec(sh.as_ref(), &format!("cd {} && find wp-content/uploads -type f -name '*.php' 2>/dev/null | head -200", q(&root)), None)
+    out.uploads_php = exec(
+        sh.as_ref(),
+        &format!(
+            "cd {} && find wp-content/uploads -type f -name '*.php' 2>/dev/null | head -200",
+            q(&root)
+        ),
+        None,
+    )
+    .await
+    .unwrap_or_default()
+    .lines()
+    .map(str::to_owned)
+    .collect();
+    if let Ok(o) = sh
+        .run(
+            &format!(
+                "wp --path={} plugin verify-checksums --all --format=json 2>/dev/null",
+                q(&root)
+            ),
+            None,
+            T,
+        )
         .await
-        .unwrap_or_default()
-        .lines()
-        .map(str::to_owned)
-        .collect();
-    if let Ok(o) = sh.run(&format!("wp --path={} plugin verify-checksums --all --format=json 2>/dev/null", q(&root)), None, T).await {
+    {
         let v: Value = serde_json::from_str(o.text().trim()).unwrap_or(Value::Null);
         out.plugins = v
             .as_array()
             .into_iter()
             .flatten()
-            .map(|x| format!("{}: {} ({})", x["plugin_name"].as_str().unwrap_or("?"), x["file"].as_str().unwrap_or("?"), x["message"].as_str().unwrap_or("")))
+            .map(|x| {
+                format!(
+                    "{}: {} ({})",
+                    x["plugin_name"].as_str().unwrap_or("?"),
+                    x["file"].as_str().unwrap_or("?"),
+                    x["message"].as_str().unwrap_or("")
+                )
+            })
             .collect();
     }
-    let mut look: Vec<String> = out.modified.iter().chain(&out.unknown).chain(&out.uploads_php).take(80).cloned().collect();
+    let mut look: Vec<String> = out
+        .modified
+        .iter()
+        .chain(&out.unknown)
+        .chain(&out.uploads_php)
+        .take(80)
+        .cloned()
+        .collect();
     look.dedup();
     for f in look {
-        if let Ok(text) = exec(sh.as_ref(), &format!("cd {} && head -c 200000 {}", q(&root), sh_quote(&f)), None).await {
+        if let Ok(text) = exec(
+            sh.as_ref(),
+            &format!("cd {} && head -c 200000 {}", q(&root), sh_quote(&f)),
+            None,
+        )
+        .await
+        {
             out.suspicious.extend(scan_code(&f, &text));
         }
     }
@@ -741,29 +980,55 @@ pub async fn cleanup(wp: &Wp, found: &Integrity) -> Result<Vec<String>> {
     let mut done = Vec::new();
     let root = wp.root()?.trim_end_matches('/').to_owned();
     backup(wp, &root, &format!("{}-before-cleanup", wp.site.domain())).await?;
-    wp.cli(&format!("core download --force --skip-content --version={}", found.version)).await?;
+    wp.cli(&format!(
+        "core download --force --skip-content --version={}",
+        found.version
+    ))
+    .await?;
     done.push(format!("core {} reinstalled", found.version));
-    let mut plugins: Vec<String> = found.plugins.iter().filter_map(|l| l.split(':').next().map(str::to_owned)).collect();
+    let mut plugins: Vec<String> = found
+        .plugins
+        .iter()
+        .filter_map(|l| l.split(':').next().map(str::to_owned))
+        .collect();
     plugins.sort();
     plugins.dedup();
-    for p in plugins.iter().filter(|p| p.bytes().all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))) {
-        let v = wp.cli(&format!("plugin get {p} --field=version")).await.unwrap_or_default();
+    for p in plugins.iter().filter(|p| {
+        p.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
+    }) {
+        let v = wp
+            .cli(&format!("plugin get {p} --field=version"))
+            .await
+            .unwrap_or_default();
         let ver = v.trim();
-        let arg = if ver.is_empty() { String::new() } else { format!(" --version={ver}") };
+        let arg = if ver.is_empty() {
+            String::new()
+        } else {
+            format!(" --version={ver}")
+        };
         wp.cli(&format!("plugin install {p} --force{arg}")).await?;
         done.push(format!("plugin {p} reinstalled"));
     }
     if let Some(sh) = &wp.sh {
         for f in &found.uploads_php {
-            exec(sh.as_ref(), &format!("cd {} && rm -f {}", q(&root), sh_quote(f)), None).await?;
+            exec(
+                sh.as_ref(),
+                &format!("cd {} && rm -f {}", q(&root), sh_quote(f)),
+                None,
+            )
+            .await?;
             done.push(format!("removed {f}"));
         }
     }
     wp.cli("config shuffle-salts").await?;
     done.push("salts renewed (all sessions logged out)".into());
-    let admins = wp.cli("user list --role=administrator --field=user_login").await?;
+    let admins = wp
+        .cli("user list --role=administrator --field=user_login")
+        .await?;
     for a in admins.lines().map(str::trim).filter(|a| !a.is_empty()) {
-        wp.cli(&format!("user reset-password {}", sh_quote(a))).await?;
+        wp.cli(&format!("user reset-password {}", sh_quote(a)))
+            .await?;
         done.push(format!("password reset email sent to {a}"));
     }
     Ok(done)
@@ -812,7 +1077,11 @@ function {func}_settings_page() {{\n\tif ( ! current_user_can( 'manage_options' 
 \t\t\t<label for=\"{func}_text\"><?php esc_html_e( 'Text', '{slug}' ); ?></label>\n\
 \t\t\t<input type=\"text\" id=\"{func}_text\" name=\"{func}_text\" value=\"<?php echo esc_attr( $settings['text'] ); ?>\" class=\"regular-text\" />\n\
 \t\t\t<?php submit_button(); ?>\n\t\t</form>\n\t</div>\n\t<?php\n}}\n",
-        wc = if woocommerce { " * Requires Plugins: woocommerce\n * WC requires at least: 8.0\n" } else { "" },
+        wc = if woocommerce {
+            " * Requires Plugins: woocommerce\n * WC requires at least: 8.0\n"
+        } else {
+            ""
+        },
         up = func.to_ascii_uppercase(),
     );
     if woocommerce {
@@ -829,11 +1098,15 @@ add_action( 'woocommerce_order_status_completed', function ( $order_id ) {{\n\t$
         (format!("{slug}/{slug}.php"), main),
         (
             format!("{slug}/uninstall.php"),
-            format!("<?php\n// Removes the plugin's options when it is deleted.\ndefined( 'WP_UNINSTALL_PLUGIN' ) || exit;\ndelete_option( '{func}_settings' );\n"),
+            format!(
+                "<?php\n// Removes the plugin's options when it is deleted.\ndefined( 'WP_UNINSTALL_PLUGIN' ) || exit;\ndelete_option( '{func}_settings' );\n"
+            ),
         ),
         (
             format!("{slug}/readme.txt"),
-            format!("=== {name} ===\nRequires at least: 6.0\nTested up to: 6.7\nRequires PHP: 7.4\nStable tag: 1.0.0\nLicense: GPLv2 or later\n\n{name}.\n"),
+            format!(
+                "=== {name} ===\nRequires at least: 6.0\nTested up to: 6.7\nRequires PHP: 7.4\nStable tag: 1.0.0\nLicense: GPLv2 or later\n\n{name}.\n"
+            ),
         ),
         (format!("{slug}/languages/.gitkeep"), String::new()),
     ]
@@ -868,27 +1141,48 @@ mod tests {
     fn helpers() {
         assert_eq!(slug_of("akismet/akismet.php"), "akismet");
         assert_eq!(slug_of("hello.php"), "hello");
-        assert_eq!(generator_version(r#"<meta name="generator" content="WordPress 6.6.2" />"#).as_deref(), Some("6.6.2"));
-        assert_eq!(generator_version("<generator>https://wordpress.org/?v=6.5</generator>").as_deref(), Some("6.5"));
+        assert_eq!(
+            generator_version(r#"<meta name="generator" content="WordPress 6.6.2" />"#).as_deref(),
+            Some("6.6.2")
+        );
+        assert_eq!(
+            generator_version("<generator>https://wordpress.org/?v=6.5</generator>").as_deref(),
+            Some("6.5")
+        );
         let hits = scan_code("x.php", "<?php\n$a=1;\neval(base64_decode($x));\n");
-        assert_eq!(hits, vec![("x.php".into(), 3, "eval of decoded data".into())]);
+        assert_eq!(
+            hits,
+            vec![("x.php".into(), 3, "eval of decoded data".into())]
+        );
     }
 
     #[test]
     fn site_profiles_validate() {
-        let mut s = WpSite { url: "http://shop.example.com/".into(), user: Some("admin".into()), secret: Some("WP_SHOP".into()), ..WpSite::default() };
+        let mut s = WpSite {
+            url: "http://shop.example.com/".into(),
+            user: Some("admin".into()),
+            secret: Some("WP_SHOP".into()),
+            ..WpSite::default()
+        };
         assert!(s.validate().is_err());
         s.url = "https://shop.example.com/".into();
         s.validate().unwrap();
         assert_eq!(s.url, "https://shop.example.com");
-        let mut cli = WpSite { url: "https://a.com".into(), ssh: Some("prod".into()), ..WpSite::default() };
+        let mut cli = WpSite {
+            url: "https://a.com".into(),
+            ssh: Some("prod".into()),
+            ..WpSite::default()
+        };
         assert!(cli.validate().is_err());
     }
 
     #[tokio::test]
     async fn rest_inventory_with_woocommerce() {
         let s = MockServer::start().await;
-        let auth = format!("Basic {}", base64::engine::general_purpose::STANDARD.encode("admin:abcd efgh"));
+        let auth = format!(
+            "Basic {}",
+            base64::engine::general_purpose::STANDARD.encode("admin:abcd efgh")
+        );
         Mock::given(path("/wp-json/wp/v2/plugins")).and(header("authorization", auth.as_str()))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!([
                 {"plugin": "woocommerce/woocommerce.php", "name": "WooCommerce", "version": "9.1.0", "status": "active"},
@@ -897,20 +1191,52 @@ mod tests {
         Mock::given(path("/wp-json/wp/v2/themes"))
             .respond_with(ResponseTemplate::new(200).set_body_json(json!([{"stylesheet": "storefront", "name": {"raw": "Storefront"}, "version": "4.6", "status": "active"}]))).mount(&s).await;
         Mock::given(path("/wp-json/wp/v2/users"))
-            .respond_with(ResponseTemplate::new(200).insert_header("x-wp-total", "7").set_body_json(json!([]))).mount(&s).await;
-        Mock::given(path("/wp-json/wc/v3/products")).and(query_param("per_page", "1"))
-            .respond_with(ResponseTemplate::new(200).insert_header("x-wp-total", "120").set_body_json(json!([]))).mount(&s).await;
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("x-wp-total", "7")
+                    .set_body_json(json!([])),
+            )
+            .mount(&s)
+            .await;
+        Mock::given(path("/wp-json/wc/v3/products"))
+            .and(query_param("per_page", "1"))
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("x-wp-total", "120")
+                    .set_body_json(json!([])),
+            )
+            .mount(&s)
+            .await;
         Mock::given(path("/wp-json/wc/v3/orders"))
-            .respond_with(ResponseTemplate::new(200).insert_header("x-wp-total", "45").set_body_json(json!([]))).mount(&s).await;
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .insert_header("x-wp-total", "45")
+                    .set_body_json(json!([])),
+            )
+            .mount(&s)
+            .await;
         Mock::given(path("/feed/"))
-            .respond_with(ResponseTemplate::new(200).set_body_string("<generator>https://wordpress.org/?v=6.6.2</generator>")).mount(&s).await;
-        let site = WpSite { url: s.uri(), user: Some("admin".into()), secret: Some("X".into()), ..WpSite::default() };
+            .respond_with(
+                ResponseTemplate::new(200)
+                    .set_body_string("<generator>https://wordpress.org/?v=6.6.2</generator>"),
+            )
+            .mount(&s)
+            .await;
+        let site = WpSite {
+            url: s.uri(),
+            user: Some("admin".into()),
+            secret: Some("X".into()),
+            ..WpSite::default()
+        };
         let wp = Wp::new("shop", site, Some("abcd efgh".into()), None).unwrap();
         let inv = wp.inventory().await.unwrap();
         assert_eq!(inv.version.as_deref(), Some("6.6.2"));
         assert_eq!(inv.plugins.len(), 2);
         assert!(inv.woocommerce);
-        assert_eq!((inv.users, inv.products, inv.orders), (Some(7), Some(120), Some(45)));
+        assert_eq!(
+            (inv.users, inv.products, inv.orders),
+            (Some(7), Some(120), Some(45))
+        );
         assert_eq!(inv.themes[0].name, "Storefront");
     }
 
@@ -918,29 +1244,61 @@ mod tests {
     async fn updates_back_up_first_and_roll_back_a_breaking_plugin() {
         let s = MockServer::start().await;
         // Home fails after the update: the plugin goes back to its old version.
-        Mock::given(path("/")).respond_with(ResponseTemplate::new(500)).mount(&s).await;
-        let sh = Arc::new(FakeShell { answers: vec![("tar czf", 0, "/home/u/kor-backups/x.tar.gz\n".into())], ..FakeShell::default() });
-        let site = WpSite { url: s.uri(), ssh: Some("prod".into()), path: Some("/home/u/www".into()), ..WpSite::default() };
+        Mock::given(path("/"))
+            .respond_with(ResponseTemplate::new(500))
+            .mount(&s)
+            .await;
+        let sh = Arc::new(FakeShell {
+            answers: vec![("tar czf", 0, "/home/u/kor-backups/x.tar.gz\n".into())],
+            ..FakeShell::default()
+        });
+        let site = WpSite {
+            url: s.uri(),
+            ssh: Some("prod".into()),
+            path: Some("/home/u/www".into()),
+            ..WpSite::default()
+        };
         let wp = Wp::new("shop", site, None, Some(sh.clone())).unwrap();
         let inv = WpInventory {
-            plugins: vec![Plugin { slug: "contact-form-7".into(), version: "5.8".into(), update: Some("5.9".into()), active: true, ..Plugin::default() }],
+            plugins: vec![Plugin {
+                slug: "contact-form-7".into(),
+                version: "5.8".into(),
+                update: Some("5.9".into()),
+                active: true,
+                ..Plugin::default()
+            }],
             ..WpInventory::default()
         };
-        let rep = update(&wp, "/home/u/www", &s.uri(), &inv, &[]).await.unwrap();
+        let rep = update(&wp, "/home/u/www", &s.uri(), &inv, &[])
+            .await
+            .unwrap();
         assert_eq!(rep.backup, ["/home/u/kor-backups/x.tar.gz"]);
         assert_eq!(rep.items[0].result, "rolled-back");
         let cmds = sh.commands();
         let first = cmds.iter().position(|c| c.contains("tar czf")).unwrap();
-        let upd = cmds.iter().position(|c| c.contains("plugin update contact-form-7")).unwrap();
+        let upd = cmds
+            .iter()
+            .position(|c| c.contains("plugin update contact-form-7"))
+            .unwrap();
         assert!(first < upd, "backup must run before the update");
-        assert!(cmds.iter().any(|c| c.contains("plugin install contact-form-7 --version=5.8 --force")));
+        assert!(
+            cmds.iter()
+                .any(|c| c.contains("plugin install contact-form-7 --version=5.8 --force"))
+        );
     }
 
     #[test]
     fn scaffolds_are_safe_by_default() {
         let files = plugin_skeleton("Kargo Takip", "kargo-takip", true);
         let main = &files[0].1;
-        for must in ["wp_verify_nonce", "sanitize_text_field", "esc_attr", "current_user_can", "load_plugin_textdomain", "declare_compatibility"] {
+        for must in [
+            "wp_verify_nonce",
+            "sanitize_text_field",
+            "esc_attr",
+            "current_user_can",
+            "load_plugin_textdomain",
+            "declare_compatibility",
+        ] {
             assert!(main.contains(must), "{must}");
         }
         let theme = child_theme("storefront", "Acme Child", "acme-child");

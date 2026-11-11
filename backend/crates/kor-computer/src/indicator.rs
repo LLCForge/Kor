@@ -56,7 +56,10 @@ pub fn set_listener_if_none(l: Listener) {
 #[allow(clippy::needless_pass_by_value)] // callers build the event for this call
 pub fn emit(a: Activity) {
     *LAST.lock().unwrap_or_else(PoisonError::into_inner) = Some(a.clone());
-    let l = LISTENER.read().unwrap_or_else(PoisonError::into_inner).clone();
+    let l = LISTENER
+        .read()
+        .unwrap_or_else(PoisonError::into_inner)
+        .clone();
     if let Some(l) = l {
         l(&a);
     }

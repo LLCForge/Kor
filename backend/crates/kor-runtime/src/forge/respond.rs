@@ -74,10 +74,20 @@ pub fn respond_prompt(pr: &PrInfo, comments: &[Comment], files: &[(String, Strin
             (Some(p), None) => format!(" on {p}"),
             _ => String::new(),
         };
-        let _ = writeln!(s, "- id {} by {}{at}: {}", c.id, c.author, c.body.replace('\n', " "));
+        let _ = writeln!(
+            s,
+            "- id {} by {}{at}: {}",
+            c.id,
+            c.author,
+            c.body.replace('\n', " ")
+        );
     }
     for (p, text) in files {
-        let _ = write!(s, "\nFile {p}:\n```\n{}\n```\n", kor_tools::redact_secrets(text));
+        let _ = write!(
+            s,
+            "\nFile {p}:\n```\n{}\n```\n",
+            kor_tools::redact_secrets(text)
+        );
     }
     s
 }
@@ -115,25 +125,24 @@ pub fn parse_response(root: &Path, reply: &str, comments: &[Comment]) -> Result<
         })
         .collect();
     let mut paths = BTreeSet::new();
-    let edits = raw
-        .edits
-        .into_iter()
-        .filter_map(|e| {
-            let full = safe_path(root, &e.path)?;
-            let before = match std::fs::metadata(&full) {
-                Ok(_) => Some(read_small(&full)?),
-                Err(_) => None,
-            };
-            let path = e.path.trim().replace('\\', "/");
-            (before.as_deref() != Some(e.content.as_str()) && paths.insert(path.clone())).then_some(
-                Proposal {
-                    path,
-                    before,
-                    after: Some(e.content),
-                },
-            )
-        })
-        .collect();
+    let edits =
+        raw.edits
+            .into_iter()
+            .filter_map(|e| {
+                let full = safe_path(root, &e.path)?;
+                let before = match std::fs::metadata(&full) {
+                    Ok(_) => Some(read_small(&full)?),
+                    Err(_) => None,
+                };
+                let path = e.path.trim().replace('\\', "/");
+                (before.as_deref() != Some(e.content.as_str()) && paths.insert(path.clone()))
+                    .then_some(Proposal {
+                        path,
+                        before,
+                        after: Some(e.content),
+                    })
+            })
+            .collect();
     Ok(Response { replies, edits })
 }
 
@@ -149,9 +158,14 @@ pub async fn draft(
     comments: &[Comment],
 ) -> Result<Response, ForgeError> {
     let files = context_files(root, comments);
-    let reply = gitflow::ask(provider, model, respond_prompt(pr, comments, &files), 16_384)
-        .await
-        .map_err(|e| ForgeError::Parse(e.to_string()))?;
+    let reply = gitflow::ask(
+        provider,
+        model,
+        respond_prompt(pr, comments, &files),
+        16_384,
+    )
+    .await
+    .map_err(|e| ForgeError::Parse(e.to_string()))?;
     parse_response(root, &reply, comments).map_err(ForgeError::Parse)
 }
 
@@ -161,7 +175,8 @@ pub async fn draft(
 /// The first write that fails.
 pub fn write(root: &Path, accepted: &[(String, String)]) -> Result<(), ForgeError> {
     for (p, content) in accepted {
-        let full = safe_path(root, p).ok_or_else(|| ForgeError::Git(format!("unsafe path: {p}")))?;
+        let full =
+            safe_path(root, p).ok_or_else(|| ForgeError::Git(format!("unsafe path: {p}")))?;
         if let Some(dir) = full.parent() {
             std::fs::create_dir_all(dir).map_err(|e| ForgeError::Git(format!("{p}: {e}")))?;
         }
@@ -219,12 +234,21 @@ mod tests {
         let reply = r#"Sure: {"replies":[{"id":"1","body":"renamed"},{"id":"9","body":"?"},{"id":"1","body":"dup"}],
             "edits":[{"path":"a.rs","content":"new\n"},{"path":"same.rs","content":"x\n"},{"path":"../evil","content":"x"},{"path":"new.rs","content":"n"}]}"#;
         let r = parse_response(dir.path(), reply, &cs).unwrap();
-        assert_eq!(r.replies, vec![Reply { id: "1".into(), body: "renamed".into() }]);
+        assert_eq!(
+            r.replies,
+            vec![Reply {
+                id: "1".into(),
+                body: "renamed".into()
+            }]
+        );
         let paths: Vec<&str> = r.edits.iter().map(|e| e.path.as_str()).collect();
         assert_eq!(paths, ["a.rs", "new.rs"]);
         assert_eq!(r.edits[0].before.as_deref(), Some("old\n"));
         assert_eq!(r.edits[1].before, None);
-        assert_eq!(context_files(dir.path(), &cs), vec![("a.rs".to_owned(), "old\n".to_owned())]);
+        assert_eq!(
+            context_files(dir.path(), &cs),
+            vec![("a.rs".to_owned(), "old\n".to_owned())]
+        );
         assert!(parse_response(dir.path(), "no", &cs).is_err());
     }
 }

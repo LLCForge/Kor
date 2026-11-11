@@ -18,7 +18,7 @@ use kor_providers::{
 };
 use kor_runtime::cost::{Control, Files, Prices, Target};
 use kor_runtime::task::{
-    self, Engine, Model, Resolution, Settings, SubStatus, Spawned, Spawner, TaskStatus,
+    self, Engine, Model, Resolution, Settings, Spawned, Spawner, SubStatus, TaskStatus,
 };
 use kor_secrets::Redactor;
 use kor_tools::{ToolCtx, default_tools};
@@ -255,7 +255,10 @@ fn plan(subtasks: &Value) -> Turn {
 }
 
 fn approve() -> Turn {
-    tool("submit_review", &json!({"approved": true, "notes": "looks right"}))
+    tool(
+        "submit_review",
+        &json!({"approved": true, "notes": "looks right"}),
+    )
 }
 
 fn settings(agents: usize) -> Settings {
@@ -335,7 +338,11 @@ async fn five_agents_merge_without_conflict() {
         assert!(s.test.as_ref().is_some_and(|t| t.ok));
         assert!(!root.join(&s.worktree).exists(), "worktree cleaned up");
     }
-    assert!(st.test.as_ref().is_some_and(|t| t.ok && t.output.contains("tests-ok")));
+    assert!(
+        st.test
+            .as_ref()
+            .is_some_and(|t| t.ok && t.output.contains("tests-ok"))
+    );
 
     // The task branch holds every change; the user's branch is untouched.
     let shared = git(&root, &["show", "kor/task/1/merged:shared.txt"]);
@@ -348,8 +355,15 @@ async fn five_agents_merge_without_conflict() {
     }
     assert!(!root.join("backend.txt").exists());
     let branches = git(&root, &["branch", "--list", "kor/task/*"]);
-    assert_eq!(branches.trim().trim_start_matches(['*', '+', ' ']), "kor/task/1/merged");
-    assert!(git(&root, &["status", "--porcelain"]).trim().is_empty(), "{}", git(&root, &["status", "--porcelain"]));
+    assert_eq!(
+        branches.trim().trim_start_matches(['*', '+', ' ']),
+        "kor/task/1/merged"
+    );
+    assert!(
+        git(&root, &["status", "--porcelain"]).trim().is_empty(),
+        "{}",
+        git(&root, &["status", "--porcelain"])
+    );
 
     // Checkpoint and ledger: per-role costs are tagged.
     let saved = task::load(&root, "1").unwrap();
@@ -358,12 +372,22 @@ async fn five_agents_merge_without_conflict() {
     let ledger = kor_runtime::usage::read(&home.path().join("usage.jsonl"));
     for r in roles {
         assert!(
-            ledger.iter().any(|e| e.role.as_deref() == Some(&format!("task:1/{r}"))),
+            ledger
+                .iter()
+                .any(|e| e.role.as_deref() == Some(&format!("task:1/{r}"))),
             "{r}"
         );
     }
-    assert!(ledger.iter().any(|e| e.role.as_deref() == Some("task:1/orchestrator")));
-    assert!(ledger.iter().any(|e| e.role.as_deref() == Some("task:1/reviewer")));
+    assert!(
+        ledger
+            .iter()
+            .any(|e| e.role.as_deref() == Some("task:1/orchestrator"))
+    );
+    assert!(
+        ledger
+            .iter()
+            .any(|e| e.role.as_deref() == Some("task:1/reviewer"))
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -395,7 +419,11 @@ async fn same_lines_conflict_is_reported_and_replanned() {
             // After re-planning it starts from the task branch, which has the backend change.
             vec![
                 read("shared.txt"),
-                edit("shared.txt", "line 5 backend\n", "line 5 backend+frontend\n"),
+                edit(
+                    "shared.txt",
+                    "line 5 backend\n",
+                    "line 5 backend+frontend\n",
+                ),
                 say("done"),
             ],
         ]),
@@ -428,12 +456,20 @@ async fn same_lines_conflict_is_reported_and_replanned() {
     assert_eq!(c.files[0].path, "shared.txt");
     assert!(c.files[0].ours.contains("line 5 backend\n"));
     assert!(c.files[0].theirs.contains("line 5 frontend\n"));
-    assert!(c.diff.contains("<<<<<<<") && c.diff.contains("line 5 frontend"), "{}", c.diff);
+    assert!(
+        c.diff.contains("<<<<<<<") && c.diff.contains("line 5 frontend"),
+        "{}",
+        c.diff
+    );
 
     // Nothing half-merged: the task branch has only the backend change, the merge worktree is
     // clean and no merge is in progress.
     let merged_wt = root.join(".kor/worktrees").join(&st.id).join("merged");
-    assert!(git(&merged_wt, &["status", "--porcelain"]).trim().is_empty());
+    assert!(
+        git(&merged_wt, &["status", "--porcelain"])
+            .trim()
+            .is_empty()
+    );
     let on_branch = git(&root, &["show", "kor/task/1/merged:shared.txt"]);
     assert!(on_branch.contains("line 5 backend\n") && !on_branch.contains("frontend"));
     assert!(!on_branch.contains("<<<<<<<"));
@@ -456,7 +492,10 @@ async fn same_lines_conflict_is_reported_and_replanned() {
     assert!(st.conflicts.is_empty());
     assert_eq!(st.subtasks[1].goal, "extend the backend's line 5");
     let final_text = git(&root, &["show", "kor/task/1/merged:shared.txt"]);
-    assert!(final_text.contains("line 5 backend+frontend\n"), "{final_text}");
+    assert!(
+        final_text.contains("line 5 backend+frontend\n"),
+        "{final_text}"
+    );
 }
 
 #[test]
@@ -470,7 +509,11 @@ fn fork_and_cancel_keep_the_checkpoint_consistent() {
     assert_eq!(forked.id, "2");
     assert_eq!(forked.forked_from.as_deref(), Some("1"));
     assert_eq!(forked.branch, "kor/task/2/merged");
-    assert_eq!(forked.status, TaskStatus::Failed, "a fork is resumable, not running");
+    assert_eq!(
+        forked.status,
+        TaskStatus::Failed,
+        "a fork is resumable, not running"
+    );
     let cancelled = task::cancel(&root, "1").unwrap();
     assert_eq!(cancelled.status, TaskStatus::Cancelled);
     assert!(task::load(&root, "../1").is_err());
@@ -491,10 +534,20 @@ fn checkpoints_live_in_sqlite_and_old_json_ones_are_imported() {
     st.id = "7".into();
     st.goal = "from an older version".into();
     std::fs::write(dir.join("7.json"), serde_json::to_string(&st).unwrap()).unwrap();
-    std::fs::write(dir.join("8.json"), r#"{"description":"tool task","status":"open"}"#).unwrap();
-    assert_eq!(task::load(&root, "7").unwrap().goal, "from an older version");
+    std::fs::write(
+        dir.join("8.json"),
+        r#"{"description":"tool task","status":"open"}"#,
+    )
+    .unwrap();
+    assert_eq!(
+        task::load(&root, "7").unwrap().goal,
+        "from an older version"
+    );
     assert!(dir.join("7.json.imported").is_file() && !dir.join("7.json").exists());
-    assert!(dir.join("8.json").is_file(), "the tool's own files are left alone");
+    assert!(
+        dir.join("8.json").is_file(),
+        "the tool's own files are left alone"
+    );
     let ids: Vec<String> = task::list(&root).into_iter().map(|t| t.id).collect();
     assert_eq!(ids.len(), 2);
     assert!(ids.contains(&"1".to_owned()) && ids.contains(&"7".to_owned()));
@@ -505,4 +558,3 @@ fn checkpoints_live_in_sqlite_and_old_json_ones_are_imported() {
     assert_eq!(task::load(&root, "1").unwrap().goal, "changed");
     assert_eq!(task::list(&root).len(), 2);
 }
-

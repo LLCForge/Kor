@@ -78,7 +78,8 @@ impl Disk {
         if self.total_mb == 0 {
             return 0;
         }
-        u8::try_from((self.total_mb - self.free_mb.min(self.total_mb)) * 100 / self.total_mb).unwrap_or(100)
+        u8::try_from((self.total_mb - self.free_mb.min(self.total_mb)) * 100 / self.total_mb)
+            .unwrap_or(100)
     }
 }
 
@@ -158,8 +159,23 @@ fn mb(bytes: u64) -> u64 {
 }
 
 const PACKAGE_MANAGERS: &[&str] = &[
-    "winget", "choco", "scoop", "brew", "port", "apt", "dnf", "yum", "pacman", "zypper", "apk", "nix-env",
-    "emerge", "xbps-install", "rpm-ostree", "flatpak", "snap",
+    "winget",
+    "choco",
+    "scoop",
+    "brew",
+    "port",
+    "apt",
+    "dnf",
+    "yum",
+    "pacman",
+    "zypper",
+    "apk",
+    "nix-env",
+    "emerge",
+    "xbps-install",
+    "rpm-ostree",
+    "flatpak",
+    "snap",
 ];
 
 /// Toolchains: name and the arguments that print its version.
@@ -194,17 +210,28 @@ pub fn version_of(text: &str) -> Option<String> {
         .map(|t| t.trim_start_matches(|c: char| c.is_ascii_alphabetic()))
         .find(|t| {
             let mut parts = t.split('.');
-            parts.next().is_some_and(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()))
-                && parts.next().is_some_and(|p| p.chars().next().is_some_and(|c| c.is_ascii_digit()))
+            parts
+                .next()
+                .is_some_and(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()))
+                && parts
+                    .next()
+                    .is_some_and(|p| p.chars().next().is_some_and(|c| c.is_ascii_digit()))
         })
-        .map(|t| t.trim_end_matches(|c: char| !c.is_ascii_alphanumeric()).to_owned())
+        .map(|t| {
+            t.trim_end_matches(|c: char| !c.is_ascii_alphanumeric())
+                .to_owned()
+        })
 }
 
 fn toolchains() -> BTreeMap<String, String> {
     let (tx, rx) = std::sync::mpsc::channel();
     let mut started = 0;
     for (name, args) in TOOLCHAINS {
-        let exe = if *name == "python" { kor_platform::python_command() } else { name };
+        let exe = if *name == "python" {
+            kor_platform::python_command()
+        } else {
+            name
+        };
         let Some(path) = kor_platform::on_path::which(exe) else {
             continue;
         };
@@ -219,7 +246,11 @@ fn toolchains() -> BTreeMap<String, String> {
                 .output();
             let v = out.ok().and_then(|o| {
                 // `java -version` writes to stderr.
-                let text = format!("{}\n{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
+                let text = format!(
+                    "{}\n{}",
+                    String::from_utf8_lossy(&o.stdout),
+                    String::from_utf8_lossy(&o.stderr)
+                );
                 version_of(&text)
             });
             let _ = tx.send((*name, v));
@@ -255,13 +286,27 @@ pub fn parse_os_release(text: &str, ostree_booted: bool) -> Option<Distro> {
     }
     let like = field("ID_LIKE");
     let variant = field("VARIANT_ID");
-    let words: Vec<&str> = std::iter::once(id.as_str()).chain(like.split_whitespace()).collect();
-    let family = ["debian", "rhel", "fedora", "arch", "suse", "alpine", "nixos", "gentoo", "void"]
-        .iter()
-        .find(|f| words.contains(f))
-        .map_or_else(|| id.clone(), |f| if *f == "fedora" { "rhel".to_owned() } else { (*f).to_owned() });
+    let words: Vec<&str> = std::iter::once(id.as_str())
+        .chain(like.split_whitespace())
+        .collect();
+    let family = [
+        "debian", "rhel", "fedora", "arch", "suse", "alpine", "nixos", "gentoo", "void",
+    ]
+    .iter()
+    .find(|f| words.contains(f))
+    .map_or_else(
+        || id.clone(),
+        |f| {
+            if *f == "fedora" {
+                "rhel".to_owned()
+            } else {
+                (*f).to_owned()
+            }
+        },
+    );
     let immutable = ostree_booted
-        || ["silverblue", "kinoite", "coreos", "iot", "sericea", "onyx"].contains(&variant.as_str())
+        || ["silverblue", "kinoite", "coreos", "iot", "sericea", "onyx"]
+            .contains(&variant.as_str())
         || ["fedora-coreos", "flatcar", "endless", "vanilla"].contains(&id.as_str());
     Some(Distro {
         name: {
@@ -278,54 +323,70 @@ pub fn parse_os_release(text: &str, ostree_booted: bool) -> Option<Distro> {
 /// The OS's keyboard layout name → language and variant (Turkish F / Q awareness, §19.1).
 pub fn keyboard(raw: &str) -> Keyboard {
     let raw = raw.trim();
-    let (lang, variant): (Option<&str>, Option<String>) = if raw.len() == 8 && raw.chars().all(|c| c.is_ascii_hexdigit()) {
-        // Windows KLID: low word is the language id, high word the layout variant.
-        let langid = raw[4..].to_ascii_uppercase();
-        let lang = match langid.as_str() {
-            "041F" => Some("tr"),
-            "0409" | "0809" | "1009" | "0C09" => Some("en"),
-            "040C" | "080C" | "0C0C" | "100C" => Some("fr"),
-            "0407" | "0807" => Some("de"),
-            "040A" | "0C0A" | "080A" => Some("es"),
-            "0410" => Some("it"),
-            "0419" => Some("ru"),
-            "0416" | "0816" => Some("pt"),
-            "0413" => Some("nl"),
-            "0415" => Some("pl"),
-            "0411" => Some("ja"),
-            "0412" => Some("ko"),
-            "0804" | "0404" => Some("zh"),
-            "0401" => Some("ar"),
-            _ => None,
-        };
-        let variant = (lang == Some("tr")).then(|| if &raw[..4] == "0001" { "F" } else { "Q" }.to_owned());
-        (lang, variant)
-    } else if let Some(name) = raw.strip_prefix("com.apple.keylayout.") {
-        let lower = name.to_ascii_lowercase();
-        if lower.starts_with("turkish") {
-            (Some("tr"), Some(if lower.contains("qwerty") { "Q" } else { "F" }.to_owned()))
-        } else {
-            let lang = [("us", "en"), ("abc", "en"), ("british", "en"), ("french", "fr"), ("german", "de"), ("spanish", "es"), ("italian", "it"), ("russian", "ru")]
+    let (lang, variant): (Option<&str>, Option<String>) =
+        if raw.len() == 8 && raw.chars().all(|c| c.is_ascii_hexdigit()) {
+            // Windows KLID: low word is the language id, high word the layout variant.
+            let langid = raw[4..].to_ascii_uppercase();
+            let lang = match langid.as_str() {
+                "041F" => Some("tr"),
+                "0409" | "0809" | "1009" | "0C09" => Some("en"),
+                "040C" | "080C" | "0C0C" | "100C" => Some("fr"),
+                "0407" | "0807" => Some("de"),
+                "040A" | "0C0A" | "080A" => Some("es"),
+                "0410" => Some("it"),
+                "0419" => Some("ru"),
+                "0416" | "0816" => Some("pt"),
+                "0413" => Some("nl"),
+                "0415" => Some("pl"),
+                "0411" => Some("ja"),
+                "0412" => Some("ko"),
+                "0804" | "0404" => Some("zh"),
+                "0401" => Some("ar"),
+                _ => None,
+            };
+            let variant = (lang == Some("tr"))
+                .then(|| if &raw[..4] == "0001" { "F" } else { "Q" }.to_owned());
+            (lang, variant)
+        } else if let Some(name) = raw.strip_prefix("com.apple.keylayout.") {
+            let lower = name.to_ascii_lowercase();
+            if lower.starts_with("turkish") {
+                (
+                    Some("tr"),
+                    Some(if lower.contains("qwerty") { "Q" } else { "F" }.to_owned()),
+                )
+            } else {
+                let lang = [
+                    ("us", "en"),
+                    ("abc", "en"),
+                    ("british", "en"),
+                    ("french", "fr"),
+                    ("german", "de"),
+                    ("spanish", "es"),
+                    ("italian", "it"),
+                    ("russian", "ru"),
+                ]
                 .iter()
                 .find(|(k, _)| lower.starts_with(k))
                 .map(|(_, l)| *l);
-            (lang, None)
-        }
-    } else {
-        // Linux `layout[:variant]`.
-        let (layout, variant) = raw.split_once(':').map_or((raw, None), |(a, b)| (a, Some(b)));
-        let lang = match layout {
-            "us" | "gb" => Some("en"),
-            "" => None,
-            l => Some(l),
-        };
-        let variant = if layout == "tr" {
-            Some(if variant == Some("f") { "F" } else { "Q" }.to_owned())
+                (lang, None)
+            }
         } else {
-            variant.map(str::to_owned)
+            // Linux `layout[:variant]`.
+            let (layout, variant) = raw
+                .split_once(':')
+                .map_or((raw, None), |(a, b)| (a, Some(b)));
+            let lang = match layout {
+                "us" | "gb" => Some("en"),
+                "" => None,
+                l => Some(l),
+            };
+            let variant = if layout == "tr" {
+                Some(if variant == Some("f") { "F" } else { "Q" }.to_owned())
+            } else {
+                variant.map(str::to_owned)
+            };
+            (lang, variant)
         };
-        (lang, variant)
-    };
     Keyboard {
         raw: raw.to_owned(),
         lang: lang.map(str::to_owned),
@@ -402,7 +463,11 @@ fn collect_real() -> Profile {
         desktop: desktop(),
     };
     let cpu = Cpu {
-        model: sys.cpus().first().map(|c| c.brand().trim().to_owned()).unwrap_or_default(),
+        model: sys
+            .cpus()
+            .first()
+            .map(|c| c.brand().trim().to_owned())
+            .unwrap_or_default(),
         cores: System::physical_core_count(),
         threads: sys.cpus().len(),
     };
@@ -457,7 +522,9 @@ pub(crate) fn disks(list: &sysinfo::Disks) -> Vec<Disk> {
             free_mb: mb(d.available_space()),
             removable: d.is_removable(),
         })
-        .filter(|d| !["tmpfs", "devtmpfs", "overlay", "squashfs", "proc", "sysfs"].contains(&d.fs.as_str()))
+        .filter(|d| {
+            !["tmpfs", "devtmpfs", "overlay", "squashfs", "proc", "sysfs"].contains(&d.fs.as_str())
+        })
         .collect();
     v.sort_by(|a, b| a.mount.cmp(&b.mount));
     v.dedup_by(|a, b| a.mount == b.mount);
@@ -473,17 +540,35 @@ pub fn changes(old: &Profile, new: &Profile) -> Vec<String> {
             out.push(key.to_owned());
         }
     };
-    check("os", old.os.version == new.os.version && old.os.name == new.os.name && old.os.distro == new.os.distro);
-    check("package_managers", old.os.package_managers == new.os.package_managers);
+    check(
+        "os",
+        old.os.version == new.os.version
+            && old.os.name == new.os.name
+            && old.os.distro == new.os.distro,
+    );
+    check(
+        "package_managers",
+        old.os.package_managers == new.os.package_managers,
+    );
     check("cpu", old.cpu.model == new.cpu.model);
-    check("memory", old.memory.total_mb.abs_diff(new.memory.total_mb) < 512);
+    check(
+        "memory",
+        old.memory.total_mb.abs_diff(new.memory.total_mb) < 512,
+    );
     check("gpus", old.gpus == new.gpus);
     let mounts = |p: &Profile| p.disks.iter().map(|d| d.mount.clone()).collect::<Vec<_>>();
     check("disks", mounts(old) == mounts(new));
     check("battery", old.battery.is_some() == new.battery.is_some());
     check("network", old.network == new.network);
-    check("displays", old.displays.len() == new.displays.len()
-        && old.displays.iter().zip(&new.displays).all(|(a, b)| (a.width, a.height, a.primary) == (b.width, b.height, b.primary)));
+    check(
+        "displays",
+        old.displays.len() == new.displays.len()
+            && old
+                .displays
+                .iter()
+                .zip(&new.displays)
+                .all(|(a, b)| (a.width, a.height, a.primary) == (b.width, b.height, b.primary)),
+    );
     check("keyboard", old.keyboard == new.keyboard);
     for (k, v) in &new.toolchains {
         if old.toolchains.get(k) != Some(v) {
@@ -518,17 +603,23 @@ pub struct Refresh {
 /// Collect with `probe`, store in `home`, and report changes.
 pub fn refresh(home: &Path, probe: &dyn Probe) -> std::io::Result<Refresh> {
     let profile = probe.collect();
-    let changed = load(home).map(|old| changes(&old, &profile)).unwrap_or_default();
+    let changed = load(home)
+        .map(|old| changes(&old, &profile))
+        .unwrap_or_default();
     std::fs::create_dir_all(home)?;
     let tmp = path(home).with_extension("json.tmp");
-    std::fs::write(&tmp, serde_json::to_string_pretty(&profile).map_err(std::io::Error::other)?)?;
+    std::fs::write(
+        &tmp,
+        serde_json::to_string_pretty(&profile).map_err(std::io::Error::other)?,
+    )?;
     std::fs::rename(&tmp, path(home))?;
     Ok(Refresh { profile, changed })
 }
 
 /// The stored profile is missing or older than `minutes`.
 pub fn stale(home: &Path, minutes: u32) -> bool {
-    load(home).is_none_or(|p| now_secs().saturating_sub(p.collected_at) > u64::from(minutes.max(1)) * 60)
+    load(home)
+        .is_none_or(|p| now_secs().saturating_sub(p.collected_at) > u64::from(minutes.max(1)) * 60)
 }
 
 fn gb(mbytes: u64) -> String {
@@ -543,12 +634,25 @@ fn gb(mbytes: u64) -> String {
 #[allow(clippy::cast_precision_loss)] // sizes shown to one decimal
 pub fn prompt_section(p: &Profile, max_chars: usize) -> String {
     let mut lines = Vec::new();
-    let mut os = format!("OS: {}", if p.os.long_name.is_empty() { &p.os.name } else { &p.os.long_name });
+    let mut os = format!(
+        "OS: {}",
+        if p.os.long_name.is_empty() {
+            &p.os.name
+        } else {
+            &p.os.long_name
+        }
+    );
     if !p.os.arch.is_empty() {
         os.push_str(&format!(" ({})", p.os.arch));
     }
     if let Some(d) = &p.os.distro {
-        os.push_str(&format!("; distribution {} {} (family {}{})", d.id, d.version, d.family, if d.immutable { ", immutable" } else { "" }));
+        os.push_str(&format!(
+            "; distribution {} {} (family {}{})",
+            d.id,
+            d.version,
+            d.family,
+            if d.immutable { ", immutable" } else { "" }
+        ));
     }
     if let Some(de) = &p.os.desktop {
         os.push_str(&format!("; desktop {de}"));
@@ -556,7 +660,10 @@ pub fn prompt_section(p: &Profile, max_chars: usize) -> String {
     lines.push(os);
     let mut env_line = Vec::new();
     if !p.os.package_managers.is_empty() {
-        env_line.push(format!("package managers: {}", p.os.package_managers.join(", ")));
+        env_line.push(format!(
+            "package managers: {}",
+            p.os.package_managers.join(", ")
+        ));
     }
     if let Some(s) = &p.shell {
         env_line.push(format!("shell: {s}"));
@@ -601,7 +708,11 @@ pub fn prompt_section(p: &Profile, max_chars: usize) -> String {
     if !p.toolchains.is_empty() {
         lines.push(format!(
             "Installed: {}",
-            p.toolchains.iter().map(|(k, v)| format!("{k} {v}")).collect::<Vec<_>>().join(", ")
+            p.toolchains
+                .iter()
+                .map(|(k, v)| format!("{k} {v}"))
+                .collect::<Vec<_>>()
+                .join(", ")
         ));
     }
     if !p.displays.is_empty() {
@@ -609,13 +720,22 @@ pub fn prompt_section(p: &Profile, max_chars: usize) -> String {
             "Displays: {}",
             p.displays
                 .iter()
-                .map(|d| format!("{}x{}{}", d.width, d.height, if d.primary { " (primary)" } else { "" }))
+                .map(|d| format!(
+                    "{}x{}{}",
+                    d.width,
+                    d.height,
+                    if d.primary { " (primary)" } else { "" }
+                ))
                 .collect::<Vec<_>>()
                 .join(", ")
         ));
     }
     if let Some(b) = p.battery {
-        lines.push(format!("Battery: {}%{}", b.percent, if b.charging { ", charging" } else { "" }));
+        lines.push(format!(
+            "Battery: {}%{}",
+            b.percent,
+            if b.charging { ", charging" } else { "" }
+        ));
     }
     let mut out = String::from(
         "\n\n# This machine\nUse commands, package managers and paths for this system; do not ask the user which OS they use.\n",
@@ -655,14 +775,25 @@ mod tests {
             version: "41".into(),
             long_name: "Linux 41 Fedora Linux".into(),
             arch: "x86_64".into(),
-            distro: parse_os_release("NAME=\"Fedora Linux\"\nID=fedora\nVERSION_ID=41\nVARIANT_ID=silverblue\n", false),
+            distro: parse_os_release(
+                "NAME=\"Fedora Linux\"\nID=fedora\nVERSION_ID=41\nVARIANT_ID=silverblue\n",
+                false,
+            ),
             package_managers: vec!["dnf".into(), "flatpak".into()],
             ..OsInfo::default()
         };
         p.memory.total_mb = 32 * 1024;
         p.memory.available_mb = 20 * 1024;
-        p.gpus = vec![Gpu { name: "RTX 4070".into(), vram_mb: Some(12282) }];
-        p.disks = vec![Disk { mount: "/".into(), total_mb: 512_000, free_mb: 40_000, ..Disk::default() }];
+        p.gpus = vec![Gpu {
+            name: "RTX 4070".into(),
+            vram_mb: Some(12282),
+        }];
+        p.disks = vec![Disk {
+            mount: "/".into(),
+            total_mb: 512_000,
+            free_mb: 40_000,
+            ..Disk::default()
+        }];
         p.toolchains.insert("node".into(), "22.11.0".into());
         p.keyboard = Some(keyboard("tr:f"));
         p
@@ -673,7 +804,13 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let a = sample();
         let mut b = a.clone();
-        b.disks.push(Disk { mount: "/mnt/usb".into(), total_mb: 64_000, free_mb: 60_000, removable: true, ..Disk::default() });
+        b.disks.push(Disk {
+            mount: "/mnt/usb".into(),
+            total_mb: 64_000,
+            free_mb: 60_000,
+            removable: true,
+            ..Disk::default()
+        });
         b.toolchains.insert("docker".into(), "27.3.1".into());
         b.memory.available_mb = 1024; // volatile: not a change
         b.collected_at += 10;
@@ -686,14 +823,21 @@ mod tests {
         assert_eq!(r.changed, ["disks", "toolchains.docker"]);
         assert_eq!(load(d.path()).unwrap().disks.len(), 2);
         let r = refresh(d.path(), &probe).unwrap();
-        assert_eq!(r.changed, ["disks", "toolchains.docker"], "removal is a change too");
+        assert_eq!(
+            r.changed,
+            ["disks", "toolchains.docker"],
+            "removal is a change too"
+        );
     }
 
     #[test]
     fn prompt_section_is_budgeted_and_names_the_system() {
         let p = sample();
         let s = prompt_section(&p, 2000);
-        assert!(s.contains("distribution fedora 41 (family rhel, immutable)"), "{s}");
+        assert!(
+            s.contains("distribution fedora 41 (family rhel, immutable)"),
+            "{s}"
+        );
         assert!(s.contains("package managers: dnf, flatpak"), "{s}");
         assert!(s.contains("keyboard: tr (F)"), "{s}");
         assert!(s.contains("GPU RTX 4070 12 GB VRAM"), "{s}");
@@ -704,7 +848,11 @@ mod tests {
 
     #[test]
     fn parsers() {
-        let deb = parse_os_release("ID=ubuntu\nID_LIKE=debian\nVERSION_ID=\"24.04\"\nNAME=\"Ubuntu\"", false).unwrap();
+        let deb = parse_os_release(
+            "ID=ubuntu\nID_LIKE=debian\nVERSION_ID=\"24.04\"\nNAME=\"Ubuntu\"",
+            false,
+        )
+        .unwrap();
         assert_eq!((deb.family.as_str(), deb.immutable), ("debian", false));
         let nix = parse_os_release("ID=nixos\nNAME=NixOS", false).unwrap();
         assert_eq!(nix.family, "nixos");
@@ -714,20 +862,47 @@ mod tests {
         assert_eq!(keyboard("0001041F").variant.as_deref(), Some("F"));
         assert_eq!(keyboard("0000041F").variant.as_deref(), Some("Q"));
         assert_eq!(keyboard("00000409").lang.as_deref(), Some("en"));
-        assert_eq!(keyboard("com.apple.keylayout.Turkish").variant.as_deref(), Some("F"));
-        assert_eq!(keyboard("com.apple.keylayout.Turkish-QWERTY-PC").variant.as_deref(), Some("Q"));
-        assert_eq!(keyboard("com.apple.keylayout.French").lang.as_deref(), Some("fr"));
+        assert_eq!(
+            keyboard("com.apple.keylayout.Turkish").variant.as_deref(),
+            Some("F")
+        );
+        assert_eq!(
+            keyboard("com.apple.keylayout.Turkish-QWERTY-PC")
+                .variant
+                .as_deref(),
+            Some("Q")
+        );
+        assert_eq!(
+            keyboard("com.apple.keylayout.French").lang.as_deref(),
+            Some("fr")
+        );
         assert_eq!(keyboard("tr").variant.as_deref(), Some("Q"));
         assert_eq!(keyboard("us").lang.as_deref(), Some("en"));
 
         assert_eq!(version_of("v22.11.0\n").as_deref(), Some("22.11.0"));
-        assert_eq!(version_of("go version go1.23.2 windows/amd64").as_deref(), Some("1.23.2"));
-        assert_eq!(version_of("openjdk version \"21.0.4\" 2024-07-16").as_deref(), Some("21.0.4"));
-        assert_eq!(version_of("Docker version 27.3.1, build ce12230").as_deref(), Some("27.3.1"));
-        assert_eq!(version_of("git version 2.47.0.windows.2").as_deref(), Some("2.47.0.windows.2"));
+        assert_eq!(
+            version_of("go version go1.23.2 windows/amd64").as_deref(),
+            Some("1.23.2")
+        );
+        assert_eq!(
+            version_of("openjdk version \"21.0.4\" 2024-07-16").as_deref(),
+            Some("21.0.4")
+        );
+        assert_eq!(
+            version_of("Docker version 27.3.1, build ce12230").as_deref(),
+            Some("27.3.1")
+        );
+        assert_eq!(
+            version_of("git version 2.47.0.windows.2").as_deref(),
+            Some("2.47.0.windows.2")
+        );
         assert_eq!(version_of("no digits"), None);
 
-        let d = Disk { total_mb: 100, free_mb: 4, ..Disk::default() };
+        let d = Disk {
+            total_mb: 100,
+            free_mb: 4,
+            ..Disk::default()
+        };
         assert_eq!(d.used_percent(), 96);
     }
 

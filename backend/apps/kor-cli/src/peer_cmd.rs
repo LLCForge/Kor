@@ -204,7 +204,10 @@ pub fn blocks_tui(cmd: &PeerCmd) -> bool {
 }
 
 fn fail(l: &Localizer, e: impl std::fmt::Display) -> bool {
-    eprintln!("{}", l.t_args("error-generic", &args!("error" => e.to_string())));
+    eprintln!(
+        "{}",
+        l.t_args("error-generic", &args!("error" => e.to_string()))
+    );
     false
 }
 
@@ -446,12 +449,17 @@ fn detached(l: &Localizer, args: &[String]) -> bool {
         return fail(l, "no data directory");
     };
     let _ = std::fs::create_dir_all(&dir);
-    let Ok(log) = std::fs::File::create(dir.join(format!("{}.log", args.get(1).map_or("peer", String::as_str)))) else {
+    let Ok(log) = std::fs::File::create(dir.join(format!(
+        "{}.log",
+        args.get(1).map_or("peer", String::as_str)
+    ))) else {
         return fail(l, "log file");
     };
     let err = log.try_clone().ok();
     let mut cmd = std::process::Command::new(exe);
-    cmd.args(args).stdin(std::process::Stdio::null()).stdout(log);
+    cmd.args(args)
+        .stdin(std::process::Stdio::null())
+        .stdout(log);
     if let Some(e) = err {
         cmd.stderr(e);
     }
@@ -470,7 +478,11 @@ fn grant_line(l: &Localizer, g: &peer::Grant) -> String {
     }
     let mut parts = Vec::new();
     if !g.dirs.is_empty() {
-        parts.push(format!("{}{}", g.dirs.join(","), if g.write { " (rw)" } else { " (ro)" }));
+        parts.push(format!(
+            "{}{}",
+            g.dirs.join(","),
+            if g.write { " (rw)" } else { " (ro)" }
+        ));
     }
     if !g.commands.is_empty() {
         parts.push(format!("cmd: {}", g.commands.join(",")));
@@ -517,7 +529,11 @@ async fn pair_cmd(
         });
     }
     let book = node.book().map_err(anyhow::Error::msg)?;
-    let addrs = if addrs.is_empty() { client::advertised_addrs(&book.listen) } else { addrs };
+    let addrs = if addrs.is_empty() {
+        client::advertised_addrs(&book.listen)
+    } else {
+        addrs
+    };
     let code = match pair::create(&node.dir, addrs) {
         Ok(c) => c,
         Err(e) => return Ok(fail(l, e)),
@@ -525,7 +541,13 @@ async fn pair_cmd(
     // No `kor peer serve` running: listen here until the code is used or expires.
     let own = tokio::net::TcpListener::bind(&book.listen).await.ok();
     println!("{}", pair::qr_text(&code));
-    println!("{}", l.t_args("peer-pair-code", &args!("code" => code.render(), "fingerprint" => node.identity.fingerprint())));
+    println!(
+        "{}",
+        l.t_args(
+            "peer-pair-code",
+            &args!("code" => code.render(), "fingerprint" => node.identity.fingerprint())
+        )
+    );
     let n = std::sync::Arc::new(node.clone());
     if let Some(lst) = own {
         let n2 = n.clone();
@@ -589,7 +611,10 @@ async fn run_task(
         let loads = client::loads(node).await;
         match client::least_busy(&loads) {
             Some(p) => {
-                eprintln!("{}", l.t_args("peer-least-busy", &args!("name" => p.name.clone())));
+                eprintln!(
+                    "{}",
+                    l.t_args("peer-least-busy", &args!("name" => p.name.clone()))
+                );
                 p.clone()
             }
             None => return Ok(fail(l, l.t("peer-none-reachable"))),
@@ -607,7 +632,10 @@ async fn run_task(
         match snapshot::collect(&root) {
             Ok(b) => {
                 if !b.skipped.is_empty() {
-                    eprintln!("{}", l.t_args("peer-skipped", &args!("count" => b.skipped.len())));
+                    eprintln!(
+                        "{}",
+                        l.t_args("peer-skipped", &args!("count" => b.skipped.len()))
+                    );
                 }
                 client::Workspace::Snapshot { bundle: b }
             }
@@ -625,7 +653,13 @@ async fn run_task(
                 return Ok(fail(l, v["message"].as_str().unwrap_or_default()));
             }
             if let Some(t) = v["task"].as_str().filter(|_| v["type"] == "attached") {
-                println!("{}", l.t_args("peer-detached", &args!("task" => t.to_owned(), "name" => e.name.clone())));
+                println!(
+                    "{}",
+                    l.t_args(
+                        "peer-detached",
+                        &args!("task" => t.to_owned(), "name" => e.name.clone())
+                    )
+                );
                 return Ok(true);
             }
         }
@@ -720,20 +754,32 @@ async fn show_result(l: &Localizer, node: &Node, e: &PeerEntry, task: &str, appl
     let _ = std::io::stdout().flush();
     let go = apply
         || (std::io::stdin().is_terminal() && {
-            eprint!("{}", l.t_args("peer-apply-ask", &args!("count" => r.changes.len())));
+            eprint!(
+                "{}",
+                l.t_args("peer-apply-ask", &args!("count" => r.changes.len()))
+            );
             let mut s = String::new();
             let _ = std::io::stdin().read_line(&mut s);
             crate::remote_cmd::answer(&s) != "no"
         });
     if !go {
-        println!("{}", l.t_args("peer-apply-later", &args!("name" => e.name.clone(), "task" => task.to_owned())));
+        println!(
+            "{}",
+            l.t_args(
+                "peer-apply-later",
+                &args!("name" => e.name.clone(), "task" => task.to_owned())
+            )
+        );
         return true;
     }
     let root = std::env::current_dir().unwrap_or_default();
     let res = snapshot::apply(&root, &r.changes, None);
     let mut ok = true;
     for a in &res {
-        let line = l.t_args(&format!("peer-applied-{}", a.status), &args!("path" => a.path.clone()));
+        let line = l.t_args(
+            &format!("peer-applied-{}", a.status),
+            &args!("path" => a.path.clone()),
+        );
         if a.status == "conflict" || a.status == "failed" {
             ok = false;
             eprintln!("{line}");
@@ -741,7 +787,11 @@ async fn show_result(l: &Localizer, node: &Node, e: &PeerEntry, task: &str, appl
             println!("{line}");
         }
     }
-    peer::audit("apply", &e.name, json!({ "task": task, "files": res.len(), "ok": ok }));
+    peer::audit(
+        "apply",
+        &e.name,
+        json!({ "task": task, "files": res.len(), "ok": ok }),
+    );
     ok
 }
 
@@ -752,7 +802,16 @@ fn latest_session() -> Option<(String, PathBuf)> {
         .flatten()
         .filter(|e| e.path().extension().is_some_and(|x| x == "jsonl"))
         .max_by_key(|e| e.metadata().and_then(|m| m.modified()).ok())
-        .map(|e| (e.path().file_stem().unwrap_or_default().to_string_lossy().into_owned(), e.path()))
+        .map(|e| {
+            (
+                e.path()
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned(),
+                e.path(),
+            )
+        })
 }
 
 async fn standby_cmd(
@@ -768,7 +827,9 @@ async fn standby_cmd(
     };
     let (sid, path) = match session {
         Some(s) if kor_runtime::valid_session_id(&s) => {
-            let p = kor_runtime::sessions_dir().unwrap_or_default().join(format!("{s}.jsonl"));
+            let p = kor_runtime::sessions_dir()
+                .unwrap_or_default()
+                .join(format!("{s}.jsonl"));
             (s, p)
         }
         Some(_) => return Ok(fail(l, "invalid session id")),
@@ -780,7 +841,13 @@ async fn standby_cmd(
     if release {
         return Ok(match standby::release(node, &e, &sid).await {
             Ok(Some(t)) => {
-                println!("{}", l.t_args("peer-taken-over", &args!("task" => t, "name" => e.name.clone())));
+                println!(
+                    "{}",
+                    l.t_args(
+                        "peer-taken-over",
+                        &args!("task" => t, "name" => e.name.clone())
+                    )
+                );
                 true
             }
             Ok(None) => {
@@ -796,11 +863,23 @@ async fn standby_cmd(
         project: std::env::current_dir()?,
         sent_digest: None,
     };
-    println!("{}", l.t_args("peer-standby-on", &args!("session" => sid, "name" => e.name.clone())));
+    println!(
+        "{}",
+        l.t_args(
+            "peer-standby-on",
+            &args!("session" => sid, "name" => e.name.clone())
+        )
+    );
     loop {
         match standby::renew(node, &e, &mut m).await {
             Ok(standby::Renewed::TakenOver(t)) => {
-                println!("{}", l.t_args("peer-taken-over", &args!("task" => t, "name" => e.name.clone())));
+                println!(
+                    "{}",
+                    l.t_args(
+                        "peer-taken-over",
+                        &args!("task" => t, "name" => e.name.clone())
+                    )
+                );
                 return Ok(true);
             }
             Ok(standby::Renewed::Held) => {}
@@ -825,17 +904,45 @@ mod tests {
     #[test]
     fn args_parse() {
         let t = T::try_parse_from(["peer", "run", "auto", "fix", "the", "tests", "--yes"]).unwrap();
-        assert!(matches!(t.c, PeerCmd::Run { ref peer, ref task, yes: true, .. } if peer == "auto" && task.len() == 3));
-        let t = T::try_parse_from(["peer", "allow", "laptop", "--dir", "/srv", "--command", "cargo test", "--memory"]).unwrap();
+        assert!(
+            matches!(t.c, PeerCmd::Run { ref peer, ref task, yes: true, .. } if peer == "auto" && task.len() == 3)
+        );
+        let t = T::try_parse_from([
+            "peer",
+            "allow",
+            "laptop",
+            "--dir",
+            "/srv",
+            "--command",
+            "cargo test",
+            "--memory",
+        ])
+        .unwrap();
         assert!(matches!(t.c, PeerCmd::Allow { ref dirs, memory: true, .. } if dirs.len() == 1));
-        let t = T::try_parse_from(["peer", "pair", "--join", "KOR1-AAAA@x:1", "--ssh", "me@srv"]).unwrap();
-        assert!(matches!(t.c, PeerCmd::Pair { join: Some(_), ssh: Some(_), .. }));
+        let t = T::try_parse_from(["peer", "pair", "--join", "KOR1-AAAA@x:1", "--ssh", "me@srv"])
+            .unwrap();
+        assert!(matches!(
+            t.c,
+            PeerCmd::Pair {
+                join: Some(_),
+                ssh: Some(_),
+                ..
+            }
+        ));
         assert!(T::try_parse_from(["peer", "serve", "--stdio"]).is_ok());
         assert!(T::try_parse_from(["peer", "standby", "srv", "--release"]).is_ok());
         assert!(T::try_parse_from(["peer", "worker", "srv", "r-1"]).is_ok());
         assert!(blocks_tui(&T::try_parse_from(["peer", "serve"]).unwrap().c));
-        assert!(!blocks_tui(&T::try_parse_from(["peer", "serve", "--background"]).unwrap().c));
-        assert!(!blocks_tui(&T::try_parse_from(["peer", "run", "srv", "x", "--detach"]).unwrap().c));
+        assert!(!blocks_tui(
+            &T::try_parse_from(["peer", "serve", "--background"])
+                .unwrap()
+                .c
+        ));
+        assert!(!blocks_tui(
+            &T::try_parse_from(["peer", "run", "srv", "x", "--detach"])
+                .unwrap()
+                .c
+        ));
         assert!(T::try_parse_from(["peer", "serve", "--stdio", "--background"]).is_err());
     }
 }

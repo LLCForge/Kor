@@ -102,7 +102,9 @@ impl Guard {
         };
         let since = self.watcher.now_ms().saturating_sub(at);
         let moved = match (cursor, self.watcher.cursor()) {
-            (Some((x0, y0)), Some((x1, y1))) => (x1 - x0).abs() > CURSOR_SLACK || (y1 - y0).abs() > CURSOR_SLACK,
+            (Some((x0, y0)), Some((x1, y1))) => {
+                (x1 - x0).abs() > CURSOR_SLACK || (y1 - y0).abs() > CURSOR_SLACK
+            }
             _ => false,
         };
         let touched = self
@@ -168,7 +170,8 @@ pub(crate) mod fake {
         }
         /// The user touches the keyboard now.
         pub fn key(&self) {
-            self.last_input.store(self.now.load(Ordering::SeqCst), Ordering::SeqCst);
+            self.last_input
+                .store(self.now.load(Ordering::SeqCst), Ordering::SeqCst);
         }
         pub fn move_mouse(&self, dx: i32) {
             self.x.fetch_add(dx, Ordering::SeqCst);

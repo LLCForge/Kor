@@ -21,7 +21,10 @@ pub const MARKER: &str = "integrations-first-run.json";
 /// `env` reads an environment variable; `dev` is `tauri::is_dev()` in the desktop.
 pub fn guard(env: impl Fn(&str) -> Option<String>, dev: bool) -> Option<&'static str> {
     // Set at all (even empty) counts: fail closed.
-    if ["KOR_HOME", "KOR_CONFIG_DIR", "KOR_CACHE_DIR"].iter().any(|k| env(k).is_some()) {
+    if ["KOR_HOME", "KOR_CONFIG_DIR", "KOR_CACHE_DIR"]
+        .iter()
+        .any(|k| env(k).is_some())
+    {
         return Some("isolated");
     }
     if dev {
@@ -88,7 +91,10 @@ pub fn load(data: &Path) -> Option<Marker> {
 pub fn names(l: &kor_i18n::Localizer, ids: &[String]) -> String {
     ids.iter()
         .map(|id| match id.strip_prefix("shell:") {
-            Some(sh) => l.t_args("autoint-item-shell", &kor_i18n::args!("shell" => sh.to_owned())),
+            Some(sh) => l.t_args(
+                "autoint-item-shell",
+                &kor_i18n::args!("shell" => sh.to_owned()),
+            ),
             None if id == "context-menu" => l.t("autoint-item-context-menu"),
             None => l.t(&format!("osx-item-{id}")),
         })
@@ -100,7 +106,10 @@ pub fn names(l: &kor_i18n::Localizer, ids: &[String]) -> String {
 pub fn status_line(l: &kor_i18n::Localizer, cfg: &kor_config::Integrations) -> String {
     match kor_platform::data_dir().and_then(|d| load(&d)) {
         Some(m) if m.installed.is_empty() => l.t("autoint-ran-none"),
-        Some(m) => l.t_args("autoint-ran", &kor_i18n::args!("list" => names(l, &m.installed))),
+        Some(m) => l.t_args(
+            "autoint-ran",
+            &kor_i18n::args!("list" => names(l, &m.installed)),
+        ),
         None if !cfg.auto => l.t("autoint-off"),
         None => l.t("autoint-pending"),
     }
@@ -108,7 +117,11 @@ pub fn status_line(l: &kor_i18n::Localizer, cfg: &kor_config::Integrations) -> S
 
 /// Items the first run would install. `default_shell` is `Some` only when that shell exists here;
 /// `os_available` lists the installable §27.10 items of this OS that are available.
-pub fn plan(cfg: &kor_config::Integrations, default_shell: Option<ShellKind>, os_available: &[&str]) -> Vec<Item> {
+pub fn plan(
+    cfg: &kor_config::Integrations,
+    default_shell: Option<ShellKind>,
+    os_available: &[&str],
+) -> Vec<Item> {
     if !cfg.auto {
         return Vec::new();
     }
@@ -121,7 +134,12 @@ pub fn plan(cfg: &kor_config::Integrations, default_shell: Option<ShellKind>, os
     {
         v.push(Item::Shell(k));
     }
-    v.extend(os_available.iter().filter(|id| cfg.os_on(id)).map(|id| Item::Os((*id).to_owned())));
+    v.extend(
+        os_available
+            .iter()
+            .filter(|id| cfg.os_on(id))
+            .map(|id| Item::Os((*id).to_owned())),
+    );
     v
 }
 
@@ -167,7 +185,10 @@ pub fn run_once(
     m.at = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
-    let mut now = Marker { at: m.at, ..Marker::default() };
+    let mut now = Marker {
+        at: m.at,
+        ..Marker::default()
+    };
     for it in todo {
         match install(it) {
             Ok(()) => now.installed.push(it.id()),
@@ -177,7 +198,10 @@ pub fn run_once(
     m.installed.extend(now.installed.iter().cloned());
     m.failed.extend(now.failed.iter().cloned());
     std::fs::create_dir_all(data)?;
-    std::fs::write(marker_path(data), serde_json::to_string_pretty(&m).map_err(std::io::Error::other)?)?;
+    std::fs::write(
+        marker_path(data),
+        serde_json::to_string_pretty(&m).map_err(std::io::Error::other)?,
+    )?;
     Ok(Outcome::Ran(now))
 }
 
@@ -188,10 +212,17 @@ mod tests {
     #[test]
     fn guard_blocks_isolated_dev_and_cargo_runs() {
         for k in ["KOR_HOME", "KOR_CONFIG_DIR", "KOR_CACHE_DIR"] {
-            assert_eq!(guard(|v| (v == k).then(String::new), false), Some("isolated"), "{k}");
+            assert_eq!(
+                guard(|v| (v == k).then(String::new), false),
+                Some("isolated"),
+                "{k}"
+            );
         }
         assert_eq!(guard(|_| None, true), Some("dev"));
-        assert_eq!(guard(|v| (v == "CARGO_MANIFEST_DIR").then(|| "/x".into()), false), Some("cargo"));
+        assert_eq!(
+            guard(|v| (v == "CARGO_MANIFEST_DIR").then(|| "/x".into()), false),
+            Some("cargo")
+        );
         // `cargo test` of this crate: blocked even with a clean environment.
         assert_eq!(guard(|_| None, false), Some("cargo"));
         assert!(guard_here(false).is_some());
@@ -215,18 +246,42 @@ mod tests {
     fn runs_once_and_respects_later_removal() {
         let d = tempfile::tempdir().unwrap();
         let cfg = kor_config::Integrations::default();
-        let items = plan(&cfg, Some(ShellKind::PowerShell), &["powertoys-run", "portals", "widgets"]);
+        let items = plan(
+            &cfg,
+            Some(ShellKind::PowerShell),
+            &["powertoys-run", "portals", "widgets"],
+        );
         assert_eq!(
             items.iter().map(Item::id).collect::<Vec<_>>(),
-            ["context-menu", "shell:powershell", "powertoys-run", "widgets"]
+            [
+                "context-menu",
+                "shell:powershell",
+                "powertoys-run",
+                "widgets"
+            ]
         );
-        let out = run_once(d.path(), None, &items, |i| if i.id() == "widgets" { Err("no-bundle".into()) } else { Ok(()) }).unwrap();
-        let Outcome::Ran(m) = out else { panic!("{out:?}") };
-        assert_eq!(m.installed, ["context-menu", "shell:powershell", "powertoys-run"]);
+        let out = run_once(d.path(), None, &items, |i| {
+            if i.id() == "widgets" {
+                Err("no-bundle".into())
+            } else {
+                Ok(())
+            }
+        })
+        .unwrap();
+        let Outcome::Ran(m) = out else {
+            panic!("{out:?}")
+        };
+        assert_eq!(
+            m.installed,
+            ["context-menu", "shell:powershell", "powertoys-run"]
+        );
         assert_eq!(m.failed, [("widgets".to_owned(), "no-bundle".to_owned())]);
         assert_eq!(load(d.path()), Some(m));
         // Second launch (the user may have removed items meanwhile): nothing is installed again.
-        assert_eq!(run_once(d.path(), None, &items, |_| panic!("ran twice")).unwrap(), Outcome::AlreadyDone);
+        assert_eq!(
+            run_once(d.path(), None, &items, |_| panic!("ran twice")).unwrap(),
+            Outcome::AlreadyDone
+        );
     }
 
     #[test]
@@ -235,7 +290,9 @@ mod tests {
         let cfg = kor_config::Integrations::default();
         // The CLI can set up the menu and the shell, not the desktop-only OS items.
         let cli = plan(&cfg, Some(ShellKind::Bash), &[]);
-        let Outcome::Ran(first) = run_once(d.path(), None, &cli, |_| Ok(())).unwrap() else { panic!() };
+        let Outcome::Ran(first) = run_once(d.path(), None, &cli, |_| Ok(())).unwrap() else {
+            panic!()
+        };
         assert_eq!(first.installed, ["context-menu", "shell:bash"]);
         // Later the desktop runs: only the items never attempted are installed.
         let desk = plan(&cfg, Some(ShellKind::Bash), &["windows-terminal"]);
@@ -244,10 +301,15 @@ mod tests {
             seen.push(i.id());
             Ok(())
         })
-        .unwrap() else { panic!() };
+        .unwrap() else {
+            panic!()
+        };
         assert_eq!(seen, ["windows-terminal"]);
         assert_eq!(second.installed, ["windows-terminal"]);
-        assert_eq!(load(d.path()).unwrap().installed, ["context-menu", "shell:bash", "windows-terminal"]);
+        assert_eq!(
+            load(d.path()).unwrap().installed,
+            ["context-menu", "shell:bash", "windows-terminal"]
+        );
     }
 
     #[test]
@@ -255,7 +317,14 @@ mod tests {
         let mut cfg = kor_config::Integrations::default();
         cfg.os.insert("widgets".into(), false);
         cfg.shell = false;
-        let ids: Vec<String> = plan(&cfg, Some(ShellKind::Bash), &["widgets", "windows-terminal"]).iter().map(Item::id).collect();
+        let ids: Vec<String> = plan(
+            &cfg,
+            Some(ShellKind::Bash),
+            &["widgets", "windows-terminal"],
+        )
+        .iter()
+        .map(Item::id)
+        .collect();
         assert_eq!(ids, ["context-menu", "windows-terminal"]);
         cfg.auto = false;
         assert!(plan(&cfg, None, &["windows-terminal"]).is_empty());

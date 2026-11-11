@@ -45,7 +45,13 @@ pub const TASKS_DONE: &str = "Tamamlandı";
 pub const FOLDERS: [&str; 7] = [SESSIONS, MEDIA, REPORTS, DIFFS, RECORDS, INBOX, TASKS];
 
 /// Project folders that hold reports (linked under `Raporlar/<proje>/`).
-const REPORT_DIRS: [&str; 5] = [".kor/perf", ".kor/bench", ".kor/reports", ".kor/e2e", ".kor/deploy"];
+const REPORT_DIRS: [&str; 5] = [
+    ".kor/perf",
+    ".kor/bench",
+    ".kor/reports",
+    ".kor/e2e",
+    ".kor/deploy",
+];
 
 /// Largest inbox file inlined as text into a session.
 const INBOX_TEXT_MAX: u64 = 32 * 1024;
@@ -102,7 +108,10 @@ impl Manifest {
     fn save(&self, l: &Layout) -> std::io::Result<()> {
         std::fs::create_dir_all(&l.home)?;
         let tmp = l.manifest_path().with_extension("json.tmp");
-        std::fs::write(&tmp, serde_json::to_vec_pretty(self).map_err(std::io::Error::other)?)?;
+        std::fs::write(
+            &tmp,
+            serde_json::to_vec_pretty(self).map_err(std::io::Error::other)?,
+        )?;
         std::fs::rename(tmp, l.manifest_path())
     }
 }
@@ -158,7 +167,11 @@ pub fn status(l: &Layout) -> Status {
         for name in FOLDERS {
             items.push(Item {
                 name: name.into(),
-                kind: if matches!(name, INBOX | TASKS) { "dir" } else { "view" },
+                kind: if matches!(name, INBOX | TASKS) {
+                    "dir"
+                } else {
+                    "view"
+                },
                 path: l.dir(name),
                 target: None,
             });
@@ -192,11 +205,10 @@ pub fn enable(l: &Layout, project: Option<&Path>) -> std::io::Result<SyncReport>
         root: l.root.clone(),
         ..Manifest::default()
     });
-    for name in FOLDERS
-        .iter()
-        .map(|s| (*s).to_owned())
-        .chain([format!("{INBOX}/{INBOX_DONE}"), format!("{TASKS}/{TASKS_DONE}")])
-    {
+    for name in FOLDERS.iter().map(|s| (*s).to_owned()).chain([
+        format!("{INBOX}/{INBOX_DONE}"),
+        format!("{TASKS}/{TASKS_DONE}"),
+    ]) {
         let p = l.root.join(&name);
         if !p.exists() {
             if !l.root.exists() && !m.dirs.iter().any(String::is_empty) {
@@ -307,7 +319,9 @@ fn walk_dirs(root: &Path) -> Vec<PathBuf> {
     while let Some(d) = stack.pop() {
         for e in std::fs::read_dir(&d).into_iter().flatten().flatten() {
             let p = e.path();
-            if e.file_type().is_ok_and(|t| t.is_dir()) && kor_platform::mount::link_target(&p).is_none() {
+            if e.file_type().is_ok_and(|t| t.is_dir())
+                && kor_platform::mount::link_target(&p).is_none()
+            {
                 out.push(p.clone());
                 stack.push(p);
             }
@@ -359,7 +373,10 @@ fn link_projects(l: &Layout, m: &mut Manifest, r: &mut SyncReport) {
         let name = project_name(m, p);
         let mut want = vec![
             (format!("{RECORDS}/{name}"), p.join(kor_tools::record::DIR)),
-            (format!("{MEDIA}/{name}"), p.join(kor_agent::media::MEDIA_DIR)),
+            (
+                format!("{MEDIA}/{name}"),
+                p.join(kor_agent::media::MEDIA_DIR),
+            ),
         ];
         for d in REPORT_DIRS {
             let kind = d.rsplit('/').next().unwrap_or(d);
@@ -458,10 +475,15 @@ pub fn inbox_files(l: &Layout) -> Vec<PathBuf> {
 
 /// Skip hidden files and in-progress downloads.
 fn is_ready(p: &Path) -> bool {
-    let name = p.file_name().map(|n| n.to_string_lossy().to_lowercase()).unwrap_or_default();
+    let name = p
+        .file_name()
+        .map(|n| n.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
     !(name.starts_with('.')
         || name.starts_with("~$")
-        || [".part", ".crdownload", ".tmp", ".download"].iter().any(|s| name.ends_with(s)))
+        || [".part", ".crdownload", ".tmp", ".download"]
+            .iter()
+            .any(|s| name.ends_with(s)))
 }
 
 /// Move a file into `dir` without overwriting: `ad.txt`, `ad (2).txt`, …
@@ -499,7 +521,10 @@ pub fn inbox_block(files: &[PathBuf]) -> String {
             .filter(|t| !t.contains('\0'));
         match text {
             Some(t) if out.len() + t.len() < INBOX_TOTAL_MAX => {
-                out.push_str(&format!("\n<file path=\"{}\">\n{t}\n</file>\n", f.display()));
+                out.push_str(&format!(
+                    "\n<file path=\"{}\">\n{t}\n</file>\n",
+                    f.display()
+                ));
             }
             _ => out.push_str(&format!("\n- {} ({size} bytes)\n", f.display())),
         }

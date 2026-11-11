@@ -24,16 +24,16 @@ pub mod mcp_gen;
 pub mod mcp_oauth;
 pub mod mcp_tools;
 pub mod media;
-pub mod modes;
 pub mod memory;
+pub mod modes;
 pub mod permissions;
 pub mod plugins;
 pub mod port;
 pub mod prompt;
+mod prompt_text;
 pub mod recall;
 mod record;
 pub mod remote;
-mod prompt_text;
 pub mod repair;
 pub mod repomap;
 pub mod review;
@@ -43,12 +43,12 @@ pub mod semantic;
 pub mod session;
 pub mod shadow;
 pub mod shellint;
-pub mod status;
-pub mod toolcall;
 mod skill;
+pub mod status;
 pub mod subagent;
 pub mod summarize;
 pub mod team_sync;
+pub mod toolcall;
 pub mod verify;
 
 pub use agent::{
@@ -62,5 +62,7 @@ pub use subagent::AgentTool;
 
 /// `KOR_<name>`, falling back to the Claude Code variable a user may already have set.
 pub fn env_compat(kor: &str, claude: &str) -> Option<String> {
-    std::env::var(kor).ok().or_else(|| std::env::var(claude).ok())
+    std::env::var(kor)
+        .ok()
+        .or_else(|| std::env::var(claude).ok())
 }

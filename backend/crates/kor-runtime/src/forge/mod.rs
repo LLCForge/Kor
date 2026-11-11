@@ -124,7 +124,13 @@ pub enum Kind {
 }
 
 impl Kind {
-    pub const ALL: [Self; 5] = [Self::Github, Self::Gitlab, Self::Gitea, Self::Bitbucket, Self::Azure];
+    pub const ALL: [Self; 5] = [
+        Self::Github,
+        Self::Gitlab,
+        Self::Gitea,
+        Self::Bitbucket,
+        Self::Azure,
+    ];
 
     pub fn id(self) -> &'static str {
         match self {
@@ -155,7 +161,11 @@ impl Kind {
             Self::Gitea => &["GITEA_TOKEN", "FORGEJO_TOKEN"],
             Self::Bitbucket => &["BITBUCKET_TOKEN"],
             // A personal access token; `SYSTEM_ACCESSTOKEN` inside Azure Pipelines.
-            Self::Azure => &["AZURE_DEVOPS_TOKEN", "AZURE_DEVOPS_EXT_PAT", "SYSTEM_ACCESSTOKEN"],
+            Self::Azure => &[
+                "AZURE_DEVOPS_TOKEN",
+                "AZURE_DEVOPS_EXT_PAT",
+                "SYSTEM_ACCESSTOKEN",
+            ],
         }
     }
 
@@ -247,7 +257,9 @@ impl Remote {
             Kind::Github => format!("{web}/api/v3"),
             Kind::Gitlab => format!("{web}/api/v4"),
             Kind::Gitea => format!("{web}/api/v1"),
-            Kind::Bitbucket if host == "bitbucket.org" => "https://api.bitbucket.org/2.0".to_owned(),
+            Kind::Bitbucket if host == "bitbucket.org" => {
+                "https://api.bitbucket.org/2.0".to_owned()
+            }
             Kind::Bitbucket => format!("{web}/2.0"),
             Kind::Azure => unreachable!("handled above"),
         };
@@ -351,14 +363,21 @@ pub fn current_branch(root: &Path) -> Result<String, ForgeError> {
 pub fn has_upstream(root: &Path, branch: &str) -> bool {
     gitflow::git(
         root,
-        &["rev-parse", "--abbrev-ref", &format!("{branch}@{{upstream}}")],
+        &[
+            "rev-parse",
+            "--abbrev-ref",
+            &format!("{branch}@{{upstream}}"),
+        ],
     )
     .is_ok()
 }
 
 /// The remote's default branch, else `main`/`master` when one exists locally, else `main`.
 pub fn default_base(root: &Path) -> String {
-    if let Ok(r) = gitflow::git(root, &["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]) {
+    if let Ok(r) = gitflow::git(
+        root,
+        &["symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+    ) {
         let r = r.trim();
         if let Some(b) = r.strip_prefix("origin/") {
             return b.to_owned();
@@ -372,7 +391,8 @@ pub fn default_base(root: &Path) -> String {
 }
 
 fn safe_ref(r: &str) -> Result<&str, ForgeError> {
-    if r.is_empty() || r.starts_with('-') || r.contains("..") || r.chars().any(char::is_whitespace) {
+    if r.is_empty() || r.starts_with('-') || r.contains("..") || r.chars().any(char::is_whitespace)
+    {
         Err(ForgeError::Git(format!("invalid branch name: {r}")))
     } else {
         Ok(r)
@@ -439,7 +459,13 @@ pub fn branch_changes(root: &Path, base: &str) -> Result<(Vec<Entry>, String), F
     let entries = gitflow::log(root, Some(&b))?;
     let mut diff = gitflow::git(
         root,
-        &["diff", "--no-color", "--no-ext-diff", &format!("{b}...HEAD"), "--"],
+        &[
+            "diff",
+            "--no-color",
+            "--no-ext-diff",
+            &format!("{b}...HEAD"),
+            "--",
+        ],
     )?;
     if let Some((i, _)) = diff.char_indices().nth(MAX_DIFF) {
         diff.truncate(i);

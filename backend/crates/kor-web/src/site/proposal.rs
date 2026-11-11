@@ -16,8 +16,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use super::tr::{kdv, try_format};
 use super::Result;
+use super::tr::{kdv, try_format};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
@@ -113,7 +113,11 @@ pub fn business_path(base: &Path) -> PathBuf {
 /// The user's `business.toml`, or defaults when there is none.
 pub fn business(base: &Path) -> Result<Business> {
     let p = business_path(base);
-    if p.is_file() { super::load_toml(&p) } else { Ok(Business::default()) }
+    if p.is_file() {
+        super::load_toml(&p)
+    } else {
+        Ok(Business::default())
+    }
 }
 
 /// Write a commented starter `business.toml` (never over an existing one).
@@ -146,24 +150,76 @@ pub struct Item {
 
 /// Hours Kor assumes for a scope line when the user gave none (keyword, hours).
 const ESTIMATES: &[(&[&str], f64)] = &[
-    (&["e-ticaret", "eticaret", "woocommerce", "ödeme", "odeme", "payment", "checkout", "sepet"], 16.0),
+    (
+        &[
+            "e-ticaret",
+            "eticaret",
+            "woocommerce",
+            "ödeme",
+            "odeme",
+            "payment",
+            "checkout",
+            "sepet",
+        ],
+        16.0,
+    ),
     (&["tasarım", "tasarim", "design", "arayüz", "ui"], 16.0),
-    (&["taşıma", "tasima", "migration", "yönlendirme", "redirect"], 8.0),
-    (&["geliştirme", "gelistirme", "development", "kodlama", "eklenti", "plugin", "tema", "theme"], 24.0),
-    (&["entegrasyon", "integration", "api", "kargo", "pazaryeri", "e-fatura"], 12.0),
+    (
+        &["taşıma", "tasima", "migration", "yönlendirme", "redirect"],
+        8.0,
+    ),
+    (
+        &[
+            "geliştirme",
+            "gelistirme",
+            "development",
+            "kodlama",
+            "eklenti",
+            "plugin",
+            "tema",
+            "theme",
+        ],
+        24.0,
+    ),
+    (
+        &[
+            "entegrasyon",
+            "integration",
+            "api",
+            "kargo",
+            "pazaryeri",
+            "e-fatura",
+        ],
+        12.0,
+    ),
     (&["seo", "arama motoru"], 8.0),
     (&["içerik", "icerik", "content", "metin", "blog"], 8.0),
     (&["logo", "kurumsal kimlik"], 6.0),
     (&["test", "kontrol"], 6.0),
-    (&["kurulum", "install", "setup", "hosting", "ssl", "alan adı", "domain"], 4.0),
-    (&["bakım", "bakim", "maintenance", "güncelleme", "update"], 4.0),
+    (
+        &[
+            "kurulum",
+            "install",
+            "setup",
+            "hosting",
+            "ssl",
+            "alan adı",
+            "domain",
+        ],
+        4.0,
+    ),
+    (
+        &["bakım", "bakim", "maintenance", "güncelleme", "update"],
+        4.0,
+    ),
     (&["eğitim", "egitim", "training"], 3.0),
 ];
 const DEFAULT_HOURS: f64 = 6.0;
 
 fn hours_in(line: &str) -> Option<f64> {
     let re = regex::Regex::new(r"(?i)(\d+(?:[.,]\d+)?)\s*(saat|sa\b|hours?|hrs?|h\b)").ok()?;
-    re.captures(line).and_then(|c| c[1].replace(',', ".").parse().ok())
+    re.captures(line)
+        .and_then(|c| c[1].replace(',', ".").parse().ok())
 }
 
 pub fn estimate(line: &str) -> f64 {
@@ -180,9 +236,23 @@ pub fn scope_from_text(text: &str) -> Vec<Item> {
         .lines()
         .map(str::trim)
         .filter_map(|l| {
-            let b = l.strip_prefix("- ").or_else(|| l.strip_prefix("* ")).or_else(|| l.strip_prefix("• "));
-            let n = l.split_once(". ").filter(|(n, _)| !n.is_empty() && n.len() <= 2 && n.bytes().all(|c| c.is_ascii_digit())).map(|(_, r)| r);
-            let n = n.or_else(|| l.split_once(") ").filter(|(n, _)| !n.is_empty() && n.len() <= 2 && n.bytes().all(|c| c.is_ascii_digit())).map(|(_, r)| r));
+            let b = l
+                .strip_prefix("- ")
+                .or_else(|| l.strip_prefix("* "))
+                .or_else(|| l.strip_prefix("• "));
+            let n = l
+                .split_once(". ")
+                .filter(|(n, _)| {
+                    !n.is_empty() && n.len() <= 2 && n.bytes().all(|c| c.is_ascii_digit())
+                })
+                .map(|(_, r)| r);
+            let n = n.or_else(|| {
+                l.split_once(") ")
+                    .filter(|(n, _)| {
+                        !n.is_empty() && n.len() <= 2 && n.bytes().all(|c| c.is_ascii_digit())
+                    })
+                    .map(|(_, r)| r)
+            });
             b.or(n).map(str::to_owned)
         })
         .collect();
@@ -193,7 +263,18 @@ pub fn scope_from_text(text: &str) -> Vec<Item> {
             .filter(|s| s.split_whitespace().count() >= 3)
             .filter(|s| {
                 let l = super::tr::lower_tr(s);
-                !["merhaba", "selam", "saygılar", "teşekkür", "iyi çalışmalar", "hello", "regards", "thanks"].iter().any(|g| l.starts_with(g))
+                ![
+                    "merhaba",
+                    "selam",
+                    "saygılar",
+                    "teşekkür",
+                    "iyi çalışmalar",
+                    "hello",
+                    "regards",
+                    "thanks",
+                ]
+                .iter()
+                .any(|g| l.starts_with(g))
             })
             .map(str::to_owned)
             .take(15)
@@ -203,19 +284,35 @@ pub fn scope_from_text(text: &str) -> Vec<Item> {
         .into_iter()
         .map(|l| {
             let given = hours_in(&l);
-            Item { hours: given.unwrap_or_else(|| estimate(&l)), estimated: given.is_none(), title: l, price: None }
+            Item {
+                hours: given.unwrap_or_else(|| estimate(&l)),
+                estimated: given.is_none(),
+                title: l,
+                price: None,
+            }
         })
         .collect()
 }
 
 /// `Tasarım=12` (hours) items.
 pub fn parse_item(s: &str) -> Result<Item> {
-    let (t, h) = s.rsplit_once('=').ok_or_else(|| format!("`{s}`: use title=hours"))?;
-    let hours: f64 = h.trim().replace(',', ".").parse().map_err(|_| format!("`{s}`: hours must be a number"))?;
+    let (t, h) = s
+        .rsplit_once('=')
+        .ok_or_else(|| format!("`{s}`: use title=hours"))?;
+    let hours: f64 = h
+        .trim()
+        .replace(',', ".")
+        .parse()
+        .map_err(|_| format!("`{s}`: hours must be a number"))?;
     if t.trim().is_empty() || !(0.0..=10_000.0).contains(&hours) {
         return Err(format!("`{s}`: invalid item"));
     }
-    Ok(Item { title: t.trim().to_owned(), hours, estimated: false, price: None })
+    Ok(Item {
+        title: t.trim().to_owned(),
+        hours,
+        estimated: false,
+        price: None,
+    })
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -273,19 +370,45 @@ fn kurus(lira: f64) -> i64 {
 
 pub fn totals(p: &Proposal, b: &Business) -> Totals {
     let hours: f64 = p.items.iter().map(|i| i.hours).sum();
-    let net: i64 = p.items.iter().map(|i| kurus(i.price.unwrap_or(i.hours * b.hourly_rate))).sum();
+    let net: i64 = p
+        .items
+        .iter()
+        .map(|i| kurus(i.price.unwrap_or(i.hours * b.hourly_rate)))
+        .sum();
     let (vat, gross) = kdv(net, b.vat);
     let labels: &[&str] = match p.lang {
-        Lang::Tr => &["Başlangıç (sözleşme imzasında)", "Ara teslim (tasarım/geliştirme onayında)", "Teslim (yayına alındığında)", "Ek aşama"],
-        Lang::En => &["Start (on signing)", "Milestone (design/development approval)", "Delivery (on launch)", "Extra stage"],
+        Lang::Tr => &[
+            "Başlangıç (sözleşme imzasında)",
+            "Ara teslim (tasarım/geliştirme onayında)",
+            "Teslim (yayına alındığında)",
+            "Ek aşama",
+        ],
+        Lang::En => &[
+            "Start (on signing)",
+            "Milestone (design/development approval)",
+            "Delivery (on launch)",
+            "Extra stage",
+        ],
     };
-    let plan_pct: Vec<u32> = if b.payment_plan.iter().sum::<u32>() == 100 { b.payment_plan.clone() } else { vec![100] };
+    let plan_pct: Vec<u32> = if b.payment_plan.iter().sum::<u32>() == 100 {
+        b.payment_plan.clone()
+    } else {
+        vec![100]
+    };
     let mut plan = Vec::new();
     let mut given = 0;
     for (i, pct) in plan_pct.iter().enumerate() {
-        let amount = if i + 1 == plan_pct.len() { gross - given } else { gross * i64::from(*pct) / 100 };
+        let amount = if i + 1 == plan_pct.len() {
+            gross - given
+        } else {
+            gross * i64::from(*pct) / 100
+        };
         given += amount;
-        plan.push(((*labels.get(i).unwrap_or(&labels[3])).to_owned(), *pct, amount));
+        plan.push((
+            (*labels.get(i).unwrap_or(&labels[3])).to_owned(),
+            *pct,
+            amount,
+        ));
     }
     Totals {
         hours,
@@ -293,14 +416,20 @@ pub fn totals(p: &Proposal, b: &Business) -> Totals {
         vat,
         gross,
         plan,
-        days: if b.hours_per_day > 0.0 { (hours / b.hours_per_day).ceil() } else { 0.0 },
+        days: if b.hours_per_day > 0.0 {
+            (hours / b.hours_per_day).ceil()
+        } else {
+            0.0
+        },
         estimated: p.items.iter().any(|i| i.estimated),
     }
 }
 
 fn fmt_hours(h: f64) -> String {
     let s = format!("{h:.1}");
-    s.trim_end_matches('0').trim_end_matches('.').replace('.', ",")
+    s.trim_end_matches('0')
+        .trim_end_matches('.')
+        .replace('.', ",")
 }
 
 /// `{{key}}` → value; unknown keys stay visible so the user sees what to fill.
@@ -348,7 +477,12 @@ pub fn template(base: &Path, kind: &str, lang: Lang) -> Result<String> {
 pub fn vars(p: &Proposal, b: &Business) -> BTreeMap<&'static str, String> {
     let t = totals(p, b);
     let tr = p.lang == Lang::Tr;
-    let mut items = if tr { "| # | İş | Saat | Tutar (KDV hariç) |\n|---|---|---|---|\n" } else { "| # | Work | Hours | Amount (excl. VAT) |\n|---|---|---|---|\n" }.to_owned();
+    let mut items = if tr {
+        "| # | İş | Saat | Tutar (KDV hariç) |\n|---|---|---|---|\n"
+    } else {
+        "| # | Work | Hours | Amount (excl. VAT) |\n|---|---|---|---|\n"
+    }
+    .to_owned();
     for (i, it) in p.items.iter().enumerate() {
         let amount = kurus(it.price.unwrap_or(it.hours * b.hourly_rate));
         let _ = writeln!(
@@ -361,7 +495,12 @@ pub fn vars(p: &Proposal, b: &Business) -> BTreeMap<&'static str, String> {
             try_format(amount)
         );
     }
-    let mut plan = if tr { "| Aşama | Oran | Tutar (KDV dahil) |\n|---|---|---|\n" } else { "| Stage | Share | Amount (incl. VAT) |\n|---|---|---|\n" }.to_owned();
+    let mut plan = if tr {
+        "| Aşama | Oran | Tutar (KDV dahil) |\n|---|---|---|\n"
+    } else {
+        "| Stage | Share | Amount (incl. VAT) |\n|---|---|---|\n"
+    }
+    .to_owned();
     for (label, pct, amount) in &t.plan {
         let _ = writeln!(plan, "| {label} | %{pct} | {} |", try_format(*amount));
     }
@@ -404,10 +543,13 @@ pub fn vars(p: &Proposal, b: &Business) -> BTreeMap<&'static str, String> {
             String::new()
         },
     );
-    v.insert("notes", p.notes.iter().fold(String::new(), |mut o, n| {
-        let _ = writeln!(o, "- {n}");
-        o
-    }));
+    v.insert(
+        "notes",
+        p.notes.iter().fold(String::new(), |mut o, n| {
+            let _ = writeln!(o, "- {n}");
+            o
+        }),
+    );
     v
 }
 
@@ -423,16 +565,24 @@ pub fn revise(p: &mut Proposal, reply: &str) -> Vec<String> {
     let mut changes = Vec::new();
     let find = |items: &[Item], name: &str| {
         let n = super::tr::lower_tr(name.trim());
-        items.iter().position(|i| super::tr::lower_tr(&i.title).contains(&n))
+        items
+            .iter()
+            .position(|i| super::tr::lower_tr(&i.title).contains(&n))
     };
     for raw in reply.lines() {
         let line = raw.trim().trim_start_matches(['-', '*', '•']).trim();
         let lower = super::tr::lower_tr(line);
         // lower_tr maps one char to one char, so char counts line up (byte lengths may not).
         let rest = |prefixes: &[&str]| {
-            prefixes
-                .iter()
-                .find_map(|x| lower.strip_prefix(x).map(|_| line.chars().skip(x.chars().count()).collect::<String>().trim().to_owned()))
+            prefixes.iter().find_map(|x| {
+                lower.strip_prefix(x).map(|_| {
+                    line.chars()
+                        .skip(x.chars().count())
+                        .collect::<String>()
+                        .trim()
+                        .to_owned()
+                })
+            })
         };
         if let Some(name) = rest(&["çıkar:", "cikar:", "remove:", "sil:"]) {
             if let Some(i) = find(&p.items, &name) {
@@ -440,7 +590,12 @@ pub fn revise(p: &mut Proposal, reply: &str) -> Vec<String> {
                 changes.push(format!("- {}", it.title));
             }
         } else if let Some(spec) = rest(&["ekle:", "add:"]) {
-            let item = parse_item(&spec).unwrap_or_else(|_| Item { hours: estimate(&spec), estimated: true, title: spec.clone(), price: None });
+            let item = parse_item(&spec).unwrap_or_else(|_| Item {
+                hours: estimate(&spec),
+                estimated: true,
+                title: spec.clone(),
+                price: None,
+            });
             changes.push(format!("+ {}", item.title));
             p.items.push(item);
         } else if let Some(note) = rest(&["not:", "note:"]) {
@@ -449,7 +604,12 @@ pub fn revise(p: &mut Proposal, reply: &str) -> Vec<String> {
         } else if let Ok(it) = parse_item(line)
             && let Some(i) = find(&p.items, &it.title)
         {
-            changes.push(format!("{}: {} → {}", p.items[i].title, fmt_hours(p.items[i].hours), fmt_hours(it.hours)));
+            changes.push(format!(
+                "{}: {} → {}",
+                p.items[i].title,
+                fmt_hours(p.items[i].hours),
+                fmt_hours(it.hours)
+            ));
             p.items[i].hours = it.hours;
             p.items[i].estimated = false;
         }
@@ -461,14 +621,32 @@ pub fn revise(p: &mut Proposal, reply: &str) -> Vec<String> {
 }
 
 /// Generate the proposal (and with `contracts`, the contract, KVKK annex and NDA) into `dir`.
-pub fn write(base: &Path, dir: &Path, p: &Proposal, b: &Business, contracts: bool, formats: &[String]) -> Result<Vec<PathBuf>> {
+pub fn write(
+    base: &Path,
+    dir: &Path,
+    p: &Proposal,
+    b: &Business,
+    contracts: bool,
+    formats: &[String],
+) -> Result<Vec<PathBuf>> {
     let mut out = Vec::new();
-    let suffix = if p.version > 1 { format!("-v{}", p.version) } else { String::new() };
+    let suffix = if p.version > 1 {
+        format!("-v{}", p.version)
+    } else {
+        String::new()
+    };
     let kinds: &[&str] = if contracts { &KINDS } else { &["proposal"] };
     for kind in kinds {
         let md = render(base, kind, p, b)?;
         let title = format!("{} — {}", p.project, p.client);
-        out.extend(super::docs::write_all(dir, &format!("{kind}{suffix}"), &md, &title, &b.accent, formats)?);
+        out.extend(super::docs::write_all(
+            dir,
+            &format!("{kind}{suffix}"),
+            &md,
+            &title,
+            &b.accent,
+            formats,
+        )?);
     }
     let state = serde_json::to_string_pretty(p).map_err(|e| e.to_string())?;
     let sp = dir.join("proposal.json");
@@ -489,7 +667,11 @@ mod tests {
     use super::*;
 
     fn biz() -> Business {
-        Business { name: "Acme Dijital".into(), hourly_rate: 1000.0, ..Business::default() }
+        Business {
+            name: "Acme Dijital".into(),
+            hourly_rate: 1000.0,
+            ..Business::default()
+        }
     }
 
     #[test]
@@ -499,7 +681,9 @@ mod tests {
         assert_eq!(items.len(), 3);
         assert_eq!((items[0].hours, items[0].estimated), (12.0, false));
         assert_eq!((items[1].hours, items[1].estimated), (16.0, true));
-        let prose = scope_from_text("Merhaba. Mevcut sitemizi yeni bir temaya taşımak istiyoruz. Teşekkürler.");
+        let prose = scope_from_text(
+            "Merhaba. Mevcut sitemizi yeni bir temaya taşımak istiyoruz. Teşekkürler.",
+        );
         assert_eq!(prose.len(), 1);
         assert_eq!(prose[0].hours, 8.0);
     }
@@ -509,7 +693,15 @@ mod tests {
         let p = Proposal {
             client: "Ayşe".into(),
             project: "Site".into(),
-            items: vec![parse_item("Tasarım=12").unwrap(), Item { title: "Paket".into(), hours: 0.0, estimated: false, price: Some(5000.0) }],
+            items: vec![
+                parse_item("Tasarım=12").unwrap(),
+                Item {
+                    title: "Paket".into(),
+                    hours: 0.0,
+                    estimated: false,
+                    price: Some(5000.0),
+                },
+            ],
             version: 1,
             ..Proposal::default()
         };
@@ -537,17 +729,31 @@ mod tests {
                 let md = render(dir.path(), k, &p, &biz()).unwrap();
                 assert!(!md.contains("{{"), "{k} {lang:?}: unfilled placeholder");
                 if k != "proposal" {
-                    assert!(md.contains("hukuki") || md.contains("legal advice"), "{k} {lang:?}: notice");
+                    assert!(
+                        md.contains("hukuki") || md.contains("legal advice"),
+                        "{k} {lang:?}: notice"
+                    );
                 }
             }
         }
         assert!(templates_dir(dir.path()).join("contract.tr.md").is_file());
         p.lang = Lang::Tr;
-        let ch = revise(&mut p, "Teşekkürler, birkaç değişiklik:\n- çıkar: logo\n- Tasarım = 20\n- ekle: Eğitim=2\nnot: Teslim Aralık sonu");
+        let ch = revise(
+            &mut p,
+            "Teşekkürler, birkaç değişiklik:\n- çıkar: logo\n- Tasarım = 20\n- ekle: Eğitim=2\nnot: Teslim Aralık sonu",
+        );
         assert_eq!(ch.len(), 4, "{ch:?}");
         assert_eq!(p.version, 2);
         assert!(p.items.iter().all(|i| i.title != "Logo"));
-        let out = write(dir.path(), &dir.path().join("out"), &p, &biz(), true, &["html".into(), "pdf".into(), "docx".into()]).unwrap();
+        let out = write(
+            dir.path(),
+            &dir.path().join("out"),
+            &p,
+            &biz(),
+            true,
+            &["html".into(), "pdf".into(), "docx".into()],
+        )
+        .unwrap();
         assert!(out.iter().any(|f| f.ends_with("contract-v2.pdf")));
         assert_eq!(load_state(&dir.path().join("out")).unwrap(), p);
     }

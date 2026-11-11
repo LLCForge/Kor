@@ -301,14 +301,18 @@ fn db(root: &Path, create: bool) -> Result<Option<rusqlite::Connection>, String>
         .flatten()
         .flatten()
         .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|x| x == "json") && p.file_stem().and_then(|s| s.to_str()).is_some_and(valid_id))
+        .filter(|p| {
+            p.extension().is_some_and(|x| x == "json")
+                && p.file_stem().and_then(|s| s.to_str()).is_some_and(valid_id)
+        })
         .collect();
     if !create && !file.exists() && legacy.is_empty() {
         return Ok(None);
     }
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     let c = rusqlite::Connection::open(&file).map_err(|e| e.to_string())?;
-    c.busy_timeout(std::time::Duration::from_secs(5)).map_err(|e| e.to_string())?;
+    c.busy_timeout(std::time::Duration::from_secs(5))
+        .map_err(|e| e.to_string())?;
     c.execute_batch(
         "PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;
          CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, updated_ms INTEGER NOT NULL, state TEXT NOT NULL);",
@@ -317,11 +321,19 @@ fn db(root: &Path, create: bool) -> Result<Option<rusqlite::Connection>, String>
     // `<id>.json` checkpoints of older versions (the `TaskCreate` tool's own files do not parse
     // as a task state and stay untouched).
     for p in legacy {
-        let Ok(text) = std::fs::read_to_string(&p) else { continue };
-        let Ok(st) = serde_json::from_str::<TaskState>(&text) else { continue };
+        let Ok(text) = std::fs::read_to_string(&p) else {
+            continue;
+        };
+        let Ok(st) = serde_json::from_str::<TaskState>(&text) else {
+            continue;
+        };
         c.execute(
             "INSERT OR IGNORE INTO tasks (id, updated_ms, state) VALUES (?1, ?2, ?3)",
-            rusqlite::params![st.id, i64::try_from(st.updated_ms).unwrap_or(i64::MAX), text],
+            rusqlite::params![
+                st.id,
+                i64::try_from(st.updated_ms).unwrap_or(i64::MAX),
+                text
+            ],
         )
         .map_err(|e| e.to_string())?;
         let _ = std::fs::rename(&p, p.with_extension("json.imported"));
@@ -340,7 +352,11 @@ pub fn save(root: &Path, state: &mut TaskState) -> Result<(), String> {
     c.execute(
         "INSERT INTO tasks (id, updated_ms, state) VALUES (?1, ?2, ?3)
          ON CONFLICT(id) DO UPDATE SET updated_ms = excluded.updated_ms, state = excluded.state",
-        rusqlite::params![state.id, i64::try_from(state.updated_ms).unwrap_or(i64::MAX), text],
+        rusqlite::params![
+            state.id,
+            i64::try_from(state.updated_ms).unwrap_or(i64::MAX),
+            text
+        ],
     )
     .map(|_| ())
     .map_err(|e| e.to_string())
@@ -363,10 +379,18 @@ pub fn load(root: &Path, id: &str) -> Result<TaskState, String> {
 
 /// Every task of this repository, most recently updated first.
 pub fn list(root: &Path) -> Vec<TaskState> {
-    let Ok(Some(c)) = db(root, false) else { return Vec::new() };
-    let Ok(mut q) = c.prepare("SELECT state FROM tasks ORDER BY updated_ms DESC") else { return Vec::new() };
+    let Ok(Some(c)) = db(root, false) else {
+        return Vec::new();
+    };
+    let Ok(mut q) = c.prepare("SELECT state FROM tasks ORDER BY updated_ms DESC") else {
+        return Vec::new();
+    };
     q.query_map([], |r| r.get::<_, String>(0))
-        .map(|rows| rows.flatten().filter_map(|t| serde_json::from_str(&t).ok()).collect())
+        .map(|rows| {
+            rows.flatten()
+                .filter_map(|t| serde_json::from_str(&t).ok())
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -444,7 +468,10 @@ pub fn fork(root: &Path, id: &str) -> Result<TaskState, String> {
             s.status = SubStatus::Pending;
         }
     }
-    if matches!(st.status, TaskStatus::Running | TaskStatus::Planning | TaskStatus::Merging) {
+    if matches!(
+        st.status,
+        TaskStatus::Running | TaskStatus::Planning | TaskStatus::Merging
+    ) {
         st.status = TaskStatus::Failed;
     }
     save(root, &mut st)?;
@@ -924,9 +951,7 @@ impl Engine {
         let wt = self.root.join(&sub.worktree);
         let base = sub.base.clone().unwrap_or_else(|| st.base.clone());
         git::fresh_worktree(&self.root, &wt, &sub.branch, &base)?;
-        let spawned = self
-            .spawner
-            .spawn(&wt, &sub.role, sub.model.as_deref())?;
+        let spawned = self.spawner.spawn(&wt, &sub.role, sub.model.as_deref())?;
         let Spawned {
             mut agent,
             cost,
@@ -962,7 +987,12 @@ impl Engine {
             Ok(StopReason::Blocked(why)) => return Err(why),
             Err(e) => return Err(e.message),
         }
-        let msg = format!("kor task #{}: {} ({})", st.id, sub.role, first_line(&sub.goal));
+        let msg = format!(
+            "kor task #{}: {} ({})",
+            st.id,
+            sub.role,
+            first_line(&sub.goal)
+        );
         let Some(commit) = git::commit_all(&wt, &msg)? else {
             return Err("the agent changed no files".into());
         };
@@ -1034,7 +1064,11 @@ impl Engine {
     }
 
     /// Merge approved sub-tasks in plan order, then test the task branch.
-    async fn merge_all(&self, st: &mut TaskState, cancel: &CancellationToken) -> Result<(), String> {
+    async fn merge_all(
+        &self,
+        st: &mut TaskState,
+        cancel: &CancellationToken,
+    ) -> Result<(), String> {
         let merged_wt = worktrees_dir(&self.root, &st.id).join("merged");
         git::integration_worktree(&self.root, &merged_wt, &st.branch, &st.base)?;
         st.status = TaskStatus::Merging;
@@ -1167,7 +1201,12 @@ impl Engine {
 }
 
 fn first_line(s: &str) -> String {
-    s.lines().next().unwrap_or_default().chars().take(72).collect()
+    s.lines()
+        .next()
+        .unwrap_or_default()
+        .chars()
+        .take(72)
+        .collect()
 }
 
 /// `path` is one of `files` or inside one of them (a directory).
@@ -1201,7 +1240,10 @@ fn sub_prompt(st: &TaskState, sub: &SubTask, previous_review: Option<&str>) -> S
         );
     }
     if let Some(r) = previous_review {
-        let _ = write!(p, "\n\nA previous attempt was rejected by the reviewer:\n{r}");
+        let _ = write!(
+            p,
+            "\n\nA previous attempt was rejected by the reviewer:\n{r}"
+        );
     }
     p
 }

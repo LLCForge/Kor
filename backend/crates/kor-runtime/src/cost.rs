@@ -926,7 +926,11 @@ impl Control {
             default: default_ref,
             targets,
             prices,
-            estimates: files.ledger.as_deref().and_then(Path::parent).map(|d| d.join("estimates.jsonl")),
+            estimates: files
+                .ledger
+                .as_deref()
+                .and_then(Path::parent)
+                .map(|d| d.join("estimates.jsonl")),
             ledger: files.ledger,
             log: files.log,
             started: now_ms(),
@@ -999,7 +1003,9 @@ impl Control {
         self.lock()
             .session
             .values()
-            .fold((0.0, false), |(usd, est), r| (usd + r.usd, est || r.estimated))
+            .fold((0.0, false), |(usd, est), r| {
+                (usd + r.usd, est || r.estimated)
+            })
     }
 
     /// This session's spend per model, for the summary at the end.
@@ -1039,7 +1045,11 @@ impl Control {
     /// The time and cost estimate of `task` on the session's model with `context` tokens in the
     /// conversation (front ends show it in the composer before anything is sent).
     pub fn estimate(&self, task: &str, context: u64) -> crate::estimate::Estimate {
-        let runs = self.estimates.as_deref().map(crate::estimate::read).unwrap_or_default();
+        let runs = self
+            .estimates
+            .as_deref()
+            .map(crate::estimate::read)
+            .unwrap_or_default();
         crate::estimate::estimate(task, &self.default, context, &self.prices, &runs)
     }
 
@@ -1100,16 +1110,20 @@ impl Control {
         s.history.push(d);
         Some(Plan { main, verify })
     }
-
 }
 
 impl CostControl for Control {
     fn route(&self, task: &str) -> Option<Plan> {
         let plan = self.route_plan(task);
-        let model = plan
-            .as_ref()
-            .map_or_else(|| self.default.clone(), |p| format!("{}/{}", p.main.provider.id(), p.main.model));
-        let runs = self.estimates.as_deref().map(crate::estimate::read).unwrap_or_default();
+        let model = plan.as_ref().map_or_else(
+            || self.default.clone(),
+            |p| format!("{}/{}", p.main.provider.id(), p.main.model),
+        );
+        let runs = self
+            .estimates
+            .as_deref()
+            .map(crate::estimate::read)
+            .unwrap_or_default();
         let e = crate::estimate::estimate(task, &model, 0, &self.prices, &runs);
         self.lock().tracking = Some(crate::estimate::Tracking::new(e, task, now_ms()));
         plan
@@ -1550,11 +1564,22 @@ mod tests {
             media: true,
             estimated: true,
         };
-        let r = report(std::slice::from_ref(&media), &p, now, 30, &Budget::default());
+        let r = report(
+            std::slice::from_ref(&media),
+            &p,
+            now,
+            30,
+            &Budget::default(),
+        );
         assert_eq!(r.media.requests, 1);
         assert!(r.media.estimated, "an estimated list price stays marked");
         let lines = report_lines(&Localizer::new(Lang::En), &r);
-        assert!(lines.iter().any(|x| x.contains("≈$0.40") && x.to_lowercase().contains("media")), "{lines:?}");
+        assert!(
+            lines
+                .iter()
+                .any(|x| x.contains("≈$0.40") && x.to_lowercase().contains("media")),
+            "{lines:?}"
+        );
     }
 
     #[test]

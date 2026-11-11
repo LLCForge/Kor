@@ -48,7 +48,9 @@ fn primary() -> Result<Monitor, String> {
         .iter()
         .position(|m| m.is_primary().unwrap_or(false))
         .unwrap_or(0);
-    all.into_iter().nth(idx).ok_or_else(|| "no monitor found".into())
+    all.into_iter()
+        .nth(idx)
+        .ok_or_else(|| "no monitor found".into())
 }
 
 pub fn screen() -> Result<(u32, u32), String> {
@@ -69,7 +71,9 @@ pub struct Shot {
 
 pub fn screenshot() -> Result<Shot, String> {
     let m = primary()?;
-    let img = m.capture_image().map_err(|e| format!("capture failed: {e}"))?;
+    let img = m
+        .capture_image()
+        .map_err(|e| format!("capture failed: {e}"))?;
     let real = (img.width(), img.height());
     let (w, h) = shot_size(real.0, real.1);
     let img = if (w, h) == real {
@@ -91,7 +95,9 @@ pub fn screenshot() -> Result<Shot, String> {
 
 fn enigo() -> Result<Enigo, String> {
     Enigo::new(&Settings::default()).map_err(|e| {
-        format!("cannot control input: {e} (macOS: allow Kor under Privacy & Security → Accessibility)")
+        format!(
+            "cannot control input: {e} (macOS: allow Kor under Privacy & Security → Accessibility)"
+        )
     })
 }
 
@@ -116,7 +122,8 @@ pub fn move_to(x: i32, y: i32) -> Result<(), String> {
 
 pub fn click(x: i32, y: i32, right: bool, double: bool) -> Result<(), String> {
     let mut e = enigo()?;
-    e.move_mouse(x, y, Coordinate::Abs).map_err(|e| e.to_string())?;
+    e.move_mouse(x, y, Coordinate::Abs)
+        .map_err(|e| e.to_string())?;
     let b = if right { Button::Right } else { Button::Left };
     for _ in 0..if double { 2 } else { 1 } {
         e.button(b, Direction::Click).map_err(|e| e.to_string())?;
@@ -192,10 +199,12 @@ pub fn combo(keys: &[KeyName]) -> Result<(), String> {
     let mut pressed = Vec::new();
     let result = (|| {
         for m in mods {
-            e.key(key_of(m), Direction::Press).map_err(|x| x.to_string())?;
+            e.key(key_of(m), Direction::Press)
+                .map_err(|x| x.to_string())?;
             pressed.push(key_of(m));
         }
-        e.key(key_of(last), Direction::Click).map_err(|x| x.to_string())
+        e.key(key_of(last), Direction::Click)
+            .map_err(|x| x.to_string())
     })();
     // Never leave a modifier held down, even after an error.
     for k in pressed.into_iter().rev() {
@@ -205,6 +214,10 @@ pub fn combo(keys: &[KeyName]) -> Result<(), String> {
 }
 
 pub fn scroll(amount: i32, vertical: bool) -> Result<(), String> {
-    let axis = if vertical { Axis::Vertical } else { Axis::Horizontal };
+    let axis = if vertical {
+        Axis::Vertical
+    } else {
+        Axis::Horizontal
+    };
     enigo()?.scroll(amount, axis).map_err(|e| e.to_string())
 }

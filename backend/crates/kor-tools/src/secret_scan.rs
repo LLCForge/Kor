@@ -41,67 +41,67 @@ static ANY: LazyLock<Option<regex::RegexSet>> = LazyLock::new(|| {
 });
 
 const SOURCES: &[Rule] = &[
-        Rule {
-            id: "aws-access-token",
-            source: r"\b((?:A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA)[A-Z2-7]{16})\b",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "anthropic-api-key",
-            source: r"\b(sk-ant-api03-[a-zA-Z0-9_\-]{93}AA)(?:[\x60\x27\x22\s;]|\\[nr]|$)",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "anthropic-admin-api-key",
-            source: r"\b(sk-ant-admin01-[a-zA-Z0-9_\-]{93}AA)(?:[\x60\x27\x22\s;]|\\[nr]|$)",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "openai-api-key",
-            source: r"\b(sk-(?:proj|svcacct|admin)-(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})T3BlbkFJ(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})\b|sk-[a-zA-Z0-9]{20}T3BlbkFJ[a-zA-Z0-9]{20})(?:[\x60\x27\x22\s;]|\\[nr]|$)",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "github-pat",
-            source: r"ghp_[0-9a-zA-Z]{36}",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "github-fine-grained-pat",
-            source: r"github_pat_\w{82}",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "github-oauth",
-            source: r"gho_[0-9a-zA-Z]{36}",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "gitlab-pat",
-            source: r"glpat-[\w-]{20}",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "slack-bot-token",
-            source: r"xoxb-[0-9]{10,13}-[0-9]{10,13}[a-zA-Z0-9-]*",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "npm-access-token",
-            source: r"\b(npm_[a-zA-Z0-9]{36})(?:[\x60\x27\x22\s;]|\\[nr]|$)",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "stripe-access-token",
-            source: r"\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:[\x60\x27\x22\s;]|\\[nr]|$)",
-            case_insensitive: false,
-        },
-        Rule {
-            id: "private-key",
-            source: r"-----BEGIN[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----[\s\S-]{64,}?-----END[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----",
-            case_insensitive: true,
-        },
-    ];
+    Rule {
+        id: "aws-access-token",
+        source: r"\b((?:A3T[A-Z0-9]|AKIA|ASIA|ABIA|ACCA)[A-Z2-7]{16})\b",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "anthropic-api-key",
+        source: r"\b(sk-ant-api03-[a-zA-Z0-9_\-]{93}AA)(?:[\x60\x27\x22\s;]|\\[nr]|$)",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "anthropic-admin-api-key",
+        source: r"\b(sk-ant-admin01-[a-zA-Z0-9_\-]{93}AA)(?:[\x60\x27\x22\s;]|\\[nr]|$)",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "openai-api-key",
+        source: r"\b(sk-(?:proj|svcacct|admin)-(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})T3BlbkFJ(?:[A-Za-z0-9_-]{74}|[A-Za-z0-9_-]{58})\b|sk-[a-zA-Z0-9]{20}T3BlbkFJ[a-zA-Z0-9]{20})(?:[\x60\x27\x22\s;]|\\[nr]|$)",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "github-pat",
+        source: r"ghp_[0-9a-zA-Z]{36}",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "github-fine-grained-pat",
+        source: r"github_pat_\w{82}",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "github-oauth",
+        source: r"gho_[0-9a-zA-Z]{36}",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "gitlab-pat",
+        source: r"glpat-[\w-]{20}",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "slack-bot-token",
+        source: r"xoxb-[0-9]{10,13}-[0-9]{10,13}[a-zA-Z0-9-]*",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "npm-access-token",
+        source: r"\b(npm_[a-zA-Z0-9]{36})(?:[\x60\x27\x22\s;]|\\[nr]|$)",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "stripe-access-token",
+        source: r"\b((?:sk|rk)_(?:test|live|prod)_[a-zA-Z0-9]{10,99})(?:[\x60\x27\x22\s;]|\\[nr]|$)",
+        case_insensitive: false,
+    },
+    Rule {
+        id: "private-key",
+        source: r"-----BEGIN[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----[\s\S-]{64,}?-----END[ A-Z0-9_-]{0,100}PRIVATE KEY(?: BLOCK)?-----",
+        case_insensitive: true,
+    },
+];
 
 /// Rule ids that matched. Empty when the content is safe to store.
 pub fn scan(content: &str) -> Vec<&'static str> {
@@ -121,9 +121,8 @@ pub fn find(content: &str) -> Vec<(&'static str, usize)> {
     RULES
         .iter()
         .flat_map(|(id, re)| {
-            re.captures_iter(content).filter_map(move |c| {
-                c.get(1).or_else(|| c.get(0)).map(|m| (*id, m.start()))
-            })
+            re.captures_iter(content)
+                .filter_map(move |c| c.get(1).or_else(|| c.get(0)).map(|m| (*id, m.start())))
         })
         .collect()
 }

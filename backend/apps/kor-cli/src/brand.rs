@@ -37,12 +37,23 @@ impl Depth {
 
     /// `COLORTERM=truecolor|24bit` (and Windows consoles, which set no `TERM`) get truecolor;
     /// other terminals the 256-colour palette.
-    pub fn from_env(no_color: bool, term: Option<&str>, colorterm: Option<&str>, tty: bool) -> Self {
+    pub fn from_env(
+        no_color: bool,
+        term: Option<&str>,
+        colorterm: Option<&str>,
+        tty: bool,
+    ) -> Self {
         if no_color || !tty || term == Some("dumb") {
             return Self::None;
         }
-        let truecolor = colorterm.is_some_and(|c| c.eq_ignore_ascii_case("truecolor") || c.eq_ignore_ascii_case("24bit"));
-        if truecolor || term.is_none() { Self::TrueColor } else { Self::Ansi256 }
+        let truecolor = colorterm.is_some_and(|c| {
+            c.eq_ignore_ascii_case("truecolor") || c.eq_ignore_ascii_case("24bit")
+        });
+        if truecolor || term.is_none() {
+            Self::TrueColor
+        } else {
+            Self::Ansi256
+        }
     }
 }
 
@@ -68,7 +79,11 @@ fn paint(depth: Depth, c: theme::Rgb, s: &str) -> String {
 
 /// Dim text; plain without colour.
 fn dim(depth: Depth, s: &str) -> String {
-    if depth == Depth::None { s.to_owned() } else { format!("\x1b[2m{s}\x1b[22m") }
+    if depth == Depth::None {
+        s.to_owned()
+    } else {
+        format!("\x1b[2m{s}\x1b[22m")
+    }
 }
 
 /// Below this many columns the small banner is shown (§16.1).
@@ -167,7 +182,9 @@ impl Spinner {
     fn progress(&self, secs: u64) -> Option<(String, bool)> {
         let p = self.est.as_ref()?;
         #[allow(clippy::cast_precision_loss)] // token counts far below 2^52
-        let spent = p.price.map_or(0.0, |(i, o)| (self.tokens.0 as f64 * i + self.tokens.1 as f64 * o) / 1_000_000.0);
+        let spent = p.price.map_or(0.0, |(i, o)| {
+            (self.tokens.0 as f64 * i + self.tokens.1 as f64 * o) / 1_000_000.0
+        });
         let e = kor_runtime::estimate::Estimate {
             secs: p.secs,
             usd: p.usd,
@@ -183,7 +200,10 @@ impl Spinner {
             correction: 1.0,
         };
         let text = kor_runtime::estimate::progress(secs * 1000, spent, &e);
-        Some((text, kor_runtime::estimate::drifting(secs * 1000, spent, &e)))
+        Some((
+            text,
+            kor_runtime::estimate::drifting(secs * 1000, spent, &e),
+        ))
     }
 
     /// The text of the current frame (without terminal control codes): frame, verb, seconds.
@@ -212,7 +232,8 @@ impl Spinner {
                     _ if drift => format!("\x1b[33m{est}\x1b[0m"),
                     _ => dim(depth, &est),
                 };
-                let hint = ctx.trim_start_matches(" · ").to_owned() + if ctx.is_empty() { "" } else { " · " };
+                let hint = ctx.trim_start_matches(" · ").to_owned()
+                    + if ctx.is_empty() { "" } else { " · " };
                 format!(
                     "{} {} {est} {}",
                     paint(depth, color, f),
@@ -261,7 +282,11 @@ impl Spinner {
 /// The banner's lines without colour (the TUI paints them itself): the small one below
 /// [`NARROW_COLUMNS`] columns.
 pub fn banner_lines(width: u16) -> Vec<&'static str> {
-    let text = if width < NARROW_COLUMNS || width < 40 { BANNER_SMALL } else { BANNER };
+    let text = if width < NARROW_COLUMNS || width < 40 {
+        BANNER_SMALL
+    } else {
+        BANNER
+    };
     text.lines().filter(|l| !l.trim().is_empty()).collect()
 }
 
@@ -296,7 +321,8 @@ impl MultiSpinner {
     /// Set row `i` (rows are added as needed): label (agent role), detail text, state.
     pub fn set(&mut self, i: usize, label: &str, detail: &str, state: RowState) {
         while self.rows.len() <= i {
-            self.rows.push((String::new(), String::new(), RowState::Waiting));
+            self.rows
+                .push((String::new(), String::new(), RowState::Waiting));
         }
         self.rows[i] = (label.to_owned(), detail.to_owned(), state);
     }
@@ -304,7 +330,12 @@ impl MultiSpinner {
     /// The rows as text at a colour depth (no cursor movement): `⠋ backend  Running`.
     pub fn render(&self, depth: Depth) -> Vec<String> {
         let frames = &theme::frames::BRAILLE;
-        let width = self.rows.iter().map(|r| r.0.chars().count()).max().unwrap_or(0);
+        let width = self
+            .rows
+            .iter()
+            .map(|r| r.0.chars().count())
+            .max()
+            .unwrap_or(0);
         self.rows
             .iter()
             .enumerate()
@@ -312,7 +343,11 @@ impl MultiSpinner {
                 let mark = match state {
                     RowState::Running => {
                         let g = &theme::GRADIENT;
-                        paint(depth, g[(self.tick + i) % g.len()], frames[(self.tick + i) % frames.len()])
+                        paint(
+                            depth,
+                            g[(self.tick + i) % g.len()],
+                            frames[(self.tick + i) % frames.len()],
+                        )
                     }
                     RowState::Waiting => dim(depth, "·"),
                     RowState::Done => paint(depth, theme::status::SUCCESS, "✓"),
@@ -374,11 +409,18 @@ impl LiveMulti {
                 std::thread::sleep(MultiSpinner::TICK);
             }
         });
-        Some(Self { state, stop, thread: Some(thread) })
+        Some(Self {
+            state,
+            stop,
+            thread: Some(thread),
+        })
     }
 
     pub fn set(&self, i: usize, label: &str, detail: &str, state: RowState) {
-        self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner).set(i, label, detail, state);
+        self.state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .set(i, label, detail, state);
     }
 }
 
@@ -388,7 +430,10 @@ impl Drop for LiveMulti {
         if let Some(t) = self.thread.take() {
             let _ = t.join();
         }
-        let mut m = self.state.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let mut m = self
+            .state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         if !m.rows.is_empty() {
             m.draw();
         }
@@ -413,13 +458,21 @@ mod tests {
         m.set(0, "backend", "merged", RowState::Done);
         m.set(1, "frontend", "failed", RowState::Failed);
         let done = m.render(Depth::None);
-        assert!(done[0].starts_with("✓ ") && done[1].starts_with("✗ "), "{done:?}");
+        assert!(
+            done[0].starts_with("✓ ") && done[1].starts_with("✗ "),
+            "{done:?}"
+        );
         assert!(m.render(Depth::TrueColor)[0].contains("\x1b[38;2;"));
     }
 
     fn spinner_at(tick: usize) -> Spinner {
         let mut s = Spinner::new();
-        s.set_status(AgentStatus { verb: "Közlüyor".into(), verb_index: 1, elapsed_ms: 3_400, tokens: 120 });
+        s.set_status(AgentStatus {
+            verb: "Közlüyor".into(),
+            verb_index: 1,
+            elapsed_ms: 3_400,
+            tokens: 120,
+        });
         s.set_context(62);
         s.tick = tick;
         s
@@ -435,15 +488,28 @@ mod tests {
     fn snapshot_banner_wide_and_narrow() {
         insta::assert_snapshot!("banner_wide_plain", banner_depth(Depth::None, false));
         insta::assert_snapshot!("banner_narrow_plain", banner_depth(Depth::None, true));
-        insta::assert_snapshot!("banner_wide_truecolor", shown(&banner_depth(Depth::TrueColor, false)));
-        insta::assert_snapshot!("banner_narrow_256", shown(&banner_depth(Depth::Ansi256, true)));
-        assert!(banner_depth(Depth::None, true).lines().all(|l| l.chars().count() < usize::from(NARROW_COLUMNS)));
+        insta::assert_snapshot!(
+            "banner_wide_truecolor",
+            shown(&banner_depth(Depth::TrueColor, false))
+        );
+        insta::assert_snapshot!(
+            "banner_narrow_256",
+            shown(&banner_depth(Depth::Ansi256, true))
+        );
+        assert!(
+            banner_depth(Depth::None, true)
+                .lines()
+                .all(|l| l.chars().count() < usize::from(NARROW_COLUMNS))
+        );
     }
 
     #[test]
     fn snapshot_spinner_depths() {
         let s = spinner_at(2);
-        insta::assert_snapshot!("spinner_truecolor", shown(&s.line(Depth::TrueColor).unwrap()));
+        insta::assert_snapshot!(
+            "spinner_truecolor",
+            shown(&s.line(Depth::TrueColor).unwrap())
+        );
         insta::assert_snapshot!("spinner_256", shown(&s.line(Depth::Ansi256).unwrap()));
         let plain = s.line(Depth::None).unwrap();
         assert!(!plain.contains('\x1b'), "NO_COLOR: no escape codes");
@@ -471,12 +537,31 @@ mod tests {
 
     #[test]
     fn depth_detection() {
-        assert_eq!(Depth::from_env(true, Some("xterm-256color"), Some("truecolor"), true), Depth::None);
-        assert_eq!(Depth::from_env(false, Some("dumb"), None, true), Depth::None);
-        assert_eq!(Depth::from_env(false, Some("xterm-256color"), None, false), Depth::None);
-        assert_eq!(Depth::from_env(false, Some("xterm-256color"), None, true), Depth::Ansi256);
-        assert_eq!(Depth::from_env(false, Some("xterm-256color"), Some("24bit"), true), Depth::TrueColor);
-        assert_eq!(Depth::from_env(false, None, None, true), Depth::TrueColor, "Windows consoles");
+        assert_eq!(
+            Depth::from_env(true, Some("xterm-256color"), Some("truecolor"), true),
+            Depth::None
+        );
+        assert_eq!(
+            Depth::from_env(false, Some("dumb"), None, true),
+            Depth::None
+        );
+        assert_eq!(
+            Depth::from_env(false, Some("xterm-256color"), None, false),
+            Depth::None
+        );
+        assert_eq!(
+            Depth::from_env(false, Some("xterm-256color"), None, true),
+            Depth::Ansi256
+        );
+        assert_eq!(
+            Depth::from_env(false, Some("xterm-256color"), Some("24bit"), true),
+            Depth::TrueColor
+        );
+        assert_eq!(
+            Depth::from_env(false, None, None, true),
+            Depth::TrueColor,
+            "Windows consoles"
+        );
         assert_eq!(ansi256(kor_core::theme::ember::MID), 214);
     }
 

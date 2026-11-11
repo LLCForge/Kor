@@ -9,7 +9,8 @@ use kor_compat::{Applies, Compat, Source};
 
 pub use crate::prompt_text::Surface;
 use crate::prompt_text::{
-    ASK_CRITICAL, ASK_NEVER, ASK_OFTEN, CODE, IDENTITY, PRIORITY, REPORT, TOOLS, WORK, output_section,
+    ASK_CRITICAL, ASK_NEVER, ASK_OFTEN, CODE, IDENTITY, PRIORITY, REPORT, TOOLS, WORK,
+    output_section,
 };
 
 /// Characters of skill listing in the system prompt; the rest are named by count only.

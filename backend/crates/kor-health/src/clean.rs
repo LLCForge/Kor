@@ -54,8 +54,14 @@ impl Scan {
                 globals.push((kind.to_owned(), p));
             }
         };
-        add("npm", home.as_ref().map(|h| h.join(".npm").join("_cacache")));
-        add("npm", local.as_ref().map(|d| d.join("npm-cache").join("_cacache")));
+        add(
+            "npm",
+            home.as_ref().map(|h| h.join(".npm").join("_cacache")),
+        );
+        add(
+            "npm",
+            local.as_ref().map(|d| d.join("npm-cache").join("_cacache")),
+        );
         add("pip", cache.as_ref().map(|d| d.join("pip")));
         add("pip", local.as_ref().map(|d| d.join("pip").join("Cache")));
         add("yarn", cache.as_ref().map(|d| d.join("yarn")));
@@ -63,7 +69,11 @@ impl Scan {
         add("yarn", local.as_ref().map(|d| d.join("Yarn").join("Cache")));
         add("go", cache.as_ref().map(|d| d.join("go-build")));
         add("go", local.as_ref().map(|d| d.join("go-build")));
-        add("cargo-registry", home.as_ref().map(|h| h.join(".cargo").join("registry").join("cache")));
+        add(
+            "cargo-registry",
+            home.as_ref()
+                .map(|h| h.join(".cargo").join("registry").join("cache")),
+        );
         // Kor's disposable cache, only where it is not also Kor's data folder (Windows shares them).
         if let (Some(c), d) = (kor_platform::cache_dir(), kor_platform::data_dir())
             && d.as_ref() != Some(&c)
@@ -87,7 +97,11 @@ fn id_of(kind: &str, path: Option<&Path>) -> String {
     if let Some(p) = path {
         h.update(p.to_string_lossy().as_bytes());
     }
-    h.finalize().iter().take(5).map(|b| format!("{b:02x}")).collect()
+    h.finalize()
+        .iter()
+        .take(5)
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 fn is_link(p: &Path) -> bool {
@@ -108,7 +122,12 @@ pub fn project_cache_kind(dir: &Path) -> Option<&'static str> {
         "__pycache__" | ".pytest_cache" | ".mypy_cache" | ".ruff_cache" => Some("python"),
         ".turbo" | ".parcel-cache" => Some("js"),
         ".next" | ".nuxt" | ".svelte-kit" if sibling("package.json") => Some("js"),
-        ".gradle" if sibling("build.gradle") || sibling("build.gradle.kts") || sibling("settings.gradle") || sibling("settings.gradle.kts") => {
+        ".gradle"
+            if sibling("build.gradle")
+                || sibling("build.gradle.kts")
+                || sibling("settings.gradle")
+                || sibling("settings.gradle.kts") =>
+        {
             Some("gradle")
         }
         _ => None,
@@ -202,7 +221,9 @@ pub fn parse_docker_df(out: &str) -> (u64, u64) {
     let mut total = 0;
     let mut reclaim = 0;
     for l in out.lines() {
-        let Ok(v) = serde_json::from_str::<serde_json::Value>(l) else { continue };
+        let Ok(v) = serde_json::from_str::<serde_json::Value>(l) else {
+            continue;
+        };
         total += v["Size"].as_str().and_then(parse_docker_size).unwrap_or(0);
         reclaim += v["Reclaimable"]
             .as_str()
@@ -222,7 +243,9 @@ fn docker(args: &[&str]) -> Option<String> {
         .stderr(std::process::Stdio::null())
         .output()
         .ok()?;
-    out.status.success().then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+    out.status
+        .success()
+        .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
 }
 
 /// Docker's total disk use and what pruning can reclaim (`None` without a running Docker).
@@ -286,7 +309,13 @@ pub fn clean(scan: &Scan, ids: &[String]) -> Vec<Outcome> {
                 project_cache_kind(p).is_some()
             };
             if !still {
-                out.push(Outcome { id: id.clone(), kind: kind.clone(), path: Some(p.clone()), freed: 0, error: Some("not a cache folder any more".into()) });
+                out.push(Outcome {
+                    id: id.clone(),
+                    kind: kind.clone(),
+                    path: Some(p.clone()),
+                    freed: 0,
+                    error: Some("not a cache folder any more".into()),
+                });
                 continue;
             }
             let (bytes, _) = dir_size(p, scan.budget);
@@ -311,7 +340,13 @@ pub fn clean(scan: &Scan, ids: &[String]) -> Vec<Outcome> {
                 error: (a.is_none() && b.is_none()).then(|| "docker prune failed".into()),
             });
         } else {
-            out.push(Outcome { id: id.clone(), kind: String::new(), path: None, freed: 0, error: Some("unknown id; run `kor clean --suggest` again".into()) });
+            out.push(Outcome {
+                id: id.clone(),
+                kind: String::new(),
+                path: None,
+                freed: 0,
+                error: Some("unknown id; run `kor clean --suggest` again".into()),
+            });
         }
     }
     out
@@ -358,10 +393,23 @@ mod tests {
         let global = d.path().join("pipcache");
         write(&global.join("http/a"), 700);
 
-        let scan = Scan { roots: vec![proj.clone()], globals: vec![("pip".into(), global.clone())], docker: false, budget: Duration::from_secs(5) };
+        let scan = Scan {
+            roots: vec![proj.clone()],
+            globals: vec![("pip".into(), global.clone())],
+            docker: false,
+            budget: Duration::from_secs(5),
+        };
         let s = suggest(&scan);
         let kinds: Vec<(&str, u64)> = s.iter().map(|c| (c.kind.as_str(), c.bytes)).collect();
-        assert_eq!(kinds, [("cargo", 5000), ("node", 3000), ("pip", 700), ("python", 100)]);
+        assert_eq!(
+            kinds,
+            [
+                ("cargo", 5000),
+                ("node", 3000),
+                ("pip", 700),
+                ("python", 100)
+            ]
+        );
         assert!(s.iter().all(|c| !c.approx));
 
         // Nothing happens without ids; an unknown id deletes nothing.
@@ -375,7 +423,10 @@ mod tests {
         let r = clean(&scan, &[cargo, pip]);
         assert_eq!(r.iter().map(|o| o.freed).sum::<u64>(), 5700);
         assert!(!proj.join("target").exists() && !global.exists());
-        assert!(proj.join("docs/target/keep.md").exists() && proj.join("lib/node_modules/keep.js").exists());
+        assert!(
+            proj.join("docs/target/keep.md").exists()
+                && proj.join("lib/node_modules/keep.js").exists()
+        );
         assert!(proj.join("web/node_modules").exists() && proj.join("Cargo.toml").exists());
     }
 

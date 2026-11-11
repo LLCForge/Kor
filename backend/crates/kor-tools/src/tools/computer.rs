@@ -51,7 +51,9 @@ const MAX_STEPS: usize = 20;
 static STEPS: std::sync::Mutex<Vec<Step>> = std::sync::Mutex::new(Vec::new());
 
 pub(crate) fn push_step(step: Step) {
-    let mut s = STEPS.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut s = STEPS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     if s.len() >= MAX_STEPS {
         s.remove(0);
     }
@@ -59,7 +61,10 @@ pub(crate) fn push_step(step: Step) {
 }
 
 pub(crate) fn pop_step() -> Option<Step> {
-    STEPS.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop()
+    STEPS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .pop()
 }
 
 /// How an action is reversed: typed text is erased with Backspace, a key combination or a drag
@@ -73,7 +78,11 @@ pub enum Reverse {
 }
 
 pub fn reverse_of(action: &str, input: &Value) -> Reverse {
-    let undo = if kor_platform::os() == kor_platform::Os::Mac { "cmd+z" } else { "ctrl+z" };
+    let undo = if kor_platform::os() == kor_platform::Os::Mac {
+        "cmd+z"
+    } else {
+        "ctrl+z"
+    };
     match action {
         // A newline usually submitted something (a form, a chat): erasing would not undo that.
         "type" => match input["text"].as_str() {
@@ -214,7 +223,8 @@ fn act(action: &str, input: &Value) -> ToolOutput {
             Ok(ToolOutput::ok(format!("scrolled {dir} {amount}")))
         }
         "undo_last_action" => {
-            let step = pop_step().ok_or("nothing to undo: no desktop action was recorded in this session")?;
+            let step = pop_step()
+                .ok_or("nothing to undo: no desktop action was recorded in this session")?;
             let done = match reverse_of(&step.action, &step.input) {
                 Reverse::Backspace(n) => {
                     for _ in 0..n.min(2_000) {
@@ -226,14 +236,19 @@ fn act(action: &str, input: &Value) -> ToolOutput {
                     live::combo(&parse_combo(k)?)?;
                     format!("pressed {k} (the app's undo)")
                 }
-                Reverse::ByHand => "this action has no automatic reverse; nothing was pressed".to_owned(),
+                Reverse::ByHand => {
+                    "this action has no automatic reverse; nothing was pressed".to_owned()
+                }
             };
             let mut out = ToolOutput::ok(format!(
                 "Undo of `{}`: {done}. The attached image is the screen just before that action; take a \
                  screenshot and compare. If they differ, restore it by hand (click, scroll back) or tell the user.",
                 step.action
             ));
-            out.image = Some(kor_core::ImageSource::Base64 { media_type: "image/jpeg".into(), data: step.before });
+            out.image = Some(kor_core::ImageSource::Base64 {
+                media_type: "image/jpeg".into(),
+                data: step.before,
+            });
             Ok(out)
         }
         other => Err(format!("unknown desktop action `{other}`")),
@@ -414,15 +429,35 @@ mod undo_tests {
 
     #[test]
     fn reverses_typing_keys_and_drags_and_keeps_order() {
-        assert_eq!(reverse_of("type", &json!({"text": "héllo"})), Reverse::Backspace(5));
-        let undo = if kor_platform::os() == kor_platform::Os::Mac { "cmd+z" } else { "ctrl+z" };
-        assert_eq!(reverse_of("type", &json!({"text": "a\nb"})), Reverse::Shortcut(undo));
-        assert_eq!(reverse_of("key", &json!({"text": "ctrl+x"})), Reverse::Shortcut(undo));
+        assert_eq!(
+            reverse_of("type", &json!({"text": "héllo"})),
+            Reverse::Backspace(5)
+        );
+        let undo = if kor_platform::os() == kor_platform::Os::Mac {
+            "cmd+z"
+        } else {
+            "ctrl+z"
+        };
+        assert_eq!(
+            reverse_of("type", &json!({"text": "a\nb"})),
+            Reverse::Shortcut(undo)
+        );
+        assert_eq!(
+            reverse_of("key", &json!({"text": "ctrl+x"})),
+            Reverse::Shortcut(undo)
+        );
         assert_eq!(reverse_of("left_click", &json!({})), Reverse::ByHand);
         for i in 0..(MAX_STEPS + 2) {
-            push_step(Step { action: format!("a{i}"), input: json!({}), before: String::new() });
+            push_step(Step {
+                action: format!("a{i}"),
+                input: json!({}),
+                before: String::new(),
+            });
         }
-        assert_eq!(pop_step().map(|s| s.action), Some(format!("a{}", MAX_STEPS + 1)));
+        assert_eq!(
+            pop_step().map(|s| s.action),
+            Some(format!("a{}", MAX_STEPS + 1))
+        );
         let mut n = 1;
         while pop_step().is_some() {
             n += 1;
@@ -437,12 +472,30 @@ mod tests {
 
     #[test]
     fn actions_map_to_tiers() {
-        assert_eq!(action_of("screenshot", &json!({})), (Action::Observe, false));
-        assert_eq!(action_of("double_click", &json!({})), (Action::Click, false));
-        assert_eq!(action_of("left_click_drag", &json!({})), (Action::Pointer, false));
-        assert_eq!(action_of("key", &json!({"text": "alt+F4"})), (Action::Type, true));
-        assert_eq!(action_of("key", &json!({"text": "ctrl+s"})), (Action::Type, false));
-        assert_eq!(action_of("type", &json!({"text": "hi"})), (Action::Type, false));
+        assert_eq!(
+            action_of("screenshot", &json!({})),
+            (Action::Observe, false)
+        );
+        assert_eq!(
+            action_of("double_click", &json!({})),
+            (Action::Click, false)
+        );
+        assert_eq!(
+            action_of("left_click_drag", &json!({})),
+            (Action::Pointer, false)
+        );
+        assert_eq!(
+            action_of("key", &json!({"text": "alt+F4"})),
+            (Action::Type, true)
+        );
+        assert_eq!(
+            action_of("key", &json!({"text": "ctrl+s"})),
+            (Action::Type, false)
+        );
+        assert_eq!(
+            action_of("type", &json!({"text": "hi"})),
+            (Action::Type, false)
+        );
     }
 
     /// Reads the real screen (no input is sent). Run with `--ignored` on a desktop session.
@@ -454,7 +507,10 @@ mod tests {
         use kor_computer::live;
         let shot = live::screenshot().unwrap();
         let ((w, h), (rw, rh)) = (shot.size, shot.real);
-        eprintln!("screen {rw}x{rh} -> shot {w}x{h}, {} KB", shot.jpeg_base64.len() / 1024);
+        eprintln!(
+            "screen {rw}x{rh} -> shot {w}x{h}, {} KB",
+            shot.jpeg_base64.len() / 1024
+        );
         assert!(w <= MAX_SHOT_WIDTH && w > 0 && h > 0 && shot.jpeg_base64.len() > 1000);
         let (x, y) = live::map_point(i64::from(w) - 1, i64::from(h) - 1).unwrap();
         eprintln!("bottom-right of shot maps to input ({x}, {y})");

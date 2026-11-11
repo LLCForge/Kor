@@ -20,7 +20,9 @@ pub fn bytes(name: &str) -> Option<&'static [u8]> {
 /// The sound written once to Kor's cache folder (players take a file path).
 fn file(name: &str) -> Option<PathBuf> {
     let data = bytes(name)?;
-    let path = crate::cache_dir()?.join("sounds").join(format!("{name}.wav"));
+    let path = crate::cache_dir()?
+        .join("sounds")
+        .join(format!("{name}.wav"));
     if std::fs::metadata(&path).map(|m| m.len()).ok() != Some(data.len() as u64) {
         std::fs::create_dir_all(path.parent()?).ok()?;
         std::fs::write(&path, data).ok()?;
@@ -36,7 +38,10 @@ fn players(path: &std::path::Path) -> Vec<std::process::Command> {
             let mut c = std::process::Command::new("powershell");
             c.no_window();
             // The path is ours (cache folder); single quotes are doubled for PowerShell.
-            let script = format!("(New-Object Media.SoundPlayer '{}').PlaySync()", p.replace('\'', "''"));
+            let script = format!(
+                "(New-Object Media.SoundPlayer '{}').PlaySync()",
+                p.replace('\'', "''")
+            );
             c.args(["-NoProfile", "-NonInteractive", "-Command", &script]);
             vec![c]
         }

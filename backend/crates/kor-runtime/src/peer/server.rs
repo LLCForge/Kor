@@ -116,7 +116,8 @@ async fn handle(node: &Node, peer: PeerEntry, mut link: Link) -> Result<(), Stri
             link.send(json!({ "type": "status", "load": load }))
         }
         "tasks" => return tasks(node, &peer, link, &open).await,
-        "result" => result(node, &peer, &open).and_then(|r| link.send(json!({ "type": "result", "result": r }))),
+        "result" => result(node, &peer, &open)
+            .and_then(|r| link.send(json!({ "type": "result", "result": r }))),
         "sync" => sync(node, &peer, &open).and_then(|v| link.send(v)),
         "standby" => standby::serve(node, &peer, &open).and_then(|v| link.send(v)),
         other => Err(format!("unknown channel {other}")),
@@ -132,7 +133,11 @@ async fn handle(node: &Node, peer: PeerEntry, mut link: Link) -> Result<(), Stri
 /// Delegated tasks running or waiting for an answer, every peer together.
 fn running_tasks(node: &Node) -> u32 {
     let mut n = 0u32;
-    for d in std::fs::read_dir(node.dir.join("tasks")).into_iter().flatten().flatten() {
+    for d in std::fs::read_dir(node.dir.join("tasks"))
+        .into_iter()
+        .flatten()
+        .flatten()
+    {
         let store = crate::remote::TaskStore { dir: d.path() };
         n += u32::try_from(
             store
@@ -163,7 +168,10 @@ pub async fn load(node: &Node) -> Load {
 
 /// `~/x` → the home directory's `x`.
 fn expand_home(p: &str) -> PathBuf {
-    match (p.strip_prefix("~/").or_else(|| p.strip_prefix("~\\")), dirs::home_dir()) {
+    match (
+        p.strip_prefix("~/").or_else(|| p.strip_prefix("~\\")),
+        dirs::home_dir(),
+    ) {
         (Some(rest), Some(h)) => h.join(rest),
         _ if p == "~" => dirs::home_dir().unwrap_or_default(),
         _ => PathBuf::from(p),
@@ -183,7 +191,9 @@ fn granted_dir(grant: &Grant, dir: &str) -> Result<PathBuf, String> {
             return Ok(kor_tools::without_verbatim(&want));
         }
     }
-    Err(format!("the peer policy of this machine does not grant {dir}"))
+    Err(format!(
+        "the peer policy of this machine does not grant {dir}"
+    ))
 }
 
 /// Create a delegated task: its workspace, metadata, first message and worker.
@@ -283,7 +293,12 @@ async fn tasks(node: &Node, peer: &PeerEntry, link: Link, open: &Value) -> Resul
 }
 
 /// The remote-serve relay (ADR 0044) over the Noise link, scoped to this peer's tasks.
-async fn relay(node: &Node, peer: &PeerEntry, link: Link, first: Vec<Command>) -> Result<(), String> {
+async fn relay(
+    node: &Node,
+    peer: &PeerEntry,
+    link: Link,
+    first: Vec<Command>,
+) -> Result<(), String> {
     let store = node.store(&peer.name);
     let (mut in_w, in_r) = tokio::io::duplex(1 << 20);
     let (out_w, out_r) = tokio::io::duplex(1 << 20);
@@ -302,7 +317,9 @@ async fn relay(node: &Node, peer: &PeerEntry, link: Link, first: Vec<Command>) -
             match serde_json::from_value::<Command>(v) {
                 // New tasks come with a workspace through `open`, never as a bare send.
                 Ok(Command::Send { task: None, .. }) => {
-                    let _ = err_tx.send(json!({ "type": "error", "message": "start tasks with kor peer run" }));
+                    let _ = err_tx.send(
+                        json!({ "type": "error", "message": "start tasks with kor peer run" }),
+                    );
                 }
                 Ok(c) => {
                     if in_w.write_all(c.frame().as_bytes()).await.is_err() {
@@ -310,7 +327,8 @@ async fn relay(node: &Node, peer: &PeerEntry, link: Link, first: Vec<Command>) -
                     }
                 }
                 Err(e) => {
-                    let _ = err_tx.send(json!({ "type": "error", "message": format!("bad command: {e}") }));
+                    let _ = err_tx
+                        .send(json!({ "type": "error", "message": format!("bad command: {e}") }));
                 }
             }
         }
@@ -358,7 +376,11 @@ fn result(node: &Node, peer: &PeerEntry, open: &Value) -> Result<TaskResult, Str
     .map_err(|e| e.to_string())?;
     let changes = snapshot::changes(&bundle, &meta.root)?;
     let diff = snapshot::diff(&changes);
-    super::audit("result", &peer.name, json!({ "task": task, "files": changes.len() }));
+    super::audit(
+        "result",
+        &peer.name,
+        json!({ "task": task, "files": changes.len() }),
+    );
     Ok(TaskResult {
         task: task.to_owned(),
         state,
@@ -368,7 +390,10 @@ fn result(node: &Node, peer: &PeerEntry, open: &Value) -> Result<TaskResult, Str
 }
 
 fn sync(node: &Node, peer: &PeerEntry, open: &Value) -> Result<Value, String> {
-    let home = node.knowledge_home.as_deref().ok_or("no knowledge base here")?;
+    let home = node
+        .knowledge_home
+        .as_deref()
+        .ok_or("no knowledge base here")?;
     let theirs: Vec<kor_memory::Record> =
         serde_json::from_value(open["records"].clone()).map_err(|e| format!("bad records: {e}"))?;
     let ours = merge::snapshot(merge::local_records(home)?);
@@ -387,7 +412,9 @@ fn sync(node: &Node, peer: &PeerEntry, open: &Value) -> Result<Value, String> {
     } else {
         super::audit("sync", &peer.name, json!({ "read_only": true }));
     }
-    Ok(json!({ "type": "synced", "merged": out.merged, "conflicts": out.conflicts, "applied": applied }))
+    Ok(
+        json!({ "type": "synced", "merged": out.merged, "conflicts": out.conflicts, "applied": applied }),
+    )
 }
 
 /// `kor peer serve --stdio`: one session on this process's stdin/stdout (the SSH route).

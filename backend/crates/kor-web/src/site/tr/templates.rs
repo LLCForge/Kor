@@ -8,7 +8,10 @@
 pub fn payment(provider: &str) -> Option<Vec<(String, String)>> {
     match provider {
         "iyzico" => Some(vec![
-            ("iyzico/composer.json".into(), "{\n  \"require\": {\n    \"iyzico/iyzipay-php\": \"^2.0\"\n  }\n}\n".into()),
+            (
+                "iyzico/composer.json".into(),
+                "{\n  \"require\": {\n    \"iyzico/iyzipay-php\": \"^2.0\"\n  }\n}\n".into(),
+            ),
             ("iyzico/checkout.php".into(), IYZICO.into()),
             ("iyzico/callback.php".into(), IYZICO_CALLBACK.into()),
         ]),

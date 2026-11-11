@@ -258,10 +258,22 @@ pub fn run(ctx: &Ctx, cmd: &ForkCmd) -> anyhow::Result<bool> {
                 None => println!("{}", l.t("fork-no-worktree")),
             }
             if !f.rewound.is_empty() {
-                println!("{}", l.t_args("fork-rewound", &args!("count" => f.rewound.len(), "files" => f.rewound.join(", "))));
+                println!(
+                    "{}",
+                    l.t_args(
+                        "fork-rewound",
+                        &args!("count" => f.rewound.len(), "files" => f.rewound.join(", "))
+                    )
+                );
             }
             if !f.unrestored.is_empty() {
-                println!("{}", l.t_args("fork-unrestored", &args!("files" => f.unrestored.join(", "))));
+                println!(
+                    "{}",
+                    l.t_args(
+                        "fork-unrestored",
+                        &args!("files" => f.unrestored.join(", "))
+                    )
+                );
             }
             if f.shell_after {
                 println!("{}", l.t("fork-shell-after"));

@@ -56,7 +56,11 @@ impl std::str::FromStr for Shell {
     fn from_str(s: &str) -> Result<Self, String> {
         Self::ALL
             .into_iter()
-            .find(|sh| sh.name() == s || (s == "pwsh" && *sh == Self::PowerShell) || (s == "nu" && *sh == Self::Nushell))
+            .find(|sh| {
+                sh.name() == s
+                    || (s == "pwsh" && *sh == Self::PowerShell)
+                    || (s == "nu" && *sh == Self::Nushell)
+            })
             .ok_or_else(|| format!("unknown shell `{s}`"))
     }
 }
@@ -117,21 +121,39 @@ pub fn plan(shell: Shell, d: &Dirs) -> Plan {
         },
         Shell::Zsh => {
             let file = kor_dir.join("_kor");
-            let line = format!("(( $+functions[compdef] )) && source \"{}\" {MARK}", quoted(&file));
-            Plan { shell, profile: Some((d.home.join(".zshrc"), line)), file }
+            let line = format!(
+                "(( $+functions[compdef] )) && source \"{}\" {MARK}",
+                quoted(&file)
+            );
+            Plan {
+                shell,
+                profile: Some((d.home.join(".zshrc"), line)),
+                file,
+            }
         }
         Shell::PowerShell => {
             let file = kor_dir.join("kor.ps1");
             let profile = if d.windows {
-                d.documents.join("PowerShell").join("Microsoft.PowerShell_profile.ps1")
+                d.documents
+                    .join("PowerShell")
+                    .join("Microsoft.PowerShell_profile.ps1")
             } else {
-                d.home.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
+                d.home
+                    .join(".config/powershell/Microsoft.PowerShell_profile.ps1")
             };
             let line = format!(". \"{}\" {MARK}", quoted(&file));
-            Plan { shell, profile: Some((profile, line)), file }
+            Plan {
+                shell,
+                profile: Some((profile, line)),
+                file,
+            }
         }
         Shell::Elvish => {
-            let base = if d.windows { d.config.join("elvish") } else { d.home.join(".config/elvish") };
+            let base = if d.windows {
+                d.config.join("elvish")
+            } else {
+                d.home.join(".config/elvish")
+            };
             Plan {
                 shell,
                 file: base.join("lib").join("kor.elv"),

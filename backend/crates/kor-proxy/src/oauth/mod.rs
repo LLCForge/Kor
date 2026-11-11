@@ -705,7 +705,11 @@ pub fn list_accounts(dir: &Path) -> Vec<AccountEntry> {
         if file_name.is_empty() {
             continue;
         }
-        let pool_id = if in_pool { label.clone() } else { String::new() };
+        let pool_id = if in_pool {
+            label.clone()
+        } else {
+            String::new()
+        };
         out.push(AccountEntry {
             file_name,
             provider,
@@ -716,7 +720,11 @@ pub fn list_accounts(dir: &Path) -> Vec<AccountEntry> {
             in_pool,
         });
     }
-    out.sort_by(|left, right| left.label.cmp(&right.label).then(left.file_name.cmp(&right.file_name)));
+    out.sort_by(|left, right| {
+        left.label
+            .cmp(&right.label)
+            .then(left.file_name.cmp(&right.file_name))
+    });
     out
 }
 
@@ -731,11 +739,7 @@ pub fn options_from_settings(settings: &crate::config::Settings, open_browser: b
 }
 
 /// Run a full subscription login; `on_prompt` runs before waiting for approval (for UI or logs).
-pub async fn login_with<F>(
-    provider: Provider,
-    opts: &Options,
-    on_prompt: F,
-) -> Result<Saved, Error>
+pub async fn login_with<F>(provider: Provider, opts: &Options, on_prompt: F) -> Result<Saved, Error>
 where
     F: FnOnce(&Prompt),
 {
@@ -745,7 +749,11 @@ where
 }
 
 /// Update Kor routing metadata on an auth file (`kor.weight`, `kor.priority`).
-pub fn set_account_meta(path: &Path, weight: Option<u32>, priority: Option<i64>) -> Result<(), Error> {
+pub fn set_account_meta(
+    path: &Path,
+    weight: Option<u32>,
+    priority: Option<i64>,
+) -> Result<(), Error> {
     let text = std::fs::read_to_string(path).map_err(|e| err(format!("read auth file: {e}")))?;
     let mut doc: Value =
         serde_json::from_str(&text).map_err(|e| err(format!("auth file is not JSON: {e}")))?;

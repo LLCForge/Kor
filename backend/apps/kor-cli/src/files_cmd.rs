@@ -74,11 +74,19 @@ pub(crate) fn print_rows(l: &Localizer, rows: &[Row], cwd: &Path) {
             .map_or_else(|_| s.to_owned(), |p| p.display().to_string())
     };
     for r in rows {
-        let detail = if r.detail.is_empty() { String::new() } else { format!("  ({})", r.detail) };
+        let detail = if r.detail.is_empty() {
+            String::new()
+        } else {
+            format!("  ({})", r.detail)
+        };
         println!(
             "  {:<16} {}  →  {}{detail}",
             l.t(&format!("files-op-{}", r.op.replace('_', "-"))),
-            r.from.split(", ").map(&short).collect::<Vec<_>>().join(", "),
+            r.from
+                .split(", ")
+                .map(&short)
+                .collect::<Vec<_>>()
+                .join(", "),
             short(&r.to)
         );
     }
@@ -98,10 +106,13 @@ pub fn run(ctx: &Ctx, a: &FilesArgs) -> anyhow::Result<bool> {
         return Ok(false);
     };
     let loaded = ctx.config.as_ref().map_err(|e| anyhow::anyhow!("{e}"))?;
-    let (provider, model) =
-        kor_runtime::oneshot_provider(l, loaded, a.model.as_deref()).map_err(|e| anyhow::anyhow!(e))?;
+    let (provider, model) = kor_runtime::oneshot_provider(l, loaded, a.model.as_deref())
+        .map_err(|e| anyhow::anyhow!(e))?;
     let planner = ProviderPlanner { provider, model };
-    println!("{}", l.t_args("files-planning", &args!("count" => files.len())));
+    println!(
+        "{}",
+        l.t_args("files-planning", &args!("count" => files.len()))
+    );
     let plan = crate::providers::runtime()?
         .block_on(batch::plan(&planner, &files, &instruction))
         .map_err(|e| anyhow::anyhow!(e))?;
@@ -118,16 +129,26 @@ pub fn run(ctx: &Ctx, a: &FilesArgs) -> anyhow::Result<bool> {
         println!("\n{}", l.t("files-dry-run"));
         return Ok(true);
     }
-    if !crate::shell_cmd::confirm(l, &l.t_args("files-confirm", &args!("count" => plan.steps.len())), a.yes) {
+    if !crate::shell_cmd::confirm(
+        l,
+        &l.t_args("files-confirm", &args!("count" => plan.steps.len())),
+        a.yes,
+    ) {
         return Ok(false);
     }
     let out = batch::apply(&plan, kor_runtime::undo_dir().as_deref());
-    println!("{}", l.t_args("files-applied", &args!("count" => out.done.len())));
+    println!(
+        "{}",
+        l.t_args("files-applied", &args!("count" => out.done.len()))
+    );
     for (r, e) in &out.failed {
         eprintln!("  ✗ {}: {e}", r.from);
     }
     if let Some(id) = &out.undo {
-        println!("{}", l.t_args("files-undo", &args!("session" => id.clone())));
+        println!(
+            "{}",
+            l.t_args("files-undo", &args!("session" => id.clone()))
+        );
     }
     Ok(out.failed.is_empty())
 }
@@ -148,10 +169,16 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         std::fs::write(d.path().join("a.jpg"), "").unwrap();
         let t = T::try_parse_from(["files", "--task", "webp yap", "*.jpg", "--dry-run"]).unwrap();
-        assert_eq!(split(&t.a, d.path()), (Some("webp yap".into()), vec!["*.jpg".into()]));
+        assert_eq!(
+            split(&t.a, d.path()),
+            (Some("webp yap".into()), vec!["*.jpg".into()])
+        );
         assert!(t.a.dry_run);
         let t = T::try_parse_from(["files", "boşlukları tire yap", "*.jpg", "a.jpg"]).unwrap();
-        assert_eq!(split(&t.a, d.path()).0.as_deref(), Some("boşlukları tire yap"));
+        assert_eq!(
+            split(&t.a, d.path()).0.as_deref(),
+            Some("boşlukları tire yap")
+        );
         // Only paths: the instruction is asked for.
         let t = T::try_parse_from(["files", "a.jpg"]).unwrap();
         assert_eq!(split(&t.a, d.path()), (None, vec!["a.jpg".into()]));

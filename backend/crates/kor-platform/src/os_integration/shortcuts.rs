@@ -26,10 +26,22 @@ pub struct Shortcut {
 }
 
 pub const ALL: [Shortcut; 4] = [
-    Shortcut { file: "kor-send", action: Action::Send },
-    Shortcut { file: "kor-start-task", action: Action::Start },
-    Shortcut { file: "kor-last-reply", action: Action::LastReply },
-    Shortcut { file: "kor-approve", action: Action::Approve },
+    Shortcut {
+        file: "kor-send",
+        action: Action::Send,
+    },
+    Shortcut {
+        file: "kor-start-task",
+        action: Action::Start,
+    },
+    Shortcut {
+        file: "kor-last-reply",
+        action: Action::LastReply,
+    },
+    Shortcut {
+        file: "kor-approve",
+        action: Action::Approve,
+    },
 ];
 
 /// The question "Görev Başlat" asks (localized by the caller; Turkish by default).
@@ -40,12 +52,16 @@ pub struct Texts {
 
 impl Default for Texts {
     fn default() -> Self {
-        Self { ask: "Kor ne yapsın?".into() }
+        Self {
+            ask: "Kor ne yapsın?".into(),
+        }
     }
 }
 
 fn esc(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 fn key(k: &str, v: &str) -> String {
@@ -116,7 +132,10 @@ pub fn workflow_with(s: Shortcut, kor: &str, t: &Texts) -> String {
         ));
         v.push(action(
             "is.workflow.actions.gettext",
-            &[key("WFTextActionText", &token("kor://task?prompt=", ENCODED, "URL Encoded Text"))],
+            &[key(
+                "WFTextActionText",
+                &token("kor://task?prompt=", ENCODED, "URL Encoded Text"),
+            )],
         ));
         v.push(action("is.workflow.actions.openurl", &[]));
         v
@@ -127,7 +146,10 @@ pub fn workflow_with(s: Shortcut, kor: &str, t: &Texts) -> String {
                 "is.workflow.actions.runshellscript",
                 &[
                     uuid(SCRIPT),
-                    key("Script", &string(&format!("{} os-integration {sub}", sh_quote(kor)))),
+                    key(
+                        "Script",
+                        &string(&format!("{} os-integration {sub}", sh_quote(kor))),
+                    ),
                     key("Shell", &string("/bin/zsh")),
                     key("InputMode", &string("to stdin")),
                 ],
@@ -198,16 +220,22 @@ mod tests {
         assert!(x.contains(&format!("<string>{ENCODED}</string>")));
         let send = workflow(ALL[0], "kor");
         assert!(!send.contains("actions.ask"));
-        assert!(send.contains("<string>ActionExtension</string>") && send.contains("WFURLContentItem"));
+        assert!(
+            send.contains("<string>ActionExtension</string>") && send.contains("WFURLContentItem")
+        );
     }
 
     #[test]
     fn cli_shortcuts_quote_the_path_and_show_the_result() {
         let x = workflow(ALL[3], "/Users/o'neil/kor & co/kor");
-        assert!(x.contains(r"<string>'/Users/o'\''neil/kor &amp; co/kor' os-integration approve</string>"));
+        assert!(x.contains(
+            r"<string>'/Users/o'\''neil/kor &amp; co/kor' os-integration approve</string>"
+        ));
         assert!(x.contains("is.workflow.actions.showresult"));
         assert!(x.contains("<key>{0, 1}</key>"));
-        let t = Texts { ask: "What should Kor do?".into() };
+        let t = Texts {
+            ask: "What should Kor do?".into(),
+        };
         assert!(workflow_with(ALL[1], "kor", &t).contains("What should Kor do?"));
         assert!(workflow(ALL[2], "kor").contains("os-integration last-reply"));
     }
