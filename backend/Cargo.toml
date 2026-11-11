@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*", "apps/*", "crates/kor-platform/shellext"]
 
 [workspace.package]
-version = "0.8.1"
+version = "0.8.2"
 edition = "2024"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
@@ -11,20 +11,20 @@ repository = "https://github.com/LLCForge/Kor"
 authors = ["Kor contributors"]
 
 [workspace.dependencies]
-kor-core = { path = "crates/kor-core", version = "0.2.1" }
-kor-config = { path = "crates/kor-config", version = "0.6.1" }
+kor-core = { path = "crates/kor-core", version = "0.2.2" }
+kor-config = { path = "crates/kor-config", version = "0.6.2" }
 kor-secrets = { path = "crates/kor-secrets", version = "0.2.1" }
 kor-i18n = { path = "crates/kor-i18n", version = "0.1.6" }
-kor-providers = { path = "crates/kor-providers", version = "0.2.1" }
+kor-providers = { path = "crates/kor-providers", version = "0.2.2" }
 kor-sandbox = { path = "crates/kor-sandbox", version = "0.2.0" }
 kor-tools = { path = "crates/kor-tools", version = "0.2.2" }
-kor-agent = { path = "crates/kor-agent", version = "0.6.1" }
+kor-agent = { path = "crates/kor-agent", version = "0.6.2" }
 kor-compat = { path = "crates/kor-compat", version = "0.2.1" }
-kor-runtime = { path = "crates/kor-runtime", version = "0.6.1" }
+kor-runtime = { path = "crates/kor-runtime", version = "0.6.2" }
 kor-platform = { path = "crates/kor-platform", version = "0.1.3" }
 kor-components = { path = "crates/kor-components", version = "0.1.1" }
 kor-proxy = { path = "crates/kor-proxy", version = "0.0.3" }
-kor-graph = { path = "crates/kor-graph", version = "0.4.0" }
+kor-graph = { path = "crates/kor-graph", version = "0.4.1" }
 kor-memory = { path = "crates/kor-memory", version = "0.2.0" }
 kor-web = { path = "crates/kor-web", version = "0.0.1" }
 kor-computer = { path = "crates/kor-computer", version = "0.0.1", default-features = false }
