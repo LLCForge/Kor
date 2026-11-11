@@ -6314,5 +6314,12 @@
   "Modellere sor": "Ask the models",
   "Geçersiz gölge model: {0}": "Invalid shadow model: {0}",
   "Henüz bir model sağlayıcısı bağlı değil. Hesap gerekmez: bir API anahtarı ekleyin ya da bilgisayarınızdaki yerel modeli (Ollama, LM Studio) kullanın.": "No model provider is connected yet. No account needed: add an API key or use a local model on this computer (Ollama, LM Studio).",
-  "Sağlayıcı bağla": "Connect a provider"
+  "Sağlayıcı bağla": "Connect a provider",
+  "Düğüm ara…": "Search nodes…",
+  "Düğüm bilgisi": "Node info",
+  "Eşleşen düğümler": "Matching nodes",
+  "Graf ayrıntıları": "Graph details",
+  "Topluluklar": "Communities",
+  "Çizim teması": "Canvas theme",
+  "İncelemek için bir düğüme tıkla.": "Click a node to inspect it."
 }

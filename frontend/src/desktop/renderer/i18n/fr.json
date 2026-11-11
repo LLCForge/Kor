@@ -6314,5 +6314,12 @@
   "Modellere sor": "Interroger les modèles",
   "Geçersiz gölge model: {0}": "Modèle ombre invalide : {0}",
   "Henüz bir model sağlayıcısı bağlı değil. Hesap gerekmez: bir API anahtarı ekleyin ya da bilgisayarınızdaki yerel modeli (Ollama, LM Studio) kullanın.": "Aucun fournisseur de modèle n'est encore connecté. Aucun compte nécessaire : ajoutez une clé d'API ou utilisez un modèle local sur cet ordinateur (Ollama, LM Studio).",
-  "Sağlayıcı bağla": "Connecter un fournisseur"
+  "Sağlayıcı bağla": "Connecter un fournisseur",
+  "Düğüm ara…": "Rechercher des nœuds…",
+  "Düğüm bilgisi": "Infos du nœud",
+  "Eşleşen düğümler": "Nœuds correspondants",
+  "Graf ayrıntıları": "Détails du graphe",
+  "Topluluklar": "Communautés",
+  "Çizim teması": "Thème du canevas",
+  "İncelemek için bir düğüme tıkla.": "Cliquez sur un nœud pour l'inspecter."
 }
