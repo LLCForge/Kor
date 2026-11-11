@@ -1,0 +1,16 @@
+# Source: https://www.alibabacloud.com/help/en/model-studio/compatibility-of-openai-with-dashscope
+id = "dashscope-cn"
+name = "Alibaba Cloud Model Studio (China)"
+category = "cloud"
+adapter = "openai_compat"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+auth = { kind = "bearer", env = "DASHSCOPE_CN_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://www.alibabacloud.com/help/en/model-studio/compatibility-of-openai-with-dashscope"
+
+[privacy]
+tier = "standard"
+retention = "Retention per Alibaba Cloud terms (verify)."
+jurisdiction = "CN"

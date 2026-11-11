@@ -1,0 +1,11 @@
+rule cursor/user home/.cursor/rules/global.mdc [always] Global Cursor rule.
+rule cursor/project repo/.cursorrules [always] Legacy cursorrules: prefer small functions.
+rule cursor/project repo/.cursor/rules/agent-requested.mdc [on-request "Database migrations and schema changes"] Migrations are reversible.
+rule cursor/project repo/.cursor/rules/always.mdc [always] Always: answer briefly.
+rule cursor/project repo/.cursor/rules/manual.mdc [manual] Release checklist.
+rule cursor/project repo/.cursor/rules/auto-attached.mdc [globs src/**/*.ts src/**/*.tsx] TypeScript: strict mode.
+rule cursor/project repo/.cursor/rules/nested/testing.mdc [globs **/*.test.ts] Use vitest.
+command /review cursor/project repo/.cursor/commands/review.md
+mcp browser cursor/user home/.cursor/mcp.json
+mcp github cursor/project repo/.cursor/mcp.json
+mcp postgres cursor/project repo/.cursor/mcp.json

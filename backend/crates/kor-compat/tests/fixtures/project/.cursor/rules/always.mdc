@@ -1,0 +1,5 @@
+---
+description: Base style
+alwaysApply: true
+---
+Never use var.

@@ -1,0 +1,7 @@
+---
+source: apps/kor-cli/src/brand.rs
+expression: "shown(&banner_depth(Depth::Ansi256, true))"
+---
+\e[38;5;221m   ▄▄ ▄▄  ▄▄▄  ▄▄▄\e[39m
+\e[38;5;214m   ██▄█  ██ ██ ██▄▀\e[39m
+\e[38;5;208m   ██ ▀▄ ▀███▀ ██ ▀▄\e[39m

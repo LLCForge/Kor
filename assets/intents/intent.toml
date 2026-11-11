@@ -1,0 +1,3706 @@
+# Kor intent catalog: maps free text (tr/en/fr) to `kor` CLI commands.
+#
+# One [[intent]] per command. Fields:
+#   command  exact `cli` string from parity.toml (plus intent/tool commands not yet in it)
+#   run      "auto"    = local, read-only, no model/network/money: may run without asking
+#            "confirm" = writes, runs, installs, calls a model or the network: ask first
+#            "never"   = entry point that free text must never route to (phrases empty)
+#   tr/en/fr example phrases; the matcher normalizes them (lowercase, Turkish letters
+#            folded, apostrophes dropped, suffix prefix-matching, stopwords removed)
+#   params   optional arguments: { name, kind = path|text|number|url|domain, required, flag? }
+#            `flag` is set when the value is passed as `--flag value` instead of positionally
+#   tokens   rough total LLM tokens of one run (only for commands that call a model)
+#   eta_s    rough seconds one run takes
+
+[[intent]]
+command = "kor"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor resume"
+run = "confirm"
+tr = ["son oturumu sürdür", "önceki oturuma devam et", "kaldığım oturumdan devam", "eski konuşmayı sürdür"]
+en = ["resume my last session", "continue the previous session", "pick up where I left off", "reopen the last conversation"]
+fr = ["reprendre la dernière session", "continuer la session précédente", "reprendre la session précédente"]
+params = [{ name = "id", kind = "text", required = false }]
+eta_s = 2
+
+[[intent]]
+command = "kor sessions"
+run = "auto"
+tr = ["oturumları listele", "oturumlarımı göster", "geçmiş oturumlar", "hangi oturumlar var", "kayıtlı sohbetleri listele"]
+en = ["list sessions", "show my sessions", "past sessions", "which sessions do I have", "list saved conversations"]
+fr = ["liste des sessions", "affiche mes sessions", "sessions précédentes"]
+eta_s = 1
+
+[[intent]]
+command = "kor compat status"
+run = "auto"
+tr = ["uyumluluk durumu", "hangi araç dosyaları okundu", "claude md agents md okundu mu", "uyumluluk durumunu göster"]
+en = ["compat status", "which tool files were read", "show compatibility status", "did kor read claude md and agents md"]
+fr = ["état de compatibilité", "quels fichiers d'outils ont été lus"]
+eta_s = 1
+
+[[intent]]
+command = "kor compat conflicts"
+run = "auto"
+tr = ["uyumluluk çakışmalarını göster", "araçlar arası kural çakışmaları", "çakışan kuralları listele"]
+en = ["show compat conflicts", "conflicting rules between tools", "list rule conflicts across tools"]
+fr = ["conflits de compatibilité", "règles en conflit entre outils"]
+eta_s = 1
+
+[[intent]]
+command = "kor compat export"
+run = "confirm"
+tr = ["kor kurallarını başka araca aktar", "kuralları cursor biçimine dışa aktar", "kuralları claude biçimine çevir"]
+en = ["export kor rules to another tool", "export rules for cursor", "convert my rules to claude format"]
+fr = ["exporter les règles kor vers un autre outil", "convertir les règles pour cursor"]
+params = [{ name = "to", kind = "text", required = true, flag = "--to" }]
+eta_s = 2
+
+[[intent]]
+command = "kor trust"
+run = "confirm"
+tr = ["bu projeye güven", "projeyi güvenilir yap", "klasöre güven ver", "proje güvenini kaldır"]
+en = ["trust this project", "mark this folder as trusted", "trust the workspace", "revoke project trust"]
+fr = ["faire confiance à ce projet", "marquer le dossier comme fiable"]
+eta_s = 1
+
+[[intent]]
+command = "kor doctor"
+run = "auto"
+tr = ["ortamı tanıla", "kor doctor çalıştır", "kurulumda sorun var mı", "ortam kontrolü yap", "sistem sağlık kontrolü", "kor neden çalışmıyor"]
+en = ["run doctor", "diagnose my environment", "check my setup", "is my installation ok", "environment health check", "why is kor not working"]
+fr = ["diagnostiquer l'environnement", "vérifier mon installation", "lancer le doctor"]
+eta_s = 3
+
+[[intent]]
+command = "kor catalog"
+run = "confirm"
+tr = ["model kataloğunu göster", "modellerin fiyat ve hızları", "hangi model daha zeki", "model karşılaştırma tablosu"]
+en = ["show the model catalog", "model prices and speeds", "which model is smartest", "model comparison table"]
+fr = ["catalogue des modèles", "prix et vitesse des modèles"]
+params = [{ name = "model", kind = "text", required = false }]
+eta_s = 3
+
+[[intent]]
+command = "kor hooks list"
+run = "auto"
+tr = ["kancaları listele", "tanımlı hookları göster", "hangi kancalar var"]
+en = ["list hooks", "show configured hooks", "which hooks are set up"]
+fr = ["lister les hooks", "afficher les hooks configurés"]
+eta_s = 1
+
+[[intent]]
+command = "kor undo"
+run = "confirm"
+tr = ["oturumun değişikliklerini geri al", "kor'un yaptığı değişiklikleri geri al", "ajanın dosya değişikliklerini geri al", "son oturumu geri al", "yapılan dosya düzenlemelerini geri sar"]
+en = ["undo the session's changes", "revert what kor changed", "undo the agent's file edits", "roll back the last session", "revert every file change of the session"]
+fr = ["annuler les changements de la session", "défaire les modifications de l'agent", "revenir avant la session", "défaire les changements de l'agent"]
+eta_s = 2
+
+[[intent]]
+command = "kor component list"
+run = "auto"
+tr = ["bileşenleri listele", "yardımcı programları göster", "hangi bileşenler kurulu"]
+en = ["list components", "show helper components", "which components are installed"]
+fr = ["lister les composants", "composants installés"]
+eta_s = 1
+
+[[intent]]
+command = "kor component add"
+run = "confirm"
+tr = ["bileşen kur", "chromium bileşenini indir", "python bileşenini yükle", "ocr modelini kur"]
+en = ["install a component", "download the chromium component", "add the python component", "install the ocr models"]
+fr = ["installer un composant", "télécharger le composant chromium"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 60
+
+[[intent]]
+command = "kor component install"
+run = "confirm"
+tr = ["bütün bileşenleri kur", "tüm yardımcı programları indir", "bileşenlerin hepsini yükle"]
+en = ["install all components", "download every helper component", "install every component"]
+fr = ["installer tous les composants", "télécharger tous les composants"]
+eta_s = 300
+
+[[intent]]
+command = "kor component update"
+run = "confirm"
+tr = ["bileşenleri güncelle", "eski bileşenleri yenile", "yardımcı programları güncelle"]
+en = ["update components", "upgrade outdated components", "update helper programs"]
+fr = ["mettre à jour les composants", "actualiser les composants"]
+eta_s = 120
+
+[[intent]]
+command = "kor component verify"
+run = "auto"
+tr = ["bileşenleri doğrula", "kurulu bileşenler bozuk mu", "bileşen dosyalarını denetle"]
+en = ["verify components", "are my components corrupted", "check installed components"]
+fr = ["vérifier les composants", "contrôler les composants installés"]
+eta_s = 20
+
+[[intent]]
+command = "kor component remove"
+run = "confirm"
+tr = ["bileşeni sil", "kurulu bileşeni kaldır", "chromium bileşenini kaldır"]
+en = ["remove a component", "uninstall the component", "delete the chromium component"]
+fr = ["supprimer un composant", "désinstaller le composant"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor auth login"
+run = "confirm"
+tr = ["api anahtarı ekle", "anahtarımı kaydet", "sağlayıcıya giriş yap", "openai anahtarımı gir"]
+en = ["add an api key", "log in to a provider", "save my api key", "set my openai key"]
+fr = ["ajouter une clé api", "se connecter au fournisseur"]
+params = [{ name = "provider", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor auth status"
+run = "auto"
+tr = ["anahtar durumu", "hangi api anahtarları kayıtlı", "anahtarlarım tanımlı mı"]
+en = ["auth status", "which api keys are saved", "are my keys configured"]
+fr = ["état des clés api", "quelles clés sont enregistrées"]
+eta_s = 1
+
+[[intent]]
+command = "kor auth logout"
+run = "confirm"
+tr = ["api anahtarını sil", "sağlayıcıdan çıkış yap", "anahtarımı kaldır"]
+en = ["remove my api key", "log out of the provider", "delete the stored key", "delete my api key for a provider"]
+fr = ["supprimer la clé api", "se déconnecter du fournisseur"]
+params = [{ name = "provider", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor provider test"
+run = "confirm"
+tr = ["sağlayıcıyı sına", "sağlayıcı bağlantısını test et", "api çalışıyor mu dene"]
+en = ["test the provider", "check the provider connection", "does the api endpoint work"]
+fr = ["tester le fournisseur", "vérifier la connexion au fournisseur"]
+params = [{ name = "id", kind = "text", required = true }]
+tokens = 50
+eta_s = 5
+
+[[intent]]
+command = "kor provider status"
+run = "confirm"
+tr = ["sağlayıcı sağlığı", "sağlayıcı gecikme ve hata oranı", "sağlayıcılar ayakta mı"]
+en = ["provider health", "provider latency and error rate", "are the providers up"]
+fr = ["santé des fournisseurs", "latence des fournisseurs"]
+eta_s = 5
+
+[[intent]]
+command = "kor proxy serve"
+run = "confirm"
+tr = ["proxy sunucusunu başlat", "yerel api proxy'si aç", "openai uyumlu proxy çalıştır"]
+en = ["start the proxy server", "serve the local api proxy", "run an openai compatible proxy"]
+fr = ["démarrer le serveur proxy", "lancer le proxy local"]
+eta_s = 2
+
+[[intent]]
+command = "kor proxy status"
+run = "confirm"
+tr = ["proxy durumu", "proxy kullanım sayaçları", "proxy çalışıyor mu"]
+en = ["proxy status", "proxy usage counters", "is the proxy running"]
+fr = ["état du proxy", "compteurs d'utilisation du proxy"]
+eta_s = 1
+
+[[intent]]
+command = "kor proxy key"
+run = "auto"
+tr = ["proxy anahtarını göster", "proxy erişim anahtarı", "proxy key nedir"]
+en = ["show the proxy key", "proxy access key", "what is my proxy key"]
+fr = ["afficher la clé du proxy", "clé d'accès du proxy"]
+eta_s = 1
+
+[[intent]]
+command = "kor provider add"
+run = "confirm"
+tr = ["yeni sağlayıcı ekle", "özel uç nokta ekle", "yerel model sunucusu ekle", "ollama sunucusunu ekle"]
+en = ["add a provider", "add a custom endpoint", "add a local model server", "register my ollama server"]
+fr = ["ajouter un fournisseur", "ajouter un point de terminaison personnalisé"]
+params = [{ name = "id", kind = "text", required = true }, { name = "url", kind = "url", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor provider remove"
+run = "confirm"
+tr = ["sağlayıcıyı kaldır", "eklediğim sağlayıcıyı sil", "özel ucu sil"]
+en = ["remove a provider", "delete the custom provider", "drop that endpoint"]
+fr = ["supprimer un fournisseur", "retirer le fournisseur ajouté"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor provider discover"
+run = "confirm"
+tr = ["yerel sunucuları keşfet", "bilgisayardaki model sunucularını bul", "ollama veya lm studio açık mı bul"]
+en = ["discover local servers", "find local model servers", "detect ollama or lm studio", "find model servers on this machine"]
+fr = ["découvrir les serveurs locaux", "trouver les serveurs de modèles locaux"]
+eta_s = 3
+
+[[intent]]
+command = "kor provider keys"
+run = "auto"
+tr = ["anahtar havuzunu göster", "key havuzunda neler var", "yedek anahtarları listele"]
+en = ["show the key pool", "list failover keys", "which keys are in the pool"]
+fr = ["afficher le pool de clés", "lister les clés de secours"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor provider add-key"
+run = "confirm"
+tr = ["havuza anahtar ekle", "yedek api anahtarı ekle", "failover için key ekle"]
+en = ["add a key to the pool", "add a failover key", "add a backup api key"]
+fr = ["ajouter une clé au pool", "ajouter une clé de secours"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor provider remove-key"
+run = "confirm"
+tr = ["havuzdan anahtar sil", "yedek anahtarı kaldır", "key havuzundan bir anahtarı çıkar"]
+en = ["remove a key from the pool", "delete a failover key", "drop a pooled key"]
+fr = ["retirer une clé du pool", "supprimer une clé de secours"]
+params = [{ name = "id", kind = "text", required = true }, { name = "slot", kind = "number", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor config explain"
+run = "auto"
+tr = ["etkin ayarları göster", "ayarlar nereden geliyor", "geçerli yapılandırmayı açıkla", "config değerlerini göster"]
+en = ["show effective settings", "explain my config", "where do my settings come from", "show the current configuration"]
+fr = ["afficher la configuration effective", "expliquer ma configuration"]
+eta_s = 1
+
+[[intent]]
+command = "kor config paths"
+run = "auto"
+tr = ["ayar dosyası yolları", "config dosyası nerede", "ayar dosyaları hangi klasörde"]
+en = ["config file paths", "where is the config file", "show settings file locations"]
+fr = ["chemins des fichiers de configuration", "où est le fichier de configuration"]
+eta_s = 1
+
+[[intent]]
+command = "kor config set"
+run = "confirm"
+tr = ["ayarı değiştir", "kor ayarını güncelle", "yapılandırma değeri ata"]
+en = ["change a setting", "set a config value", "update the kor configuration"]
+fr = ["modifier un paramètre", "changer la configuration de kor"]
+params = [{ name = "key", kind = "text", required = true }, { name = "value", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor providers"
+run = "auto"
+tr = ["sağlayıcıları listele", "hangi sağlayıcılar tanımlı", "kayıtlı sağlayıcılar"]
+en = ["list providers", "which providers are configured", "show my providers"]
+fr = ["lister les fournisseurs", "fournisseurs configurés"]
+eta_s = 1
+
+[[intent]]
+command = "kor models"
+run = "confirm"
+tr = ["modelleri listele", "kullanabileceğim modeller", "hangi modeller var"]
+en = ["list models", "which models can I use", "show available models"]
+fr = ["lister les modèles", "modèles disponibles"]
+params = [{ name = "provider", kind = "text", required = false, flag = "--provider" }]
+eta_s = 4
+
+[[intent]]
+command = "kor chat"
+run = "confirm"
+tr = ["araçsız tek soru sor", "modele tek istem gönder", "tek seferlik sohbet"]
+en = ["one shot prompt without tools", "ask the model a single question", "plain chat with no tools"]
+fr = ["poser une seule question au modèle", "invite unique sans outils"]
+params = [{ name = "model", kind = "text", required = true, flag = "--model" }, { name = "prompt", kind = "text", required = true }]
+tokens = 2000
+eta_s = 10
+
+[[intent]]
+command = "kor mcp"
+run = "auto"
+tr = ["mcp sunucularını göster", "tanımlı mcp sunucuları", "mcp listesi"]
+en = ["show mcp servers", "configured mcp servers", "mcp overview"]
+fr = ["afficher les serveurs mcp", "serveurs mcp configurés"]
+eta_s = 1
+
+[[intent]]
+command = "kor mcp serve"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor chrome-native-host"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor plugin marketplace add"
+run = "confirm"
+tr = ["eklenti pazarı ekle", "yeni eklenti marketi ekle", "marketplace kaynağı ekle"]
+en = ["add a plugin marketplace", "register a marketplace", "add a marketplace source"]
+fr = ["ajouter une place de marché de plugins", "ajouter un marketplace"]
+params = [{ name = "name", kind = "text", required = true }, { name = "source", kind = "url", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor plugin marketplace list"
+run = "auto"
+tr = ["eklenti pazarlarını listele", "hangi marketler ekli", "marketplace listesi"]
+en = ["list plugin marketplaces", "which marketplaces are added", "show marketplaces"]
+fr = ["lister les places de marché", "marketplaces ajoutés"]
+eta_s = 1
+
+[[intent]]
+command = "kor plugin marketplace remove"
+run = "confirm"
+tr = ["eklenti pazarını kaldır", "marketplace sil", "marketi çıkar", "eklenti marketini sil"]
+en = ["remove a plugin marketplace", "delete the marketplace", "drop that marketplace"]
+fr = ["supprimer une place de marché", "retirer le marketplace"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor plugin install"
+run = "confirm"
+tr = ["eklenti kur", "eklentiyi yükle", "plugin kur"]
+en = ["install a plugin", "add the plugin", "install plugin"]
+fr = ["installer un plugin", "ajouter l'extension"]
+params = [{ name = "plugin", kind = "text", required = true }]
+eta_s = 15
+
+[[intent]]
+command = "kor plugin uninstall"
+run = "confirm"
+tr = ["eklentiyi kaldır", "plugin sil", "eklentiyi kaldırıp sil"]
+en = ["uninstall a plugin", "remove the plugin", "delete plugin"]
+fr = ["désinstaller un plugin", "supprimer l'extension"]
+params = [{ name = "plugin", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor plugin list"
+run = "auto"
+tr = ["eklentileri listele", "kurulu eklentiler", "hangi pluginler var"]
+en = ["list plugins", "installed plugins", "which plugins do I have"]
+fr = ["lister les plugins", "plugins installés"]
+eta_s = 1
+
+[[intent]]
+command = "kor plugin enable"
+run = "confirm"
+tr = ["eklentiyi etkinleştir", "plugini aç", "eklentiyi aktif et"]
+en = ["enable a plugin", "turn the plugin on", "activate plugin"]
+fr = ["activer un plugin", "activer l'extension"]
+params = [{ name = "plugin", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor plugin disable"
+run = "confirm"
+tr = ["eklentiyi devre dışı bırak", "plugini kapat", "eklentiyi pasif yap"]
+en = ["disable a plugin", "turn the plugin off", "deactivate plugin"]
+fr = ["désactiver un plugin", "couper l'extension"]
+params = [{ name = "plugin", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor plugin update"
+run = "confirm"
+tr = ["eklentiyi güncelle", "plugin güncelle", "eklentinin yeni sürümünü kur"]
+en = ["update a plugin", "upgrade the plugin", "update plugin to latest"]
+fr = ["mettre à jour un plugin", "mettre à jour l'extension"]
+params = [{ name = "plugin", kind = "text", required = true }]
+eta_s = 15
+
+[[intent]]
+command = "kor plugin doctor"
+run = "confirm"
+tr = ["eklentiyi doğrula", "eklenti sağlam mı kontrol et", "plugin sorunlarını tanıla"]
+en = ["validate a plugin", "check the plugin for problems", "plugin doctor"]
+fr = ["valider un plugin", "diagnostiquer l'extension"]
+params = [{ name = "plugin", kind = "text", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor --privacy-mode"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor agents"
+run = "auto"
+tr = ["ajanları listele", "hangi alt ajanlar var", "tanımlı ajanlar"]
+en = ["list agents", "which subagents exist", "show available agents", "which subagents are available"]
+fr = ["lister les agents", "agents disponibles"]
+eta_s = 1
+
+[[intent]]
+command = "kor memory"
+run = "auto"
+tr = ["proje belleğini göster", "memory dosyasını göster", "kor ne hatırlıyor", "proje hafızası"]
+en = ["show project memory", "show the memory file", "what does kor remember", "project memory"]
+fr = ["afficher la mémoire du projet", "que retient kor"]
+eta_s = 1
+
+[[intent]]
+command = "kor connections"
+run = "auto"
+tr = ["bağlantıları listele", "ssh ve veritabanı bağlantıları", "kayıtlı sunucu bağlantıları"]
+en = ["list connections", "ssh and database connections", "saved server connections"]
+fr = ["lister les connexions", "connexions ssh et base de données"]
+eta_s = 1
+
+[[intent]]
+command = "kor cost"
+run = "auto"
+tr = ["maliyetimi göster", "ne kadar harcadım", "harcamalarımı göster", "bu ayki maliyet", "kullanım ve maliyet", "toplam harcama ne kadar", "model masrafları", "maliyetlerimi göster"]
+en = ["show my cost", "how much did I spend", "show spending", "cost this month", "usage and cost", "what is my total spend", "model spending"]
+fr = ["affiche mes coûts", "combien j'ai dépensé", "mes dépenses ce mois", "coût d'utilisation", "mes dépenses en modèles"]
+eta_s = 1
+
+[[intent]]
+command = "kor routines list"
+run = "auto"
+tr = ["zamanlanmış görevleri listele", "rutinleri göster", "planlı görevler neler"]
+en = ["list routines", "show scheduled tasks", "what routines are scheduled"]
+fr = ["lister les routines", "tâches planifiées"]
+eta_s = 1
+
+[[intent]]
+command = "kor routines add"
+run = "confirm"
+tr = ["zamanlanmış görev ekle", "yeni rutin oluştur", "her gün çalışacak görev ekle"]
+en = ["add a routine", "schedule a recurring task", "create a daily routine"]
+fr = ["ajouter une routine", "planifier une tâche récurrente"]
+params = [{ name = "every", kind = "number", required = true, flag = "--every" }, { name = "prompt", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor routines remove"
+run = "confirm"
+tr = ["zamanlanmış görevi sil", "rutini kaldır", "planlı görevi sil", "rutini sil"]
+en = ["remove a routine", "delete the scheduled task", "drop that routine"]
+fr = ["supprimer une routine", "retirer la tâche planifiée"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor routines enable"
+run = "confirm"
+tr = ["rutini sürdür", "zamanlanmış görevi yeniden aç", "duraklatılan rutini etkinleştir", "rutini tekrar etkinleştir"]
+en = ["enable a routine", "resume the scheduled task", "unpause the routine"]
+fr = ["réactiver une routine", "reprendre la tâche planifiée"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor routines disable"
+run = "confirm"
+tr = ["rutini duraklat", "zamanlanmış görevi durdur", "rutini kapat"]
+en = ["disable a routine", "pause the scheduled task", "turn off the routine"]
+fr = ["mettre en pause une routine", "désactiver la tâche planifiée"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor mcp add"
+run = "confirm"
+tr = ["mcp sunucusu ekle", "yeni mcp bağla", "veritabanından mcp sunucusu üret", "openapi'den mcp oluştur"]
+en = ["add an mcp server", "connect a new mcp", "generate an mcp server from a database", "create mcp from openapi"]
+fr = ["ajouter un serveur mcp", "générer un serveur mcp depuis une base"]
+params = [{ name = "source", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor mcp remove"
+run = "confirm"
+tr = ["mcp sunucusunu kaldır", "mcp sil", "mcp bağlantısını çıkar"]
+en = ["remove an mcp server", "delete the mcp", "drop that mcp server"]
+fr = ["supprimer un serveur mcp", "retirer le mcp"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor mcp enable"
+run = "confirm"
+tr = ["mcp sunucusunu aç", "mcp etkinleştir", "kapalı mcp'yi aç"]
+en = ["enable an mcp server", "turn the mcp on", "activate mcp server"]
+fr = ["activer un serveur mcp", "allumer le mcp"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor mcp disable"
+run = "confirm"
+tr = ["mcp sunucusunu kapat", "mcp devre dışı bırak", "mcp'yi pasif yap"]
+en = ["disable an mcp server", "turn the mcp off", "deactivate mcp server"]
+fr = ["désactiver un serveur mcp", "éteindre le mcp"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor update check"
+run = "confirm"
+tr = ["güncelleme var mı", "yeni sürüm çıktı mı", "güncellemeyi denetle", "kor güncel mi", "güncellemeleri kontrol et", "güncelleme var mı"]
+en = ["check for updates", "is there a new version", "is kor up to date", "any new release", "are there any updates", "is a new version available"]
+fr = ["vérifier les mises à jour", "y a-t-il une nouvelle version"]
+eta_s = 3
+
+[[intent]]
+command = "kor update"
+run = "confirm"
+tr = ["kor'u güncelle", "son sürüme yükselt", "güncellemeyi kur", "kor'u yeni sürüme geçir", "kendini güncelle", "kor'un yeni sürümünü kur"]
+en = ["update kor", "upgrade to the latest version", "install the update", "update yourself", "upgrade kor", "install the newest kor version", "upgrade kor to the latest release"]
+fr = ["mettre à jour kor", "installer la dernière version", "passer à la nouvelle version"]
+eta_s = 30
+
+[[intent]]
+command = "kor update channel"
+run = "confirm"
+tr = ["güncelleme kanalını değiştir", "beta kanalına geç", "nightly sürümlere geç"]
+en = ["change the update channel", "switch to the beta channel", "use nightly builds"]
+fr = ["changer le canal de mise à jour", "passer au canal bêta"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor update rollback"
+run = "confirm"
+tr = ["önceki sürüme dön", "güncellemeyi geri al", "kor'un eski sürümüne dön"]
+en = ["roll back the update", "go back to the previous version", "downgrade kor"]
+fr = ["revenir à la version précédente", "annuler la mise à jour"]
+eta_s = 10
+
+[[intent]]
+command = "kor media models"
+run = "confirm"
+tr = ["fal modellerini ara", "görsel üretim modelleri", "fal model fiyatları"]
+en = ["search fal models", "image generation models on fal", "fal model prices"]
+fr = ["chercher des modèles fal", "modèles de génération d'images"]
+params = [{ name = "query", kind = "text", required = false }]
+eta_s = 3
+
+[[intent]]
+command = "kor media run"
+run = "confirm"
+tr = ["fal modelini çalıştır", "fal üzerinde model koş", "video modelini çalıştır"]
+en = ["run a fal model", "run a model on fal", "run the video model"]
+fr = ["exécuter un modèle fal", "lancer un modèle sur fal"]
+params = [{ name = "model", kind = "text", required = true }]
+eta_s = 60
+
+[[intent]]
+command = "kor media image"
+run = "confirm"
+tr = ["görsel üret", "resim oluştur", "fal ile görsel çiz", "bir fotoğraf üret"]
+en = ["generate an image", "create a picture", "make an image with fal", "draw an image"]
+fr = ["générer une image", "créer une image avec fal"]
+params = [{ name = "prompt", kind = "text", required = true }]
+eta_s = 20
+
+[[intent]]
+command = "kor hf search"
+run = "confirm"
+tr = ["hugging face'te model ara", "hf modellerini ara", "huggingface üzerinde model bul"]
+en = ["search hugging face models", "find a model on huggingface", "search the hf hub"]
+fr = ["chercher un modèle sur hugging face", "rechercher sur le hub hf"]
+params = [{ name = "query", kind = "text", required = false }]
+eta_s = 3
+
+[[intent]]
+command = "kor hf info"
+run = "confirm"
+tr = ["hugging face model bilgisi", "hf model kartını göster", "modelin dosyalarını listele hf"]
+en = ["hugging face model info", "show the hf model card", "list files of the hf repo"]
+fr = ["infos du modèle hugging face", "carte du modèle hf"]
+params = [{ name = "repo", kind = "text", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor hf download"
+run = "confirm"
+tr = ["hugging face modelini indir", "hf'den model indir", "huggingface reposunu indir"]
+en = ["download a hugging face model", "download from hf", "pull the huggingface repo"]
+fr = ["télécharger un modèle hugging face", "télécharger depuis hf"]
+params = [{ name = "repo", kind = "text", required = true }]
+eta_s = 120
+
+[[intent]]
+command = "kor hf infer"
+run = "confirm"
+tr = ["hugging face çıkarımı çalıştır", "hf modeliyle tahmin yap", "hf inference endpoint çağır"]
+en = ["run hugging face inference", "infer with an hf model", "call the hf inference endpoint"]
+fr = ["lancer une inférence hugging face", "inférence avec un modèle hf"]
+params = [{ name = "model", kind = "text", required = true }, { name = "task", kind = "text", required = true }, { name = "input", kind = "text", required = true }]
+eta_s = 15
+
+[[intent]]
+command = "kor context"
+run = "auto"
+tr = ["context bütçesini göster", "bağlam penceresi dökümü", "context ne kadar dolu", "token bütçesi dökümü"]
+en = ["show the context budget", "context window breakdown", "how full is the context", "token budget breakdown"]
+fr = ["afficher le budget de contexte", "répartition de la fenêtre de contexte"]
+eta_s = 1
+
+[[intent]]
+command = "kor bench"
+run = "confirm"
+tr = ["modelleri yarıştır", "model kıyaslaması yap", "hangi model testlerimde daha iyi", "routing önerisi için benchmark"]
+en = ["race the models", "benchmark models on my tests", "which model is best for my test suite", "run kor bench"]
+fr = ["faire la course des modèles", "benchmark des modèles sur mes tests"]
+tokens = 200000
+eta_s = 600
+
+[[intent]]
+command = "kor shell install"
+run = "confirm"
+tr = ["kabuk entegrasyonunu kur", "shell entegrasyonu ekle", "terminal entegrasyonunu kur"]
+en = ["install shell integration", "set up the shell hook", "add kor to my shell"]
+fr = ["installer l'intégration shell", "ajouter kor au shell"]
+eta_s = 2
+
+[[intent]]
+command = "kor shell uninstall"
+run = "confirm"
+tr = ["kabuk entegrasyonunu kaldır", "shell entegrasyonunu sil", "terminal entegrasyonunu çıkar"]
+en = ["uninstall shell integration", "remove the shell hook", "remove kor from my shell"]
+fr = ["désinstaller l'intégration shell", "retirer kor du shell"]
+eta_s = 2
+
+[[intent]]
+command = "kor shell status"
+run = "auto"
+tr = ["kabuk entegrasyonu durumu", "shell entegrasyonu kurulu mu", "son kaydedilen hata ne"]
+en = ["shell integration status", "is shell integration installed", "last recorded failure"]
+fr = ["état de l'intégration shell", "l'intégration shell est-elle installée"]
+eta_s = 1
+
+[[intent]]
+command = "kor shell capture"
+run = "confirm"
+tr = ["komutu çıktısıyla yakala", "bu komutu çalıştırıp çıktısını kaydet", "komut çıktısını yakala"]
+en = ["capture a command with its output", "run this command and capture output", "record the command output"]
+fr = ["capturer une commande avec sa sortie", "enregistrer la sortie de la commande"]
+params = [{ name = "command", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor fix"
+run = "confirm"
+tr = ["son hatayı düzelt", "son komutun hatasını düzelt", "son başarısız komutu düzelt", "terminaldeki son hatayı düzelt", "az önce patlayan komutu düzelt"]
+en = ["fix the last error", "fix my last failed command", "correct the last failing command", "fix the terminal error I just got", "repair the last command that failed"]
+fr = ["corrige la dernière erreur", "réparer la dernière commande échouée", "corriger la commande qui a planté"]
+tokens = 4000
+eta_s = 10
+
+[[intent]]
+command = "kor why"
+run = "confirm"
+tr = ["son hatayı açıkla", "son komut neden başarısız oldu", "son komut neden patladı", "terminaldeki hata neden oldu"]
+en = ["explain the last error", "why did my last command fail", "why did the last command break", "what went wrong with the last command"]
+fr = ["explique la dernière erreur", "pourquoi la dernière commande a échoué", "pourquoi la commande a planté"]
+tokens = 3000
+eta_s = 8
+
+[[intent]]
+command = "kor commit"
+run = "confirm"
+tr = ["commit mesajı yaz", "değişiklikleri commit et", "staged değişiklikler için commit at", "commit mesajı üret", "commitle"]
+en = ["write a commit message", "commit my changes", "commit the staged changes", "generate a commit message", "make a commit"]
+fr = ["écris un message de commit", "commiter mes changements", "générer le message de commit"]
+tokens = 5000
+eta_s = 10
+
+[[intent]]
+command = "kor changelog"
+run = "confirm"
+tr = ["changelog üret", "değişiklik günlüğü yaz", "sürüm notlarını hazırla", "son etiketten beri changelog"]
+en = ["generate the changelog", "write release notes", "changelog since the last tag", "update changelog"]
+fr = ["générer le changelog", "rédiger les notes de version"]
+tokens = 6000
+eta_s = 15
+
+[[intent]]
+command = "kor run"
+run = "confirm"
+tr = ["görev şablonunu çalıştır", "şablonu çalıştır", "template ile görev başlat"]
+en = ["run a task template", "run the template", "start a task from a template"]
+fr = ["exécuter un modèle de tâche", "lancer le template"]
+params = [{ name = "target", kind = "text", required = true }]
+tokens = 30000
+eta_s = 120
+
+[[intent]]
+command = "kor templates list"
+run = "auto"
+tr = ["şablonları listele", "hangi görev şablonları var", "templateleri göster"]
+en = ["list templates", "which task templates exist", "show templates"]
+fr = ["lister les modèles de tâche", "afficher les templates"]
+eta_s = 1
+
+[[intent]]
+command = "kor templates show"
+run = "auto"
+tr = ["şablonu göster", "şablonun adımlarını göster", "template detayları"]
+en = ["show a template", "show the template steps", "template details"]
+fr = ["afficher un modèle de tâche", "détails du template"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor templates new"
+run = "confirm"
+tr = ["yeni şablon oluştur", "şablon iskeleti oluştur", "template iskeleti çıkar"]
+en = ["create a new template", "scaffold a task template", "new template skeleton"]
+fr = ["créer un nouveau modèle de tâche", "squelette de template"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor cost why"
+run = "auto"
+tr = ["neden bu model seçildi", "yönlendirme kararlarını göster", "router neden bu modeli seçti", "model seçim gerekçeleri"]
+en = ["why was this model chosen", "show routing decisions", "why did the router pick that model", "model routing reasons"]
+fr = ["pourquoi ce modèle a été choisi", "décisions de routage"]
+eta_s = 1
+
+[[intent]]
+command = "kor cost --export"
+run = "confirm"
+tr = ["maliyeti csv olarak dışa aktar", "harcamaları json'a aktar", "maliyet raporunu dışa aktar"]
+en = ["export costs to csv", "export spending as json", "export the cost report"]
+fr = ["exporter les coûts en csv", "exporter les dépenses en json"]
+params = [{ name = "export", kind = "text", required = true, flag = "--export" }]
+eta_s = 1
+
+[[intent]]
+command = "kor quota"
+run = "confirm"
+tr = ["kalan kotamı göster", "sağlayıcı kotaları", "ne kadar kotam kaldı", "api limitim ne durumda"]
+en = ["show my remaining quota", "provider quotas", "how much quota is left", "api rate limit status"]
+fr = ["afficher mon quota restant", "quotas des fournisseurs"]
+eta_s = 5
+
+[[intent]]
+command = "kor tui"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor packages"
+run = "auto"
+tr = ["monorepo paketlerini listele", "repodaki paketler", "workspace paketlerini göster"]
+en = ["list monorepo packages", "packages in this repo", "show workspace packages"]
+fr = ["lister les paquets du monorepo", "paquets du dépôt"]
+eta_s = 2
+
+[[intent]]
+command = "kor packages affected"
+run = "auto"
+tr = ["değişiklikten etkilenen paketler", "hangi paketler etkilendi", "sadece etkilenen paketleri test et komutu"]
+en = ["packages affected by my changes", "which packages are affected", "affected packages and narrowed commands"]
+fr = ["paquets affectés par les changements", "quels paquets sont touchés"]
+eta_s = 3
+
+[[intent]]
+command = "kor packages deps"
+run = "auto"
+tr = ["paketin bağımlılıklarını göster", "bu pakete kim bağımlı", "paket bağımlılık ağacı"]
+en = ["show a package's dependencies", "who depends on this package", "package dependency tree"]
+fr = ["dépendances d'un paquet", "qui dépend de ce paquet"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor packages cost"
+run = "auto"
+tr = ["paket başına maliyet", "hangi paket ne kadar harcattı", "paketlere göre harcama"]
+en = ["cost per package", "which package cost the most", "spending by package"]
+fr = ["coût par paquet", "dépenses par paquet"]
+eta_s = 2
+
+[[intent]]
+command = "kor memory notes push"
+run = "confirm"
+tr = ["kararları git notu olarak kaydet", "kararları git notlarına yaz", "decisions dosyasını git notuna gönder"]
+en = ["push decisions as git notes", "store decisions in git notes", "save decisions to git notes"]
+fr = ["enregistrer les décisions en notes git", "pousser les décisions dans git notes"]
+eta_s = 2
+
+[[intent]]
+command = "kor memory notes pull"
+run = "confirm"
+tr = ["kararları git notundan al", "git notlarındaki kararları çek", "git notlarını belleğe aktar"]
+en = ["pull decisions from git notes", "load decisions from git notes", "import git notes decisions"]
+fr = ["récupérer les décisions des notes git", "importer les notes git"]
+eta_s = 2
+
+[[intent]]
+command = "kor context add"
+run = "confirm"
+tr = ["başka projeyi bağlama bağla", "diğer repoyu bağlama ekle", "ikinci projeyi bağla"]
+en = ["link another project into context", "add another repo to the context", "attach a second project"]
+fr = ["lier un autre projet au contexte", "ajouter un autre dépôt au contexte"]
+params = [{ name = "path", kind = "path", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor context remove"
+run = "confirm"
+tr = ["bağlı projeyi çıkar", "bağlamdaki projeyi kaldır", "proje bağlantısını kopar"]
+en = ["unlink a project from context", "remove the linked project", "detach the second project"]
+fr = ["délier un projet du contexte", "retirer le projet lié"]
+params = [{ name = "path", kind = "path", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor context projects"
+run = "auto"
+tr = ["bağlı projeleri göster", "bağlama hangi projeler bağlı", "bağlı repolar"]
+en = ["show linked projects", "which projects are linked", "linked repos"]
+fr = ["projets liés", "quels projets sont liés"]
+eta_s = 1
+
+[[intent]]
+command = "kor recall"
+run = "auto"
+tr = ["bilgi tabanında ara", "daha önce ne yapmıştık hatırla", "geçmiş çalışmalarda ara", "önceki işlerde bul"]
+en = ["search the knowledge base", "recall what we did before", "search past work", "find it in earlier sessions"]
+fr = ["chercher dans la base de connaissances", "rappelle ce qu'on a fait avant"]
+params = [{ name = "query", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor forget"
+run = "confirm"
+tr = ["bilgi tabanından kaydı sil", "bu hatırayı unut", "bilgi kaydını kaldır"]
+en = ["delete a knowledge base record", "forget this memory record", "remove a knowledge entry"]
+fr = ["supprimer une entrée de la base de connaissances", "oublier cet enregistrement"]
+params = [{ name = "id", kind = "number", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor knowledge export"
+run = "confirm"
+tr = ["bilgi tabanını dışa aktar", "bilgi tabanını markdown olarak kaydet", "bilgi tabanını obsidian'a aktar"]
+en = ["export the knowledge base", "export knowledge as markdown", "dump the knowledge base to obsidian"]
+fr = ["exporter la base de connaissances", "exporter les connaissances en markdown"]
+params = [{ name = "dir", kind = "path", required = false }]
+eta_s = 3
+
+[[intent]]
+command = "kor workspace add"
+run = "confirm"
+tr = ["çoklu repo klasörü ekle", "çalışma alanına klasör ekle", "workspace'e proje klasörü ekle"]
+en = ["add a workspace folder", "add a folder to the multi repo view", "register a repo folder in the workspace"]
+fr = ["ajouter un dossier à l'espace de travail", "ajouter un dépôt au workspace"]
+params = [{ name = "pattern", kind = "path", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor workspace list"
+run = "auto"
+tr = ["çalışma alanı klasörlerini listele", "workspace klasörleri", "çoklu repo klasörlerini göster"]
+en = ["list workspace folders", "show the multi repo folders", "workspace folders"]
+fr = ["lister les dossiers de l'espace de travail", "dossiers du workspace"]
+eta_s = 1
+
+[[intent]]
+command = "kor workspace remove"
+run = "confirm"
+tr = ["çalışma alanından klasörü çıkar", "workspace klasörünü kaldır", "çoklu repo klasörünü sil"]
+en = ["remove a workspace folder", "drop a folder from the workspace", "unregister a repo folder"]
+fr = ["retirer un dossier de l'espace de travail", "supprimer un dossier du workspace"]
+params = [{ name = "path", kind = "path", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor graph"
+run = "auto"
+tr = ["grafı aç", "proje grafını göster", "canlı proje grafı", "kod grafına bak", "proje haritasını göster"]
+en = ["open the graph", "show the project graph", "live project graph", "look at the code graph", "show the project map"]
+fr = ["ouvrir le graphe", "afficher le graphe du projet", "graphe du code"]
+eta_s = 2
+
+[[intent]]
+command = "kor graph status"
+run = "auto"
+tr = ["graf durumu", "graf ne zaman güncellendi", "grafta kaç düğüm var", "graf istatistikleri"]
+en = ["graph status", "when was the graph updated", "how many nodes in the graph", "graph stats"]
+fr = ["état du graphe", "quand le graphe a été mis à jour"]
+eta_s = 1
+
+[[intent]]
+command = "kor graph explain"
+run = "auto"
+tr = ["graf düğümünü açıkla", "bu sembolü grafta açıkla", "fonksiyonu kim çağırıyor grafta", "sembolün çağıranlarını göster"]
+en = ["explain a graph node", "explain this symbol in the graph", "who calls this function in the graph", "show callers of a symbol"]
+fr = ["expliquer un nœud du graphe", "qui appelle ce symbole"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor graph path"
+run = "auto"
+tr = ["iki kavram arası yol", "iki modül arasındaki en kısa yol", "grafta a'dan b'ye yol bul"]
+en = ["shortest path between two concepts", "path between two modules in the graph", "how is a connected to b"]
+fr = ["chemin le plus court entre deux concepts", "chemin entre deux modules"]
+params = [{ name = "from", kind = "text", required = true }, { name = "to", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor graph query"
+run = "auto"
+tr = ["grafta ara", "grafı sorgula", "graf üzerinde kelime ara"]
+en = ["search the graph", "query the graph", "find in the code graph"]
+fr = ["chercher dans le graphe", "interroger le graphe"]
+params = [{ name = "text", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor graph hotspots"
+run = "auto"
+tr = ["risk haritasını göster", "sıcak noktalar", "en riskli dosyalar hangileri", "çok değişen ve çok bağlı dosyalar"]
+en = ["show the risk map", "hotspots", "which files are the riskiest", "high churn high coupling files"]
+fr = ["carte des risques", "points chauds du code"]
+eta_s = 2
+
+[[intent]]
+command = "kor graph diff"
+run = "auto"
+tr = ["graf commitler arası nasıl değişti", "grafın değişimini göster", "son sürümden beri graf farkı"]
+en = ["how did the graph change since a commit", "graph diff", "graph changes since last release"]
+fr = ["comment le graphe a changé", "différence du graphe depuis un commit"]
+params = [{ name = "rev", kind = "text", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor graph impact"
+run = "auto"
+tr = ["grafta etki alanı", "bu sembole neler bağımlı", "bu değişikliğin etki alanı grafta"]
+en = ["graph impact of a symbol", "what depends on this symbol", "blast radius in the graph"]
+fr = ["impact dans le graphe", "ce qui dépend de ce symbole"]
+params = [{ name = "target", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor graph export"
+run = "confirm"
+tr = ["grafı dışa aktar", "grafı mermaid olarak çıkar", "grafı obsidian'a aktar", "grafı json'a kaydet"]
+en = ["export the graph", "export the graph as mermaid", "export graph to obsidian", "save the graph as json"]
+fr = ["exporter le graphe", "exporter le graphe en mermaid"]
+eta_s = 3
+
+[[intent]]
+command = "kor graph update"
+run = "confirm"
+tr = ["grafı yeniden tara", "grafı güncelle", "proje grafını baştan oluştur", "grafı tazele", "grafı baştan oluştur"]
+en = ["rescan the graph", "update the graph", "rebuild the project graph", "refresh the code graph", "rebuild the graph from scratch"]
+fr = ["rescanner le graphe", "mettre à jour le graphe", "reconstruire le graphe du projet"]
+eta_s = 30
+
+[[intent]]
+command = "kor knowledge reindex"
+run = "confirm"
+tr = ["bilgi tabanını yeniden göm", "bilgi tabanını yeniden indeksle", "anlamsal arama indeksini yenile"]
+en = ["reindex the knowledge base", "re-embed the knowledge base", "rebuild semantic search index"]
+fr = ["réindexer la base de connaissances", "reconstruire l'index sémantique"]
+eta_s = 60
+
+[[intent]]
+command = "kor db"
+run = "auto"
+tr = ["graftaki veritabanı tabloları", "veritabanı şemasını göster", "veritabanı özetini göster"]
+en = ["database tables in the graph", "show the database schema", "database overview"]
+fr = ["tables de la base dans le graphe", "afficher le schéma de la base"]
+eta_s = 1
+
+[[intent]]
+command = "kor db connect"
+run = "confirm"
+tr = ["veritabanı şemasını grafa bağla", "veritabanını bağla", "db şemasını oku ve grafa ekle"]
+en = ["connect the database schema to the graph", "connect a database", "read the db schema into the graph"]
+fr = ["connecter le schéma de la base au graphe", "connecter une base de données"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor db refresh"
+run = "confirm"
+tr = ["veritabanı şemasını yenile", "db şemasını tekrar oku", "bağlı veritabanını yenile"]
+en = ["refresh the database schema", "reread the db schema", "refresh connected databases"]
+fr = ["rafraîchir le schéma de la base", "relire le schéma"]
+eta_s = 10
+
+[[intent]]
+command = "kor db tables"
+run = "auto"
+tr = ["veritabanı tablolarını listele", "grafta hangi tablolar var", "tablo listesi", "grafa bağlı tabloları listele"]
+en = ["list database tables", "which tables are in the graph", "table list"]
+fr = ["lister les tables", "quelles tables sont dans le graphe"]
+eta_s = 1
+
+[[intent]]
+command = "kor db show"
+run = "auto"
+tr = ["tablo ayrıntısını göster", "tablonun sütunlarını göster", "bu tabloyu kim okuyor kim yazıyor"]
+en = ["show table details", "show the table's columns", "who reads and writes this table"]
+fr = ["détails de la table", "colonnes de la table"]
+params = [{ name = "table", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor vault add"
+run = "confirm"
+tr = ["kasaya sır ekle", "gizli anahtarı kasaya kaydet", "kasaya parola ekle"]
+en = ["add a secret to the vault", "store a secret in the vault", "save a password in the vault"]
+fr = ["ajouter un secret au coffre", "stocker un secret dans le coffre"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor vault list"
+run = "auto"
+tr = ["kasadaki sırları listele", "kasada neler var", "kayıtlı sırların adları"]
+en = ["list vault secrets", "what is in the vault", "names of stored secrets"]
+fr = ["lister les secrets du coffre", "que contient le coffre"]
+eta_s = 1
+
+[[intent]]
+command = "kor vault remove"
+run = "confirm"
+tr = ["kasadan sır sil", "kasadaki anahtarı kaldır", "sırrı kasadan çıkar"]
+en = ["remove a secret from the vault", "delete a vault secret", "drop the secret from the vault"]
+fr = ["supprimer un secret du coffre", "retirer le secret du coffre"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor vault import"
+run = "confirm"
+tr = [".env dosyasını kasaya aktar", "env değişkenlerini kasaya al", "dotenv dosyasını kasaya yükle"]
+en = ["import the .env file into the vault", "move env variables into the vault", "load dotenv into the vault"]
+fr = ["importer le fichier .env dans le coffre", "mettre les variables d'env dans le coffre"]
+params = [{ name = "path", kind = "path", required = false }]
+eta_s = 2
+
+[[intent]]
+command = "kor audit list"
+run = "auto"
+tr = ["denetim kaydını listele", "denetim günlüğünü göster", "audit log kayıtları", "kor neler yaptı kaydı"]
+en = ["list the audit log", "show the audit trail", "audit log entries", "what did kor do log"]
+fr = ["lister le journal d'audit", "afficher la piste d'audit"]
+eta_s = 1
+
+[[intent]]
+command = "kor audit verify"
+run = "auto"
+tr = ["denetim kaydını doğrula", "audit log hash zincirini kontrol et", "denetim günlüğü değiştirilmiş mi"]
+en = ["verify the audit log", "check the audit hash chain", "was the audit log tampered with"]
+fr = ["vérifier le journal d'audit", "contrôler la chaîne de hachage"]
+eta_s = 2
+
+[[intent]]
+command = "kor sandbox status"
+run = "auto"
+tr = ["sandbox durumu", "sandbox ayarlarını göster", "korumalı alan açık mı", "sandbox ağ izin listesi"]
+en = ["sandbox status", "show sandbox settings", "is the sandbox on", "sandbox network allowlist"]
+fr = ["état du sandbox", "le bac à sable est-il actif"]
+eta_s = 1
+
+[[intent]]
+command = "kor sandbox test"
+run = "auto"
+tr = ["sandbox'ı test et", "sandbox öz denetimi", "sandbox proje dışına yazmayı engelliyor mu", "korumalı alanı sına"]
+en = ["test the sandbox", "sandbox self test", "does the sandbox block writes outside the project", "check the sandbox works"]
+fr = ["tester le sandbox", "auto-test du bac à sable"]
+eta_s = 5
+
+[[intent]]
+command = "kor sandbox pull"
+run = "confirm"
+tr = ["docker sandbox imajını indir", "sandbox imajını çek", "sandbox docker imajını kur"]
+en = ["pull the docker sandbox image", "download the sandbox image", "fetch the sandbox container"]
+fr = ["télécharger l'image docker du sandbox", "récupérer l'image du bac à sable"]
+eta_s = 120
+
+[[intent]]
+command = "kor audit report"
+run = "auto"
+tr = ["kvkk uyum raporu", "gdpr uyum raporu çıkar", "denetim kaydından uyum raporu", "hangi sağlayıcılara veri gitti raporu"]
+en = ["compliance report from the audit log", "gdpr report", "which providers received data report", "kvkk compliance report"]
+fr = ["rapport de conformité rgpd", "rapport de conformité depuis le journal d'audit"]
+eta_s = 2
+
+[[intent]]
+command = "kor audit export"
+run = "confirm"
+tr = ["denetim kaydını dışa aktar", "audit logu jsonl olarak çıkar", "denetim günlüğünü dosyaya yaz"]
+en = ["export the audit log", "export audit log as jsonl", "dump the audit trail to a file"]
+fr = ["exporter le journal d'audit", "exporter l'audit en jsonl"]
+eta_s = 2
+
+[[intent]]
+command = "kor offline init"
+run = "confirm"
+tr = ["çevrimdışı kurulum yap", "internetsiz çalışmaya hazırla", "offline modu kur", "yerel modelleri indir offline için"]
+en = ["set up offline mode", "prepare for working without internet", "offline init", "download local models for offline"]
+fr = ["préparer le mode hors ligne", "installer pour travailler sans internet"]
+eta_s = 600
+
+[[intent]]
+command = "kor offline status"
+run = "auto"
+tr = ["çevrimdışı hazırlık durumu", "internetsiz çalışabilir miyim", "offline hazır mı", "çevrimdışı çalışabilir miyim"]
+en = ["offline readiness", "can I work offline now", "is offline mode ready"]
+fr = ["état du mode hors ligne", "puis-je travailler hors ligne"]
+eta_s = 2
+
+[[intent]]
+command = "kor offline run"
+run = "confirm"
+tr = ["çevrimdışı modda çalıştır", "kor'u internetsiz başlat", "yerel modelle offline çalış"]
+en = ["run kor offline", "start in offline mode", "work offline with the local model"]
+fr = ["lancer kor hors ligne", "démarrer en mode hors ligne"]
+tokens = 20000
+eta_s = 60
+
+[[intent]]
+command = "kor offline bundle"
+run = "confirm"
+tr = ["air-gap paketi oluştur", "internetsiz kurulum paketi hazırla", "çevrimdışı paket oluştur"]
+en = ["create an air gap bundle", "build an offline install bundle", "make an offline package", "build an offline bundle"]
+fr = ["créer un paquet air gap", "préparer un paquet d'installation hors ligne"]
+params = [{ name = "out", kind = "path", required = true, flag = "--out" }]
+eta_s = 300
+
+[[intent]]
+command = "kor offline import"
+run = "confirm"
+tr = ["air-gap paketini içe aktar", "çevrimdışı paketi kur", "offline paketi yükle"]
+en = ["import an air gap bundle", "install the offline bundle", "load the offline package"]
+fr = ["importer le paquet air gap", "installer le paquet hors ligne"]
+params = [{ name = "file", kind = "path", required = true }]
+eta_s = 120
+
+[[intent]]
+command = "kor task"
+run = "confirm"
+tr = ["çok ajanlı görev başlat", "ajan ekibiyle görev başlat", "birden fazla ajanla bu işi yap", "paralel ajanlara böl"]
+en = ["start a multi agent task", "start a team of agents on this", "split this across several agents", "run parallel agents on a goal"]
+fr = ["lancer une tâche multi agents", "répartir sur plusieurs agents"]
+params = [{ name = "goal", kind = "text", required = true }]
+tokens = 300000
+eta_s = 900
+
+[[intent]]
+command = "kor task list"
+run = "auto"
+tr = ["görevleri listele", "çok ajanlı görevler", "hangi görevler var"]
+en = ["list tasks", "multi agent tasks", "which tasks exist"]
+fr = ["lister les tâches", "tâches multi agents"]
+eta_s = 1
+
+[[intent]]
+command = "kor task status"
+run = "auto"
+tr = ["görev durumu", "alt ajanlar ne durumda", "görevin maliyeti ve dalları"]
+en = ["task status", "how are the sub agents doing", "task cost and branches"]
+fr = ["état de la tâche", "où en sont les sous agents"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor task resume"
+run = "confirm"
+tr = ["görevi sürdür", "duran görevi devam ettir", "çöken görevi kaldığı yerden sürdür"]
+en = ["resume the task", "continue the stopped task", "restart the crashed task from checkpoint"]
+fr = ["reprendre la tâche", "continuer la tâche arrêtée"]
+params = [{ name = "id", kind = "text", required = true }]
+tokens = 100000
+eta_s = 600
+
+[[intent]]
+command = "kor task fork"
+run = "confirm"
+tr = ["görevi çatalla", "görevin kopyasını oluştur", "görevi aynı noktadan dallandır"]
+en = ["fork the task", "copy the task from the same point", "branch the task"]
+fr = ["dupliquer la tâche", "forker la tâche"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor task cancel"
+run = "confirm"
+tr = ["görevi iptal et", "çalışan görevi durdur", "görevi sonlandır"]
+en = ["cancel the task", "stop the running task", "abort the task"]
+fr = ["annuler la tâche", "arrêter la tâche en cours"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor task resolve"
+run = "confirm"
+tr = ["görevdeki birleştirme çakışmasını çöz", "alt görev çakışmasını çöz", "görev merge çakışması"]
+en = ["resolve the task merge conflict", "settle the sub task conflict", "task merge conflict"]
+fr = ["résoudre le conflit de fusion de la tâche", "régler le conflit de sous tâche"]
+params = [{ name = "id", kind = "text", required = true }, { name = "part", kind = "number", required = true }, { name = "action", kind = "text", required = true }]
+tokens = 20000
+eta_s = 120
+
+[[intent]]
+command = "kor mcp test"
+run = "confirm"
+tr = ["mcp sunucusunu dene", "mcp çalışıyor mu test et", "mcp bağlantısını sına"]
+en = ["test the mcp server", "does the mcp work", "try the mcp connection"]
+fr = ["tester le serveur mcp", "essayer la connexion mcp"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor mcp list"
+run = "auto"
+tr = ["mcp sunucularını listele", "mcp sunucuları ve araç sayıları", "hangi mcp'ler açık"]
+en = ["list mcp servers", "mcp servers with tool counts", "which mcps are enabled"]
+fr = ["lister les serveurs mcp", "serveurs mcp et nombre d'outils"]
+eta_s = 1
+
+[[intent]]
+command = "kor pr create"
+run = "confirm"
+tr = ["pull request aç", "pr oluştur", "bu dal için pr aç", "değişiklikleri pr olarak gönder"]
+en = ["open a pull request", "create a pr", "open a pr for this branch", "send my changes as a pr", "open a pull request for my branch"]
+fr = ["ouvrir une pull request", "créer une pr pour cette branche", "ouvrir une pull request pour ma branche"]
+tokens = 8000
+eta_s = 30
+
+[[intent]]
+command = "kor pr review"
+run = "confirm"
+tr = ["pull request'i incele", "pr'ı gözden geçir ve yorum yaz", "şu pr'a review yap", "pr'ı incele"]
+en = ["review the pull request", "review that pr and post comments", "review pr number"]
+fr = ["relire la pull request", "faire la revue de la pr"]
+params = [{ name = "target", kind = "text", required = true }]
+tokens = 30000
+eta_s = 90
+
+[[intent]]
+command = "kor pr respond"
+run = "confirm"
+tr = ["inceleme yorumlarına yanıt ver", "pr yorumlarını düzelt ve cevapla", "review yorumlarını uygula"]
+en = ["respond to review comments", "address the pr comments", "reply to and fix review feedback"]
+fr = ["répondre aux commentaires de revue", "traiter les commentaires de la pr"]
+params = [{ name = "target", kind = "text", required = true }]
+tokens = 40000
+eta_s = 180
+
+[[intent]]
+command = "kor pr list"
+run = "confirm"
+tr = ["açık pull requestleri listele", "açık pr'lar", "bekleyen pr'ları göster"]
+en = ["list open pull requests", "open prs", "show pending prs"]
+fr = ["lister les pull requests ouvertes", "pr ouvertes"]
+eta_s = 3
+
+[[intent]]
+command = "kor pr status"
+run = "confirm"
+tr = ["bu dalın pr durumu", "pr'ım ne durumda", "bu branch'in pull request'i"]
+en = ["status of this branch's pr", "what's the state of my pr", "status of the pull request for this branch"]
+fr = ["état de la pr de cette branche", "où en est ma pr"]
+eta_s = 3
+
+[[intent]]
+command = "kor review"
+run = "confirm"
+tr = ["kodumu incele", "değişikliklerimi gözden geçir", "kod incelemesi yap", "güvenlik gözüyle incele", "diff'i review et"]
+en = ["review my code", "review my changes", "do a code review", "review the diff with a security persona", "code review my uncommitted changes"]
+fr = ["relis mon code", "faire une revue de code", "revue de mes changements", "relis mes changements"]
+params = [{ name = "persona", kind = "text", required = false }]
+tokens = 20000
+eta_s = 60
+
+[[intent]]
+command = "kor daemon start"
+run = "confirm"
+tr = ["daemon'u başlat", "arka plan servisini başlat", "tetikleyici servisini çalıştır"]
+en = ["start the daemon", "start the background service", "launch the trigger daemon"]
+fr = ["démarrer le démon", "lancer le service en arrière plan"]
+eta_s = 2
+
+[[intent]]
+command = "kor daemon stop"
+run = "confirm"
+tr = ["daemon'u durdur", "arka plan servisini kapat", "daemon'u kapat"]
+en = ["stop the daemon", "stop the background service", "shut down the daemon"]
+fr = ["arrêter le démon", "couper le service en arrière plan"]
+eta_s = 2
+
+[[intent]]
+command = "kor daemon status"
+run = "auto"
+tr = ["daemon durumu", "daemon çalışıyor mu", "arka plan servisi açık mı"]
+en = ["daemon status", "is the daemon running", "is the background service up"]
+fr = ["état du démon", "le démon tourne-t-il"]
+eta_s = 1
+
+[[intent]]
+command = "kor daemon logs"
+run = "auto"
+tr = ["daemon günlüğünü göster", "daemon loglarına bak", "arka plan servisinin logları"]
+en = ["show daemon logs", "daemon log", "background service logs"]
+fr = ["journaux du démon", "afficher les logs du démon"]
+eta_s = 1
+
+[[intent]]
+command = "kor daemon install"
+run = "confirm"
+tr = ["daemon'u açılışta başlat", "daemon'u başlangıca ekle", "oturum açılışında daemon çalışsın"]
+en = ["start the daemon at login", "install the daemon at startup", "run the daemon on boot"]
+fr = ["démarrer le démon à la connexion", "installer le démon au démarrage"]
+eta_s = 2
+
+[[intent]]
+command = "kor daemon uninstall"
+run = "confirm"
+tr = ["daemon açılış kaydını kaldır", "daemon başlangıçta çalışmasın", "daemon'u başlangıçtan çıkar", "daemon girişte başlamasın"]
+en = ["remove the daemon login entry", "stop starting the daemon at login", "uninstall the daemon startup", "don't start the daemon at login"]
+fr = ["retirer le démon du démarrage", "désinstaller le démarrage du démon"]
+eta_s = 2
+
+[[intent]]
+command = "kor triggers list"
+run = "confirm"
+tr = ["tetikleyicileri listele", "hangi tetikleyiciler var", "trigger listesi"]
+en = ["list triggers", "which triggers exist", "show triggers"]
+fr = ["lister les déclencheurs", "afficher les déclencheurs"]
+eta_s = 1
+
+[[intent]]
+command = "kor triggers test"
+run = "confirm"
+tr = ["tetikleyiciyi dene", "tetikleyiciyi şimdi çalıştır", "trigger'ı test et"]
+en = ["test the trigger", "fire the trigger now", "try a trigger"]
+fr = ["tester le déclencheur", "lancer le déclencheur maintenant"]
+params = [{ name = "name", kind = "text", required = true }]
+tokens = 20000
+eta_s = 60
+
+[[intent]]
+command = "kor triggers history"
+run = "auto"
+tr = ["tetikleyici geçmişi", "tetikleyicilerin geçmiş işleri", "trigger geçmişini göster"]
+en = ["trigger history", "past trigger jobs", "show trigger runs"]
+fr = ["historique des déclencheurs", "exécutions passées des déclencheurs"]
+eta_s = 1
+
+[[intent]]
+command = "kor triggers approve"
+run = "confirm"
+tr = ["bekleyen isteği onayla", "tetikleyici isteğini onayla", "bekleyen işi kabul et"]
+en = ["approve the pending request", "approve the trigger request", "accept the pending job"]
+fr = ["approuver la demande en attente", "valider la demande du déclencheur"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor triggers reject"
+run = "confirm"
+tr = ["bekleyen isteği reddet", "tetikleyici isteğini reddet", "bekleyen işi geri çevir"]
+en = ["reject the pending request", "reject the trigger request", "decline the pending job"]
+fr = ["rejeter la demande en attente", "refuser la demande du déclencheur"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor triggers hook install"
+run = "confirm"
+tr = ["git kancası kur tetikleyici için", "push tetikleyicisi için git hook kur", "tetikleyici git kancasını ekle"]
+en = ["install the trigger git hook", "add a git hook for push triggers", "set up the trigger hook"]
+fr = ["installer le hook git des déclencheurs", "ajouter un hook git pour les déclencheurs"]
+eta_s = 1
+
+[[intent]]
+command = "kor triggers hook uninstall"
+run = "confirm"
+tr = ["tetikleyici git kancasını kaldır", "push tetikleyici hook'unu sil", "git kancasını kaldır"]
+en = ["remove the trigger git hook", "uninstall the push trigger hook", "delete the trigger hook"]
+fr = ["retirer le hook git des déclencheurs", "désinstaller le hook git"]
+eta_s = 1
+
+[[intent]]
+command = "kor deploy"
+run = "confirm"
+tr = ["değişen servisleri dağıt", "deploy et", "staging'e dağıt", "prod'a yayına al", "uygulamayı dağıt"]
+en = ["deploy the changed services", "deploy to staging", "ship it to production", "deploy the app", "run a deploy"]
+fr = ["déployer les services modifiés", "déployer en staging"]
+params = [{ name = "env", kind = "text", required = false }]
+eta_s = 300
+
+[[intent]]
+command = "kor deploy risk-check"
+run = "confirm"
+tr = ["dağıtım riskini denetle", "deploy öncesi risk kontrolü", "yayına almak riskli mi"]
+en = ["deploy risk check", "is it risky to deploy now", "check deploy risks"]
+fr = ["vérifier le risque du déploiement", "est-ce risqué de déployer"]
+params = [{ name = "env", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor deploy status"
+run = "auto"
+tr = ["dağıtım durumu", "son deploy ne zaman", "ortamlar ve son dağıtım"]
+en = ["deploy status", "when was the last deploy", "environments and last deploy"]
+fr = ["état du déploiement", "dernier déploiement"]
+eta_s = 1
+
+[[intent]]
+command = "kor watch logs"
+run = "confirm"
+tr = ["günlükleri izle", "logları takip et hata yakala", "log dosyasını izle", "log dosyasını izle"]
+en = ["watch the logs", "follow logs for errors", "tail the log and catch errors"]
+fr = ["surveiller les journaux", "suivre les logs pour les erreurs"]
+params = [{ name = "source", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor watch incidents"
+run = "auto"
+tr = ["yakalanan hataları göster", "loglardan yakalanan olaylar", "izlenen hatalar listesi"]
+en = ["show captured incidents", "incidents from the logs", "list caught errors"]
+fr = ["incidents capturés", "erreurs détectées dans les logs"]
+eta_s = 1
+
+[[intent]]
+command = "kor watch fix"
+run = "confirm"
+tr = ["yakalanan hatayı düzelt", "olayın kök nedenini bul ve düzelt", "incident'ı düzeltmeye başla"]
+en = ["fix the captured incident", "find the root cause of the incident and fix it", "start fixing the incident"]
+fr = ["corriger l'incident capturé", "réparer l'incident"]
+params = [{ name = "id", kind = "text", required = true }]
+tokens = 60000
+eta_s = 300
+
+[[intent]]
+command = "kor watch pr"
+run = "confirm"
+tr = ["olay düzeltmesini pr olarak aç", "incident düzeltmesi için pr aç", "düzeltme dalını pr yap"]
+en = ["open the incident fix as a pr", "open a pr for the incident fix", "turn the fix branch into a pr"]
+fr = ["ouvrir la correction de l'incident en pr", "créer la pr du correctif"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 30
+
+[[intent]]
+command = "kor watch clear"
+run = "confirm"
+tr = ["hata kayıtlarını temizle", "yakalanan olayları sil", "incident listesini temizle"]
+en = ["clear the incidents", "delete captured errors", "wipe the incident list"]
+fr = ["effacer les incidents", "vider la liste des incidents"]
+eta_s = 1
+
+[[intent]]
+command = "kor db indexes"
+run = "confirm"
+tr = ["index önerilerini göster", "veritabanı indexlerini listele", "hangi index eksik"]
+en = ["show index suggestions", "list database indexes", "which indexes are missing"]
+fr = ["suggestions d'index", "lister les index de la base"]
+eta_s = 10
+
+[[intent]]
+command = "kor db migrate new"
+run = "confirm"
+tr = ["yeni migration yaz", "migration dosyası oluştur", "şema değişikliği için migration üret"]
+en = ["write a new migration", "create a migration file", "generate a migration for the schema change"]
+fr = ["écrire une nouvelle migration", "créer un fichier de migration"]
+params = [{ name = "description", kind = "text", required = true }]
+tokens = 15000
+eta_s = 60
+
+[[intent]]
+command = "kor db apply"
+run = "confirm"
+tr = ["sql dosyasını uygula", "sql'i önce kopyada dene sonra uygula", "veritabanına sql çalıştır"]
+en = ["apply the sql file", "try the sql on a copy then apply", "run sql against the database", "apply a sql file to a connection"]
+fr = ["appliquer le fichier sql", "exécuter le sql sur la base"]
+params = [{ name = "name", kind = "text", required = true }, { name = "file", kind = "path", required = true }]
+eta_s = 30
+
+[[intent]]
+command = "kor find"
+run = "confirm"
+tr = ["kodda bul", "kod tabanında ara", "nerede yapılıyor bul", "kullanıcı girişini yapan kodu bul", "hangi dosyada tanımlı bul"]
+en = ["find in the codebase", "search the code for", "where is this handled", "find the code that does", "which file defines"]
+fr = ["chercher dans le code", "où est géré dans le code"]
+params = [{ name = "question", kind = "text", required = true }]
+tokens = 8000
+eta_s = 15
+
+[[intent]]
+command = "kor replay list"
+run = "auto"
+tr = ["oturum kayıtlarını listele", "kaydedilmiş oturumlar", "oynatılabilir kayıtlar"]
+en = ["list session recordings", "recorded sessions", "which recordings can I replay"]
+fr = ["lister les enregistrements de session", "sessions enregistrées"]
+eta_s = 1
+
+[[intent]]
+command = "kor replay"
+run = "auto"
+tr = ["oturumu tekrar oynat", "kayıtlı oturumu izle", "oturum kaydını oynat"]
+en = ["replay the session", "play back the recorded session", "watch the session recording"]
+fr = ["rejouer la session", "revoir l'enregistrement de la session"]
+params = [{ name = "id", kind = "text", required = false }]
+eta_s = 2
+
+[[intent]]
+command = "kor replay export"
+run = "confirm"
+tr = ["oturum kaydını dışa aktar", "oturum kaydını dosya olarak paylaş", "kaydı tek dosyaya çıkar"]
+en = ["export the session recording", "share the recording as one file", "export replay"]
+fr = ["exporter l'enregistrement de session", "partager l'enregistrement"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor env status"
+run = "auto"
+tr = ["geliştirme ortamı durumu", "sabitlenmiş sürümler uyuyor mu", "node ve rust sürümleri doğru mu"]
+en = ["dev environment status", "do pinned versions match", "are my tool versions right"]
+fr = ["état de l'environnement de développement", "versions épinglées"]
+eta_s = 2
+
+[[intent]]
+command = "kor attach"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor discover"
+run = "confirm"
+tr = ["sunucuyu keşfet", "canlı sistemi tara", "ssh ile sunucuda neler çalışıyor bak"]
+en = ["discover the server", "scan the live system", "what runs on the server over ssh"]
+fr = ["découvrir le serveur", "scanner le système en production"]
+params = [{ name = "target", kind = "domain", required = false }]
+eta_s = 60
+
+[[intent]]
+command = "kor mcp run"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor daemon run"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor remote-serve"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor audit"
+run = "confirm"
+tr = ["güvenlik denetimi yap", "projede güvenlik açığı tara", "güvenlik taraması", "kodda sır sızıntısı var mı tara", "güvenlik analizi", "kodda sızan anahtar var mı"]
+en = ["run a security audit", "scan the project for vulnerabilities", "security scan", "scan for leaked secrets", "security analysis", "find leaked secrets in the code"]
+fr = ["audit de sécurité", "scanner les vulnérabilités du projet"]
+eta_s = 30
+
+[[intent]]
+command = "kor audit --compliance"
+run = "confirm"
+tr = ["kvkk analizi yap", "kişisel veri işleme noktalarını bul", "gdpr kişisel veri analizi"]
+en = ["gdpr personal data analysis", "find personal data processing", "kvkk analysis"]
+fr = ["analyse rgpd des données personnelles", "trouver les traitements de données personnelles"]
+params = [{ name = "compliance", kind = "text", required = true, flag = "--compliance" }]
+eta_s = 30
+
+[[intent]]
+command = "kor audit --out"
+run = "confirm"
+tr = ["güvenlik raporunu dosyaya yaz", "analiz raporunu sarif olarak kaydet", "denetim raporunu imzala"]
+en = ["write the security report to a file", "save the analysis as sarif", "sign the audit report"]
+fr = ["écrire le rapport de sécurité dans un fichier", "enregistrer le rapport en sarif"]
+params = [{ name = "out", kind = "path", required = true, flag = "--out" }]
+eta_s = 30
+
+[[intent]]
+command = "kor audit verify-report"
+run = "auto"
+tr = ["analiz raporunu doğrula", "rapor imzasını kontrol et", "güvenlik raporu değiştirilmiş mi"]
+en = ["verify the analysis report", "check the report signature", "was the security report altered"]
+fr = ["vérifier le rapport d'analyse", "contrôler la signature du rapport"]
+params = [{ name = "file", kind = "path", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor audit --licenses"
+run = "confirm"
+tr = ["lisans denetimi yap", "bağımlılık lisanslarını kontrol et", "yasak lisans var mı"]
+en = ["license audit", "check dependency licenses", "any forbidden licenses"]
+fr = ["audit des licences", "vérifier les licences des dépendances"]
+eta_s = 15
+
+[[intent]]
+command = "kor deps check"
+run = "confirm"
+tr = ["bağımlılıkları kontrol et", "bağımlılıklarda açık var mı", "kullanılmayan paketleri bul", "güncellenecek bağımlılıklar", "bağımlılık güvenlik taraması", "hangi bağımlılıkları yükseltmeliyim"]
+en = ["check dependencies", "any vulnerable dependencies", "find unused packages", "which dependencies need upgrading", "dependency security scan", "which dependencies should I upgrade"]
+fr = ["vérifier les dépendances", "dépendances vulnérables"]
+eta_s = 20
+
+[[intent]]
+command = "kor deps list"
+run = "auto"
+tr = ["bağımlılıkları listele", "hangi paketleri kullanıyoruz", "bağımlılık listesi ve lisansları", "tüm bağımlılıklar"]
+en = ["list dependencies", "which packages do we use", "dependency list with licenses", "all dependencies", "which packages do we depend on"]
+fr = ["lister les dépendances", "quels paquets utilisons nous"]
+eta_s = 2
+
+[[intent]]
+command = "kor consensus"
+run = "confirm"
+tr = ["bunu üç modele birden sor", "modellerin uyuştuğu cevabı ver", "consensus modunda sor"]
+en = ["ask several models the same question", "what do the models agree on", "ask this in consensus mode"]
+fr = ["demander à plusieurs modèles", "sur quoi les modèles sont d'accord"]
+params = [{ name = "prompt", kind = "text", required = true }]
+eta_s = 20
+
+[[intent]]
+command = "kor comment"
+run = "confirm"
+tr = ["kod yorumlarını türkçeye çevir", "yorumları ingilizceye çevir", "yorumu olmayan fonksiyonlara yorum yaz"]
+en = ["translate the code comments", "translate comments into english", "write comments for undocumented functions"]
+fr = ["traduire les commentaires du code", "commenter les fonctions sans commentaire"]
+params = [{ name = "files", kind = "text", required = true }, { name = "lang", kind = "text", required = true }]
+eta_s = 30
+
+[[intent]]
+command = "kor explain"
+run = "confirm"
+tr = ["bu dosyayı açıkla", "dosyanın geçmişini anlat", "kod arkeolojisi", "bu dosya neden böyle yazılmış", "dosyayı bana anlat"]
+en = ["explain this file", "tell me the history of this file", "code archaeology", "why is this file written this way", "walk me through this file"]
+fr = ["explique ce fichier", "archéologie du code", "historique de ce fichier"]
+params = [{ name = "file", kind = "path", required = true }]
+tokens = 12000
+eta_s = 20
+
+[[intent]]
+command = "kor quality"
+run = "auto"
+tr = ["kalite notunu göster", "projenin kalite puanı", "kod kalitesi ne durumda", "kalite raporu", "kalite geçmişi"]
+en = ["show the quality grade", "project quality score", "how is the code quality", "quality report", "quality history"]
+fr = ["note de qualité du projet", "qualité du code"]
+eta_s = 10
+
+[[intent]]
+command = "kor debt"
+run = "auto"
+tr = ["teknik borcu göster", "teknik borç kaç saat", "teknik borç raporu"]
+en = ["show technical debt", "how many hours of tech debt", "tech debt report"]
+fr = ["dette technique", "combien d'heures de dette technique"]
+eta_s = 10
+
+[[intent]]
+command = "kor style"
+run = "confirm"
+tr = ["stil profilimi çıkar", "kodlama stilimi öğren", "stil profilini oluştur"]
+en = ["build my style profile", "learn my coding style", "create the style profile"]
+fr = ["profil de style de code", "apprendre mon style de code"]
+eta_s = 15
+
+[[intent]]
+command = "kor style check"
+run = "auto"
+tr = ["stil denetimi yap", "değişiklikler stilime uyuyor mu", "stil profiline aykırı kod var mı"]
+en = ["style check", "does my change match the style profile", "flag code that breaks my style"]
+fr = ["vérification du style", "le code respecte-t-il mon style"]
+eta_s = 5
+
+[[intent]]
+command = "kor stats"
+run = "auto"
+tr = ["geliştirici istatistikleri", "bu haftaki istatistiklerim", "haftalık kod istatistikleri", "ne kadar kod yazdım"]
+en = ["developer stats", "my stats this week", "weekly coding statistics", "how much code did I write"]
+fr = ["statistiques du développeur", "mes statistiques de la semaine"]
+eta_s = 5
+
+[[intent]]
+command = "kor impact"
+run = "auto"
+tr = ["değişiklik etkisi", "bu değişiklik neleri etkiler", "staged değişikliklerin etkisi", "bu dosyayı değiştirirsem ne bozulur"]
+en = ["change impact", "what does this change affect", "impact of my staged changes", "what breaks if I change this file"]
+fr = ["impact du changement", "qu'est-ce que ce changement affecte"]
+params = [{ name = "target", kind = "text", required = false }]
+eta_s = 5
+
+[[intent]]
+command = "kor dead-code"
+run = "auto"
+tr = ["ölü kodu bul", "kullanılmayan kodları listele", "erişilmeyen kod var mı", "ölü kodları bul"]
+en = ["find dead code", "list unused code", "any unreachable code"]
+fr = ["trouver le code mort", "code inutilisé"]
+eta_s = 15
+
+[[intent]]
+command = "kor screenshot"
+run = "confirm"
+tr = ["ekran görüntüsünden bileşen üret", "bu ekran görüntüsünü koda çevir", "görselden react bileşeni yap"]
+en = ["generate components from a screenshot", "turn this screenshot into code", "make react components from an image"]
+fr = ["générer des composants depuis une capture", "transformer la capture d'écran en code"]
+params = [{ name = "image", kind = "path", required = true }]
+tokens = 30000
+eta_s = 90
+
+[[intent]]
+command = "kor diagram"
+run = "confirm"
+tr = ["diyagramdan modül iskeleti üret", "mimari çizimi koda çevir", "diyagramdan proje iskeleti"]
+en = ["module skeleton from a diagram", "turn the architecture diagram into code", "scaffold from a diagram"]
+fr = ["squelette de modules depuis un diagramme", "transformer le diagramme en code"]
+params = [{ name = "image", kind = "path", required = true }]
+tokens = 25000
+eta_s = 90
+
+[[intent]]
+command = "kor visualize"
+run = "confirm"
+tr = ["mimari haritayı göster", "çağrı grafını çiz", "veri akışını görselleştir", "projeyi görselleştir"]
+en = ["show the architecture map", "draw the call graph", "visualize the data flow", "visualize the project"]
+fr = ["carte de l'architecture", "visualiser le flux de données"]
+params = [{ name = "path", kind = "path", required = false }]
+eta_s = 10
+
+[[intent]]
+command = "kor voice"
+run = "confirm"
+tr = ["sesle görev ver", "mikrofondan dinle", "sesli komut al"]
+en = ["give a task by voice", "listen to the microphone", "voice command"]
+fr = ["donner une tâche à la voix", "écouter le micro"]
+eta_s = 15
+
+[[intent]]
+command = "kor perf"
+run = "confirm"
+tr = ["performans profili çıkar", "flamegraph üret", "testlerin profilini çıkar", "endpoint'in performansını ölç"]
+en = ["profile performance", "make a flamegraph", "profile the tests", "measure the endpoint performance"]
+fr = ["profiler les performances", "générer un flamegraph"]
+params = [{ name = "target", kind = "text", required = true }]
+eta_s = 60
+
+[[intent]]
+command = "kor perf report"
+run = "auto"
+tr = ["profil dosyasını oku", "profil dosyasını grafa eşle", "pprof dosyasını analiz et"]
+en = ["read the profile file", "map the profile onto the graph", "analyze the pprof file"]
+fr = ["lire le fichier de profil", "analyser le fichier pprof"]
+params = [{ name = "file", kind = "path", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor perf list"
+run = "auto"
+tr = ["önceki profil çalıştırmaları", "eski profilleri listele", "performans ölçüm geçmişi"]
+en = ["previous profile runs", "list earlier profiles", "performance run history"]
+fr = ["exécutions de profil précédentes", "historique des profils"]
+eta_s = 1
+
+[[intent]]
+command = "kor intents list"
+run = "auto"
+tr = ["niyetleri listele", "hangi doğal dil komutları var", "tanınan ifadeleri göster", "intent listesi"]
+en = ["list intents", "which natural language commands exist", "show recognized phrases", "intent list"]
+fr = ["lister les intentions", "phrases reconnues"]
+eta_s = 1
+
+[[intent]]
+command = "kor intents test"
+run = "auto"
+tr = ["bu cümle hangi komuta gider", "niyet eşleşmesini test et", "ifadeyi dene hangi komut çıkıyor"]
+en = ["which command does this sentence map to", "test intent matching", "try a phrase against the intents"]
+fr = ["tester la correspondance d'intention", "quelle commande pour cette phrase"]
+params = [{ name = "text", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor intents add"
+run = "confirm"
+tr = ["yeni niyet ifadesi ekle", "bu cümleyi komuta bağla", "kendi kısayol cümlemi ekle"]
+en = ["add an intent phrase", "map this sentence to a command", "teach a new phrase"]
+fr = ["ajouter une phrase d'intention", "associer cette phrase à une commande"]
+params = [{ name = "text", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor intents forget"
+run = "confirm"
+tr = ["niyet ifadesini unut", "eklediğim ifadeyi sil", "bu cümle eşleşmesini kaldır"]
+en = ["forget an intent phrase", "remove the phrase I added", "drop that sentence mapping"]
+fr = ["oublier une phrase d'intention", "supprimer la phrase ajoutée"]
+params = [{ name = "text", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor tool list"
+run = "auto"
+tr = ["araçları listele", "hangi araçlar var", "kullanabileceğim araçlar", "tool listesini göster", "kurulu araçlar"]
+en = ["list tools", "which tools are available", "what tools can I use", "show the tool list", "installed tools", "which tools do I have installed"]
+fr = ["lister les outils", "outils disponibles", "quels outils sont installés"]
+eta_s = 1
+
+[[intent]]
+command = "kor tool describe"
+run = "auto"
+tr = ["aracı açıkla", "bu araç ne yapıyor", "aracın parametrelerini göster"]
+en = ["describe a tool", "what does this tool do", "show the tool's parameters"]
+fr = ["décrire un outil", "que fait cet outil"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor tool search"
+run = "auto"
+tr = ["araç ara", "işime yarayacak aracı bul", "araç kataloğunda ara"]
+en = ["search tools", "find a tool for this", "search the tool catalog"]
+fr = ["chercher un outil", "trouver un outil pour ça"]
+params = [{ name = "query", kind = "text", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor tool add"
+run = "confirm"
+tr = ["yeni araç ekle", "aracı kur", "kor'a araç tanımla"]
+en = ["add a tool", "install the tool", "register a new tool"]
+fr = ["ajouter un outil", "installer l'outil"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor tool share"
+run = "confirm"
+tr = ["aracı paylaş", "aracımı yayınla", "aracı ekiple paylaş"]
+en = ["share a tool", "publish my tool", "share the tool with the team"]
+fr = ["partager un outil", "publier mon outil"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor tool pull"
+run = "confirm"
+tr = ["paylaşılan aracı çek", "aracı uzaktan indir", "ekibin aracını al", "ekibin araçlarını indir"]
+en = ["pull a shared tool", "download the tool", "fetch the team's tool"]
+fr = ["récupérer un outil partagé", "télécharger l'outil"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 5
+
+# Commands added with the web, SEO, peer, desktop and docs features.
+
+[[intent]]
+command = "kor sessions ls"
+run = "auto"
+tr = ["sabitlenmiş oturumları listele", "etiketli oturumları filtrele", "arşivlenmiş oturumları da listele"]
+en = ["list pinned sessions", "filter sessions by tag", "list archived sessions too"]
+fr = ["lister les sessions épinglées", "filtrer les sessions par étiquette"]
+eta_s = 1
+
+[[intent]]
+command = "kor sessions search"
+run = "auto"
+tr = ["oturumların içinde ara", "eski sohbetlerde metin ara", "hangi oturumda konuşmuştuk bul"]
+en = ["search inside my sessions", "full text search old conversations", "find which session mentioned it"]
+fr = ["rechercher dans mes sessions", "chercher un texte dans les anciennes conversations"]
+params = [{ name = "text", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor sessions mv"
+run = "confirm"
+tr = ["oturumu klasöre taşı", "sohbeti başka klasöre koy", "oturumu klasörden çıkar"]
+en = ["move the session into a folder", "put this conversation in a folder", "take the session out of its folder"]
+fr = ["déplacer la session dans un dossier", "ranger la conversation dans un dossier"]
+params = [{ name = "id", kind = "text", required = true }, { name = "folder", kind = "text", required = false }]
+eta_s = 1
+
+[[intent]]
+command = "kor sessions pin"
+run = "confirm"
+tr = ["oturumu sabitle", "bu sohbeti yukarıya iğnele", "oturumun sabitlemesini kaldır"]
+en = ["pin the session", "pin this conversation to the top", "unpin the session"]
+fr = ["épingler la session", "désépingler la session"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor sessions archive"
+run = "confirm"
+tr = ["oturumu arşivle", "eski sohbeti arşive kaldır", "arşivlenen oturumu geri getir"]
+en = ["archive the session", "archive this old conversation", "restore an archived session"]
+fr = ["archiver la session", "restaurer une session archivée"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor sessions tag"
+run = "confirm"
+tr = ["oturuma etiket ekle", "sohbeti etiketle", "oturumdan etiketi kaldır"]
+en = ["tag the session", "add a tag to this conversation", "remove a tag from the session"]
+fr = ["étiqueter la session", "ajouter une étiquette à la conversation"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor sessions color"
+run = "confirm"
+tr = ["oturuma renk noktası ver", "oturum renk etiketini ayarla", "oturumu kırmızı noktayla işaretle"]
+en = ["color the session", "give this conversation a color dot", "mark the session red"]
+fr = ["changer la couleur de la session", "marquer la session en rouge"]
+params = [{ name = "id", kind = "text", required = true }, { name = "color", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor sessions rename"
+run = "confirm"
+tr = ["oturumu yeniden adlandır", "sohbetin başlığını değiştir", "oturuma yeni başlık ver"]
+en = ["rename the session", "change the conversation title", "give the session a new title"]
+fr = ["renommer la session", "changer le titre de la conversation"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor sessions suggest"
+run = "confirm"
+tr = ["oturum için başlık ve etiket öner", "sohbete uygun başlık öner", "oturuma otomatik başlık bul"]
+en = ["suggest a title and tags for the session", "suggest a conversation title", "auto title this session"]
+fr = ["suggérer un titre pour la session", "proposer des étiquettes pour la conversation"]
+params = [{ name = "id", kind = "text", required = true }]
+tokens = 2000
+eta_s = 3
+
+[[intent]]
+command = "kor sessions export"
+run = "confirm"
+tr = ["oturumları markdown olarak dışa aktar", "tüm sohbetleri klasöre yaz", "oturum yedeği al markdown"]
+en = ["export sessions as markdown", "write every conversation to a folder", "back up my sessions as markdown"]
+fr = ["exporter les sessions en markdown", "sauvegarder les conversations en markdown"]
+params = [{ name = "dir", kind = "path", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor sessions import"
+run = "confirm"
+tr = ["markdown dosyasından oturum içe aktar", "dışa aktarılmış sohbeti geri yükle", "oturumu markdowndan içeri al"]
+en = ["import a session from markdown", "load an exported conversation back", "import the markdown session file"]
+fr = ["importer une session depuis markdown", "recharger une conversation exportée"]
+params = [{ name = "file", kind = "path", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor sessions fork"
+run = "confirm"
+tr = ["oturumu dallandır", "sohbeti bu mesajdan çatalla", "konuşmayı başka modelle dallandır"]
+en = ["fork the session", "branch the conversation after this message", "fork the chat with another model"]
+fr = ["bifurquer la session", "créer une branche de la conversation"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor sessions tree"
+run = "auto"
+tr = ["oturum dallarını ağaç olarak göster", "sohbet dallanma ağacı", "çatallanan oturumları göster"]
+en = ["show the session branch tree", "conversation branches as a tree", "show forked sessions"]
+fr = ["arbre des branches de session", "afficher les sessions bifurquées"]
+eta_s = 1
+
+[[intent]]
+command = "kor sessions compare"
+run = "auto"
+tr = ["iki oturum dalını karşılaştır", "dalların sonuçlarını kıyasla", "çatallanan sohbetleri karşılaştır"]
+en = ["compare two session branches", "compare the branch conclusions", "diff two forked conversations"]
+fr = ["comparer deux branches de session", "comparer les conversations bifurquées"]
+params = [{ name = "a", kind = "text", required = true }, { name = "b", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor sessions merge"
+run = "confirm"
+tr = ["dalı ana oturuma birleştir", "çatallanan sohbetin sonucunu geri al", "oturum dalını birleştir"]
+en = ["merge the branch back into its session", "merge the forked conversation", "take the branch conclusion back"]
+fr = ["fusionner la branche dans la session", "fusionner la conversation bifurquée"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor sessions unfork"
+run = "confirm"
+tr = ["oturum dalını sil", "çatal kaydını unut", "dalın worktreesini kaldır"]
+en = ["unfork the session branch", "forget the branch record", "remove the branch worktree"]
+fr = ["supprimer la branche de session", "oublier la bifurcation"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor completions"
+run = "auto"
+tr = ["kabuk tamamlama betiği üret", "bash için otomatik tamamlama", "zsh tamamlamalarını yazdır"]
+en = ["generate shell completions", "bash completion script for kor", "print zsh completions"]
+fr = ["générer l'autocomplétion du shell", "script de complétion bash"]
+eta_s = 1
+
+[[intent]]
+command = "kor plan list"
+run = "auto"
+tr = ["projenin planlarını listele", "kaydedilmiş planları göster", "hangi planlar var"]
+en = ["list the project plans", "show saved plans", "which plans do we have"]
+fr = ["lister les plans du projet", "afficher les plans enregistrés"]
+eta_s = 1
+
+[[intent]]
+command = "kor plan show"
+run = "auto"
+tr = ["son planı göster", "planın içeriğini yazdır", "plan detayını aç"]
+en = ["show the latest plan", "print the plan", "open the plan details"]
+fr = ["afficher le dernier plan", "montrer le contenu du plan"]
+params = [{ name = "id", kind = "text", required = false }]
+eta_s = 1
+
+[[intent]]
+command = "kor plan approve"
+run = "confirm"
+tr = ["planı onayla", "plana yazma izni ver", "bu planı onaylıyorum uygula"]
+en = ["approve the plan", "approve this plan and let it write", "accept the plan"]
+fr = ["approuver le plan", "valider le plan"]
+params = [{ name = "id", kind = "text", required = false }]
+eta_s = 1
+
+[[intent]]
+command = "kor plan"
+run = "auto"
+tr = ["planlar ekranı", "plan modu planlarına bak", "planları aç"]
+en = ["plans overview", "look at plan mode plans", "open the plans"]
+fr = ["vue des plans", "ouvrir les plans"]
+eta_s = 1
+
+[[intent]]
+command = "kor status"
+run = "auto"
+tr = ["şu an neler çalışıyor", "çalışan görevler ve bekleyen onaylar", "genel durum özetini göster"]
+en = ["what is running right now", "running tasks and pending approvals", "show the overall status"]
+fr = ["qu'est-ce qui tourne en ce moment", "tâches en cours et approbations en attente"]
+eta_s = 1
+
+[[intent]]
+command = "kor approve"
+run = "confirm"
+tr = ["onay kimliğiyle izin isteğini onayla", "oturumdaki izin isteğini kabul et", "daemonun izin isteğine evet de"]
+en = ["approve the permission request by its id", "say yes to the session permission prompt", "grant the daemon permission request"]
+fr = ["approuver la demande en attente", "accepter l'approbation en attente"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor deny"
+run = "confirm"
+tr = ["onay kimliğiyle izin isteğini reddet", "oturumdaki izin isteğini geri çevir", "daemonun izin isteğine hayır de"]
+en = ["deny the permission request by its id", "say no to the session permission prompt", "refuse the daemon permission request"]
+fr = ["refuser la demande en attente", "rejeter l'approbation en attente"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor approvals"
+run = "auto"
+tr = ["onay kuyruğunu göster", "onay bekleyen istekler", "bekleyen onayları listele"]
+en = ["show the approval queue", "requests waiting for approval", "list pending approvals"]
+fr = ["file des approbations", "demandes en attente d'approbation"]
+eta_s = 1
+
+[[intent]]
+command = "kor notifications list"
+run = "auto"
+tr = ["bildirimleri listele", "okunmamış bildirimleri göster", "son bildirimler neler"]
+en = ["list notifications", "show unread notifications", "what are my latest notifications"]
+fr = ["lister les notifications", "afficher les notifications non lues"]
+eta_s = 1
+
+[[intent]]
+command = "kor notifications read"
+run = "confirm"
+tr = ["bildirimleri okundu say", "tüm bildirimleri okundu işaretle", "bildirimi okundu yap"]
+en = ["mark notifications as read", "mark all notifications read", "mark this notification read"]
+fr = ["marquer les notifications comme lues", "tout marquer comme lu"]
+eta_s = 1
+
+[[intent]]
+command = "kor notifications clear"
+run = "confirm"
+tr = ["bildirimleri temizle", "tüm bildirimleri sil", "bildirim listesini boşalt"]
+en = ["clear notifications", "delete all notifications", "empty the notification list"]
+fr = ["effacer les notifications", "vider la liste des notifications"]
+eta_s = 1
+
+[[intent]]
+command = "kor notifications"
+run = "auto"
+tr = ["bildirim merkezi", "bildirimlerimi aç", "bildirim merkezini göster"]
+en = ["notification center", "open my notifications", "show the notification center"]
+fr = ["centre de notifications", "ouvrir mes notifications"]
+eta_s = 1
+
+[[intent]]
+command = "kor integrate install"
+run = "confirm"
+tr = ["sağ tık menüsüne kor ekle", "dosya gezginine kor entegrasyonu kur", "bağlam menüsü girişlerini kur"]
+en = ["add kor to the right click menu", "install the file explorer integration", "install context menu entries"]
+fr = ["ajouter kor au menu clic droit", "installer l'intégration à l'explorateur"]
+eta_s = 3
+
+[[intent]]
+command = "kor integrate uninstall"
+run = "confirm"
+tr = ["sağ tık menüsünden kor u kaldır", "dosya gezgini entegrasyonunu kaldır", "bağlam menüsü girişlerini sil"]
+en = ["remove kor from the right click menu", "uninstall the file explorer integration", "remove the context menu entries"]
+fr = ["retirer kor du menu clic droit", "désinstaller l'intégration à l'explorateur"]
+eta_s = 2
+
+[[intent]]
+command = "kor integrate status"
+run = "auto"
+tr = ["sağ tık menüsü entegrasyonu kurulu mu", "dosya gezgini entegrasyon durumu", "bağlam menüsünde neler kurulu"]
+en = ["is the right click menu integration installed", "file explorer integration status", "what is in the context menu"]
+fr = ["l'intégration au menu clic droit est-elle installée", "état de l'intégration à l'explorateur"]
+eta_s = 1
+
+[[intent]]
+command = "kor integrate open-terminal"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor integrate edit"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor files"
+run = "confirm"
+tr = ["dosyaları toplu yeniden adlandır", "seçili dosyaları talimatla düzenle", "dosya adlarında boşlukları tire yap"]
+en = ["batch rename these files", "batch edit the files with an instruction", "replace spaces with dashes in file names"]
+fr = ["renommer les fichiers en lot", "modifier les fichiers en lot"]
+params = [{ name = "task", kind = "text", required = false, flag = "--task" }]
+tokens = 4000
+eta_s = 10
+
+[[intent]]
+command = "kor folder init"
+run = "confirm"
+tr = ["kor klasörünü oluştur", "ev dizininde kor klasörü kur", "kor klasör görünümünü aç"]
+en = ["create the kor folder", "set up the kor folder in my home", "enable the kor folder views"]
+fr = ["créer le dossier kor", "installer le dossier kor dans mon home"]
+eta_s = 3
+
+[[intent]]
+command = "kor folder status"
+run = "auto"
+tr = ["kor klasöründe ne var", "kor klasörünün durumu", "kor klasörü açık mı"]
+en = ["what is in the kor folder", "kor folder status", "is the kor folder enabled"]
+fr = ["que contient le dossier kor", "état du dossier kor"]
+eta_s = 1
+
+[[intent]]
+command = "kor folder sync"
+run = "confirm"
+tr = ["kor klasörünü eşitle", "klasördeki görünümleri güncelle", "kor klasörüne bırakılan görevleri çalıştır"]
+en = ["sync the kor folder", "refresh the views in the kor folder", "run the tasks dropped in the kor folder"]
+fr = ["synchroniser le dossier kor", "mettre à jour les vues du dossier kor"]
+eta_s = 3
+
+[[intent]]
+command = "kor folder remove"
+run = "confirm"
+tr = ["kor klasörünü kaldır", "kor un oluşturduğu klasör dosyalarını sil", "kor klasör görünümünü kapat"]
+en = ["remove the kor folder", "delete what kor created in the folder", "disable the kor folder views"]
+fr = ["supprimer le dossier kor", "désactiver le dossier kor"]
+eta_s = 2
+
+[[intent]]
+command = "kor mount"
+run = "confirm"
+tr = ["projeyi sürücü olarak bağla", "projeyi ağ sürücüsü olarak tak", "bağlı sürücüyü ayır"]
+en = ["mount the project as a drive", "map the project as a network drive", "unmount the kor drive"]
+fr = ["monter le projet comme lecteur", "démonter le lecteur kor"]
+eta_s = 5
+
+[[intent]]
+command = "kor os-integration list"
+run = "auto"
+tr = ["işletim sistemi entegrasyonlarını listele", "hangi sistem entegrasyonları var", "masaüstü entegrasyonları neler"]
+en = ["list os integrations", "which system integrations are available", "what desktop integrations are there"]
+fr = ["lister les intégrations système", "quelles intégrations au système existent"]
+eta_s = 1
+
+[[intent]]
+command = "kor os-integration status"
+run = "auto"
+tr = ["sistem entegrasyonlarının durumu", "wsl dahil entegrasyon durumu", "işletim sistemi entegrasyonu kurulu mu"]
+en = ["os integration status", "integration status including wsl", "are the os integrations installed"]
+fr = ["état des intégrations système", "les intégrations système sont-elles installées"]
+eta_s = 1
+
+[[intent]]
+command = "kor os-integration install"
+run = "confirm"
+tr = ["sistem entegrasyonlarını kur", "işletim sistemi entegrasyonu ekle", "tüm masaüstü entegrasyonlarını kur"]
+en = ["install os integrations", "add the system integrations", "install every desktop integration"]
+fr = ["installer les intégrations système", "ajouter les intégrations au système"]
+eta_s = 5
+
+[[intent]]
+command = "kor os-integration uninstall"
+run = "confirm"
+tr = ["sistem entegrasyonlarını kaldır", "işletim sistemi entegrasyonunu sil", "masaüstü entegrasyonlarını kaldır"]
+en = ["uninstall os integrations", "remove the system integrations", "remove the desktop integrations"]
+fr = ["désinstaller les intégrations système", "retirer les intégrations au système"]
+eta_s = 3
+
+[[intent]]
+command = "kor os-integration feed"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor os-integration last-reply"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor os-integration approve"
+run = "confirm"
+tr = ["en eski bekleyen isteği sistemden onayla", "widgettan bekleyen isteği onayla", "başlatıcıdan onay ver"]
+en = ["approve the oldest waiting request from the widget", "approve from the launcher", "approve the waiting request from the shell widget"]
+fr = ["approuver depuis le lanceur", "approuver la plus ancienne demande depuis le widget"]
+eta_s = 1
+
+[[intent]]
+command = "kor host connect"
+run = "confirm"
+tr = ["hosting paneline bağlan", "cpanel sunucusunu bağla", "plesk sunucusu ekle"]
+en = ["connect a hosting panel", "connect my cpanel server", "add a plesk server"]
+fr = ["connecter un panneau d'hébergement", "ajouter un serveur cpanel"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor host list"
+run = "auto"
+tr = ["bağlı hosting sunucularını listele", "hangi hosting panelleri bağlı", "kayıtlı sunucu profilleri"]
+en = ["list connected hosting servers", "which hosting panels are connected", "saved host profiles"]
+fr = ["lister les serveurs d'hébergement connectés", "quels panneaux d'hébergement sont connectés"]
+eta_s = 1
+
+[[intent]]
+command = "kor host remove"
+run = "confirm"
+tr = ["hosting sunucusunu unut", "sunucu profilini kaldır", "bağlı hosting panelini sil"]
+en = ["forget the hosting server", "remove the host profile", "disconnect the hosting panel"]
+fr = ["oublier le serveur d'hébergement", "supprimer le profil d'hébergement"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor host inventory"
+run = "confirm"
+tr = ["hosting envanterini çıkar", "sunucudaki domainleri ve php sürümlerini listele", "ssl bitiş tarihleri ve disk kullanımı"]
+en = ["hosting inventory", "list domains and php versions on the server", "ssl expiry dates and disk usage on the host"]
+fr = ["inventaire de l'hébergement", "domaines et versions php du serveur"]
+eta_s = 15
+
+[[intent]]
+command = "kor host ssl"
+run = "confirm"
+tr = ["siteye ssl sertifikası kur", "lets encrypt sertifikasını yenile", "domain için autossl çalıştır"]
+en = ["install an ssl certificate for the site", "renew the lets encrypt certificate", "run autossl for the domain"]
+fr = ["installer un certificat ssl", "renouveler le certificat lets encrypt"]
+params = [{ name = "domain", kind = "domain", required = true, flag = "--domain" }]
+eta_s = 30
+
+[[intent]]
+command = "kor host php"
+run = "confirm"
+tr = ["sitenin php sürümünü değiştir", "php sürümünü 8.3 yap hostingde", "domainin php versiyonunu yükselt"]
+en = ["change the site php version", "switch the hosting php version", "upgrade the domain php version"]
+fr = ["changer la version php du site", "mettre à jour la version php de l'hébergement"]
+params = [{ name = "domain", kind = "domain", required = true, flag = "--domain" }]
+eta_s = 15
+
+[[intent]]
+command = "kor host php-ini"
+run = "confirm"
+tr = ["php ini ayarını değiştir", "memory limit değerini artır hostingde", "upload max filesize ayarla"]
+en = ["set a php ini value", "raise the memory limit on the host", "set upload max filesize for the site"]
+fr = ["modifier une valeur php ini", "augmenter la memory limit de l'hébergement"]
+params = [{ name = "domain", kind = "domain", required = true, flag = "--domain" }]
+eta_s = 10
+
+[[intent]]
+command = "kor host subdomain"
+run = "confirm"
+tr = ["hostingde alt alan adı oluştur", "yeni subdomain aç", "panelde alt domain ekle"]
+en = ["create a subdomain on the host", "add a new subdomain", "set up a subdomain in the panel"]
+fr = ["créer un sous-domaine", "ajouter un sous-domaine dans le panneau"]
+params = [{ name = "domain", kind = "domain", required = true, flag = "--domain" }]
+eta_s = 15
+
+[[intent]]
+command = "kor host db"
+run = "confirm"
+tr = ["hostingde veritabanı ve kullanıcı oluştur", "panelde yeni mysql veritabanı aç", "sunucuda veritabanı kullanıcısı ekle"]
+en = ["create a database and user on the host", "create a new mysql database in the panel", "add a database user on the server"]
+fr = ["créer une base de données sur l'hébergement", "ajouter un utilisateur de base de données"]
+eta_s = 15
+
+[[intent]]
+command = "kor host email"
+run = "confirm"
+tr = ["hostingde mail kutusu oluştur", "panelde yeni mail hesabı aç", "domain için kurumsal mail adresi aç"]
+en = ["create a mailbox on the host", "add a new email account in the panel", "create an email address for the domain"]
+fr = ["créer une boîte mail sur l'hébergement", "ajouter un compte email"]
+eta_s = 15
+
+[[intent]]
+command = "kor host backup"
+run = "confirm"
+tr = ["hosting yedeği al", "sunucudaki sitenin yedeğini al", "panelden tam yedek oluştur"]
+en = ["take a hosting backup", "back up the site on the server", "create a full panel backup"]
+fr = ["faire une sauvegarde de l'hébergement", "sauvegarder le site sur le serveur"]
+eta_s = 120
+
+[[intent]]
+command = "kor host restore"
+run = "confirm"
+tr = ["hosting yedeğini geri yükle", "sunucuya eski yedeği dön", "kor yedeğinden siteyi geri yükle"]
+en = ["restore a hosting backup", "roll the server back to a backup", "restore the site from a kor backup"]
+fr = ["restaurer une sauvegarde de l'hébergement", "restaurer le site depuis une sauvegarde"]
+eta_s = 180
+
+[[intent]]
+command = "kor host clean"
+run = "confirm"
+tr = ["sunucuda disk temizliği yap", "hostingde yer açacak dosyaları bul", "sunucudaki gereksiz dosyaları sil"]
+en = ["clean up disk on the server", "find what takes space on the host", "delete junk files on the server"]
+fr = ["nettoyer le disque du serveur", "libérer de l'espace sur l'hébergement"]
+eta_s = 30
+
+[[intent]]
+command = "kor host cron"
+run = "confirm"
+tr = ["sunucuya cron işi ekle", "hostingde zamanlanmış görev kur", "panelde cron job tanımla"]
+en = ["add a cron job on the server", "schedule a cron task on the host", "create a cron job in the panel"]
+fr = ["ajouter une tâche cron sur le serveur", "planifier une tâche cron"]
+eta_s = 10
+
+[[intent]]
+command = "kor host perms"
+run = "confirm"
+tr = ["sunucuda dosya izinlerini düzelt", "wordpress klasör izinlerini 755 yap", "hostingde chmod izinlerini onar"]
+en = ["fix file permissions on the server", "set wordpress folder permissions to 755", "repair chmod permissions on the host"]
+fr = ["corriger les permissions sur le serveur", "réparer les droits des fichiers"]
+eta_s = 20
+
+[[intent]]
+command = "kor host sftp"
+run = "confirm"
+tr = ["sftp kullanıcısı oluştur", "hostingde ftp hesabı aç", "sunucuya sftp erişimi ver"]
+en = ["create an sftp user", "add an ftp account on the host", "give sftp access to the server"]
+fr = ["créer un utilisateur sftp", "ajouter un compte ftp"]
+eta_s = 10
+
+[[intent]]
+command = "kor wp connect"
+run = "confirm"
+tr = ["wordpress sitesini bağla", "wp sitesini uygulama şifresiyle bağla", "wordpress sitesi ekle"]
+en = ["connect a wordpress site", "connect the wp site with an application password", "add a wordpress site"]
+fr = ["connecter un site wordpress", "ajouter un site wordpress"]
+params = [{ name = "name", kind = "text", required = true }, { name = "url", kind = "url", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor wp list"
+run = "auto"
+tr = ["bağlı wordpress sitelerini listele", "hangi wp siteleri bağlı", "kayıtlı wordpress siteleri"]
+en = ["list connected wordpress sites", "which wp sites are connected", "saved wordpress sites"]
+fr = ["lister les sites wordpress connectés", "quels sites wordpress sont connectés"]
+eta_s = 1
+
+[[intent]]
+command = "kor wp remove"
+run = "confirm"
+tr = ["wordpress sitesini unut", "wp site bağlantısını kaldır", "bağlı wordpress sitesini sil"]
+en = ["forget the wordpress site", "remove the wp site connection", "disconnect the wordpress site"]
+fr = ["oublier le site wordpress", "déconnecter le site wordpress"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor wp inventory"
+run = "confirm"
+tr = ["wordpress eklenti ve tema envanteri", "wp sitesindeki eklentileri listele", "woocommerce ürün ve sipariş sayıları"]
+en = ["wordpress plugin and theme inventory", "list plugins on the wp site", "woocommerce product and order counts"]
+fr = ["inventaire des plugins wordpress", "lister les extensions du site wordpress"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 15
+
+[[intent]]
+command = "kor wp health"
+run = "confirm"
+tr = ["wordpress site sağlığını kontrol et", "wp site health testlerini çalıştır", "wordpress çekirdek sağlama kontrolü"]
+en = ["check wordpress site health", "run wp site health tests", "wordpress core checksum check"]
+fr = ["vérifier la santé du site wordpress", "lancer les tests site health"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 30
+
+[[intent]]
+command = "kor wp doctor"
+run = "confirm"
+tr = ["wordpress eklenti doktoru", "çakışan ve güncel olmayan eklentileri bul", "wp eklentilerine not ver"]
+en = ["wordpress plugin doctor", "find conflicting and outdated plugins", "grade the wp plugins"]
+fr = ["docteur des plugins wordpress", "trouver les plugins obsolètes ou en conflit"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 60
+
+[[intent]]
+command = "kor wp update"
+run = "confirm"
+tr = ["wordpress eklentilerini güncelle", "wp çekirdeğini yedekle ve güncelle", "wordpress temalarını güncelle"]
+en = ["update wordpress plugins", "back up and update wp core", "update the wordpress themes"]
+fr = ["mettre à jour les plugins wordpress", "mettre à jour le coeur wordpress"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 300
+
+[[intent]]
+command = "kor wp staging"
+run = "confirm"
+tr = ["wordpress staging kopyası oluştur", "wp test kopyası aç", "staging kopyasını kaldır wordpress"]
+en = ["create a wordpress staging copy", "make a wp staging site", "drop the wordpress staging copy"]
+fr = ["créer une copie de staging wordpress", "supprimer la copie de staging"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 120
+
+[[intent]]
+command = "kor wp integrity"
+run = "confirm"
+tr = ["wordpress dosya bütünlüğünü kontrol et", "wp çekirdek dosyaları değişmiş mi", "şüpheli kod taraması wordpress"]
+en = ["check wordpress file integrity", "were wp core files modified", "scan wordpress for suspicious code"]
+fr = ["vérifier l'intégrité des fichiers wordpress", "chercher du code suspect dans wordpress"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 60
+
+[[intent]]
+command = "kor wp cleanup"
+run = "confirm"
+tr = ["hacklenen wordpress sitesini temizle", "wp çekirdeğini yeniden kur ve salt değiştir", "saldırı sonrası wordpress temizliği"]
+en = ["clean up the hacked wordpress site", "reinstall wp core and rotate salts", "wordpress cleanup after a compromise"]
+fr = ["nettoyer le site wordpress piraté", "réinstaller le coeur wordpress après une attaque"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 300
+
+[[intent]]
+command = "kor wp scaffold"
+run = "confirm"
+tr = ["wordpress alt tema iskeleti oluştur", "wp eklenti iskeleti üret", "opencart modül iskeleti"]
+en = ["scaffold a wordpress child theme", "generate a wp plugin skeleton", "opencart module skeleton"]
+fr = ["créer un thème enfant wordpress", "générer un squelette de plugin wordpress"]
+eta_s = 3
+
+[[intent]]
+command = "kor wp detect"
+run = "confirm"
+tr = ["site hangi altyapıyı kullanıyor", "bu site wordpress mi ticimax mı", "e ticaret platformunu tespit et"]
+en = ["which platform does this site run on", "is this site wordpress or opencart", "detect the ecommerce platform"]
+fr = ["quelle plateforme utilise ce site", "détecter la plateforme e-commerce"]
+params = [{ name = "target", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor redirects build"
+run = "confirm"
+tr = ["eski urlleri yenilerine eşle", "site taşıma için yönlendirme haritası çıkar", "301 yönlendirme listesi oluştur"]
+en = ["map old urls to new ones", "build a redirect map for the migration", "create a 301 redirect list"]
+fr = ["faire correspondre les anciennes urls aux nouvelles", "créer une table de redirections 301"]
+eta_s = 60
+
+[[intent]]
+command = "kor redirects export"
+run = "confirm"
+tr = ["yönlendirmeleri nginx kuralına çevir", "yönlendirme haritasını htaccess olarak dışa aktar", "cloudflare yönlendirme kuralları üret"]
+en = ["export redirects as nginx rules", "export the redirect map to htaccess", "generate cloudflare redirect rules"]
+fr = ["exporter les redirections pour nginx", "générer les règles de redirection htaccess"]
+eta_s = 2
+
+[[intent]]
+command = "kor redirects check"
+run = "confirm"
+tr = ["yönlendirmeleri canlıda kontrol et", "eski urller 404 veriyor mu", "yönlendirme zincirlerini ve döngüleri bul"]
+en = ["check the redirects after launch", "do the old urls return 404", "find redirect chains and loops"]
+fr = ["vérifier les redirections après la mise en ligne", "trouver les chaînes de redirection"]
+eta_s = 60
+
+[[intent]]
+command = "kor redirects slugs"
+run = "confirm"
+tr = ["türkçe karakterli urller için yönlendirme", "türkçe harfli slugları ascii ye yönlendir", "ğüşıöç içeren urlleri düzelt"]
+en = ["redirects for urls with turkish letters", "redirect turkish slugs to ascii", "fix urls with turkish characters"]
+fr = ["redirections pour les urls avec lettres turques", "rediriger les slugs turcs vers ascii"]
+eta_s = 10
+
+[[intent]]
+command = "kor proposal init"
+run = "confirm"
+tr = ["teklif ayarlarını başlat", "business toml dosyası oluştur", "saat ücreti ve firma bilgilerini kur"]
+en = ["set up proposal settings", "create the business toml", "set my hourly rate and company details"]
+fr = ["initialiser les réglages de devis", "créer le fichier business toml"]
+eta_s = 2
+
+[[intent]]
+command = "kor proposal new"
+run = "confirm"
+tr = ["müşteriye teklif hazırla", "iş tanımından fiyat teklifi yaz", "teklif ve sözleşme oluştur"]
+en = ["write a proposal for the client", "prepare a quote from the job description", "create a proposal and contract"]
+fr = ["rédiger un devis pour le client", "préparer une proposition commerciale"]
+tokens = 8000
+eta_s = 30
+
+[[intent]]
+command = "kor proposal revise"
+run = "confirm"
+tr = ["teklifi müşteri cevabına göre güncelle", "teklifin yeni sürümünü çıkar", "müşteri yanıtıyla teklifi revize et"]
+en = ["revise the proposal from the client reply", "make a new version of the quote", "update the proposal after feedback"]
+fr = ["réviser le devis selon la réponse du client", "nouvelle version de la proposition"]
+tokens = 6000
+eta_s = 20
+
+[[intent]]
+command = "kor proposal templates"
+run = "confirm"
+tr = ["teklif şablonları nerede", "teklif şablonlarını aç", "sözleşme şablonlarını düzenle"]
+en = ["where are the proposal templates", "open the proposal templates", "edit the contract templates"]
+fr = ["où sont les modèles de devis", "ouvrir les modèles de proposition"]
+eta_s = 1
+
+[[intent]]
+command = "kor client add"
+run = "confirm"
+tr = ["yeni müşteri ekle", "müşteri çalışma alanı oluştur", "müşteri bilgilerini güncelle"]
+en = ["add a new client", "create a client workspace", "update the client details"]
+fr = ["ajouter un nouveau client", "créer un espace client"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor client list"
+run = "auto"
+tr = ["müşterileri listele", "müşteri çalışma alanları", "hangi müşterilerim var"]
+en = ["list clients", "client workspaces", "which clients do I have"]
+fr = ["lister les clients", "espaces clients"]
+eta_s = 1
+
+[[intent]]
+command = "kor client log"
+run = "confirm"
+tr = ["müşteri için çalışma saati gir", "müşteriye harcanan zamanı kaydet", "iş saati kaydı ekle"]
+en = ["log hours for the client", "record time spent for a client", "add a time sheet entry"]
+fr = ["saisir des heures pour le client", "enregistrer le temps passé"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor client ticket"
+run = "confirm"
+tr = ["müşteri talebi aç", "müşteri destek kaydı ekle", "müşteri taleplerini listele"]
+en = ["open a client ticket", "add a support ticket for the client", "list the client tickets"]
+fr = ["ouvrir un ticket client", "lister les tickets du client"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor client check"
+run = "confirm"
+tr = ["müşteri sitelerinin uptime ve ssl kontrolü", "müşterinin siteleri ayakta mı", "müşteri siteleri ssl süresi"]
+en = ["check uptime and ssl of the client sites", "are the client sites up", "client sites ssl expiry"]
+fr = ["vérifier la disponibilité des sites du client", "contrôler le ssl des sites du client"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 30
+
+[[intent]]
+command = "kor client report"
+run = "confirm"
+tr = ["müşteri aylık raporu hazırla", "müşteriye aylık bakım raporu", "aylık müşteri raporu ve mesaj taslakları"]
+en = ["monthly client report", "prepare the monthly maintenance report", "client report with email draft"]
+fr = ["rapport mensuel client", "préparer le rapport de maintenance mensuel"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 30
+
+[[intent]]
+command = "kor tr check"
+run = "confirm"
+tr = ["sitenin kvkk uyumunu kontrol et", "çerez bildirimi ve verbis kontrolü", "türk e ticaret uyumluluk kontrolü"]
+en = ["check the site kvkk compliance", "check the cookie notice and verbis", "turkish ecommerce compliance check"]
+fr = ["vérifier la conformité kvkk du site", "contrôle de conformité e-commerce turc"]
+params = [{ name = "url", kind = "url", required = true }]
+eta_s = 30
+
+[[intent]]
+command = "kor tr slug"
+run = "auto"
+tr = ["türkçe metinden slug üret", "başlığı türkçe uyumlu url yap", "türkçe karakterleri slug a çevir"]
+en = ["turkish aware slug", "make a url slug from a turkish title", "slugify turkish text"]
+fr = ["slug pour un texte turc", "créer un slug depuis un titre turc"]
+params = [{ name = "text", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor tr kdv"
+run = "auto"
+tr = ["kdv hesapla", "kdv dahil fiyatı bul", "kdv hariç tutarı hesapla"]
+en = ["calculate turkish vat", "gross price with kdv", "net amount without kdv"]
+fr = ["calculer la tva turque", "prix ttc avec kdv"]
+params = [{ name = "amount", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor tr kvkk"
+run = "confirm"
+tr = ["kvkk aydınlatma metni oluştur", "çerez politikası yaz", "kvkk metni ve çerez politikası hazırla"]
+en = ["generate a kvkk disclosure text", "write a cookie policy", "prepare the kvkk notice and cookie policy"]
+fr = ["générer le texte d'information kvkk", "rédiger la politique de cookies"]
+eta_s = 5
+
+[[intent]]
+command = "kor tr efatura"
+run = "confirm"
+tr = ["e fatura xml oluştur", "ubl tr e arşiv faturası üret", "e faturayı entegratöre gönder"]
+en = ["generate an e invoice xml", "create a ubl tr e archive invoice", "send the e invoice to the integrator"]
+fr = ["générer une facture électronique turque", "créer une e-facture ubl tr"]
+params = [{ name = "file", kind = "path", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor tr irsaliye"
+run = "confirm"
+tr = ["e irsaliye xml oluştur", "sevk irsaliyesi üret ubl", "e irsaliyeyi entegratöre gönder"]
+en = ["generate an e despatch xml", "create a ubl tr despatch advice", "send the e despatch to the integrator"]
+fr = ["générer un bon de livraison électronique", "créer un e-irsaliye ubl tr"]
+params = [{ name = "file", kind = "path", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor tr payment"
+run = "confirm"
+tr = ["iyzico entegrasyon şablonu", "paytr ödeme entegrasyonu ekle", "sanal pos entegrasyon şablonu üret"]
+en = ["iyzico integration template", "add paytr payment integration", "generate a turkish payment gateway template"]
+fr = ["modèle d'intégration iyzico", "ajouter le paiement paytr"]
+params = [{ name = "provider", kind = "text", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor tr market"
+run = "confirm"
+tr = ["trendyol ve hepsiburada sipariş sayıları", "pazaryeri ürün sayılarını getir", "trendyol satışlarını göster"]
+en = ["trendyol and hepsiburada order counts", "marketplace product counts", "show trendyol sales"]
+fr = ["nombre de commandes trendyol et hepsiburada", "statistiques des places de marché"]
+eta_s = 15
+
+[[intent]]
+command = "kor tr keywords"
+run = "confirm"
+tr = ["türkçe anahtar kelime köklerini çıkar", "sayfanın en sık türkçe kelimeleri", "metindeki türkçe anahtar kelimeler"]
+en = ["turkish keyword stems of the page", "most frequent turkish keywords", "turkish keywords in this text"]
+fr = ["mots-clés turcs les plus fréquents", "racines des mots-clés turcs"]
+params = [{ name = "source", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor seo audit"
+run = "confirm"
+tr = ["teknik seo denetimi yap", "sitenin seo taramasını çalıştır", "seo hatalarını bul sitede"]
+en = ["run a technical seo audit", "crawl the site for seo issues", "find seo problems on the site"]
+fr = ["faire un audit seo technique", "trouver les problèmes seo du site"]
+params = [{ name = "target", kind = "url", required = true }]
+eta_s = 120
+
+[[intent]]
+command = "kor seo verify"
+run = "confirm"
+tr = ["seo düzeltmelerini doğrula", "seo hataları giderildi mi tekrar tara", "seo düzeltmesini yeniden kontrol et"]
+en = ["verify the seo fixes", "recrawl to check the seo fixes", "were the seo issues fixed"]
+fr = ["vérifier les corrections seo", "les problèmes seo sont-ils corrigés"]
+params = [{ name = "target", kind = "url", required = true }]
+eta_s = 60
+
+[[intent]]
+command = "kor seo bing setup"
+run = "confirm"
+tr = ["bing webmaster anahtarını kur", "bing webmaster api bağla", "bing api anahtarı ekle"]
+en = ["set up the bing webmaster key", "connect the bing webmaster api", "add a bing api key"]
+fr = ["configurer la clé bing webmaster", "connecter l'api bing webmaster"]
+eta_s = 2
+
+[[intent]]
+command = "kor seo bing query"
+run = "confirm"
+tr = ["bing sorgu istatistikleri", "bingde hangi aramalarla geliyoruz", "bing arama sorguları"]
+en = ["bing query stats", "which bing searches bring traffic", "bing search queries"]
+fr = ["statistiques des requêtes bing", "requêtes de recherche bing"]
+params = [{ name = "site", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor seo bing pages"
+run = "confirm"
+tr = ["bing sayfa istatistikleri", "bingde en çok tıklanan sayfalar", "bing sayfa performansı"]
+en = ["bing page stats", "top pages on bing", "bing page performance"]
+fr = ["statistiques des pages bing", "pages les plus cliquées sur bing"]
+params = [{ name = "site", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor seo gsc setup"
+run = "confirm"
+tr = ["search console oauth istemcisini kur", "google search console bağlantısını ayarla", "ga4 ve search console kurulumu"]
+en = ["set up the search console oauth client", "configure google search console access", "set up ga4 and search console"]
+fr = ["configurer le client oauth search console", "configurer l'accès à google search console"]
+eta_s = 3
+
+[[intent]]
+command = "kor seo gsc login"
+run = "confirm"
+tr = ["search console a giriş yap", "google search console hesabına bağlan", "gsc girişi yap"]
+en = ["log in to search console", "sign in to google search console", "gsc login"]
+fr = ["se connecter à search console", "connexion à google search console"]
+eta_s = 10
+
+[[intent]]
+command = "kor seo gsc logout"
+run = "confirm"
+tr = ["search console dan çıkış yap", "gsc oturumunu kapat", "google search console bağlantısını kes"]
+en = ["log out of search console", "sign out of gsc", "disconnect google search console"]
+fr = ["se déconnecter de search console", "déconnexion de gsc"]
+eta_s = 1
+
+[[intent]]
+command = "kor seo gsc status"
+run = "confirm"
+tr = ["search console bağlantı durumu", "gsc bağlı mı", "search console girişi açık mı"]
+en = ["search console connection status", "is gsc connected", "am I logged in to search console"]
+fr = ["état de la connexion search console", "gsc est-il connecté"]
+eta_s = 2
+
+[[intent]]
+command = "kor seo gsc sites"
+run = "confirm"
+tr = ["search console mülklerini listele", "gsc deki siteler", "search console da hangi siteler var"]
+en = ["list search console properties", "sites in gsc", "which sites are in search console"]
+fr = ["lister les propriétés search console", "sites dans gsc"]
+eta_s = 5
+
+[[intent]]
+command = "kor seo gsc query"
+run = "confirm"
+tr = ["search console sorgu verisi", "gsc tıklama ve gösterimleri getir", "search console da hangi sorgular var"]
+en = ["search console query data", "get gsc clicks and impressions", "which queries show in search console"]
+fr = ["données de requêtes search console", "clics et impressions gsc"]
+params = [{ name = "site", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor seo gsc drops"
+run = "confirm"
+tr = ["tıklaması düşen sayfaları bul", "search console da trafik kaybı olan sayfalar", "organik tıklama düşüşü analizi"]
+en = ["find pages whose clicks dropped", "pages losing traffic in search console", "analyze the organic click drop"]
+fr = ["trouver les pages dont les clics ont baissé", "analyse de la baisse de trafic organique"]
+params = [{ name = "site", kind = "text", required = true }]
+eta_s = 20
+
+[[intent]]
+command = "kor seo gsc ga"
+run = "confirm"
+tr = ["ga4 raporu getir", "google analytics 4 verilerini çek", "ga4 oturum ve kullanıcı raporu"]
+en = ["ga4 report", "pull google analytics 4 data", "ga4 sessions and users report"]
+fr = ["rapport ga4", "données google analytics 4"]
+params = [{ name = "property", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor seo content new"
+run = "confirm"
+tr = ["anahtar kelime için yeni seo içeriği başlat", "seo makale hattına yeni yazı ekle", "blog yazısı için içerik hattı aç"]
+en = ["start new seo content for a keyword", "add a new article to the seo content pipeline", "open a content pipeline for a blog post"]
+fr = ["démarrer un nouveau contenu seo pour un mot-clé", "nouvel article dans le pipeline seo"]
+params = [{ name = "keyword", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor seo content run"
+run = "confirm"
+tr = ["içerik hattında sonraki aşamayı çalıştır", "seo içeriği için brief ve taslak üret", "makale taslağını yazdır seo"]
+en = ["run the next content pipeline stage", "generate the brief and draft for the seo content", "write the seo article draft"]
+fr = ["lancer l'étape suivante du pipeline de contenu", "générer le brief et le brouillon seo"]
+params = [{ name = "slug", kind = "text", required = true }]
+tokens = 20000
+eta_s = 120
+
+[[intent]]
+command = "kor seo content list"
+run = "auto"
+tr = ["seo içerik hattındaki yazılar", "içerik hattını listele", "hangi seo içerikleri hazırlanıyor"]
+en = ["list the seo content pipeline", "articles in the content pipeline", "which seo contents are in progress"]
+fr = ["lister le pipeline de contenu seo", "articles en cours de rédaction seo"]
+eta_s = 1
+
+[[intent]]
+command = "kor seo content show"
+run = "auto"
+tr = ["seo içeriğinin durumunu göster", "içerik hattındaki yazının dosyaları", "makalenin hangi aşamada olduğunu göster"]
+en = ["show the seo content status", "files of the article in the pipeline", "which stage is the article at"]
+fr = ["afficher l'état du contenu seo", "à quelle étape est l'article"]
+params = [{ name = "slug", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor seo content approve"
+run = "confirm"
+tr = ["seo içeriğini onayla", "makale taslağını yayına onayla", "içerik hattında insan onayı ver"]
+en = ["approve the seo content", "approve the article draft", "give human approval in the content pipeline"]
+fr = ["approuver le contenu seo", "valider le brouillon de l'article"]
+params = [{ name = "slug", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor seo content publish"
+run = "confirm"
+tr = ["seo içeriğini wordpresse gönder", "makaleyi wordpress te yayınla", "içeriği dışa aktar yayına hazır"]
+en = ["publish the seo content to wordpress", "post the article to wordpress", "export the finished article"]
+fr = ["publier le contenu seo sur wordpress", "envoyer l'article sur wordpress"]
+params = [{ name = "slug", kind = "text", required = true }]
+eta_s = 20
+
+[[intent]]
+command = "kor seo meta generate"
+run = "confirm"
+tr = ["toplu meta açıklama üret", "görsellere alt metin yaz toplu", "sayfalar için title ve description oluştur"]
+en = ["generate meta descriptions in bulk", "write alt text for images in bulk", "create titles and descriptions for the pages"]
+fr = ["générer des méta descriptions en masse", "écrire les textes alternatifs des images"]
+tokens = 30000
+eta_s = 120
+
+[[intent]]
+command = "kor seo meta check"
+run = "auto"
+tr = ["meta tablosunu kontrol et", "toplu meta csv sini doğrula", "meta uzunluklarını kontrol et"]
+en = ["check the meta table", "validate the bulk meta csv", "check the meta lengths"]
+fr = ["vérifier la table des métas", "valider le csv des métas"]
+params = [{ name = "csv", kind = "path", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor seo meta apply"
+run = "confirm"
+tr = ["toplu metayı wordpresse uygula", "meta açıklamaları siteye yaz", "alt metinleri wordpress e işle"]
+en = ["apply the bulk meta to wordpress", "write the meta descriptions to the site", "push alt texts to wordpress"]
+fr = ["appliquer les métas sur wordpress", "écrire les méta descriptions sur le site"]
+params = [{ name = "csv", kind = "path", required = true }]
+eta_s = 60
+
+[[intent]]
+command = "kor seo meta undo"
+run = "confirm"
+tr = ["toplu meta değişikliklerini geri al", "wordpress meta güncellemesini geri çevir", "uygulanan metaları eski haline getir"]
+en = ["undo the bulk meta changes", "revert the wordpress meta update", "restore the previous metas"]
+fr = ["annuler les changements de métas", "restaurer les anciennes métas"]
+params = [{ name = "file", kind = "path", required = true }]
+eta_s = 60
+
+[[intent]]
+command = "kor seo logs"
+run = "confirm"
+tr = ["log dosyasından seo analizi", "googlebot tarama bütçesi analizi", "erişim loglarında bot taramalarını incele"]
+en = ["seo analysis of the access logs", "googlebot crawl budget analysis", "look at bot crawls in the server logs"]
+fr = ["analyse seo des logs", "analyse du budget de crawl de googlebot"]
+eta_s = 30
+
+[[intent]]
+command = "kor seo competitors add"
+run = "confirm"
+tr = ["rakip site ekle izlemeye", "seo rakibi takip et", "rakip izleme listesine ekle"]
+en = ["add a competitor to monitor", "track a seo competitor", "add to the competitor watch list"]
+fr = ["ajouter un concurrent à surveiller", "suivre un concurrent seo"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor seo competitors remove"
+run = "confirm"
+tr = ["rakibi izlemeden çıkar", "seo rakibini kaldır", "rakip takibini bırak"]
+en = ["remove the competitor from monitoring", "stop tracking the seo competitor", "drop the competitor"]
+fr = ["retirer le concurrent de la surveillance", "arrêter de suivre le concurrent"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor seo competitors list"
+run = "auto"
+tr = ["izlenen rakipleri listele", "rakip izleme listesi", "hangi rakipleri takip ediyoruz"]
+en = ["list monitored competitors", "competitor watch list", "which competitors are we tracking"]
+fr = ["lister les concurrents surveillés", "quels concurrents suivons-nous"]
+eta_s = 1
+
+[[intent]]
+command = "kor seo competitors run"
+run = "confirm"
+tr = ["rakiplerin anlık görüntüsünü al", "rakip sitelerde ne değişti", "rakip karşılaştırmasını çalıştır"]
+en = ["snapshot the competitors", "what changed on competitor sites", "run the competitor comparison"]
+fr = ["capturer les concurrents", "qu'est-ce qui a changé chez les concurrents"]
+eta_s = 60
+
+[[intent]]
+command = "kor seo competitors schedule"
+run = "confirm"
+tr = ["rakip izlemeyi zamanla", "rakipleri her hafta kontrol et", "rakip takibi için rutin kur"]
+en = ["schedule competitor monitoring", "check competitors every week", "set a routine for competitor tracking"]
+fr = ["planifier la surveillance des concurrents", "vérifier les concurrents chaque semaine"]
+eta_s = 2
+
+[[intent]]
+command = "kor seo agents"
+run = "confirm"
+tr = ["seo ajan takımını çalıştır", "seo uzman ajanlarıyla siteyi denetle", "seo nöbet modunu başlat"]
+en = ["run the seo agent team", "audit the site with seo specialist agents", "start seo watch mode"]
+fr = ["lancer l'équipe d'agents seo", "auditer le site avec les agents seo"]
+params = [{ name = "site", kind = "text", required = true }]
+tokens = 60000
+eta_s = 300
+
+[[intent]]
+command = "kor seo opportunities"
+run = "confirm"
+tr = ["sıralama fırsatlarını bul", "seo fırsat skoru hesapla", "hangi sorgularda yükselebiliriz"]
+en = ["find ranking opportunities", "compute seo opportunity scores", "which queries can we rank higher for"]
+fr = ["trouver les opportunités de classement", "score d'opportunité seo"]
+params = [{ name = "site", kind = "text", required = true }]
+eta_s = 30
+
+[[intent]]
+command = "kor peer pair"
+run = "confirm"
+tr = ["başka bir makineyle eşleş", "kor eşleştirme kodu göster", "diğer bilgisayarı kor a bağla"]
+en = ["pair with another machine", "show a kor pairing code", "connect the other computer to kor"]
+fr = ["appairer une autre machine", "afficher un code d'appairage kor"]
+eta_s = 5
+
+[[intent]]
+command = "kor peer list"
+run = "confirm"
+tr = ["eşleşmiş makineleri listele", "bağlı kor makineleri ve yükleri", "hangi makinelerle eşleştim"]
+en = ["list paired machines", "connected kor peers and their load", "which machines am I paired with"]
+fr = ["lister les machines appairées", "quelles machines sont appairées"]
+eta_s = 3
+
+[[intent]]
+command = "kor peer serve"
+run = "confirm"
+tr = ["eş makinelere hizmet ver", "peer sunucusunu başlat", "bu makineyi diğer kor lara aç"]
+en = ["serve paired machines", "start the peer server", "open this machine to other kor peers"]
+fr = ["servir les machines appairées", "démarrer le serveur de pairs"]
+eta_s = 3
+
+[[intent]]
+command = "kor peer run"
+run = "confirm"
+tr = ["görevi başka makinede çalıştır", "işi en boş eş makineye gönder", "görevi peer üzerinde yürüt"]
+en = ["run the task on another machine", "send the job to the least busy peer", "run this on a peer"]
+fr = ["lancer la tâche sur une autre machine", "envoyer le travail au pair le moins occupé"]
+eta_s = 300
+
+[[intent]]
+command = "kor peer attach"
+run = "confirm"
+tr = ["eş makinedeki göreve bağlan", "peer görevini tekrar izle", "diğer makinedeki işi takip et"]
+en = ["attach to the task on the peer", "follow the peer task again", "watch the job on the other machine"]
+fr = ["se rattacher à la tâche du pair", "suivre la tâche sur l'autre machine"]
+params = [{ name = "peer", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor peer result"
+run = "confirm"
+tr = ["eş makinedeki görevin sonucunu getir", "peer görevinin değişikliklerini göster", "diğer makinenin diffini uygula"]
+en = ["get the result of the peer task", "show what the peer task changed", "apply the diff from the other machine"]
+fr = ["récupérer le résultat de la tâche du pair", "appliquer le diff de l'autre machine"]
+params = [{ name = "peer", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor peer sync"
+run = "confirm"
+tr = ["eş makineyle hafızayı eşitle", "peer ile bellek senkronize et", "diğer makineyle bilgileri birleştir"]
+en = ["sync memory with the peer", "synchronize memory with another machine", "merge memory with the other computer"]
+fr = ["synchroniser la mémoire avec le pair", "fusionner la mémoire avec l'autre machine"]
+params = [{ name = "peer", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor peer allow"
+run = "confirm"
+tr = ["eş makineye yazma izni ver", "peer in bu makinede ne yapabileceğini ayarla", "eş makinenin izinlerini sıfırla"]
+en = ["let the peer write here", "set what the peer may do on this machine", "reset the peer permissions"]
+fr = ["autoriser le pair à écrire ici", "définir les droits du pair"]
+params = [{ name = "peer", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor peer route"
+run = "confirm"
+tr = ["eş makineye nasıl ulaşılacağını ayarla", "peer için ssh hedefi belirle", "eş makinenin adresini değiştir"]
+en = ["set how to reach the peer", "set the ssh target for the peer", "change the peer address"]
+fr = ["définir comment joindre le pair", "changer l'adresse du pair"]
+params = [{ name = "peer", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor peer remove"
+run = "confirm"
+tr = ["eşleşmiş makineyi unut", "peer eşleşmesini kaldır", "diğer makinenin eşleşmesini sil"]
+en = ["forget the paired machine", "remove the peer pairing", "unpair the other computer"]
+fr = ["oublier la machine appairée", "supprimer l'appairage"]
+params = [{ name = "peer", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor peer standby"
+run = "confirm"
+tr = ["oturumu eş makineye yedekle", "bu makine kapanırsa diğeri devam etsin", "çalışan oturumu peer e yansıt"]
+en = ["mirror the session to a peer", "let the peer continue if this machine closes", "keep a standby copy on the other machine"]
+fr = ["refléter la session sur un pair", "secours sur l'autre machine"]
+params = [{ name = "peer", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor peer worker"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor acp serve"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor acp run"
+run = "confirm"
+tr = ["acp ajanını alt ajan olarak çalıştır", "gemini cli yi acp ile çalıştır", "acp ajanına görev ver"]
+en = ["run an acp agent as a sub agent", "run gemini cli over acp", "give a task to an acp agent"]
+fr = ["lancer un agent acp comme sous-agent", "donner une tâche à un agent acp"]
+params = [{ name = "agent", kind = "text", required = true }]
+eta_s = 120
+
+[[intent]]
+command = "kor acp agents"
+run = "auto"
+tr = ["tanımlı acp ajanlarını listele", "hangi acp ajanları var", "acp ajan yapılandırması"]
+en = ["list configured acp agents", "which acp agents are there", "acp agent configuration"]
+fr = ["lister les agents acp", "quels agents acp sont configurés"]
+eta_s = 1
+
+[[intent]]
+command = "kor acp setup"
+run = "auto"
+tr = ["kor u zed editöre ekle", "acp editör kurulumu nasıl", "zed ayarlarına kor ajanını ekle"]
+en = ["add kor to the zed editor", "how to set up kor in an acp editor", "add the kor agent to zed settings"]
+fr = ["ajouter kor à l'éditeur zed", "configurer kor dans un éditeur acp"]
+eta_s = 1
+
+[[intent]]
+command = "kor acp"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor chrome pair"
+run = "confirm"
+tr = ["chrome eklentisini eşleştir", "tarayıcı eklentisi için eşleştirme kodu", "chrome yan panelini bağla"]
+en = ["pair the chrome extension", "pairing code for the browser extension", "connect the chrome side panel"]
+fr = ["appairer l'extension chrome", "code d'appairage pour l'extension"]
+eta_s = 2
+
+[[intent]]
+command = "kor chrome install"
+run = "confirm"
+tr = ["chrome eklentisini kur", "tarayıcı eklentisini yükle", "kor chrome uzantısını kur"]
+en = ["install the chrome extension", "install the browser extension", "set up the kor chrome extension"]
+fr = ["installer l'extension chrome", "installer l'extension du navigateur"]
+eta_s = 5
+
+[[intent]]
+command = "kor chrome uninstall"
+run = "confirm"
+tr = ["chrome eklentisini kaldır", "tarayıcı eklentisi kaydını sil", "kor chrome uzantısını kaldır"]
+en = ["uninstall the chrome extension", "remove the browser extension host", "remove the kor chrome extension"]
+fr = ["désinstaller l'extension chrome", "retirer l'extension du navigateur"]
+eta_s = 2
+
+[[intent]]
+command = "kor chrome status"
+run = "auto"
+tr = ["chrome eklentisi bağlı mı", "tarayıcı eklentisinin durumu", "chrome eşleşme durumu"]
+en = ["is the chrome extension connected", "browser extension status", "chrome pairing status"]
+fr = ["l'extension chrome est-elle connectée", "état de l'extension du navigateur"]
+eta_s = 1
+
+[[intent]]
+command = "kor chrome allow"
+run = "confirm"
+tr = ["kor un bu alan adında çalışmasına izin ver", "tarayıcıda bu siteye izin ver", "chrome için domaine izin ver"]
+en = ["allow kor to act on this domain", "allow this site in the browser", "allow the domain for chrome"]
+fr = ["autoriser kor sur ce domaine", "autoriser ce site dans le navigateur"]
+params = [{ name = "domain", kind = "domain", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor chrome deny"
+run = "confirm"
+tr = ["kor un bu alan adına girmesini engelle", "tarayıcıda bu siteyi yasakla", "chrome için domaini engelle"]
+en = ["never let kor act on this domain", "block this site in the browser", "deny the domain for chrome"]
+fr = ["interdire kor sur ce domaine", "bloquer ce site dans le navigateur"]
+params = [{ name = "domain", kind = "domain", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor chrome domains"
+run = "auto"
+tr = ["izinli ve yasaklı alan adları", "chrome izin listesini göster", "tarayıcıda hangi sitelere izin var"]
+en = ["allowed and blocked domains", "show the chrome allow list", "which sites are allowed in the browser"]
+fr = ["domaines autorisés et bloqués", "liste des sites autorisés"]
+eta_s = 1
+
+[[intent]]
+command = "kor chrome profile list"
+run = "auto"
+tr = ["form doldurma profillerini listele", "kayıtlı form profilleri", "hangi doldurma profilleri var"]
+en = ["list form filler profiles", "saved form profiles", "which autofill profiles are there"]
+fr = ["lister les profils de remplissage", "profils de formulaire enregistrés"]
+eta_s = 1
+
+[[intent]]
+command = "kor chrome profile show"
+run = "confirm"
+tr = ["form profilini göster", "doldurma profilinin değerleri", "kişisel form profilini aç"]
+en = ["show the form profile", "values of the autofill profile", "open the personal form profile"]
+fr = ["afficher le profil de formulaire", "valeurs du profil de remplissage"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor chrome profile set"
+run = "confirm"
+tr = ["form profiline değer ekle", "doldurma profilini güncelle", "form profiline mail adresi kaydet"]
+en = ["add values to the form profile", "update the autofill profile", "save an email in the form profile"]
+fr = ["ajouter des valeurs au profil de formulaire", "mettre à jour le profil de remplissage"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor chrome profile remove"
+run = "confirm"
+tr = ["form profilini sil", "doldurma profilini kaldır", "kayıtlı form profilini temizle"]
+en = ["delete the form profile", "remove the autofill profile", "clear the saved form profile"]
+fr = ["supprimer le profil de formulaire", "retirer le profil de remplissage"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor computer status"
+run = "auto"
+tr = ["masaüstü kontrolü açık mı", "bilgisayar kontrolü durumu", "uygulama izin seviyeleri"]
+en = ["is desktop control on", "computer control status", "app permission tiers"]
+fr = ["le contrôle du bureau est-il activé", "état du contrôle de l'ordinateur"]
+eta_s = 1
+
+[[intent]]
+command = "kor computer on"
+run = "confirm"
+tr = ["masaüstü kontrolünü aç", "bilgisayarımı kontrol etmeye izin ver", "ekran kontrolünü etkinleştir"]
+en = ["turn desktop control on", "let kor control my computer", "enable computer use"]
+fr = ["activer le contrôle du bureau", "autoriser kor à contrôler l'ordinateur"]
+eta_s = 1
+
+[[intent]]
+command = "kor computer off"
+run = "confirm"
+tr = ["masaüstü kontrolünü kapat", "bilgisayar kontrolünü durdur", "ekran kontrolünü devre dışı bırak"]
+en = ["turn desktop control off", "stop computer control", "disable computer use"]
+fr = ["désactiver le contrôle du bureau", "arrêter le contrôle de l'ordinateur"]
+eta_s = 1
+
+[[intent]]
+command = "kor computer allow"
+run = "confirm"
+tr = ["uygulamaya tam kontrol izni ver", "uygulamanın izin seviyesini ayarla", "bu uygulamayı masaüstü kontrolünde engelle"]
+en = ["give an app full control", "set an app permission tier", "block this app for desktop control"]
+fr = ["donner le contrôle total à une application", "définir le niveau d'accès d'une application"]
+params = [{ name = "app", kind = "text", required = true }, { name = "tier", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor computer reset"
+run = "confirm"
+tr = ["uygulamanın izin seviyesini sıfırla", "uygulama izinlerini varsayılana döndür", "masaüstü kontrolü iznini sıfırla"]
+en = ["reset the app tier", "restore the default app permission", "reset desktop control permission for an app"]
+fr = ["réinitialiser le niveau de l'application", "rétablir l'accès par défaut"]
+params = [{ name = "app", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor system show"
+run = "auto"
+tr = ["sistem profilini göster", "bilgisayarın donanım ve yazılım profili", "kayıtlı sistem bilgisi"]
+en = ["show the system profile", "hardware and software profile of this machine", "stored system info"]
+fr = ["afficher le profil système", "profil matériel et logiciel de la machine"]
+eta_s = 2
+
+[[intent]]
+command = "kor system refresh"
+run = "confirm"
+tr = ["sistem profilini yenile", "sistem bilgisini tekrar topla", "sistemde ne değişti yeniden tara"]
+en = ["refresh the system profile", "collect the system info again", "rescan what changed on the system"]
+fr = ["rafraîchir le profil système", "recollecter les infos système"]
+eta_s = 10
+
+[[intent]]
+command = "kor system health"
+run = "auto"
+tr = ["sistem sağlık kontrollerini çalıştır", "disk ve önbellek sağlığına bak", "bilgisayarın sağlık durumu"]
+en = ["run the system health checks", "check disk and cache health", "machine health status"]
+fr = ["lancer les contrôles de santé du système", "santé du disque et des caches"]
+eta_s = 10
+
+[[intent]]
+command = "kor system"
+run = "auto"
+tr = ["sistem bilgisi", "bu makinenin özellikleri", "sistem özetini göster"]
+en = ["system info", "specs of this machine", "show the system summary"]
+fr = ["informations système", "caractéristiques de cette machine"]
+eta_s = 2
+
+[[intent]]
+command = "kor clean"
+run = "confirm"
+tr = ["derleme ve araç önbelleklerini temizle", "disk yer açmak için önbellekleri sil", "node modules ve target klasörlerini temizle"]
+en = ["clean build and tool caches", "free disk space by deleting caches", "clean node modules and target folders"]
+fr = ["nettoyer les caches de compilation", "libérer de l'espace disque en supprimant les caches"]
+eta_s = 30
+
+[[intent]]
+command = "kor layout save"
+run = "confirm"
+tr = ["pencere düzenini kaydet", "açık pencerelerin yerleşimini kaydet", "bu pencere düzenini projeye bağla"]
+en = ["save the window layout", "save the arrangement of open windows", "link this window layout to the project"]
+fr = ["enregistrer la disposition des fenêtres", "sauvegarder l'agencement des fenêtres"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor layout restore"
+run = "confirm"
+tr = ["pencere düzenini geri yükle", "pencereleri kayıtlı yerlerine koy", "projenin pencere yerleşimini uygula"]
+en = ["restore the window layout", "put the windows back where they were", "apply the project window layout"]
+fr = ["restaurer la disposition des fenêtres", "remettre les fenêtres en place"]
+params = [{ name = "name", kind = "text", required = false }]
+eta_s = 3
+
+[[intent]]
+command = "kor layout list"
+run = "auto"
+tr = ["kayıtlı pencere düzenleri", "pencere yerleşimlerini listele", "hangi pencere düzenleri var"]
+en = ["saved window layouts", "list window layouts", "which window layouts are saved"]
+fr = ["dispositions de fenêtres enregistrées", "lister les dispositions de fenêtres"]
+eta_s = 1
+
+[[intent]]
+command = "kor layout delete"
+run = "confirm"
+tr = ["pencere düzenini sil", "kayıtlı yerleşimi kaldır", "eski pencere düzenini sil"]
+en = ["delete the window layout", "remove a saved layout", "delete the old window arrangement"]
+fr = ["supprimer la disposition des fenêtres", "retirer une disposition enregistrée"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor prereq list"
+run = "auto"
+tr = ["sistem gereksinimlerini listele", "docker ve wsl kurulu mu", "eksik sistem önkoşulları"]
+en = ["list system prerequisites", "are docker and wsl installed", "missing system prerequisites"]
+fr = ["lister les prérequis système", "docker et wsl sont-ils installés"]
+eta_s = 2
+
+[[intent]]
+command = "kor prereq install"
+run = "confirm"
+tr = ["sistem gereksinimini kur", "docker ı paket yöneticisiyle kur", "eksik önkoşulu yükle"]
+en = ["install a system prerequisite", "install docker with the package manager", "install the missing prerequisite"]
+fr = ["installer un prérequis système", "installer docker avec le gestionnaire de paquets"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 120
+
+[[intent]]
+command = "kor install-hooks post-install"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor install-hooks pre-uninstall"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor export"
+run = "confirm"
+tr = ["bütün verimi dışa aktar", "tüm verileri tek arşive al", "kor verilerimi yedekle"]
+en = ["export all my data", "export everything into one archive", "back up my kor data"]
+fr = ["exporter toutes mes données", "tout exporter dans une archive"]
+eta_s = 10
+
+[[intent]]
+command = "kor know digest"
+run = "confirm"
+tr = ["haftalık bilgi özetini çıkar", "notların haftalık özeti", "bu hafta en çok kullanılan notlar"]
+en = ["weekly knowledge digest", "weekly digest of my notes", "most referenced notes this week"]
+fr = ["résumé hebdomadaire des connaissances", "digest hebdomadaire des notes"]
+eta_s = 5
+
+[[intent]]
+command = "kor know stale"
+run = "auto"
+tr = ["eskimiş notları bul", "değişen dosyalara atıf yapan notlar", "güncelliğini yitirmiş bilgi notları"]
+en = ["find stale notes", "notes that refer to changed files", "outdated knowledge notes"]
+fr = ["trouver les notes obsolètes", "notes qui pointent vers des fichiers modifiés"]
+eta_s = 3
+
+[[intent]]
+command = "kor know"
+run = "auto"
+tr = ["bilgi notlarımda ara", "notlarımda docker önbelleği ara", "kişisel bilgi tabanımda bul"]
+en = ["search my knowledge notes", "look up my notes about docker cache", "find it in my personal notes"]
+fr = ["chercher dans mes notes", "rechercher dans ma base de notes"]
+params = [{ name = "query", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor estimate"
+run = "auto"
+tr = ["bu görev ne kadar sürer", "görevin süre ve maliyet tahmini", "bu iş kaç dolar tutar"]
+en = ["how long will this task take", "time and cost estimate for the task", "how much will this job cost"]
+fr = ["combien de temps prendra cette tâche", "estimation du temps et du coût"]
+params = [{ name = "task", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor rules check"
+run = "auto"
+tr = ["değişiklikleri kurallara göre kontrol et", "commit öncesi kural ihlallerini bul", "staged değişiklikler kurallara uyuyor mu"]
+en = ["check the changes against the rules", "find rule violations before commit", "do the staged changes follow the rules"]
+fr = ["vérifier les changements selon les règles", "trouver les violations de règles"]
+eta_s = 5
+
+[[intent]]
+command = "kor rules list"
+run = "auto"
+tr = ["yüklü kuralları listele", "hangi kuralların otomatik kontrolü var", "proje kural satırları"]
+en = ["list the loaded rules", "which rules have an automatic check", "project rule lines"]
+fr = ["lister les règles chargées", "quelles règles ont une vérification automatique"]
+eta_s = 1
+
+[[intent]]
+command = "kor rules report"
+run = "auto"
+tr = ["en çok çiğnenen kurallar", "hangi model kuralları ihlal ediyor", "kural ihlali raporu"]
+en = ["most broken rules", "which model breaks the rules", "rule violation report"]
+fr = ["règles les plus enfreintes", "rapport des violations de règles"]
+eta_s = 2
+
+[[intent]]
+command = "kor docs add"
+run = "confirm"
+tr = ["dokümanı indeksle", "bu pdf i doküman arşivine ekle", "wiki sayfasını dokümanlara ekle"]
+en = ["index this document", "add this pdf to the docs", "add the wiki page to the documents"]
+fr = ["indexer ce document", "ajouter ce pdf aux documents"]
+params = [{ name = "source", kind = "text", required = true }]
+eta_s = 20
+
+[[intent]]
+command = "kor docs list"
+run = "auto"
+tr = ["indekslenmiş dokümanları listele", "doküman arşivinde neler var", "eklenen dokümanlar"]
+en = ["list indexed documents", "what is in the docs index", "added documents"]
+fr = ["lister les documents indexés", "documents ajoutés"]
+eta_s = 1
+
+[[intent]]
+command = "kor docs search"
+run = "auto"
+tr = ["dokümanlarda ara", "eklenen pdf ve wikilerde ara", "spesifikasyon dokümanlarında bul"]
+en = ["search the documents", "search the added pdfs and wikis", "find it in the spec documents"]
+fr = ["rechercher dans les documents", "chercher dans les pdf et wikis ajoutés"]
+params = [{ name = "query", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor docs refresh"
+run = "confirm"
+tr = ["dokümanları yeniden indeksle", "değişen dokümanları güncelle", "doküman indeksini tazele"]
+en = ["reindex the documents", "refresh the changed documents", "update the docs index"]
+fr = ["réindexer les documents", "mettre à jour l'index des documents"]
+eta_s = 30
+
+[[intent]]
+command = "kor docs rm"
+run = "confirm"
+tr = ["dokümanı indeksten kaldır", "eklenen dokümanı sil", "doküman arşivinden çıkar"]
+en = ["remove the document from the index", "delete the added document", "drop it from the docs"]
+fr = ["retirer le document de l'index", "supprimer le document ajouté"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor docs use"
+run = "confirm"
+tr = ["tarayıcıdaki doküman sayfasını projeye uygula", "bu dokümantasyon sayfasını kodda kullan", "açık doküman sayfasına göre entegre et"]
+en = ["apply the docs page in the browser to this project", "use this documentation page in the code", "integrate following the open docs page"]
+fr = ["appliquer la page de documentation au projet", "utiliser cette page de documentation dans le code"]
+params = [{ name = "url", kind = "url", required = true }]
+tokens = 15000
+eta_s = 60
+
+[[intent]]
+command = "kor docs cache"
+run = "auto"
+tr = ["önbellekteki doküman sayfaları", "doküman önbelleğini göster", "kaydedilmiş doküman sayfaları"]
+en = ["cached docs pages", "show the docs cache", "saved documentation pages"]
+fr = ["pages de documentation en cache", "afficher le cache de documentation"]
+eta_s = 1
+
+[[intent]]
+command = "kor hooks add"
+run = "confirm"
+tr = ["yeni kanca ekle", "commit öncesi hook tanımla", "düzenleme sonrası çalışacak kanca ekle"]
+en = ["add a hook", "define a pre commit hook", "add a hook that runs after edits"]
+fr = ["ajouter un hook", "définir un hook avant commit"]
+eta_s = 1
+
+[[intent]]
+command = "kor hooks edit"
+run = "confirm"
+tr = ["kancayı düzenle", "hook komutunu değiştir", "mevcut kancayı güncelle"]
+en = ["edit the hook", "change the hook command", "update an existing hook"]
+fr = ["modifier le hook", "changer la commande du hook"]
+eta_s = 1
+
+[[intent]]
+command = "kor hooks rm"
+run = "confirm"
+tr = ["kancayı sil", "hook u kaldır", "tanımlı kancayı kaldır"]
+en = ["remove the hook", "delete the hook", "drop a configured hook"]
+fr = ["supprimer le hook", "retirer le hook"]
+eta_s = 1
+
+[[intent]]
+command = "kor hooks test"
+run = "confirm"
+tr = ["kancayı örnek veriyle dene", "hook çalışır mı test et", "kancanın kuru çalıştırması"]
+en = ["test the hook with a sample", "would the hook run", "dry run the hook"]
+fr = ["tester le hook avec un exemple", "essai à blanc du hook"]
+eta_s = 5
+
+[[intent]]
+command = "kor hooks log"
+run = "auto"
+tr = ["son kanca çalışmaları", "hook loglarını göster", "kancalar ne zaman çalıştı"]
+en = ["recent hook runs", "show the hook log", "when did the hooks run"]
+fr = ["exécutions récentes des hooks", "journal des hooks"]
+eta_s = 1
+
+[[intent]]
+command = "kor media generate"
+run = "confirm"
+tr = ["katalogdan video üret", "ses ve müzik üret medya", "medya katalog modeliyle üret"]
+en = ["generate a video from the catalog", "generate audio or music", "generate media with a catalog model"]
+fr = ["générer une vidéo depuis le catalogue", "générer de l'audio ou de la musique"]
+eta_s = 60
+
+[[intent]]
+command = "kor media gallery"
+run = "auto"
+tr = ["medya galerisini göster", "üretilen görselleri listele", "projenin medya galerisi"]
+en = ["show the media gallery", "list generated images", "project media gallery"]
+fr = ["afficher la galerie média", "lister les images générées"]
+eta_s = 1
+
+[[intent]]
+command = "kor media show"
+run = "auto"
+tr = ["galeri öğesini göster", "üretilen görselin parametreleri", "medyanın türetme zinciri"]
+en = ["show the gallery item", "parameters of the generated image", "derivation chain of the media"]
+fr = ["afficher l'élément de la galerie", "paramètres de l'image générée"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor media derive"
+run = "confirm"
+tr = ["görselin varyasyonunu üret", "görseli büyüt upscale", "görselin arka planını kaldır"]
+en = ["make a variation of the image", "upscale the image", "remove the image background"]
+fr = ["créer une variation de l'image", "agrandir l'image"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 60
+
+[[intent]]
+command = "kor media export"
+run = "confirm"
+tr = ["galeri öğesini projeye kaydet", "üretilen görseli public klasörüne kopyala", "medyayı projeye aktar"]
+en = ["save the gallery item into the project", "copy the generated image to public", "export the media to the project"]
+fr = ["enregistrer l'élément de la galerie dans le projet", "copier l'image générée dans le projet"]
+params = [{ name = "id", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
+command = "kor media jobs"
+run = "auto"
+tr = ["bekleyen medya istekleri", "toplanmamış medya işleri", "sağlayıcıda süren medya işleri"]
+en = ["pending media requests", "media jobs not collected yet", "media jobs still running at the provider"]
+fr = ["requêtes média en attente", "travaux média non récupérés"]
+eta_s = 1
+
+[[intent]]
+command = "kor media collect"
+run = "confirm"
+tr = ["bekleyen medya isteğini topla", "kuyruktaki medyayı indir", "medya işinin sonucunu kaydet"]
+en = ["collect the pending media request", "download the queued media", "save the media job result"]
+fr = ["récupérer la requête média en attente", "télécharger le média en file"]
+eta_s = 30
+
+[[intent]]
+command = "kor diagram sync"
+run = "confirm"
+tr = ["dokümandaki diyagramları koddan güncelle", "eskimiş diyagram bloklarını yenile", "mermaid diyagramlarını senkronize et"]
+en = ["update the doc diagrams from the code", "regenerate stale diagram blocks", "sync the mermaid diagrams"]
+fr = ["mettre à jour les diagrammes depuis le code", "synchroniser les diagrammes mermaid"]
+eta_s = 10
+
+[[intent]]
+command = "kor diagram watch"
+run = "confirm"
+tr = ["kod değiştikçe diyagramları güncel tut", "diyagramları canlı izle", "diyagram senkronunu sürekli çalıştır"]
+en = ["keep diagrams in sync while coding", "watch and update diagrams", "run diagram sync continuously"]
+fr = ["garder les diagrammes à jour en continu", "surveiller et mettre à jour les diagrammes"]
+eta_s = 5
+
+[[intent]]
+command = "kor diagram check"
+run = "auto"
+tr = ["diyagramlar kodla uyuşuyor mu", "eskimiş diyagram var mı kontrol et", "ci için diyagram kontrolü"]
+en = ["do the diagrams match the code", "check for stale diagrams", "diagram check for ci"]
+fr = ["les diagrammes correspondent-ils au code", "vérifier les diagrammes obsolètes"]
+eta_s = 5
+
+[[intent]]
+command = "kor diagram list"
+run = "auto"
+tr = ["işaretli diyagram bloklarını listele", "dokümanlardaki diyagramlar", "hangi diyagramlar var"]
+en = ["list the marked diagram blocks", "diagrams in the docs", "which diagrams are there"]
+fr = ["lister les blocs de diagramme", "diagrammes dans la documentation"]
+eta_s = 2
+
+[[intent]]
+command = "kor diagram add"
+run = "confirm"
+tr = ["dokümana diyagram bloğu ekle", "readme ye mimari diyagram ekle", "yeni sekans diyagramı bloğu ekle"]
+en = ["add a diagram block to the doc", "add an architecture diagram to the readme", "add a sequence diagram block"]
+fr = ["ajouter un bloc de diagramme au document", "ajouter un diagramme d'architecture"]
+eta_s = 2
+
+[[intent]]
+command = "kor providers privacy"
+run = "auto"
+tr = ["sağlayıcıların gizlilik kartları", "hangi sağlayıcı verimi eğitimde kullanıyor", "sağlayıcı veri saklama politikaları"]
+en = ["provider privacy cards", "which provider trains on my data", "provider data retention policies"]
+fr = ["fiches de confidentialité des fournisseurs", "quel fournisseur entraîne sur mes données"]
+eta_s = 1
+
+[[intent]]
+command = "kor mcp dev"
+run = "confirm"
+tr = ["mcp sunucumu geliştirme modunda çalıştır", "mcp sunucusunu canlı yeniden yükle", "yazdığım mcp sunucusunu dene"]
+en = ["run my mcp server in dev mode", "hot reload the mcp server", "try the mcp server I am writing"]
+fr = ["lancer mon serveur mcp en mode dev", "recharger le serveur mcp à chaud"]
+params = [{ name = "path", kind = "path", required = false }]
+eta_s = 10

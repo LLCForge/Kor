@@ -1,0 +1,48 @@
+/* Grup 11 stilleri: güven rozeti ve hafıza katmanları penceresi. Renkler styles.css :root token'larından. */
+
+/* ---------- Güven rozeti (```confidence) ---------- */
+.g11-confidence {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 10px 0 0;
+  font: var(--kor-text-13)/1.5 var(--font-sans); color: var(--muted);
+}
+.g11-confidence-badge {
+  display: inline-flex; align-items: center; padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px;
+  font: 600 var(--kor-text-12) var(--font-sans); white-space: nowrap;
+}
+.g11-confidence-high .g11-confidence-badge { border-color: var(--add-text); background: var(--add-bg); color: var(--add-text); }
+.g11-confidence-medium .g11-confidence-badge { border-color: var(--warn); color: var(--warn); }
+.g11-confidence-low .g11-confidence-badge { border-color: var(--del-text); background: var(--del-bg); color: var(--del-text); }
+.g11-confidence-reason { min-width: 0; color: var(--text-soft); }
+.g11-confidence-raw { font: var(--kor-text-12) var(--font-mono); color: var(--muted); }
+
+/* ---------- Hafıza katmanları penceresi ---------- */
+.dialog.g11-modal { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+.g11-body { display: flex; flex-direction: column; gap: 18px; min-height: 0; overflow-y: auto; padding: 16px 24px 24px; }
+.g11-toggle { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.g11-toggle input { margin-top: 3px; }
+.g11-toggle label { display: flex; flex-direction: column; gap: 2px; font: 500 var(--kor-text-14) var(--font-sans); color: var(--text); }
+.g11-section { display: flex; flex-direction: column; gap: 8px; }
+.g11-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.g11-section-head .btn { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.g11-count { font: 500 var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g11-records { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.g11-record {
+  display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; min-width: 0;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg); font: var(--kor-text-14)/1.5 var(--font-sans);
+}
+.g11-record .action-btn { flex-shrink: 0; margin-left: auto; }
+.g11-record-text { min-width: 0; overflow-wrap: anywhere; color: var(--text); }
+.g11-kind {
+  flex-shrink: 0; padding: 1px 6px; border-radius: 6px; background: var(--accent-soft);
+  font: 600 var(--kor-text-12) var(--font-sans); letter-spacing: 0.02em; color: var(--accent);
+}
+.g11-conflicted { border-color: var(--warn); }
+.g11-flag { color: var(--warn); font-size: var(--kor-text-12); }
+.g11-conflicts { padding: 10px 12px; border: 1px dashed var(--warn); border-radius: 10px; }
+.g11-conflict { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; font: var(--kor-text-14)/1.5 var(--font-sans); color: var(--text); overflow-wrap: anywhere; }
+.g11-vs { color: var(--warn); font-weight: 600; }
+.g11-keep { margin-left: auto; }
+
+/* Otomatik devreye giren skiller */
+.g11-skills-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g11-skill-chip { padding: 1px 6px; border: 1px solid var(--accent); border-radius: 4px; color: var(--accent); font: var(--kor-text-12) var(--font-mono); }

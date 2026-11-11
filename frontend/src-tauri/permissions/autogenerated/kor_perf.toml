@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-kor-perf"
+description = "Enables the kor_perf command without any pre-configured scope."
+commands.allow = ["kor_perf"]
+
+[[permission]]
+identifier = "deny-kor-perf"
+description = "Denies the kor_perf command without any pre-configured scope."
+commands.deny = ["kor_perf"]

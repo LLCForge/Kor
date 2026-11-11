@@ -1,0 +1,69 @@
+# Personal-data categories for `kor audit --compliance=kvkk|gdpr` (ADR 0045).
+#
+# `identifier` is matched against identifiers, column names and log-call arguments (Rust regex,
+# case-insensitive is up to the pattern). `special = true` marks special categories
+# (KVKK m.6 "özel nitelikli kişisel veri", GDPR Art. 9). Override per project in
+# `.kor/audit/pii.toml` (same id replaces a category; `enabled = false` turns it off).
+
+[[category]]
+id = "national-id"
+label = { en = "national ID number", tr = "TC kimlik / ulusal kimlik no", fr = "numéro d'identité national" }
+identifier = '''(?i)\b\w*(tc_?kimlik|tckn|tc_?no\b|kimlik_?no|national_?id|identity_?number|social_?security|passport_?(no|number)|pasaport)\w*\b|(?i)\b(\w+_)?ssn(_\w+)?\b'''
+
+[[category]]
+id = "email"
+label = { en = "e-mail address", tr = "e-posta adresi", fr = "adresse e-mail" }
+identifier = '''(?i)\b\w*(e_?mail|eposta|e_posta)\w*\b'''
+
+[[category]]
+id = "phone"
+label = { en = "phone number", tr = "telefon numarası", fr = "numéro de téléphone" }
+identifier = '''(?i:\b(phone\w*|\w*_phone\w*|telefon\w*|\w*_telefon\w*|gsm_?no|msisdn|mobile_?(no|number|phone)|tel_?no)\b)|\b[a-z]\w*Phone\w*\b'''
+
+[[category]]
+id = "financial"
+label = { en = "bank account / card number", tr = "banka hesabı / kart numarası", fr = "compte bancaire / numéro de carte" }
+identifier = '''(?i)\b\w*(iban|bank_?account|hesap_?no|card_?number|kart_?no|credit_?card|ccnum|pan_?number)\w*\b'''
+
+[[category]]
+id = "address"
+label = { en = "postal address", tr = "posta adresi", fr = "adresse postale" }
+identifier = '''(?i)\b\w*(street|adres|address_line|home_address|postal_address|billing_address|shipping_address|postcode|post_?code|zip_?code|posta_kodu)\w*\b|\baddress\b'''
+
+[[category]]
+id = "birth-date"
+label = { en = "date of birth", tr = "doğum tarihi", fr = "date de naissance" }
+identifier = '''(?i)\b\w*(birth_?date|date_?of_?birth|birthday|dogum_?tarihi|dogum_?yili)\w*\b|(?i)\b(\w+_)?dob\b'''
+
+[[category]]
+id = "ip-address"
+label = { en = "IP address", tr = "IP adresi", fr = "adresse IP" }
+identifier = '''(?i)\b\w*(ip_?address|ip_?addr|client_?ip|remote_?addr|remote_?ip|x_forwarded_for|user_?ip)\w*\b'''
+
+[[category]]
+id = "name"
+label = { en = "person name", tr = "ad soyad", fr = "nom de la personne" }
+identifier = '''(?i)\b\w*(first_?name|last_?name|full_?name|surname|soyad|ad_?soyad|given_?name|family_?name)\w*\b'''
+
+[[category]]
+id = "location"
+label = { en = "precise location", tr = "konum bilgisi", fr = "localisation précise" }
+identifier = '''(?i)\b\w*(latitude|longitude|geo_?location|konum_?bilgi\w*)\w*\b|(?i)\b(\w+_)?gps(_\w+)?\b'''
+
+[[category]]
+id = "health"
+special = true
+label = { en = "health data", tr = "sağlık verisi", fr = "données de santé" }
+identifier = '''(?i)\b\w*(health_?(data|record|status|info|condition|report)|saglik_?\w+|diagnos[ie]s|teshis|medical_?\w+|patient_?\w*|hasta_?(adi|bilgi\w*|kayit\w*|no)|blood_?type|kan_?grubu|disability|engel_?durumu)\w*\b'''
+
+[[category]]
+id = "biometric"
+special = true
+label = { en = "biometric data", tr = "biyometrik veri", fr = "données biométriques" }
+identifier = '''(?i)\b\w*(biometric|biyometrik|fingerprint|parmak_?izi|face_?template|face_?embedding|iris_?(scan|template))\w*\b'''
+
+[[category]]
+id = "belief-origin"
+special = true
+label = { en = "religion, ethnicity or political opinion", tr = "din, etnik köken veya siyasi görüş", fr = "religion, origine ethnique ou opinion politique" }
+identifier = '''(?i)\b\w*(religion|din_?bilgisi|mezhep|ethnicity|ethnic_?origin|irk_?bilgisi|political_?(view|opinion)|siyasi_?gorus|union_?member\w*|sendika_?uye\w*)\w*\b|(?i)\b(\w+_)?race\b'''

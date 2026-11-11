@@ -1,0 +1,131 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Kor",
+  "identifier": "dev.kor.desktop",
+  "version": "0.8.0",
+  "mainBinaryName": "kor-desktop",
+  "build": {
+    "frontendDist": "../dist/renderer",
+    "beforeDevCommand": {
+      "script": "npm run build:ui",
+      "wait": true
+    },
+    "beforeBuildCommand": "npm run build:ui -- --production"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "label": "main",
+        "create": false,
+        "title": "Kor",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 800,
+        "minHeight": 560,
+        "decorations": false,
+        "backgroundColor": "#14151B"
+      }
+    ],
+    "security": {
+      "csp": {
+        "default-src": "'none'",
+        "script-src": "'self' 'wasm-unsafe-eval'",
+        "style-src": "'self'",
+        "img-src": "'self' data: asset: http://asset.localhost",
+        "media-src": "asset: http://asset.localhost",
+        "font-src": "'self'",
+        "connect-src": "ipc: http://ipc.localhost",
+        "frame-src": "kor-sandbox: http://kor-sandbox.localhost",
+        "worker-src": "blob:",
+        "base-uri": "'none'",
+        "form-action": "'none'"
+      },
+      "assetProtocol": {
+        "enable": true,
+        "scope": []
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "resources": {
+      "../extension/dist/": "extension/"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
+      },
+      "bundleVCRuntime": true,
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "installer/nsis-header.bmp",
+        "sidebarImage": "installer/nsis-sidebar.bmp",
+        "installMode": "currentUser",
+        "languages": [
+          "Turkish",
+          "English",
+          "French"
+        ],
+        "displayLanguageSelector": true,
+        "startMenuFolder": "Kor",
+        "compression": "lzma"
+      }
+    },
+    "publisher": "LLCForge",
+    "copyright": "© 2026 LLCForge",
+    "category": "DeveloperTool",
+    "shortDescription": "Kor — privacy-first AI coding agent",
+    "longDescription": "Kor is a local-first AI coding agent for the terminal and the desktop: any model, uncensored providers, zero telemetry, every change reviewable and undoable.",
+    "homepage": "https://github.com/LLCForge/Kor",
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "dmg": {
+        "background": "installer/dmg-background.png",
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 215
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 215
+        }
+      }
+    },
+    "linux": {
+      "deb": {
+        "section": "devel"
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": []
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "kor"
+        ]
+      }
+    }
+  }
+}

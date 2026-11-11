@@ -1,0 +1,332 @@
+/* Grup 7 stilleri. Renkler için styles.css içindeki :root token'larını kullan. */
+
+/* ---------- Ortak parçalar ---------- */
+.g7-grow { flex: 1; min-width: 0; }
+.g7-mono { font-family: var(--font-mono); font-size: var(--kor-text-12); }
+.g7-path { overflow-wrap: anywhere; color: var(--text-soft); }
+.g7-note { margin: 0; font: var(--kor-text-12)/1.5 var(--font-sans); color: var(--subtle); }
+.g7-warn-text { color: var(--warn); }
+.g7-nowrap { white-space: nowrap; }
+.g7-stack { display: flex; flex-direction: column; gap: 14px; }
+.g7-inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.g7-button-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.g7-h3 { margin: 0; font: 500 var(--kor-text-16) var(--font-serif); color: var(--text); }
+.g7-h4 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin: 0; font: 600 var(--kor-text-13) var(--font-sans); color: var(--text); }
+.g7-label { font: 600 var(--kor-text-12) var(--font-sans); color: var(--muted); }
+.g7-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.g7-select {
+  height: 32px; max-width: 100%; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); font: var(--kor-text-13) var(--font-sans); outline: none;
+}
+.g7-select:focus-visible { border-color: var(--subtle); }
+.g7-inline-link {
+  display: inline-flex; align-items: center; gap: 3px; padding: 0; border: 0; background: none;
+  color: var(--accent); font: inherit; text-decoration: underline; text-underline-offset: 2px;
+}
+.g7-inline-link:hover { color: var(--accent-hover); }
+.g7-attribution { font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g7-hint {
+  display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; padding: 8px 10px; width: 100%;
+  border: 1px dashed var(--border); border-radius: 8px; background: var(--accent-soft);
+  color: var(--text-soft); font: var(--kor-text-12)/1.45 var(--font-sans); text-align: left;
+}
+.g7-hint:hover { border-color: var(--accent); }
+.g7-hint svg { flex-shrink: 0; color: var(--accent); }
+.g7-danger { border-color: var(--del-text); color: var(--del-text); }
+.g7-danger:hover:not(:disabled) { background: var(--del-bg); }
+@keyframes g7-spin { to { transform: rotate(360deg); } }
+.g7-spin { animation: g7-spin 0.9s linear infinite; }
+.g7-flip { transform: rotate(180deg); }
+
+.g7-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.g7-tab {
+  display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px;
+  border: 1px solid var(--border); border-radius: 999px; background: transparent;
+  color: var(--muted); font: var(--kor-text-12) var(--font-sans); white-space: nowrap;
+}
+.g7-tab:hover { color: var(--text); background: var(--hover); }
+.g7-tab[aria-selected='true'] { border-color: var(--accent); background: var(--accent-soft); color: var(--text); }
+.g7-tab-count { font-variant-numeric: tabular-nums; color: var(--subtle); }
+.g7-tabs-small .g7-tab { height: 22px; padding: 0 8px; font-size: var(--kor-text-12); }
+
+/* Rozetler ve puan çubukları */
+.badge.g7-rank { background: var(--hover); color: var(--text-soft); border: 1px solid var(--border); }
+.badge.g7-rank.top { background: var(--accent); color: #fff; border-color: var(--accent); }
+.badge.g7-warn { color: var(--warn); }
+.g7-icons { display: inline-flex; align-items: center; gap: 4px; color: var(--subtle); }
+.g7-icons > span { display: inline-flex; }
+
+.g7-score { display: inline-grid; grid-template-columns: auto 52px 28px; align-items: center; gap: 6px; font: var(--kor-text-12) var(--font-sans); color: var(--muted); }
+.g7-score-label { white-space: nowrap; }
+.g7-score.no-label { grid-template-columns: 52px 28px; }
+.g7-score-track { height: 4px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.g7-score-fill { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.g7-score-value { font-variant-numeric: tabular-nums; color: var(--text-soft); text-align: right; }
+
+/* ---------- Model seçici ---------- */
+.menu.g7-model-pop { width: min(620px, calc(100vw - 32px)); max-height: min(58vh, 600px); padding: 8px; gap: 6px; font-family: var(--font-sans); }
+.g7-pick-head { display: flex; align-items: center; gap: 6px; }
+.g7-pick-head .menu-search { margin-bottom: 0; }
+.g7-model-list { flex: 1; min-height: 0; }
+.g7-row { border-radius: 8px; }
+.g7-row.selected .g7-row-main { background: var(--accent-soft); }
+.g7-row-main { display: flex; align-items: center; gap: 2px; border-radius: 8px; }
+.g7-row-main:hover { background: var(--hover); }
+.g7-row-pick {
+  display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 7px 4px 7px 8px;
+  border: 0; border-radius: 8px; background: transparent; text-align: left;
+}
+.g7-row-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.g7-row-title { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-size: var(--kor-text-14); color: var(--text); }
+.g7-row-scores { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+.g7-row-expand { width: 28px; min-width: 28px; height: 28px; }
+.g7-pick-foot {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; padding: 8px 6px 2px;
+  border-top: 1px solid var(--border);
+}
+.g7-pick-foot .g7-attribution { margin-left: auto; }
+
+.g7-detail {
+  display: flex; flex-direction: column; gap: 10px; margin: 2px 6px 8px 32px; padding: 10px 12px;
+  border-left: 2px solid var(--border); font: var(--kor-text-12)/1.5 var(--font-sans); color: var(--text-soft);
+}
+.g7-detail-desc { margin: 0; }
+.g7-dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px 16px; margin: 0; }
+.g7-dl > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.g7-dl dt { font: 600 var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g7-dl dd { margin: 0; font: var(--kor-text-13)/1.45 var(--font-sans); color: var(--text); overflow-wrap: anywhere; }
+.g7-detail-aa { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--border); }
+.g7-detail-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 0; color: var(--text); }
+.g7-detail-scores { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.g7-detail-foot { margin: 0; color: var(--subtle); }
+
+/* ---------- Pencereler ---------- */
+.g7-modal { font-family: var(--font-sans); }
+.g7-modal[open] { display: flex; flex-direction: column; }
+.g7-modal-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0;
+  padding: 16px 16px 12px 24px; border-bottom: 1px solid var(--border);
+}
+.g7-modal-actions { display: flex; align-items: center; gap: 4px; }
+.dialog.g7-full { width: calc(100vw - 48px); max-width: 1400px; height: calc(100vh - 48px); max-height: none; }
+.g7-full-body { display: flex; flex-direction: column; gap: 18px; flex: 1; min-height: 0; overflow-y: auto; padding: 16px 24px 24px; }
+.g7-section { display: flex; flex-direction: column; gap: 10px; }
+.g7-section-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; }
+
+.g7-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.g7-rec {
+  display: flex; flex-direction: column; gap: 6px; padding: 12px; min-width: 0;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--bg);
+}
+.g7-rec .btn { align-self: flex-start; margin-top: auto; }
+.g7-rec-label { font: 600 var(--kor-text-12) var(--font-sans); letter-spacing: 0.03em; text-transform: uppercase; color: var(--accent); }
+.g7-rec-name { font: 500 var(--kor-text-14) var(--font-serif); color: var(--text); }
+.g7-rec-meta { font-size: var(--kor-text-12); color: var(--muted); }
+
+.g7-side { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.g7-side-card {
+  display: flex; flex-direction: column; gap: 10px; padding: 14px; min-width: 0;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+}
+.g7-side-card .btn { align-self: flex-start; }
+.g7-side-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.g7-side-name { display: flex; flex-direction: column; min-width: 0; font-size: var(--kor-text-14); }
+.g7-side-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.g7-side-metrics { display: flex; flex-direction: column; margin: 0; }
+.g7-side-metrics > div { display: flex; justify-content: space-between; gap: 12px; padding: 4px 6px; border-radius: 6px; font-size: var(--kor-text-13); }
+.g7-side-metrics > div:nth-child(odd) { background: var(--hover); }
+.g7-side-metrics dt { color: var(--muted); }
+.g7-side-metrics dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--text); }
+.g7-side-metrics > div.best dd { color: var(--accent); font-weight: 600; }
+
+.g7-table-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.g7-table-tools .menu-search { margin-bottom: 0; max-width: 320px; }
+.g7-table-wrap { overflow: auto; max-height: 60vh; border: 1px solid var(--border); border-radius: 10px; }
+.g7-table { width: 100%; border-collapse: collapse; font-size: var(--kor-text-13); }
+.g7-table th, .g7-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+.g7-table thead th {
+  position: sticky; top: 0; z-index: 1; background: var(--surface);
+  font: 600 var(--kor-text-12) var(--font-sans); color: var(--muted); white-space: nowrap;
+}
+.g7-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.g7-table tbody tr:hover { background: var(--hover); }
+.g7-table tbody tr.selected { background: var(--accent-soft); }
+.g7-table .g7-model-cell { font-weight: 400; min-width: 220px; }
+.g7-table .g7-model-cell .g7-row-title { font-size: var(--kor-text-13); }
+.g7-sort {
+  display: inline-flex; align-items: center; gap: 3px; padding: 2px 4px; margin: -2px -4px;
+  border: 0; border-radius: 4px; background: none; color: inherit; font: inherit;
+}
+.g7-sort:hover, .g7-sort.active { color: var(--text); }
+.g7-empty { padding: 16px; margin: 0; }
+
+/* Model testi */
+.g7-probe-pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.g7-probe-input { min-height: 96px; max-height: 240px; font-family: var(--font-sans); font-size: var(--kor-text-14); }
+.g7-probe-results { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex: 1; min-height: 240px; }
+.g7-probe-col {
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--bg); overflow: hidden;
+}
+.g7-probe-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.g7-probe-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 8px 14px; border-bottom: 1px solid var(--border); }
+.g7-probe-stats > div { display: flex; flex-direction: column; min-width: 0; }
+.g7-probe-stats dt { font-size: var(--kor-text-12); color: var(--subtle); }
+.g7-probe-stats dd { margin: 0; font: var(--kor-text-13) var(--font-mono); font-variant-numeric: tabular-nums; }
+.g7-probe-body { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; font-family: var(--font-serif); }
+
+/* ---------- Ayarlar ---------- */
+.dialog.g7-settings { width: min(1120px, calc(100vw - 32px)); height: min(760px, calc(100vh - 48px)); max-height: none; }
+.g7-settings-body { display: grid; grid-template-columns: 272px 1fr; flex: 1; min-height: 0; }
+.g7-settings-nav { display: flex; flex-direction: column; gap: 2px; padding: 4px 12px 16px; border-right: 1px solid var(--border); background: var(--bg); overflow-y: auto; }
+.g7-search {
+  display: flex; align-items: center; gap: 8px; height: 38px; margin-bottom: 10px; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--subtle);
+}
+.g7-search:focus-within { border-color: var(--subtle); }
+.g7-search-input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font: var(--kor-text-14) var(--font-sans); color: var(--text); }
+.g7-nav-btn {
+  display: flex; align-items: center; gap: 12px; height: 40px; padding: 0 12px;
+  border: 0; border-radius: 10px; background: transparent; color: var(--text-soft); font-size: var(--kor-text-14); text-align: left;
+}
+.g7-nav-btn svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.9; }
+.g7-nav-btn:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.g7-nav-btn.active { background: var(--accent-soft); color: var(--text); }
+.g7-nav-btn.active svg { color: var(--accent); opacity: 1; }
+.g7-nav-btn:disabled { opacity: 0.35; }
+/* Gruplu gezinme başlıkları (Claude Code benzeri: Tercihler / Bu bilgisayar / Özelleştirme) */
+.g7-nav-group-wrap { display: flex; flex-direction: column; gap: 2px; }
+.g7-nav-group-wrap + .g7-nav-group-wrap { margin-top: 12px; }
+.g7-nav-group { padding: 14px 10px 4px; font: 600 var(--kor-text-12) var(--font-sans); letter-spacing: 0.04em; color: var(--subtle); }
+.g7-settings-content { display: flex; flex-direction: column; gap: 26px; padding: 12px 36px 40px; overflow-y: auto; }
+.g7-settings-section { display: flex; flex-direction: column; gap: 10px; }
+/* Büyük bölüm başlığı (ör. "Genel") — yalnızca ayarlar içeriğinde */
+.g7-settings-content > .g7-settings-section > .g7-h3 { font: 600 var(--kor-text-20) var(--font-sans); letter-spacing: -0.01em; margin-bottom: 2px; }
+.g7-settings-content .g7-h4 { font-size: var(--kor-text-14); }
+.g7-settings-content .g7-note { font-size: var(--kor-text-13); color: var(--muted); }
+.g7-subsection { display: flex; flex-direction: column; gap: 10px; padding-top: 20px; border-top: 1px solid var(--border); }
+.g7-setting { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+/* Ferah satırlar + ardışık satırlar arası ince ayraç (önizlemedeki gibi) */
+.g7-settings-content .g7-setting { padding: 2px 0; }
+.g7-settings-content .g7-setting + .g7-setting { border-top: 1px solid var(--border); padding-top: 16px; }
+.g7-setting-text { display: flex; flex-direction: column; gap: 3px; flex: 1 1 260px; min-width: 0; }
+.g7-setting-title { font: var(--kor-text-14) var(--font-sans); color: var(--text); }
+
+/* iOS tarzı toggle: ayarlar içindeki tüm onay kutuları otomatik anahtar olur (sohbet alanı etkilenmez) */
+.g7-settings input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; margin: 0; position: relative; flex-shrink: 0;
+  width: 40px; height: 22px; border-radius: 999px; background: var(--border); cursor: pointer; transition: background var(--kor-dur-menu) var(--kor-ease);
+}
+.g7-settings input[type="checkbox"]::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / 0.4); transition: transform var(--kor-dur-menu) var(--kor-ease);
+}
+.g7-settings input[type="checkbox"]:checked { background: var(--accent); }
+.g7-settings input[type="checkbox"]:checked::after { transform: translateX(18px); }
+.g7-settings input[type="checkbox"]:disabled { opacity: 0.5; cursor: default; }
+.g7-settings input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.g7-setting-control { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; }
+.g7-setting-control .g7-select { width: 300px; }
+.g7-setting-control .text-input { width: 260px; }
+.g7-alias-input { width: 130px; }
+.g7-fieldset { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; border: 0; }
+.g7-theme-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.g7-theme {
+  position: relative;
+  display: flex; flex-direction: column; gap: 6px; padding: 10px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--bg);
+}
+.g7-theme.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.g7-theme:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.g7-theme input { position: absolute; opacity: 0; pointer-events: none; }
+.g7-theme-swatch { display: block; height: 44px; border: 1px solid var(--border); border-radius: 8px; }
+/* Örnek kutular temaların kendi renklerini gösterir (styles.css'teki açık/koyu --bg değerleri). */
+.g7-theme-swatch.light { background: #f0ece0; }
+.g7-theme-swatch.dark { background: #2b2a27; }
+.g7-theme-swatch.system { background: linear-gradient(135deg, #f0ece0 50%, #2b2a27 50%); }
+
+.g7-rule-group { display: flex; flex-direction: column; gap: 6px; }
+.g7-rule-list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.g7-rule {
+  display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 0 4px 0 10px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg); font-size: var(--kor-text-13);
+}
+.g7-rule code { font: var(--kor-text-12) var(--font-mono); }
+.g7-rule .action-btn { margin-left: auto; }
+.g7-rule-form { display: flex; align-items: center; gap: 8px; }
+.g7-rule-form .text-input { height: 32px; font-size: var(--kor-text-13); }
+.g7-details summary { cursor: pointer; font: var(--kor-text-13) var(--font-sans); color: var(--muted); }
+.g7-details[open] summary { margin-bottom: 8px; }
+.g7-examples { display: flex; flex-direction: column; gap: 4px; margin: 0 0 8px; padding-left: 18px; font-size: var(--kor-text-13); }
+
+.g7-callout {
+  display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px;
+  border-radius: 10px; background: var(--add-bg); color: var(--add-text); font: var(--kor-text-13)/1.5 var(--font-sans);
+}
+.g7-callout svg { flex-shrink: 0; margin-top: 2px; }
+.g7-bullets { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 0; padding-left: 18px; font: var(--kor-text-13)/1.5 var(--font-sans); color: var(--text-soft); }
+.g7-privacy-list { grid-template-columns: 1fr; gap: 10px; margin: 8px 0 12px; }
+.g7-privacy-list dd { display: flex; flex-direction: column; gap: 1px; }
+.dialog.g7-confirm, .dialog.g7-trust { width: min(520px, calc(100vw - 32px)); font-family: var(--font-sans); }
+.g7-trust-title { display: flex; align-items: center; gap: 10px; }
+.g7-trust-title svg { color: var(--warn); }
+
+/* ---------- Üst bantlar: çevrimdışı, yeniden dene, güvenilmeyen klasör ---------- */
+.g7-bands {
+  position: fixed; top: 56px; left: 50%; z-index: 5; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: max-content; max-width: calc(100vw - 32px); pointer-events: none;
+}
+.g7-band {
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 14px; pointer-events: auto;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12); font: var(--kor-text-13) var(--font-sans); color: var(--text-soft);
+}
+.g7-band:not(:has(.btn)) { padding-right: 14px; }
+.g7-band.offline { border-color: var(--del-text); background: var(--del-bg); color: var(--del-text); }
+.g7-band.warn svg { color: var(--warn); }
+/* Mesaj kutusunun açılır menüleri animasyonlu bir yığın bağlamında; bantlar onların üstünü örtmesin. */
+.app:has(.menu) .g7-bands { visibility: hidden; }
+
+/* ---------- Kullanım geçmişi grafiği ---------- */
+.usage-pop { max-height: min(80vh, 720px); overflow-y: auto; }
+.g7-usage-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.g7-chart { display: flex; flex-direction: column; gap: 4px; margin: 4px 0; }
+.g7-chart svg { display: block; overflow: visible; }
+.g7-bar-hit { fill: transparent; }
+.g7-bar-fill { fill: var(--accent); transition: fill var(--kor-dur-hover) var(--kor-ease); }
+.g7-bar:hover .g7-bar-fill { fill: var(--accent-hover); }
+.g7-axis { stroke: var(--border); stroke-width: 1; }
+.g7-chart-axis { display: flex; justify-content: space-between; gap: 8px; font-size: var(--kor-text-12); color: var(--subtle); font-variant-numeric: tabular-nums; }
+.g7-top-models { display: flex; flex-direction: column; gap: 2px; margin: 6px 0 0; padding: 0; list-style: none; }
+.g7-top-models li { display: flex; justify-content: space-between; gap: 10px; font-size: var(--kor-text-12); }
+
+@media (max-width: 760px) {
+  .g7-settings-body { grid-template-columns: 1fr; }
+  .g7-settings-nav { flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--border); }
+  .g7-probe-pickers, .g7-probe-results { grid-template-columns: 1fr; }
+}
+
+/* Arayüz dili seçici (tema kartlarıyla aynı görünüm, daha sade) */
+.g7-lang-fieldset { margin-top: 16px; }
+.g7-lang-options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.g7-lang {
+  position: relative; display: flex; align-items: center;
+  padding: 8px 14px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;
+}
+.g7-lang.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.g7-lang:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.g7-lang input { position: absolute; opacity: 0; pointer-events: none; }
+
+/* Ayarlar > Çekirdek (core/CoreSection.tsx) */
+.core-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.core-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: var(--kor-text-14); }
+.core-row-main { min-width: 0; overflow-wrap: anywhere; }
+.core-table { width: 100%; border-collapse: collapse; font-size: var(--kor-text-13); }
+.core-table th, .core-table td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+.core-table th { font-weight: 500; color: var(--muted); }
+.core-check { display: flex; align-items: center; gap: 8px; font-size: var(--kor-text-14); }
+.core-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.core-form .text-input { flex: 1 1 160px; min-width: 0; }
+.g7-h4 svg { vertical-align: -3px; margin-right: 4px; }
+.g7-band-error { color: var(--danger); font-size: var(--kor-text-12); }

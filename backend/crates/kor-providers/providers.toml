@@ -1,0 +1,190 @@
+# Registry of built-in providers (Master Build Prompt §4.2). One entry per providers/<id>.toml;
+# `adapter` names the protocol module in src/adapters/<adapter>.rs. `status = "not_yet"` (or "retired") marks a
+# card whose adapter is declared but not implemented (build() returns a clear error).
+# Test: manifest::tests::registry_matches_manifests_and_adapters.
+
+[[provider]]
+id = "abacus"
+adapter = "openai_compat"
+
+[[provider]]
+id = "abliteration"
+adapter = "openai_compat"
+
+[[provider]]
+id = "anthropic"
+adapter = "anthropic"
+
+[[provider]]
+id = "arliai"
+adapter = "openai_compat"
+
+[[provider]]
+id = "azure"
+adapter = "openai_compat"
+
+[[provider]]
+id = "bedrock"
+adapter = "openai_compat"
+
+[[provider]]
+id = "cerebras"
+adapter = "openai_compat"
+
+[[provider]]
+id = "codestral"
+adapter = "openai_compat"
+
+[[provider]]
+id = "cohere"
+adapter = "cohere"
+
+[[provider]]
+id = "dashscope-cn"
+adapter = "openai_compat"
+
+[[provider]]
+id = "dashscope"
+adapter = "openai_compat"
+
+[[provider]]
+id = "deepseek"
+adapter = "openai_compat"
+
+[[provider]]
+id = "fal"
+adapter = "openai_compat"
+
+[[provider]]
+id = "fireworks"
+adapter = "openai_compat"
+
+[[provider]]
+id = "github-models"
+adapter = "openai_compat"
+status = "retired"
+
+[[provider]]
+id = "google"
+adapter = "gemini"
+
+[[provider]]
+id = "groq"
+adapter = "openai_compat"
+
+[[provider]]
+id = "huggingface"
+adapter = "openai_compat"
+
+[[provider]]
+id = "local-jan"
+adapter = "openai_compat"
+
+[[provider]]
+id = "local-koboldcpp"
+adapter = "openai_compat"
+
+[[provider]]
+id = "local-llamacpp"
+adapter = "openai_compat"
+
+[[provider]]
+id = "local-lmstudio"
+adapter = "openai_compat"
+
+[[provider]]
+id = "local-localai"
+adapter = "openai_compat"
+
+[[provider]]
+id = "local-tgwebui"
+adapter = "openai_compat"
+
+[[provider]]
+id = "local-vllm"
+adapter = "openai_compat"
+
+[[provider]]
+id = "local"
+adapter = "ollama"
+
+[[provider]]
+id = "mancer"
+adapter = "openai_compat"
+
+[[provider]]
+id = "microsoft-foundry"
+adapter = "openai_compat"
+
+[[provider]]
+id = "mistral"
+adapter = "openai_compat"
+
+[[provider]]
+id = "moonshot"
+adapter = "openai_compat"
+
+[[provider]]
+id = "nvidia"
+adapter = "openai_compat"
+
+[[provider]]
+id = "oci"
+adapter = "openai"
+
+[[provider]]
+id = "openai"
+adapter = "openai"
+
+[[provider]]
+id = "openrouter"
+adapter = "openai_compat"
+
+[[provider]]
+id = "perplexity"
+adapter = "openai_compat"
+
+[[provider]]
+id = "refuseless"
+adapter = "openai_compat"
+
+[[provider]]
+id = "sagemaker"
+adapter = "sagemaker"
+status = "not_yet"
+
+[[provider]]
+id = "sambanova"
+adapter = "openai_compat"
+
+[[provider]]
+id = "together"
+adapter = "openai_compat"
+
+[[provider]]
+id = "uncensoredllm"
+adapter = "openai_compat"
+
+[[provider]]
+id = "venice"
+adapter = "openai_compat"
+
+[[provider]]
+id = "vertex"
+adapter = "openai_compat"
+
+[[provider]]
+id = "xai"
+adapter = "openai_compat"
+
+[[provider]]
+id = "zai-coding"
+adapter = "openai_compat"
+
+[[provider]]
+id = "zai"
+adapter = "openai_compat"
+
+[[provider]]
+id = "zhipu"
+adapter = "openai_compat"

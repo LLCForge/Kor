@@ -1,0 +1,29 @@
+# §16.4 / §17.2 (ADR 0061): start a task → status events → diff preview → approve → file written →
+# cost ledger updated. `kor doctor --ipc-trace` runs this one.
+name: task-approve-write
+title: "Görev → durum → diff önizleme → onay → dosya yazılır → maliyet güncellenir"
+project:
+  files:
+    README.md: "# Demo\n"
+mock:
+  - text: "notes.md dosyasını oluşturuyorum."
+    tool:
+      name: Write
+      input: { file_path: notes.md, content: "# Notlar\n\n- ilk not\n" }
+    usage: { prompt: 1200, completion: 40 }
+  - text: "Tamamlandı: notes.md yazıldı."
+    usage: { prompt: 1300, completion: 12 }
+steps:
+  - prompt: "notes.md adında bir not dosyası oluştur"
+  - approve: "yes"
+expect:
+  events:
+    - status
+    - { type: text, text: "notes.md dosyasını oluşturuyorum." }
+    - { type: confirm, name: Write, files: [notes.md], destructive: false }
+    - toolResult
+    - { type: text, text: "Tamamlandı: notes.md yazıldı." }
+  files:
+    notes.md: "# Notlar\n\n- ilk not\n"
+    README.md: "# Demo\n"
+  usage_requests: 2

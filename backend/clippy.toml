@@ -1,0 +1,7 @@
+# Proper nouns that `clippy::doc_markdown` would otherwise ask to wrap in backticks.
+doc-valid-idents = ["..", "OpenAI", "CLIProxyAPI", "ClientHello", "BoringSSL", "WaveSpeed"]
+# §32.2 (ADR 0062): never block a thread waiting on a future. kor-lint (apps/kor-lint) checks the rules
+# that need context (blocking I/O inside async code, render paths, unbounded channels, uncached regexes).
+disallowed-methods = [
+    { path = "futures::executor::block_on", reason = "blocks the calling thread; `.await` it or use the runtime's block_on at the edge (§32.2, ADR 0062)", allow-invalid = true },
+]

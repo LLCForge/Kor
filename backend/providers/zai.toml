@@ -1,0 +1,16 @@
+# Source: https://docs.z.ai/guides/overview/quick-start
+id = "zai"
+name = "Z.ai (GLM, international)"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.z.ai/api/paas/v4"
+auth = { kind = "bearer", env = "ZAI_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.z.ai/guides/overview/quick-start"
+
+[privacy]
+tier = "standard"
+retention = "Retention per provider privacy policy (verify)."
+jurisdiction = "SG"

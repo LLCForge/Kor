@@ -1,0 +1,6 @@
+{
+  "name": "kor-ornek-proje",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test src/" }
+}

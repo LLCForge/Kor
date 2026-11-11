@@ -1,0 +1,13 @@
+---
+source: apps/kor-cli/src/brand.rs
+assertion_line: 285
+expression: "lines.join(\"\\n\")"
+---
+✶ Düşünüyor… (0s · esc/ctrl+c)
+✷ Közlüyor… (1s · esc/ctrl+c)
+✸ Dövüyor… (2s · esc/ctrl+c)
+✹ Tavlıyor… (3s · esc/ctrl+c)
+✺ Isıtıyor… (4s · esc/ctrl+c)
+✹ Şekillendiriyor… (5s · esc/ctrl+c)
+✸ Harlıyor… (6s · esc/ctrl+c)
+✷ Çekiçliyor… (7s · esc/ctrl+c)

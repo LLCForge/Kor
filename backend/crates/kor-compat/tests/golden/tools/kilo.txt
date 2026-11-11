@@ -1,0 +1,4 @@
+rule kilo/project repo/.kilocoderules [always] Legacy kilo rule.
+rule kilo/project repo/.kilocode/rules/general.md [always] Kilo general rule.
+rule kilo/project repo/.kilocode/rules-ask/answers.md [on-request "Kilo Code `ask` mode rules"] Ask mode: cite files.
+mcp fs kilo/project repo/.kilocode/mcp.json

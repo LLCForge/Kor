@@ -1,0 +1,197 @@
+# Entry points for `kor dead-code` (spec §15.14, ADR 0047). A symbol reachable from an entry over
+# the project graph is alive. Projects add their own rules in `.kor/dead-code.toml` (same shape;
+# `ignore = ["glob"]` there keeps paths out of the report).
+#
+# Fields of a rule (all optional except name/kind):
+#   kind          main | route | cron | test | public-api | di | callback  (route = HTTP endpoint)
+#   files         globs the rule is limited to; exclude: globs it skips
+#   whole_file    every symbol of a matching file is an entry
+#   names         regex on the symbol name
+#   lines         regex on the definition line or the three lines above it (decorators, attributes)
+#   module        regex on the file text: the file itself (top-level code) is an entry
+#   registrations regex on file text; capture group 1 names an entry symbol (DI, reflection)
+#   lib_crate     Rust: only in library crates (a src/lib.rs next to the Cargo.toml)
+#   trait_impls   Rust: methods inside `impl Trait for Type`
+#   unless        regex on file text: the rule does not apply to files that match
+#   [[rule.when]] file (+ contains): applies only when that file exists in an ancestor directory
+
+[[rule]]
+name = "main"
+framework = "any"
+kind = "main"
+names = '^(main|_start|wmain|WinMain|DllMain|Main)$'
+
+[[rule]]
+name = "test-files"
+framework = "any"
+kind = "test"
+whole_file = true
+files = ["**/tests/**", "**/test/**", "**/__tests__/**", "**/spec/**", "**/benches/**", "**/examples/**", "**/*_test.*", "**/*_spec.*", "**/test_*.py", "**/*.test.*", "**/*.spec.*", "**/conftest.py", "**/build.rs"]
+
+[[rule]]
+name = "test-functions"
+framework = "any"
+kind = "test"
+names = '^(test_\w+|Test[A-Z_]\w*|Benchmark\w+|Example\w*|Fuzz\w+|setUp|tearDown|setUpClass|tearDownClass)$'
+lines = '#\[(tokio::|async_std::|actix_rt::)?test\b|#\[bench\]|#\[cfg\(test\)\]|@(Test|ParameterizedTest|BeforeEach|AfterEach|BeforeAll|AfterAll|Before|After)\b|\[(Fact|Theory|Test|TestMethod|SetUp|TearDown)\b|@pytest\.'
+
+[[rule]]
+name = "config-files"
+framework = "javascript"
+kind = "main"
+whole_file = true
+files = ["**/*.config.js", "**/*.config.ts", "**/*.config.mjs", "**/*.config.cjs", "**/.eslintrc.*"]
+
+[[rule]]
+name = "rust-public-api"
+framework = "rust"
+kind = "public-api"
+lib_crate = true
+files = ["**/*.rs"]
+exclude = ["**/src/main.rs", "**/src/bin/**"]
+lines = '^\s*pub\s+(async\s+|unsafe\s+|const\s+|extern\s+"[^"]*"\s+)*(fn|struct|enum|trait|type|union|mod|static|const|macro_rules)\b'
+
+[[rule]]
+name = "rust-trait-impls"
+framework = "rust"
+kind = "callback"
+trait_impls = true
+files = ["**/*.rs"]
+
+[[rule]]
+name = "rust-attributes"
+framework = "rust"
+kind = "route"
+lines = '#\[(no_mangle|export_name|tauri::command|wasm_bindgen|pyfunction|pymethods|napi|proc_macro\w*|tokio::main|actix_web::main|main|get|post|put|delete|patch|route|handler|debug_handler|ctor|test_case)\b'
+
+[[rule]]
+name = "serde-attribute-functions"
+framework = "rust"
+kind = "callback"
+registrations = '#\[serde\([^\]]*?(?:default|with|serialize_with|deserialize_with|skip_serializing_if|getter)\s*=\s*"(?:[\w:]*::)?(\w+)"'
+
+[[rule]]
+name = "nextjs-routes"
+framework = "Next.js"
+kind = "route"
+whole_file = true
+files = ["**/app/**/page.*", "**/app/**/layout.*", "**/app/**/route.*", "**/app/**/loading.*", "**/app/**/error.*", "**/app/**/not-found.*", "**/app/**/template.*", "**/app/**/default.*", "**/pages/**", "**/middleware.*", "**/instrumentation.*"]
+[[rule.when]]
+file = "package.json"
+contains = '"next"'
+
+[[rule]]
+name = "js-package-entry"
+framework = "javascript"
+kind = "public-api"
+whole_file = true
+files = ["**/index.js", "**/index.ts", "**/index.tsx", "**/index.jsx", "**/index.mjs", "**/index.cjs", "**/main.js", "**/main.ts", "**/main.tsx", "**/cli.js", "**/cli.ts", "**/server.js", "**/server.ts"]
+[[rule.when]]
+file = "package.json"
+
+[[rule]]
+name = "js-framework-callbacks"
+framework = "javascript"
+kind = "callback"
+names = '^(render|constructor|componentDidMount|componentDidUpdate|componentWillUnmount|shouldComponentUpdate|getDerivedStateFromProps|getSnapshotBeforeUpdate|connectedCallback|disconnectedCallback|attributeChangedCallback|getServerSideProps|getStaticProps|getStaticPaths|generateMetadata|generateStaticParams|loader|action|default)$'
+
+[[rule]]
+name = "spring-beans"
+framework = "Spring"
+kind = "di"
+lines = '@(Component|Service|Repository|Controller|RestController|ControllerAdvice|Configuration|Bean|SpringBootApplication|Scheduled|EventListener|KafkaListener|RabbitListener|JmsListener|SqsListener|PostConstruct|PreDestroy|Autowired|Inject|Override|ExceptionHandler|ModelAttribute|InitBinder)\b'
+
+[[rule]]
+name = "spring-routes"
+framework = "Spring"
+kind = "route"
+lines = '@(GetMapping|PostMapping|PutMapping|DeleteMapping|PatchMapping|RequestMapping|MessageMapping)\b'
+
+[[rule]]
+name = "django-views"
+framework = "Django"
+kind = "route"
+whole_file = true
+files = ["**/views.py", "**/views/**/*.py", "**/urls.py", "**/admin.py", "**/models.py", "**/apps.py", "**/signals.py", "**/serializers.py", "**/forms.py", "**/tasks.py", "**/management/commands/*.py", "**/migrations/*.py", "**/settings.py", "**/settings/*.py", "**/wsgi.py", "**/asgi.py", "**/templatetags/*.py", "**/middleware.py"]
+[[rule.when]]
+file = "manage.py"
+[[rule.when]]
+file = "pyproject.toml"
+contains = "django"
+[[rule.when]]
+file = "requirements.txt"
+contains = "django"
+
+[[rule]]
+name = "python-decorators"
+framework = "Flask/FastAPI/Celery/click/pytest"
+kind = "route"
+lines = '^\s*@[\w.]*\b(route|get|post|put|delete|patch|head|options|websocket|api_view|task|shared_task|periodic_task|receiver|fixture|command|group|on_event|middleware|exception_handler|validator|field_validator|model_validator|hookimpl|register)\b'
+
+[[rule]]
+name = "python-main-and-dunder"
+framework = "python"
+kind = "main"
+names = '^__\w+__$'
+module = '''(?m)^if\s+__name__\s*==\s*["']__main__["']'''
+
+[[rule]]
+name = "laravel"
+framework = "Laravel"
+kind = "route"
+whole_file = true
+files = ["**/routes/**/*.php", "**/app/Http/Controllers/**", "**/app/Http/Middleware/**", "**/app/Http/Requests/**", "**/app/Providers/**", "**/app/Console/**", "**/app/Jobs/**", "**/app/Listeners/**", "**/app/Events/**", "**/app/Models/**", "**/app/Policies/**", "**/app/Observers/**", "**/app/Mail/**", "**/app/Notifications/**", "**/database/**", "**/config/**"]
+[[rule.when]]
+file = "composer.json"
+contains = "laravel"
+
+[[rule]]
+name = "rails"
+framework = "Rails"
+kind = "route"
+whole_file = true
+files = ["**/app/controllers/**", "**/app/models/**", "**/app/jobs/**", "**/app/mailers/**", "**/app/helpers/**", "**/app/channels/**", "**/config/**", "**/db/**", "**/lib/tasks/**"]
+[[rule.when]]
+file = "Gemfile"
+contains = "rails"
+
+[[rule]]
+name = "aspnet"
+framework = "ASP.NET"
+kind = "route"
+lines = '\[(HttpGet|HttpPost|HttpPut|HttpDelete|HttpPatch|Route|ApiController|Function|FunctionName|HubMethodName)\b|\boverride\b'
+files = ["**/*.cs"]
+
+[[rule]]
+name = "aspnet-startup"
+framework = "ASP.NET"
+kind = "main"
+whole_file = true
+files = ["**/Program.cs", "**/Startup.cs"]
+
+[[rule]]
+name = "dotnet-di-registrations"
+framework = ".NET"
+kind = "di"
+registrations = '\b(?:Add(?:Scoped|Transient|Singleton|HostedService|DbContext|HttpClient)|Map(?:Hub|Grpc\w*))<(?:[\w.]+\s*,\s*)?([\w]+)>'
+
+[[rule]]
+name = "go-exported-api"
+framework = "Go"
+kind = "public-api"
+files = ["**/*.go"]
+names = '^[A-Z]'
+unless = '(?m)^package\s+main\b'
+
+[[rule]]
+name = "go-interface-methods"
+framework = "Go"
+kind = "callback"
+files = ["**/*.go"]
+names = '^(init|String|Error|ServeHTTP|MarshalJSON|UnmarshalJSON|MarshalText|UnmarshalText|MarshalYAML|UnmarshalYAML|Len|Less|Swap|Read|Write|Close|Scan|Value|Unwrap|Is|As|Format|GoString)$'
+
+[[rule]]
+name = "cron-and-triggers"
+framework = "any"
+kind = "cron"
+lines = '@(Scheduled|cron|periodic_task|Cron)\b|#\[(tokio_cron\w*|cron\w*)|schedule\.(every|cron)|\bcron\s*\('

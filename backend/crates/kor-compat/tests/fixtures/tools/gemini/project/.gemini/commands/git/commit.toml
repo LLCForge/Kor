@@ -1,0 +1,2 @@
+description = "Write a commit message"
+prompt = "Write a commit message for: {{args}}"

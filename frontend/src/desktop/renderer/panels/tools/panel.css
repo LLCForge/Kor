@@ -1,0 +1,15 @@
+/* Araçlar ve komutlar paneli; ortak kart sınıfları ../graph/panel.css (kg-*) içinde. */
+.kt { display: flex; flex-direction: column; gap: var(--kor-space-3); flex: 1; min-height: 0; padding: var(--kor-space-3); overflow-y: auto; }
+/* Kapsamlı: tasks/ ve triggers/ panelleri aynı kt-* adlarını farklı anlamla tanımlar; onların kuralları buraya sızmaz. */
+.kt .kt-form { display: flex; flex-direction: row; align-items: flex-end; gap: var(--kor-space-2); flex-wrap: wrap; padding: 0; border: 0; }
+.kt .kt-row { display: flex; align-items: stretch; gap: var(--kor-space-2); flex-wrap: wrap; }
+.kt .kt-grow { flex: 1 1 calc(var(--kor-space-1) * 50); overflow: visible; }
+.kt .kt-field { flex: initial; min-width: 0; display: flex; flex-direction: column; gap: calc(var(--kor-space-1) / 2); font-size: var(--kor-text-12); color: var(--muted); }
+.kt-check { font-size: var(--kor-text-12); display: flex; gap: var(--kor-space-1); align-items: center; }
+.kt-small { margin: 0; font-size: var(--kor-text-12); }
+.kt-h { margin: var(--kor-space-1) 0 0; font-size: var(--kor-text-12); font-weight: 500; color: var(--muted); }
+.kt .kt-list { list-style: disc; margin: 0; padding-left: var(--kor-space-4); font-size: var(--kor-text-12); display: flex; flex-direction: column; gap: calc(var(--kor-space-1) / 2); overflow-wrap: anywhere; }
+.kt-help { font-size: var(--kor-text-12); overflow-wrap: anywhere; }
+.kt-help pre { white-space: pre-wrap; margin: 0; font-family: var(--font-mono); }
+.kt-ok { margin: 0; font-size: var(--kor-text-12); color: var(--accent); }
+.kt-error { margin: 0; font-size: var(--kor-text-12); color: var(--del-text); }

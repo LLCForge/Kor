@@ -1,0 +1,59 @@
+{
+ "id": "cloudflare",
+ "name": "Cloudflare",
+ "kind": null,
+ "match": {
+  "ports": [],
+  "hosts": [
+   "dash.cloudflare.com"
+  ],
+  "paths": [],
+  "markers": []
+ },
+ "commands": [
+  {
+   "id": "dns-record",
+   "label": {
+    "tr": "DNS kaydı formunu doldur",
+    "en": "Fill in the DNS record form",
+    "fr": "Remplir le formulaire DNS"
+   },
+   "action": "fill",
+   "fields": [
+    {
+     "labels": [
+      "name",
+      "ad",
+      "host"
+     ],
+     "value": "name"
+    },
+    {
+     "labels": [
+      "ipv4 address",
+      "content",
+      "target",
+      "içerik",
+      "hedef"
+     ],
+     "value": "content"
+    },
+    {
+     "labels": [
+      "ttl"
+     ],
+     "value": "ttl"
+    }
+   ]
+  },
+  {
+   "id": "explain",
+   "label": {
+    "tr": "Bu ekranı açıkla",
+    "en": "Explain this screen",
+    "fr": "Expliquer cet écran"
+   },
+   "action": "explain"
+  }
+ ]
+}

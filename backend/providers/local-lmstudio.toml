@@ -1,0 +1,16 @@
+# Default port per https://lmstudio.ai/docs/app/api/endpoints/openai
+id = "local-lmstudio"
+name = "Local (LM Studio)"
+category = "local"
+adapter = "openai_compat"
+base_url = "http://localhost:1234/v1"
+auth = { kind = "none" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://lmstudio.ai/docs/app/api/endpoints/openai"
+
+[privacy]
+tier = "local"
+retention = "Never leaves this machine."
+training_on_data = false

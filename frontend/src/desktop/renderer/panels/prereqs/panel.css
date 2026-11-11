@@ -1,0 +1,12 @@
+/* Sistem gereksinimleri görünümü; kart ve rozet sınıfları ../graph/panel.css (kg-*) ve ../security/panel.css (ks-*) içinde.
+   Değerler yalnızca tema token'larından (ADR 0053). */
+.kp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--kor-space-2); }
+.kp-row { display: flex; flex-direction: column; gap: var(--kor-space-1); padding: var(--kor-space-3); border: 1px solid var(--border); border-radius: var(--kor-radius-card); background: var(--surface); }
+.kp-head { display: flex; align-items: center; gap: var(--kor-space-2); min-width: 0; }
+.kp-name { font-weight: 600; font-size: var(--kor-text-14); }
+.kp-ok { color: var(--add-text); }
+.kp-miss { color: var(--muted); }
+.kp-why { margin: 0; font-size: var(--kor-text-13); }
+.kp-cmd { display: flex; align-items: center; gap: var(--kor-space-1); margin: 0; min-width: 0; color: var(--muted); }
+.kp-cmd code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: var(--kor-text-12); user-select: text; }
+.kp-log { margin: 0; padding: var(--kor-space-1) var(--kor-space-2); max-height: calc(var(--kor-space-7) * 2.5); overflow: auto; border-radius: var(--kor-radius-chip); background: var(--hover); font-family: var(--font-mono); font-size: var(--kor-text-12); white-space: pre-wrap; }

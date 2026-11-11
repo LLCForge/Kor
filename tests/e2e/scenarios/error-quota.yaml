@@ -1,0 +1,20 @@
+# §17.2 error path "kota aşımı": 429 with a quota message; retries end in an error the user sees.
+name: error-quota
+title: "Hata yolu: kota aşımı"
+project:
+  files:
+    README.md: "# Demo\n"
+mock:
+  - status: 429
+    error: "You exceeded your current quota"
+  - status: 429
+    error: "You exceeded your current quota"
+  - status: 429
+    error: "You exceeded your current quota"
+  - status: 429
+    error: "You exceeded your current quota"
+steps:
+  - prompt: "merhaba"
+expect:
+  error: true
+  usage_requests: 0

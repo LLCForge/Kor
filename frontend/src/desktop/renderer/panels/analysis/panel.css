@@ -1,0 +1,23 @@
+/* Analiz görünümü; ortak kart/satır sınıfları ../graph/panel.css (kg-*) ve ../security/panel.css (ks-*) içinde. */
+.ka-report { display: flex; flex-direction: column; gap: 8px; }
+.ka-sev { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; border: 0; }
+.ka-sev-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; font-size: 12px; cursor: pointer; color: var(--muted); }
+.ka-sev-chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.ka-sev-chip:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ka-sev-chip.on { color: var(--text); background: var(--hover); }
+.ka-count { font-variant-numeric: tabular-nums; }
+.ka-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ka-item { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; }
+.ka-item-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ka-badge { flex: none; padding: 0 6px; border-radius: 6px; font-size: 12px; background: var(--hover); color: var(--muted); }
+.ka-badge.ka-critical, .ka-badge.ka-high { background: var(--del-bg); color: var(--del-text); }
+.ka-badge.ka-medium { color: var(--warn); }
+.ka-sev-chip.on.ka-critical, .ka-sev-chip.on.ka-high { border-color: var(--del-text); }
+.ka-loc { display: inline-flex; align-items: center; gap: 4px; min-width: 0; padding: 0; border: 0; background: none; color: var(--accent); font-family: var(--font-mono); font-size: 12px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ka-loc:hover { text-decoration: underline; }
+.ka-loc:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ka-msg { margin: 0; font-size: 13px; line-height: 1.5; }
+.ka-meta { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.ka-meta code { font-family: var(--font-mono); }
+.ka-fix { margin: 0; padding: 4px 6px; border-radius: 6px; background: var(--hover); font-size: 12px; line-height: 1.5; }
+.ka-notes { margin: 6px 0 0; padding-left: 18px; font-size: 12px; line-height: 1.5; }

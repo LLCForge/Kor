@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: asset: http://asset.localhost; media-src asset: http://asset.localhost; font-src 'self'; connect-src ipc: http://ipc.localhost; frame-src kor-sandbox: http://kor-sandbox.localhost; worker-src blob:; base-uri 'none'; form-action 'none'" />
+    <!-- connect-src yalnızca Tauri IPC'dir (Windows: http://ipc.localhost, macOS/Linux: ipc:); dış ağa çıkış yoktur,
+         ağ işleri Rust arka ucundadır. worker-src blob: yalnızca [g20] izole REPL worker'ı ve [g21] pdf.js çalışanı
+         içindir; blob: worker bu CSP'yi devralır (dış ağ yok; script-src 'self', eval yok).
+         'wasm-unsafe-eval' yalnızca WASM derlemesine izin verir (graphviz/@viz-js, pdf.js çözücüleri); JS eval hâlâ kapalı.
+         Aynı politika tauri.conf.json app.security.csp başlığında da var (ADR 0032). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kor</title>
+    <link rel="stylesheet" href="./renderer.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./renderer.js"></script>
+  </body>
+</html>

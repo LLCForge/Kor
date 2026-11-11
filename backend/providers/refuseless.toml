@@ -1,0 +1,20 @@
+# Source: https://docs.refuseless.com/introduction, /authentication.md, /models.md,
+# /api/chat-completions.md, /guides/tools.md, /guides/errors.md (read 2026-11-10).
+# OpenAI-compatible: POST /v1/chat/completions (SSE with stream_options.include_usage, tools,
+# tool_choice, reasoning_effort off|low|high|max). Also /v1/messages (Anthropic) and /v1/responses.
+# 429 model_busy / model_warming come with retry-after (the key pool honours it).
+id = "refuseless"
+name = "Refuseless"
+category = "uncensored"
+adapter = "openai_compat"
+base_url = "https://api.refuseless.com/v1"
+auth = { kind = "bearer", env = "REFUSELESS_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.refuseless.com/introduction"
+tags = ["privacy-focused"]
+
+[privacy]
+tier = "unknown"
+retention = "The API docs make no statement about prompt logging or retention."

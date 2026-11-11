@@ -1,0 +1,12 @@
+Analysis of sampling hot (pid 501) every 1 millisecond
+Process:         hot [501]
+
+Call graph:
+    100 Thread_7007   DispatchQueue_1: com.apple.main-thread  (serial)
+    + 100 start  (in dyld) + 1903  [0x1000e1f3f]
+    +   100 main  (in hot) + 40  [0x100003f28]  hot.c:12
+    +     70 fib  (in hot) + 20  [0x100003e14]  hot.c:4
+    +     ! 30 fib  (in hot) + 36  [0x100003e24]  hot.c:5
+    +     25 work  (in hot) + 12  [0x100003e80]  hot.c:9
+
+Total number in stack (recursed counted multiple times):

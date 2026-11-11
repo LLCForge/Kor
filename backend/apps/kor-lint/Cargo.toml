@@ -1,0 +1,27 @@
+[package]
+name = "kor-lint"
+description = "Kor's performance lint (§32.2, ADR 0062): blocking I/O on async/UI threads, unbounded channels, uncached regexes"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+# A CI tool, not a product binary: `dist` must not package it.
+[package.metadata.dist]
+dist = false
+
+[[bin]]
+name = "kor-lint"
+path = "src/main.rs"
+
+[dependencies]
+proc-macro2 = { version = "1", features = ["span-locations"] }
+quote = "1"
+serde_json.workspace = true
+syn = { version = "2", default-features = false, features = ["full", "visit", "parsing", "printing"] }
+
+[lints]
+workspace = true

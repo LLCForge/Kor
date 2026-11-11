@@ -1,0 +1,157 @@
+{
+ "id": "plesk",
+ "name": "Plesk",
+ "kind": "plesk",
+ "match": {
+  "ports": [
+   8443,
+   8880
+  ],
+  "hosts": [],
+  "paths": [
+   "/smb/"
+  ],
+  "markers": [
+   "plesk"
+  ]
+ },
+ "commands": [
+  {
+   "id": "inventory",
+   "label": {
+    "tr": "Envanteri göster",
+    "en": "Show inventory",
+    "fr": "Afficher l’inventaire"
+   },
+   "action": "api",
+   "task": null,
+   "needs": []
+  },
+  {
+   "id": "ssl",
+   "label": {
+    "tr": "Bu domaine SSL kur",
+    "en": "Install SSL for this domain",
+    "fr": "Installer SSL pour ce domaine"
+   },
+   "action": "api",
+   "task": "ssl",
+   "needs": [
+    "domain"
+   ]
+  },
+  {
+   "id": "php",
+   "label": {
+    "tr": "PHP sürümünü değiştir",
+    "en": "Change PHP version",
+    "fr": "Changer la version PHP"
+   },
+   "action": "api",
+   "task": "php",
+   "needs": [
+    "domain",
+    "version"
+   ]
+  },
+  {
+   "id": "backup",
+   "label": {
+    "tr": "Yedek al",
+    "en": "Take a backup",
+    "fr": "Faire une sauvegarde"
+   },
+   "action": "api",
+   "task": "backup",
+   "needs": []
+  },
+  {
+   "id": "subdomain",
+   "label": {
+    "tr": "Alt alan adı oluştur",
+    "en": "Create a subdomain",
+    "fr": "Créer un sous-domaine"
+   },
+   "action": "api",
+   "task": "subdomain",
+   "needs": [
+    "sub",
+    "domain"
+   ]
+  },
+  {
+   "id": "db",
+   "label": {
+    "tr": "Veritabanı oluştur",
+    "en": "Create a database",
+    "fr": "Créer une base de données"
+   },
+   "action": "api",
+   "task": "db",
+   "needs": [
+    "name",
+    "user"
+   ]
+  },
+  {
+   "id": "email",
+   "label": {
+    "tr": "E-posta hesabı oluştur",
+    "en": "Create a mailbox",
+    "fr": "Créer une boîte mail"
+   },
+   "action": "api",
+   "task": "email",
+   "needs": [
+    "address"
+   ]
+  },
+  {
+   "id": "cron",
+   "label": {
+    "tr": "Cron görevi ekle",
+    "en": "Add a cron job",
+    "fr": "Ajouter une tâche cron"
+   },
+   "action": "api",
+   "task": "cron",
+   "needs": [
+    "schedule",
+    "command"
+   ]
+  },
+  {
+   "id": "perms",
+   "label": {
+    "tr": "İzinleri düzelt (755/644)",
+    "en": "Fix permissions (755/644)",
+    "fr": "Corriger les permissions (755/644)"
+   },
+   "action": "api",
+   "task": "perms",
+   "needs": [
+    "path"
+   ]
+  },
+  {
+   "id": "clean",
+   "label": {
+    "tr": "Disk temizliği adaylarını listele",
+    "en": "List disk clean-up candidates",
+    "fr": "Lister les fichiers à nettoyer"
+   },
+   "action": "api",
+   "task": "clean",
+   "needs": []
+  },
+  {
+   "id": "explain",
+   "label": {
+    "tr": "Bu ekranı açıkla",
+    "en": "Explain this screen",
+    "fr": "Expliquer cet écran"
+   },
+   "action": "explain"
+  }
+ ]
+}

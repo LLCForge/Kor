@@ -1,0 +1,2 @@
+  301 204800   1:23.50 /Applications/Google Chrome.app/Contents/Frameworks/Google Chrome Framework.framework/Versions/1/Helpers/Google Chrome Helper (Renderer).app/Contents/MacOS/Google Chrome Helper (Renderer)
+  412  65536   0:10.02 /System/Library/CoreServices/Finder.app/Contents/MacOS/Finder

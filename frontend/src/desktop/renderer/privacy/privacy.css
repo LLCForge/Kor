@@ -1,0 +1,6 @@
+/* Gizlilik rozeti (§31.2): yalnızca mevcut değişkenler. */
+.kp-badge { display: inline-flex; align-items: center; gap: var(--kor-space-1); padding: 0 var(--kor-space-1); border: 1px solid var(--border); border-radius: calc(var(--kor-radius-composer) * 100); font-size: var(--kor-text-12); line-height: var(--kor-space-4); color: var(--muted); white-space: nowrap; }
+.kp-badge.kp-ok { color: var(--add-text); }
+.kp-badge.kp-warn { color: var(--warn); }
+.g7-row.kp-dim { opacity: 0.45; }
+.g7-row.kp-dim:hover, .g7-row.kp-dim:focus-within { opacity: 0.8; }

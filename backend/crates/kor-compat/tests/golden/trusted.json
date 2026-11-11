@@ -1,0 +1,347 @@
+{
+  "trusted": true,
+  "instructions": [
+    {
+      "source": {
+        "eco": "claude",
+        "scope": "user",
+        "path": "<tmp>/home/.claude/CLAUDE.md"
+      },
+      "applies": {
+        "kind": "always"
+      },
+      "text": "User rule: prefer small commits.\n@~/.claude/extra.md\n\n\n<!-- imported: @~/.claude/extra.md -->\nExtra user note."
+    },
+    {
+      "source": {
+        "eco": "codex",
+        "scope": "user",
+        "path": "<tmp>/home/.codex/AGENTS.md"
+      },
+      "applies": {
+        "kind": "always"
+      },
+      "text": "Codex user instructions.\n"
+    },
+    {
+      "source": {
+        "eco": "claude",
+        "scope": "project",
+        "path": "<tmp>/repo/CLAUDE.md"
+      },
+      "applies": {
+        "kind": "always"
+      },
+      "text": "Project rules.\n@AGENTS.md\n@../outside.md\n\n\n<!-- imported: @AGENTS.md -->\nUse tabs. Run cargo test before finishing."
+    },
+    {
+      "source": {
+        "eco": "claude",
+        "scope": "local",
+        "path": "<tmp>/repo/CLAUDE.local.md"
+      },
+      "applies": {
+        "kind": "always"
+      },
+      "text": "My local notes.\n"
+    },
+    {
+      "source": {
+        "eco": "cursor",
+        "scope": "project",
+        "path": "<tmp>/repo/.cursorrules"
+      },
+      "applies": {
+        "kind": "always"
+      },
+      "text": "Legacy cursor rule.\n"
+    },
+    {
+      "source": {
+        "eco": "cursor",
+        "scope": "project",
+        "path": "<tmp>/repo/.cursor/rules/always.mdc"
+      },
+      "applies": {
+        "kind": "always"
+      },
+      "text": "Never use var."
+    },
+    {
+      "source": {
+        "eco": "cursor",
+        "scope": "project",
+        "path": "<tmp>/repo/.cursor/rules/db.mdc"
+      },
+      "applies": {
+        "kind": "on_request",
+        "description": "Database migrations"
+      },
+      "text": "Use sqlx migrations."
+    },
+    {
+      "source": {
+        "eco": "cursor",
+        "scope": "project",
+        "path": "<tmp>/repo/.cursor/rules/manual.mdc"
+      },
+      "applies": {
+        "kind": "manual"
+      },
+      "text": "Manual rule."
+    },
+    {
+      "source": {
+        "eco": "claude",
+        "scope": "project",
+        "path": "<tmp>/repo/.claude/rules/rust.md"
+      },
+      "applies": {
+        "kind": "globs",
+        "globs": [
+          "src/**/*.rs"
+        ]
+      },
+      "text": "Use thiserror for errors."
+    },
+    {
+      "source": {
+        "eco": "cursor",
+        "scope": "project",
+        "path": "<tmp>/repo/.cursor/rules/tests.mdc"
+      },
+      "applies": {
+        "kind": "globs",
+        "globs": [
+          "**/*.test.ts"
+        ]
+      },
+      "text": "Use vitest."
+    }
+  ],
+  "permissions": {
+    "allow": [
+      {
+        "rule": "Bash(npm run *)",
+        "source": {
+          "eco": "claude",
+          "scope": "project",
+          "path": "<tmp>/repo/.claude/settings.json"
+        }
+      },
+      {
+        "rule": "Bash(cargo test *)",
+        "source": {
+          "eco": "claude",
+          "scope": "user",
+          "path": "<tmp>/home/.claude/settings.json"
+        }
+      }
+    ],
+    "ask": [
+      {
+        "rule": "Bash(git push *)",
+        "source": {
+          "eco": "claude",
+          "scope": "project",
+          "path": "<tmp>/repo/.claude/settings.json"
+        }
+      }
+    ],
+    "deny": [
+      {
+        "rule": "Read(.env)",
+        "source": {
+          "eco": "claude",
+          "scope": "project",
+          "path": "<tmp>/repo/.claude/settings.json"
+        }
+      },
+      {
+        "rule": "Read(~/.ssh/**)",
+        "source": {
+          "eco": "claude",
+          "scope": "user",
+          "path": "<tmp>/home/.claude/settings.json"
+        }
+      }
+    ],
+    "mode": [
+      "accept-edits",
+      {
+        "eco": "claude",
+        "scope": "project",
+        "path": "<tmp>/repo/.claude/settings.json"
+      }
+    ]
+  },
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "command": "echo pre",
+      "timeout_secs": 5,
+      "source": {
+        "eco": "claude",
+        "scope": "project",
+        "path": "<tmp>/repo/.claude/settings.json"
+      }
+    },
+    {
+      "event": "Stop",
+      "matcher": null,
+      "command": "echo stop",
+      "timeout_secs": null,
+      "source": {
+        "eco": "claude",
+        "scope": "project",
+        "path": "<tmp>/repo/.claude/settings.json"
+      }
+    }
+  ],
+  "commands": [
+    {
+      "name": "standup",
+      "description": null,
+      "argument_hint": null,
+      "allowed_tools": [],
+      "body": "Kor project standup.",
+      "source": {
+        "eco": "kor",
+        "scope": "project",
+        "path": "<tmp>/repo/.kor/commands/standup.md"
+      }
+    },
+    {
+      "name": "fix-issue",
+      "description": "Fix a GitHub issue",
+      "argument_hint": "<number>",
+      "allowed_tools": [
+        "Bash(gh issue view:*)",
+        "Read"
+      ],
+      "body": "Fix issue #$ARGUMENTS. Context: !`gh issue view $1`",
+      "source": {
+        "eco": "claude",
+        "scope": "project",
+        "path": "<tmp>/repo/.claude/commands/fix-issue.md"
+      }
+    },
+    {
+      "name": "frontend:component",
+      "description": null,
+      "argument_hint": null,
+      "allowed_tools": [],
+      "body": "Create a component named $1.",
+      "source": {
+        "eco": "claude",
+        "scope": "project",
+        "path": "<tmp>/repo/.claude/commands/frontend/component.md"
+      }
+    },
+    {
+      "name": "lint",
+      "description": null,
+      "argument_hint": null,
+      "allowed_tools": [],
+      "body": "Run the linter.",
+      "source": {
+        "eco": "cursor",
+        "scope": "project",
+        "path": "<tmp>/repo/.cursor/commands/lint.md"
+      }
+    },
+    {
+      "name": "explain",
+      "description": null,
+      "argument_hint": null,
+      "allowed_tools": [],
+      "body": "Explain $ARGUMENTS simply.",
+      "source": {
+        "eco": "codex",
+        "scope": "user",
+        "path": "<tmp>/home/.codex/prompts/explain.md"
+      }
+    }
+  ],
+  "agents": [
+    {
+      "name": "reviewer",
+      "description": "Reviews diffs for bugs",
+      "tools": [
+        "Read",
+        "Grep"
+      ],
+      "model": "sonnet",
+      "prompt": "You review code. Be strict.",
+      "source": {
+        "eco": "claude",
+        "scope": "project",
+        "path": "<tmp>/repo/.claude/agents/reviewer.md"
+      }
+    }
+  ],
+  "skills": [
+    {
+      "name": "pdf",
+      "description": "Extract text and tables from PDF files",
+      "dir": "<tmp>/home/.claude/skills/pdf",
+      "source": {
+        "eco": "claude",
+        "scope": "user",
+        "path": "<tmp>/home/.claude/skills/pdf/SKILL.md"
+      }
+    }
+  ],
+  "providers": [
+    {
+      "id": "myproxy",
+      "name": "My proxy",
+      "base_url": "https://llm.example.com/v1",
+      "env_key": "MYPROXY_API_KEY",
+      "wire_api": "chat",
+      "source": {
+        "eco": "codex",
+        "scope": "user",
+        "path": "<tmp>/home/.codex/config.toml"
+      }
+    }
+  ],
+  "mcp_servers": [],
+  "env": [
+    [
+      "PROJECT_FLAG",
+      "x",
+      {
+        "eco": "claude",
+        "scope": "project",
+        "path": "<tmp>/repo/.claude/settings.json"
+      }
+    ],
+    [
+      "USER_FLAG",
+      "1",
+      {
+        "eco": "claude",
+        "scope": "user",
+        "path": "<tmp>/home/.claude/settings.json"
+      }
+    ]
+  ],
+  "model": [
+    "claude-sonnet-4-5",
+    {
+      "eco": "claude",
+      "scope": "project",
+      "path": "<tmp>/repo/.claude/settings.json"
+    }
+  ],
+  "ignore_files": [
+    "<tmp>/repo/.cursorignore"
+  ],
+  "untrusted_skipped": [],
+  "warnings": [
+    "import `@../outside.md` points outside <tmp>/repo and was ignored",
+    "<tmp>/repo/.codex/config.toml: [model_providers] in a project config are ignored"
+  ]
+}

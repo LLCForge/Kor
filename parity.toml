@@ -1,0 +1,2592 @@
+# CLI ↔ TUI ↔ masaüstü parite manifestosu (Master Build Prompt §2 kural 9).
+#
+# Her özellik üç yüzeyde de olmalı. "-" = o yüzeyde henüz yok (açık borç).
+# `cli`: komut yolu ("kor config set"); `tui`: etkileşimli ekrandaki karşılığı (slash komutu);
+# `desktop`: köprü yöntemi (`window.kor.<yol>`).
+#
+# CI denetimi (`cargo test -p kor-cli parity`):
+#   1. CLI'daki her alt komut burada bir özelliğin `cli` değeri olarak geçmeli (yeni komut eklenip
+#      manifest unutulursa test kırmızı).
+#   2. "-" sayısı `allowed_gaps`'i aşamaz. Bir boşluk kapatıldığında sayıyı düşürün; artırmak yasak.
+#   `internal = true`: kullanıcı özelliği değil, başka bir programın çağırdığı uç (denetim dışı).
+
+[meta]
+allowed_gaps = 1
+
+[[feature]]
+name = "Ajanla sohbet (araçlı tur)"
+cli = "kor"
+tui = "kor (etkileşimli ekran)"
+desktop = "send"
+
+[[feature]]
+name = "Oturumu sürdür"
+cli = "kor resume"
+tui = "/resume"
+desktop = "openSession"
+
+[[feature]]
+name = "Oturumları listele"
+cli = "kor sessions"
+tui = "/resume"
+desktop = "listSessions"
+
+[[feature]]
+name = "Uyumluluk durumu (hangi araç dosyaları okundu)"
+cli = "kor compat status"
+tui = "/compat status"
+desktop = "core.compat"
+
+[[feature]]
+name = "Uyumluluk çakışmaları (araçlar arası aynı kural, farklı metin)"
+cli = "kor compat conflicts"
+tui = "/compat conflicts"
+desktop = "compat.conflicts"
+
+[[feature]]
+name = "Kor kurallarını başka araç biçimine aktar (.kor/export/ altına)"
+cli = "kor compat export"
+tui = "/compat export"
+desktop = "compat.export"
+
+[[feature]]
+name = "Projeye güven"
+cli = "kor trust"
+tui = "/trust"
+desktop = "g7GetTrust"
+
+[[feature]]
+name = "Ortam tanılama"
+cli = "kor doctor"
+tui = "/doctor"
+desktop = "g10.selfCheck"
+
+[[feature]]
+name = "Model kataloğu (zekâ, hız, fiyat; kaynaklarıyla)"
+cli = "kor catalog"
+tui = "/catalog"
+desktop = "catalog.get"
+
+[[feature]]
+name = "Kancaları listele"
+cli = "kor hooks list"
+tui = "/hooks list"
+desktop = "catalog.hooks"
+
+[[feature]]
+name = "Oturumun tüm dosya değişikliklerini geri al"
+cli = "kor undo"
+tui = "/undo"
+desktop = "core.undo"
+
+[[feature]]
+name = "Bileşenleri listele"
+cli = "kor component list"
+tui = "/component list"
+desktop = "components.list"
+
+[[feature]]
+name = "Bileşen indir / internetsiz kur"
+cli = "kor component add"
+tui = "/component add"
+desktop = "components.add"
+
+[[feature]]
+name = "Bütün bileşenleri kur"
+cli = "kor component install"
+tui = "/component install --all"
+desktop = "components.installAll"
+
+[[feature]]
+name = "Bileşenleri güncelle"
+cli = "kor component update"
+tui = "/component update"
+desktop = "components.update"
+
+[[feature]]
+name = "Bileşenleri doğrula"
+cli = "kor component verify"
+tui = "/component verify"
+desktop = "components.verify"
+
+[[feature]]
+name = "Bileşeni sil"
+cli = "kor component remove"
+tui = "/component remove"
+desktop = "components.remove"
+
+[[feature]]
+name = "Anahtar ekle"
+cli = "kor auth login"
+tui = "/auth login"
+desktop = "g9.addKey"
+
+[[feature]]
+name = "Anahtar durumu"
+cli = "kor auth status"
+tui = "/auth status"
+desktop = "g9.getProviders"
+
+[[feature]]
+name = "Anahtar sil"
+cli = "kor auth logout"
+tui = "/auth logout"
+desktop = "g9.removeKey"
+
+[[feature]]
+name = "Sağlayıcıyı sına (model listesi + akış)"
+cli = "kor provider test"
+tui = "/provider test"
+desktop = "provider.test"
+
+[[feature]]
+name = "Sağlayıcı sağlığı (gecikme, hata oranı, kota)"
+cli = "kor provider status"
+tui = "/provider status"
+desktop = "provider.status"
+
+[[feature]]
+name = "Gömülü proxy sunucusu (CLIProxyAPI portu, OpenAI/Anthropic/Gemini uyumlu uçlar)"
+cli = "kor proxy serve"
+tui = "/proxy serve --background"
+desktop = "proxy.start"
+
+[[feature]]
+name = "Proxy durumu ve kullanım/kota sayaçları"
+cli = "kor proxy status"
+tui = "/proxy status"
+desktop = "proxy.status"
+
+[[feature]]
+name = "Proxy erişim anahtarı (maskeli göster, yenile)"
+cli = "kor proxy key"
+tui = "/proxy key"
+desktop = "proxy.key"
+
+[[feature]]
+name = "Özel uç / yerel sunucu / abonelik proxy'si ekle"
+cli = "kor provider add"
+tui = "/provider add"
+desktop = "provider.add"
+
+[[feature]]
+name = "Eklenen sağlayıcıyı kaldır"
+cli = "kor provider remove"
+tui = "/provider remove"
+desktop = "provider.remove"
+
+[[feature]]
+name = "Yerel sunucuları keşfet"
+cli = "kor provider discover"
+tui = "/provider discover"
+desktop = "provider.discover"
+
+[[feature]]
+name = "Key havuzunu göster"
+cli = "kor provider keys"
+tui = "/provider keys"
+desktop = "provider.keys"
+
+[[feature]]
+name = "Key havuzuna key ekle (failover)"
+cli = "kor provider add-key"
+tui = "/provider add-key"
+desktop = "provider.addKey"
+
+[[feature]]
+name = "Key havuzundan key sil"
+cli = "kor provider remove-key"
+tui = "/provider remove-key"
+desktop = "provider.removeKey"
+
+[[feature]]
+name = "Etkin ayarlar ve kaynakları"
+cli = "kor config explain"
+tui = "/config explain"
+desktop = "core.configExplain"
+
+[[feature]]
+name = "Ayar dosyası yolları"
+cli = "kor config paths"
+tui = "/config paths"
+desktop = "core.configExplain"
+
+[[feature]]
+name = "Ayar değiştir"
+cli = "kor config set"
+tui = "/config set"
+desktop = "core.configSet"
+
+[[feature]]
+name = "Sağlayıcıları listele"
+cli = "kor providers"
+tui = "/providers"
+desktop = "g9.getProviders"
+
+[[feature]]
+name = "Modelleri listele"
+cli = "kor models"
+tui = "/model"
+desktop = "listModels"
+
+[[feature]]
+name = "Tek istem, araçsız yanıt"
+cli = "kor chat"
+tui = "/chat"
+desktop = "g7RunProbe"
+
+[[feature]]
+name = "MCP sunucularını listele"
+cli = "kor mcp"
+tui = "/mcp"
+desktop = "mcp.list"
+
+[[feature]]
+name = "Kor'u MCP sunucusu olarak sun"
+cli = "kor mcp serve"
+internal = true
+
+[[feature]]
+name = "Chrome yerel mesajlaşma ana bilgisayarı"
+cli = "kor chrome-native-host"
+internal = true
+
+[[feature]]
+name = "Eklenti pazarı ekle"
+cli = "kor plugin marketplace add"
+tui = "/plugin marketplace add"
+desktop = "core.addMarketplace"
+
+[[feature]]
+name = "Eklenti pazarlarını listele"
+cli = "kor plugin marketplace list"
+tui = "/plugin marketplace list"
+desktop = "core.marketplaces"
+
+[[feature]]
+name = "Eklenti pazarı kaldır"
+cli = "kor plugin marketplace remove"
+tui = "/plugin marketplace remove"
+desktop = "core.removeMarketplace"
+
+[[feature]]
+name = "Eklenti kur"
+cli = "kor plugin install"
+tui = "/plugin install"
+desktop = "plugins.install"
+
+[[feature]]
+name = "Eklenti kaldır"
+cli = "kor plugin uninstall"
+tui = "/plugin uninstall"
+desktop = "plugins.uninstall"
+
+[[feature]]
+name = "Eklentileri listele"
+cli = "kor plugin list"
+tui = "/plugin list"
+desktop = "plugins.list"
+
+[[feature]]
+name = "Eklenti etkinleştir"
+cli = "kor plugin enable"
+tui = "/plugin enable"
+desktop = "plugins.setEnabled"
+
+[[feature]]
+name = "Eklenti devre dışı bırak"
+cli = "kor plugin disable"
+tui = "/plugin disable"
+desktop = "plugins.setEnabled"
+
+[[feature]]
+name = "Eklenti güncelle"
+cli = "kor plugin update"
+tui = "/plugin update"
+desktop = "plugins.update"
+
+[[feature]]
+name = "Eklenti doğrula"
+cli = "kor plugin doctor"
+tui = "/plugin doctor"
+desktop = "core.pluginDoctor"
+
+[[feature]]
+name = "Gizlilik modu"
+cli = "kor --privacy-mode"
+tui = "kor --privacy-mode"
+desktop = "core.setPrivacy"
+[[feature]]
+name = "Ajan listesi"
+cli = "kor agents"
+tui = "/agents"
+desktop = "agents.list"
+
+[[feature]]
+name = "Bellek dosyası"
+cli = "kor memory"
+tui = "/memory"
+desktop = "getMemory"
+
+[[feature]]
+name = "SSH/veritabanı bağlantıları"
+cli = "kor connections"
+tui = "/connections"
+desktop = "connections.list"
+
+[[feature]]
+name = "Kullanım ve maliyet (paylaşılan defter)"
+cli = "kor cost"
+tui = "/cost"
+desktop = "cost.summary"
+
+[[feature]]
+name = "Zamanlanmış görevleri listele"
+cli = "kor routines list"
+tui = "/routines list"
+desktop = "routines.list"
+
+[[feature]]
+name = "Zamanlanmış görev ekle"
+cli = "kor routines add"
+tui = "/routines add"
+desktop = "routines.add"
+
+[[feature]]
+name = "Zamanlanmış görev kaldır"
+cli = "kor routines remove"
+tui = "/routines remove"
+desktop = "routines.remove"
+
+[[feature]]
+name = "Zamanlanmış görev sürdür"
+cli = "kor routines enable"
+tui = "/routines enable"
+desktop = "routines.setEnabled"
+
+[[feature]]
+name = "Zamanlanmış görev duraklat"
+cli = "kor routines disable"
+tui = "/routines disable"
+desktop = "routines.setEnabled"
+
+[[feature]]
+name = "MCP sunucusu ekle/düzenle"
+cli = "kor mcp add"
+tui = "/mcp add"
+desktop = "mcp.save"
+
+[[feature]]
+name = "MCP sunucusu kaldır"
+cli = "kor mcp remove"
+tui = "/mcp remove"
+desktop = "mcp.remove"
+
+[[feature]]
+name = "MCP sunucusu aç"
+cli = "kor mcp enable"
+tui = "/mcp enable"
+desktop = "mcp.setEnabled"
+
+[[feature]]
+name = "MCP sunucusu kapat"
+cli = "kor mcp disable"
+tui = "/mcp disable"
+desktop = "mcp.setEnabled"
+
+[[feature]]
+name = "Güncellemeyi denetle"
+cli = "kor update check"
+tui = "/update check"
+desktop = "g16UpdateCheck"
+
+[[feature]]
+name = "Güncelle"
+cli = "kor update"
+tui = "/update"
+desktop = "g16UpdateInstall"
+
+[[feature]]
+name = "Güncelleme kanalı"
+cli = "kor update channel"
+tui = "/update channel"
+desktop = "core.updateChannel"
+
+# Masaüstü kendi ikilisini değiştirmez (kurulum paketiyle güncellenir); geri dönüş paket yöneticisinden.
+[[feature]]
+name = "Önceki sürüme dön"
+cli = "kor update rollback"
+tui = "/update rollback"
+desktop = "-"
+
+[[feature]]
+name = "fal modelleri: arama, girdi şeması, fiyat"
+cli = "kor media models"
+tui = "/media models"
+desktop = "media.falModels"
+
+[[feature]]
+name = "Herhangi bir fal modelini çalıştır (kuyruk, ilerleme, kayıt)"
+cli = "kor media run"
+tui = "/media run"
+desktop = "media.falRun"
+
+[[feature]]
+name = "fal ile görsel üret"
+cli = "kor media image"
+tui = "/media image"
+desktop = "media.falImage"
+
+[[feature]]
+name = "Hugging Face model araması"
+cli = "kor hf search"
+tui = "/hf search"
+desktop = "media.hfSearch"
+
+[[feature]]
+name = "Hugging Face model bilgisi ve dosyaları"
+cli = "kor hf info"
+tui = "/hf info"
+desktop = "media.hfInfo"
+
+[[feature]]
+name = "Hugging Face indirme (devam, SHA-256)"
+cli = "kor hf download"
+tui = "/hf download"
+desktop = "media.hfDownload"
+
+[[feature]]
+name = "Hugging Face görev çıkarımı (router / Inference Endpoint)"
+cli = "kor hf infer"
+tui = "/hf infer"
+desktop = "media.hfInfer"
+
+[[feature]]
+name = "Context bütçesi dökümü (Context Budget Manager)"
+cli = "kor context"
+tui = "/context"
+desktop = "context.last"
+
+[[feature]]
+name = "Model yarışı, routing önerisi ve router açık/kapalı karşılaştırması (kor bench)"
+cli = "kor bench"
+tui = "/bench"
+desktop = "bench.start"
+
+[[feature]]
+name = "Kabuk entegrasyonu: kur"
+cli = "kor shell install"
+tui = "/shell install"
+desktop = "shell.install"
+
+[[feature]]
+name = "Kabuk entegrasyonu: kaldır"
+cli = "kor shell uninstall"
+tui = "/shell uninstall"
+desktop = "shell.uninstall"
+
+[[feature]]
+name = "Kabuk entegrasyonu: durum"
+cli = "kor shell status"
+tui = "/shell status"
+desktop = "shell.status"
+
+[[feature]]
+name = "Komutu çıktısıyla yakala"
+cli = "kor shell capture"
+tui = "/shell capture"
+desktop = "shell.capture"
+
+[[feature]]
+name = "Son hatayı düzelt (önerilen komut onayla çalışır)"
+cli = "kor fix"
+tui = "/fix"
+desktop = "shell.fix"
+
+[[feature]]
+name = "Son hatayı açıkla"
+cli = "kor why"
+tui = "/why"
+desktop = "shell.why"
+
+[[feature]]
+name = "Commit mesajı üretimi"
+cli = "kor commit"
+tui = "/commit"
+desktop = "gitflow.commitMessage"
+
+[[feature]]
+name = "Changelog üretimi"
+cli = "kor changelog"
+tui = "/changelog"
+desktop = "gitflow.changelog"
+
+[[feature]]
+name = "Görev şablonunu çalıştır"
+cli = "kor run"
+tui = "/<şablon-adı>"
+desktop = "templates.run"
+
+[[feature]]
+name = "Şablonları listele"
+cli = "kor templates list"
+tui = "/templates list"
+desktop = "templates.list"
+
+[[feature]]
+name = "Şablonu göster (girdiler, adımlar, kabul ölçütleri)"
+cli = "kor templates show"
+tui = "/templates show"
+desktop = "templates.show"
+
+[[feature]]
+name = "Şablon iskeleti oluştur"
+cli = "kor templates new"
+tui = "/templates new"
+desktop = "templates.new"
+
+[[feature]]
+name = "Yönlendirme kararları (neden bu model)"
+cli = "kor cost why"
+tui = "/cost why"
+desktop = "cost.why"
+
+[[feature]]
+name = "Maliyet dışa aktarma (CSV/JSON)"
+cli = "kor cost --export"
+tui = "/cost --export"
+desktop = "cost.exportFile"
+
+[[feature]]
+name = "Sağlayıcı kota panosu"
+cli = "kor quota"
+tui = "/quota"
+desktop = "cost.quota"
+
+[[feature]]
+name = "Tam ekran terminal arayüzü (TUI)"
+cli = "kor tui"
+tui = "kor (etkileşimli ekran)"
+desktop = "send"
+
+[[feature]]
+name = "Monorepo paketleri"
+cli = "kor packages"
+tui = "/packages"
+desktop = "packages.list"
+
+[[feature]]
+name = "Değişiklikten etkilenen paketler ve daraltılmış komutlar"
+cli = "kor packages affected"
+tui = "/packages affected"
+desktop = "packages.affected"
+
+[[feature]]
+name = "Paket bağımlılıkları"
+cli = "kor packages deps"
+tui = "/packages deps"
+desktop = "packages.deps"
+
+[[feature]]
+name = "Paket başına maliyet"
+cli = "kor packages cost"
+tui = "/packages cost"
+desktop = "packages.cost"
+
+[[feature]]
+name = "Kararları git notu olarak kaydet (§6.1)"
+cli = "kor memory notes push"
+tui = "/memory notes push"
+desktop = "memory.notesPush"
+
+[[feature]]
+name = "Kararları git notundan al (§6.1)"
+cli = "kor memory notes pull"
+tui = "/memory notes pull"
+desktop = "memory.notesPull"
+
+[[feature]]
+name = "Başka bir projeyi bağlama bağla (§6.1)"
+cli = "kor context add"
+tui = "/context add"
+desktop = "memory.link"
+
+[[feature]]
+name = "Bağlı projeyi çıkar"
+cli = "kor context remove"
+tui = "/context remove"
+desktop = "memory.unlink"
+
+[[feature]]
+name = "Bağlı projeler"
+cli = "kor context projects"
+tui = "/context projects"
+desktop = "memory.projects"
+
+[[feature]]
+name = "Bilgi tabanında ara (§31.3)"
+cli = "kor recall"
+tui = "/recall"
+desktop = "memory.recall"
+
+[[feature]]
+name = "Bilgi tabanından kayıt sil"
+cli = "kor forget"
+tui = "/forget"
+desktop = "memory.forget"
+
+[[feature]]
+name = "Bilgi tabanını dışa aktar (Markdown/JSON)"
+cli = "kor knowledge export"
+tui = "/knowledge export"
+desktop = "memory.export"
+
+[[feature]]
+name = "Çoklu repo klasörü ekle"
+cli = "kor workspace add"
+tui = "/workspace add"
+desktop = "memory.workspaceAdd"
+
+[[feature]]
+name = "Çoklu repo klasörleri"
+cli = "kor workspace list"
+tui = "/workspace list"
+desktop = "memory.workspaces"
+
+[[feature]]
+name = "Çoklu repo klasörünü çıkar"
+cli = "kor workspace remove"
+tui = "/workspace remove"
+desktop = "memory.workspaceRemove"
+
+[[feature]]
+name = "Canlı proje grafı: durum + sıcak noktalar, --html görünüm (kor graph)"
+cli = "kor graph"
+tui = "/graph + Graf paneli"
+desktop = "graph.snapshot"
+
+[[feature]]
+name = "Graf durumu"
+cli = "kor graph status"
+tui = "/graph status"
+desktop = "graph.status"
+
+[[feature]]
+name = "Graf düğümünü açıkla"
+cli = "kor graph explain"
+tui = "/graph explain"
+desktop = "graph.explain"
+
+[[feature]]
+name = "İki kavram arası en kısa yol"
+cli = "kor graph path"
+tui = "/graph path"
+desktop = "graph.path"
+
+[[feature]]
+name = "Grafta ara"
+cli = "kor graph query"
+tui = "/graph query"
+desktop = "graph.query"
+
+[[feature]]
+name = "Risk haritası (sıcak noktalar)"
+cli = "kor graph hotspots"
+tui = "/graph hotspots"
+desktop = "graph.hotspots"
+
+[[feature]]
+name = "Grafın commit'ler arası değişimi"
+cli = "kor graph diff"
+tui = "/graph diff"
+desktop = "graph.diff"
+
+[[feature]]
+name = "Değişikliğin etki alanı"
+cli = "kor graph impact"
+tui = "/graph impact"
+desktop = "graph.impact"
+
+[[feature]]
+name = "Grafı dışa aktar"
+cli = "kor graph export"
+tui = "/graph export"
+desktop = "graph.export"
+
+[[feature]]
+name = "Grafı yeniden tara"
+cli = "kor graph update"
+tui = "/graph update"
+desktop = "graph.update"
+
+[[feature]]
+name = "Bilgi tabanını yerel modelle yeniden göm (anlamsal arama)"
+cli = "kor knowledge reindex"
+tui = "/knowledge reindex"
+desktop = "memory.reindex"
+
+[[feature]]
+name = "Graftaki veritabanı tabloları (kor db)"
+cli = "kor db"
+tui = "/db"
+desktop = "db.tables"
+
+[[feature]]
+name = "Veritabanı şemasını grafa bağla"
+cli = "kor db connect"
+tui = "/db connect"
+desktop = "db.connect"
+
+[[feature]]
+name = "Bağlı veritabanı şemasını yenile"
+cli = "kor db refresh"
+tui = "/db refresh"
+desktop = "db.refresh"
+
+[[feature]]
+name = "Graftaki tablo listesi"
+cli = "kor db tables"
+tui = "/db tables"
+desktop = "db.tables"
+
+[[feature]]
+name = "Tablo ayrıntısı (sütun, FK, okuyan/yazan)"
+cli = "kor db show"
+tui = "/db show"
+desktop = "db.show"
+
+[[feature]]
+name = "Kasaya sır ekle"
+cli = "kor vault add"
+tui = "/vault add"
+desktop = "vault.add"
+
+[[feature]]
+name = "Kasadaki sırların adları"
+cli = "kor vault list"
+tui = "/vault list"
+desktop = "vault.list"
+
+[[feature]]
+name = "Kasadan sır sil"
+cli = "kor vault remove"
+tui = "/vault remove"
+desktop = "vault.remove"
+
+[[feature]]
+name = ".env dosyasını kasaya aktar"
+cli = "kor vault import"
+tui = "/vault import"
+desktop = "vault.import"
+
+[[feature]]
+name = "Denetim kaydını listele"
+cli = "kor audit list"
+tui = "/audit list"
+desktop = "audit.list"
+
+[[feature]]
+name = "Denetim kaydı hash zincirini doğrula"
+cli = "kor audit verify"
+tui = "/audit verify"
+desktop = "audit.verify"
+
+[[feature]]
+name = "Sandbox durumu (arka uç, sınırlar, ağ izin listesi)"
+cli = "kor sandbox status"
+tui = "/sandbox status"
+desktop = "sandbox.status"
+
+[[feature]]
+name = "Sandbox öz-denetimi (proje dışına yazma engelleniyor mu)"
+cli = "kor sandbox test"
+tui = "/sandbox test"
+desktop = "sandbox.test"
+
+[[feature]]
+name = "Docker sandbox imajını indir"
+cli = "kor sandbox pull"
+tui = "/sandbox pull"
+desktop = "sandbox.pull"
+
+[[feature]]
+name = "Denetim kaydından KVKK/GDPR uyum raporu"
+cli = "kor audit report"
+tui = "/audit report"
+desktop = "audit.report"
+
+[[feature]]
+name = "Denetim kaydını JSONL olarak dışa aktar"
+cli = "kor audit export"
+tui = "/audit export"
+desktop = "audit.export"
+
+[[feature]]
+name = "Çevrimdışı kurulum (yerel çalışma zamanı, modeller, katalog)"
+cli = "kor offline init"
+tui = "/offline init"
+desktop = "offline.init"
+
+[[feature]]
+name = "Çevrimdışı hazırlık durumu"
+cli = "kor offline status"
+tui = "/offline status"
+desktop = "offline.status"
+
+[[feature]]
+name = "Çevrimdışı modda çalıştır"
+cli = "kor offline run"
+tui = "/offline run"
+desktop = "offline.setEnabled"
+
+[[feature]]
+name = "Air-gap paketi oluştur"
+cli = "kor offline bundle"
+tui = "/offline bundle"
+desktop = "offline.bundle"
+
+[[feature]]
+name = "Air-gap paketini içe aktar"
+cli = "kor offline import"
+tui = "/offline import"
+desktop = "offline.import"
+
+[[feature]]
+name = "Çok ajanlı görev başlat"
+cli = "kor task"
+tui = "/task"
+desktop = "tasks.start"
+
+[[feature]]
+name = "Görev listesi"
+cli = "kor task list"
+tui = "/task list"
+desktop = "tasks.list"
+
+[[feature]]
+name = "Görev durumu (alt ajanlar, maliyet, dallar)"
+cli = "kor task status"
+tui = "/task status"
+desktop = "tasks.status"
+
+[[feature]]
+name = "Görevi sürdür"
+cli = "kor task resume"
+tui = "/task resume"
+desktop = "tasks.resume"
+
+[[feature]]
+name = "Görevi çatalla"
+cli = "kor task fork"
+tui = "/task fork"
+desktop = "tasks.fork"
+
+[[feature]]
+name = "Görevi iptal et"
+cli = "kor task cancel"
+tui = "/task cancel"
+desktop = "tasks.cancel"
+
+[[feature]]
+name = "Birleştirme çakışmasını çöz"
+cli = "kor task resolve"
+tui = "/task resolve"
+desktop = "tasks.resolve"
+
+[[feature]]
+name = "MCP sunucusunu dene"
+cli = "kor mcp test"
+tui = "/mcp test"
+desktop = "mcpgen.test"
+
+[[feature]]
+name = "MCP sunucularını listele (araç sayılarıyla)"
+cli = "kor mcp list"
+tui = "/mcp list"
+desktop = "mcp.list"
+
+[[feature]]
+name = "Pull request aç (açıklama otomatik)"
+cli = "kor pr create"
+tui = "/pr create"
+desktop = "forge.prCreate"
+
+[[feature]]
+name = "Pull request incele ve yorum gönder"
+cli = "kor pr review"
+tui = "/pr review"
+desktop = "forge.prReview"
+
+[[feature]]
+name = "İnceleme yorumlarına yanıt ve düzeltme"
+cli = "kor pr respond"
+tui = "/pr respond"
+desktop = "forge.prRespond"
+
+[[feature]]
+name = "Açık pull request'ler"
+cli = "kor pr list"
+tui = "/pr list"
+desktop = "forge.prList"
+
+[[feature]]
+name = "Bu dalın pull request'i"
+cli = "kor pr status"
+tui = "/pr status"
+desktop = "forge.prStatus"
+
+[[feature]]
+name = "Persona ile kod incelemesi"
+cli = "kor review"
+tui = "/review"
+desktop = "forge.review"
+
+[[feature]]
+name = "Daemon'u başlat"
+cli = "kor daemon start"
+tui = "/daemon start"
+desktop = "triggers.daemonStart"
+
+[[feature]]
+name = "Daemon'u durdur"
+cli = "kor daemon stop"
+tui = "/daemon stop"
+desktop = "triggers.daemonStop"
+
+[[feature]]
+name = "Daemon durumu"
+cli = "kor daemon status"
+tui = "/daemon status"
+desktop = "triggers.daemonStatus"
+
+[[feature]]
+name = "Daemon günlüğü"
+cli = "kor daemon logs"
+tui = "/daemon logs"
+desktop = "triggers.daemonLogs"
+
+[[feature]]
+name = "Daemon'u oturum açılışında başlat"
+cli = "kor daemon install"
+tui = "/daemon install"
+desktop = "triggers.daemonInstall"
+
+[[feature]]
+name = "Daemon açılış kaydını kaldır"
+cli = "kor daemon uninstall"
+tui = "/daemon uninstall"
+desktop = "triggers.daemonUninstall"
+
+[[feature]]
+name = "Tetikleyicileri listele"
+cli = "kor triggers list"
+tui = "/triggers list"
+desktop = "triggers.list"
+
+[[feature]]
+name = "Tetikleyiciyi dene"
+cli = "kor triggers test"
+tui = "/triggers test"
+desktop = "triggers.test"
+
+[[feature]]
+name = "Tetikleyici geçmişi"
+cli = "kor triggers history"
+tui = "/triggers history"
+desktop = "triggers.history"
+
+[[feature]]
+name = "Bekleyen isteği onayla"
+cli = "kor triggers approve"
+tui = "/triggers approve"
+desktop = "triggers.answer"
+
+[[feature]]
+name = "Bekleyen isteği reddet"
+cli = "kor triggers reject"
+tui = "/triggers reject"
+desktop = "triggers.answer"
+
+[[feature]]
+name = "Git kancası kur"
+cli = "kor triggers hook install"
+tui = "/triggers hook install"
+desktop = "triggers.hookInstall"
+
+[[feature]]
+name = "Git kancasını kaldır"
+cli = "kor triggers hook uninstall"
+tui = "/triggers hook uninstall"
+desktop = "triggers.hookUninstall"
+
+[[feature]]
+name = "Değişen servisleri dağıt"
+cli = "kor deploy"
+tui = "/deploy"
+desktop = "deploy.run"
+
+[[feature]]
+name = "Dağıtım risk denetimi"
+cli = "kor deploy risk-check"
+tui = "/deploy risk-check"
+desktop = "deploy.risk"
+
+[[feature]]
+name = "Ortamlar ve son dağıtım"
+cli = "kor deploy status"
+tui = "/deploy status"
+desktop = "deploy.envs"
+
+[[feature]]
+name = "Günlükleri izle"
+cli = "kor watch logs"
+tui = "/watch logs"
+desktop = "watch.start"
+
+[[feature]]
+name = "Yakalanan hatalar"
+cli = "kor watch incidents"
+tui = "/watch incidents"
+desktop = "watch.incidents"
+
+[[feature]]
+name = "Hatayı düzeltmeye başla"
+cli = "kor watch fix"
+tui = "/watch fix"
+desktop = "watch.fixStart"
+
+[[feature]]
+name = "Düzeltmeyi PR olarak aç"
+cli = "kor watch pr"
+tui = "/watch pr"
+desktop = "watch.fixFinish"
+
+[[feature]]
+name = "Hata kayıtlarını temizle"
+cli = "kor watch clear"
+tui = "/watch clear"
+desktop = "watch.clear"
+
+[[feature]]
+name = "Index'ler ve öneriler"
+cli = "kor db indexes"
+tui = "/db indexes"
+desktop = "db.indexes"
+
+[[feature]]
+name = "Yeni migration yaz"
+cli = "kor db migrate new"
+tui = "/db migrate new"
+desktop = "db.migrateNew"
+
+[[feature]]
+name = "SQL'i kopyada deneyip uygula"
+cli = "kor db apply"
+tui = "/db apply"
+desktop = "db.apply"
+
+[[feature]]
+name = "Doğal dille kod araması (kor find)"
+cli = "kor find"
+tui = "/find"
+desktop = "find.run"
+
+[[feature]]
+name = "Oturum kayıtlarını listele"
+cli = "kor replay list"
+tui = "/replay list"
+desktop = "replay.list"
+
+[[feature]]
+name = "Kayıtlı oturumu oynat (zaman çizelgesi, adım, diff)"
+cli = "kor replay"
+tui = "/replay"
+desktop = "replay.load"
+
+[[feature]]
+name = "Oturum kaydını tek dosya olarak dışa aktar"
+cli = "kor replay export"
+tui = "/replay export"
+desktop = "replay.export"
+
+[[feature]]
+name = "Geliştirme ortamı ve sabitlenmiş sürümler"
+cli = "kor env status"
+tui = "/env status"
+desktop = "env.status"
+
+[[feature]]
+name = "Uzak görevi yeniden izle"
+cli = "kor attach"
+tui = "/attach"
+desktop = "remote.attach"
+
+[[feature]]
+name = "Canlı sistem keşfi"
+cli = "kor discover"
+tui = "/discover"
+desktop = "remote.discover"
+
+[[feature]]
+name = "Üretilmiş MCP sunucusunu stdio'da çalıştır"
+cli = "kor mcp run"
+internal = true
+
+[[feature]]
+name = "Daemon süreci (start ve oturum kaydı çalıştırır)"
+cli = "kor daemon run"
+internal = true
+
+[[feature]]
+name = "Uzak sunucu tarafı (kor remote-serve)"
+cli = "kor remote-serve"
+internal = true
+
+[[feature]]
+name = "Güvenlik ve uyum analizi (kor audit --security)"
+cli = "kor audit"
+tui = "/audit --security"
+desktop = "analysis.security"
+
+[[feature]]
+name = "KVKK/GDPR kişisel veri analizi"
+cli = "kor audit --compliance"
+tui = "/audit --compliance"
+desktop = "analysis.compliance"
+
+[[feature]]
+name = "Analiz raporunu md/json/sarif dışa aktar ve imzala"
+cli = "kor audit --out"
+tui = "/audit --out"
+desktop = "analysis.export"
+
+[[feature]]
+name = "Analiz raporunu denetim kaydı ve imzasıyla doğrula"
+cli = "kor audit verify-report"
+tui = "/audit verify-report"
+desktop = "analysis.verifyReport"
+
+[[feature]]
+name = "Bağımlılık lisans denetimi"
+cli = "kor audit --licenses"
+tui = "/audit --licenses"
+desktop = "deps.licenses"
+
+[[feature]]
+name = "Bağımlılık kontrolü (osv.dev, kullanılmayan, aynı işi yapan, yükseltme)"
+cli = "kor deps check"
+tui = "/deps check"
+desktop = "deps.check"
+
+[[feature]]
+name = "Bağımlılık listesi"
+cli = "kor deps list"
+tui = "/deps list"
+desktop = "deps.list"
+
+[[feature]]
+name = "Consensus: 2–3 modele paralel sor, uyuşanı al"
+cli = "kor consensus"
+tui = "/consensus"
+desktop = "cost.consensus"
+
+[[feature]]
+name = "Kod yorumlarını çevir / eksikleri yaz"
+cli = "kor comment"
+tui = "/comment"
+desktop = "metrics.comment"
+
+[[feature]]
+name = "Kod arkeolojisi"
+cli = "kor explain"
+tui = "/explain"
+desktop = "metrics.explain"
+
+[[feature]]
+name = "Kalite notu"
+cli = "kor quality"
+tui = "/quality"
+desktop = "metrics.quality"
+
+[[feature]]
+name = "Teknik borç"
+cli = "kor debt"
+tui = "/debt"
+desktop = "metrics.debt"
+
+[[feature]]
+name = "Stil profili"
+cli = "kor style"
+tui = "/style"
+desktop = "metrics.style"
+
+[[feature]]
+name = "Stil denetimi"
+cli = "kor style check"
+tui = "/style check"
+desktop = "metrics.styleCheck"
+
+[[feature]]
+name = "Geliştirici istatistikleri"
+cli = "kor stats"
+tui = "/stats"
+desktop = "metrics.stats"
+
+[[feature]]
+name = "Değişiklik etkisi"
+cli = "kor impact"
+tui = "/impact"
+desktop = "metrics.impact"
+
+[[feature]]
+name = "Ölü kod"
+cli = "kor dead-code"
+tui = "/dead-code"
+desktop = "metrics.deadCode"
+
+[[feature]]
+name = "Ekran görüntüsünden bileşen (kor screenshot)"
+cli = "kor screenshot"
+tui = "/screenshot"
+desktop = "visual.screenshot"
+
+[[feature]]
+name = "Diyagramdan modül iskeleti (kor diagram)"
+cli = "kor diagram"
+tui = "/diagram"
+desktop = "visual.diagram"
+
+[[feature]]
+name = "Mimari harita, çağrı grafı ve veri akışı (kor visualize)"
+cli = "kor visualize"
+tui = "/visualize"
+desktop = "visual.visualize"
+
+[[feature]]
+name = "Sesle görev, yerel whisper.cpp (kor voice)"
+cli = "kor voice"
+tui = "/voice"
+desktop = "visual.voice"
+
+[[feature]]
+name = "Performans profili (flamegraph, graf eşlemesi, öncesi/sonrası)"
+cli = "kor perf"
+tui = "/perf"
+desktop = "perf.run"
+
+[[feature]]
+name = "Profil dosyasını oku ve grafa eşle"
+cli = "kor perf report"
+tui = "/perf report"
+desktop = "perf.report"
+
+[[feature]]
+name = "Önceki profil çalıştırmaları"
+cli = "kor perf list"
+tui = "/perf list"
+desktop = "perf.list"
+
+[[feature]]
+name = "kor sessions ls"
+cli = "kor sessions ls"
+tui = "/sessions ls"
+desktop = "sessions.list"
+
+[[feature]]
+name = "kor sessions search"
+cli = "kor sessions search"
+tui = "/sessions search"
+desktop = "sessions.search"
+
+[[feature]]
+name = "kor sessions mv"
+cli = "kor sessions mv"
+tui = "/sessions mv"
+desktop = "sessions.mv"
+
+[[feature]]
+name = "kor sessions pin"
+cli = "kor sessions pin"
+tui = "/sessions pin"
+desktop = "sessions.pin"
+
+[[feature]]
+name = "kor sessions archive"
+cli = "kor sessions archive"
+tui = "/sessions archive"
+desktop = "sessions.archive"
+
+[[feature]]
+name = "kor sessions tag"
+cli = "kor sessions tag"
+tui = "/sessions tag"
+desktop = "sessions.tag"
+
+[[feature]]
+name = "kor sessions color"
+cli = "kor sessions color"
+tui = "/sessions color"
+desktop = "sessions.color"
+
+[[feature]]
+name = "kor sessions rename"
+cli = "kor sessions rename"
+tui = "/sessions rename"
+desktop = "sessions.rename"
+
+[[feature]]
+name = "kor sessions suggest"
+cli = "kor sessions suggest"
+tui = "/sessions suggest"
+desktop = "sessions.suggest"
+
+[[feature]]
+name = "kor sessions export"
+cli = "kor sessions export"
+tui = "/sessions export"
+desktop = "sessions.export"
+
+[[feature]]
+name = "kor sessions import"
+cli = "kor sessions import"
+tui = "/sessions import"
+desktop = "sessions.import"
+
+[[feature]]
+name = "kor sessions fork"
+cli = "kor sessions fork"
+tui = "/sessions fork"
+desktop = "fork.create"
+
+[[feature]]
+name = "kor sessions tree"
+cli = "kor sessions tree"
+tui = "/sessions tree"
+desktop = "fork.tree"
+
+[[feature]]
+name = "kor sessions compare"
+cli = "kor sessions compare"
+tui = "/sessions compare"
+desktop = "fork.compare"
+
+[[feature]]
+name = "kor sessions merge"
+cli = "kor sessions merge"
+tui = "/sessions merge"
+desktop = "fork.mergeApply"
+
+[[feature]]
+name = "kor sessions unfork"
+cli = "kor sessions unfork"
+tui = "/sessions unfork"
+desktop = "fork.remove"
+
+[[feature]]
+name = "kor completions"
+cli = "kor completions"
+tui = "/completions"
+desktop = "g16CliInstall"
+
+[[feature]]
+name = "kor plan list"
+cli = "kor plan list"
+tui = "/plan list"
+desktop = "plan.list"
+
+[[feature]]
+name = "kor plan show"
+cli = "kor plan show"
+tui = "/plan show"
+desktop = "plan.show"
+
+[[feature]]
+name = "kor plan approve"
+cli = "kor plan approve"
+tui = "/go"
+desktop = "plan.approve"
+
+[[feature]]
+name = "kor plan"
+cli = "kor plan"
+tui = "/plan"
+desktop = "plan.list"
+
+[[feature]]
+name = "Çalışan görevler, bekleyen onaylar, daemon ve uzak görevler"
+cli = "kor status"
+tui = "/status"
+desktop = "shellui.state"
+
+[[feature]]
+name = "Bekleyen isteği onayla (sohbet, daemon, uzak görev)"
+cli = "kor approve"
+tui = "/approve"
+desktop = "shellui.approve"
+
+[[feature]]
+name = "Bekleyen isteği reddet"
+cli = "kor deny"
+tui = "/deny"
+desktop = "shellui.deny"
+
+[[feature]]
+name = "Onay kuyruğu"
+cli = "kor approvals"
+tui = "/approvals --list"
+desktop = "shellui.queue"
+
+[[feature]]
+name = "Bildirimleri listele"
+cli = "kor notifications list"
+tui = "/notifications list"
+desktop = "shellui.notifications"
+
+[[feature]]
+name = "Bildirimleri okundu say"
+cli = "kor notifications read"
+tui = "/notifications read"
+desktop = "shellui.notificationsRead"
+
+[[feature]]
+name = "Bildirimleri temizle"
+cli = "kor notifications clear"
+tui = "/notifications clear"
+desktop = "shellui.notificationsClear"
+
+[[feature]]
+name = "Bildirim merkezi"
+cli = "kor notifications"
+tui = "/notifications"
+desktop = "shellui.notifications"
+
+[[feature]]
+name = "kor integrate install"
+cli = "kor integrate install"
+tui = "/integrate install"
+desktop = "osint.menuInstall"
+
+[[feature]]
+name = "kor integrate uninstall"
+cli = "kor integrate uninstall"
+tui = "/integrate uninstall"
+desktop = "osint.menuUninstall"
+
+[[feature]]
+name = "kor integrate status"
+cli = "kor integrate status"
+tui = "/integrate status"
+desktop = "osint.menuStatus"
+
+[[feature]]
+name = "kor integrate open-terminal"
+cli = "kor integrate open-terminal"
+internal = true
+
+[[feature]]
+name = "kor integrate edit"
+cli = "kor integrate edit"
+internal = true
+
+[[feature]]
+name = "kor files"
+cli = "kor files"
+tui = "/files"
+desktop = "batch.plan"
+
+[[feature]]
+name = "kor folder init"
+cli = "kor folder init"
+tui = "/folder init"
+desktop = "korfolder.enable"
+
+[[feature]]
+name = "kor folder status"
+cli = "kor folder status"
+tui = "/folder status"
+desktop = "korfolder.status"
+
+[[feature]]
+name = "kor folder sync"
+cli = "kor folder sync"
+tui = "/folder sync"
+desktop = "korfolder.sync"
+
+[[feature]]
+name = "kor folder remove"
+cli = "kor folder remove"
+tui = "/folder remove"
+desktop = "korfolder.disable"
+
+[[feature]]
+name = "kor mount"
+cli = "kor mount"
+tui = "/mount"
+desktop = "korfolder.mount"
+
+[[feature]]
+name = "kor os-integration list"
+cli = "kor os-integration list"
+tui = "/os-integration list"
+desktop = "osextra.list"
+
+[[feature]]
+name = "kor os-integration status"
+cli = "kor os-integration status"
+tui = "/os-integration status"
+desktop = "osextra.list"
+
+[[feature]]
+name = "kor os-integration install"
+cli = "kor os-integration install"
+tui = "/os-integration install"
+desktop = "osextra.install"
+
+[[feature]]
+name = "kor os-integration uninstall"
+cli = "kor os-integration uninstall"
+tui = "/os-integration uninstall"
+desktop = "osextra.uninstall"
+
+[[feature]]
+name = "kor os-integration feed"
+cli = "kor os-integration feed"
+internal = true
+
+[[feature]]
+name = "kor os-integration last-reply"
+cli = "kor os-integration last-reply"
+internal = true
+
+[[feature]]
+name = "kor os-integration approve"
+cli = "kor os-integration approve"
+tui = "/triggers approve"
+desktop = "triggers.answer"
+
+[[feature]]
+name = "kor host connect"
+cli = "kor host connect"
+tui = "/host connect"
+desktop = "web.hostConnect"
+
+[[feature]]
+name = "kor host list"
+cli = "kor host list"
+tui = "/host list"
+desktop = "web.hosts"
+
+[[feature]]
+name = "kor host remove"
+cli = "kor host remove"
+tui = "/host remove"
+desktop = "web.hostRemove"
+
+[[feature]]
+name = "kor host inventory"
+cli = "kor host inventory"
+tui = "/host inventory"
+desktop = "web.hostPlan"
+
+[[feature]]
+name = "kor host ssl"
+cli = "kor host ssl"
+tui = "/host ssl"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host php"
+cli = "kor host php"
+tui = "/host php"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host php-ini"
+cli = "kor host php-ini"
+tui = "/host php-ini"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host subdomain"
+cli = "kor host subdomain"
+tui = "/host subdomain"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host db"
+cli = "kor host db"
+tui = "/host db"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host email"
+cli = "kor host email"
+tui = "/host email"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host backup"
+cli = "kor host backup"
+tui = "/host backup"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host restore"
+cli = "kor host restore"
+tui = "/host restore"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host clean"
+cli = "kor host clean"
+tui = "/host clean"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host cron"
+cli = "kor host cron"
+tui = "/host cron"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host perms"
+cli = "kor host perms"
+tui = "/host perms"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor host sftp"
+cli = "kor host sftp"
+tui = "/host sftp"
+desktop = "web.hostTask"
+
+[[feature]]
+name = "kor wp connect"
+cli = "kor wp connect"
+tui = "/wp connect"
+desktop = "web.wpConnect"
+
+[[feature]]
+name = "kor wp list"
+cli = "kor wp list"
+tui = "/wp list"
+desktop = "web.wpInventory"
+
+[[feature]]
+name = "kor wp remove"
+cli = "kor wp remove"
+tui = "/wp remove"
+desktop = "web.wpRemove"
+
+[[feature]]
+name = "kor wp inventory"
+cli = "kor wp inventory"
+tui = "/wp inventory"
+desktop = "web.wpInventory"
+
+[[feature]]
+name = "kor wp health"
+cli = "kor wp health"
+tui = "/wp health"
+desktop = "web.wpHealth"
+
+[[feature]]
+name = "kor wp doctor"
+cli = "kor wp doctor"
+tui = "/wp doctor"
+desktop = "web.wpDoctor"
+
+[[feature]]
+name = "kor wp update"
+cli = "kor wp update"
+tui = "/wp update"
+desktop = "web.wpUpdate"
+
+[[feature]]
+name = "kor wp staging"
+cli = "kor wp staging"
+tui = "/wp staging"
+desktop = "web.wpStaging"
+
+[[feature]]
+name = "kor wp integrity"
+cli = "kor wp integrity"
+tui = "/wp integrity"
+desktop = "web.wpIntegrity"
+
+[[feature]]
+name = "kor wp cleanup"
+cli = "kor wp cleanup"
+tui = "/wp cleanup"
+desktop = "web.wpCleanup"
+
+[[feature]]
+name = "kor wp scaffold"
+cli = "kor wp scaffold"
+tui = "/wp scaffold"
+desktop = "web.wpScaffold"
+
+[[feature]]
+name = "kor wp detect"
+cli = "kor wp detect"
+tui = "/wp detect"
+desktop = "web.wpInventory"
+
+[[feature]]
+name = "kor redirects build"
+cli = "kor redirects build"
+tui = "/redirects build"
+desktop = "web.redirectsBuild"
+
+[[feature]]
+name = "kor redirects export"
+cli = "kor redirects export"
+tui = "/redirects export"
+desktop = "web.redirectsExport"
+
+[[feature]]
+name = "kor redirects check"
+cli = "kor redirects check"
+tui = "/redirects check"
+desktop = "web.redirectsCheck"
+
+[[feature]]
+name = "kor redirects slugs"
+cli = "kor redirects slugs"
+tui = "/redirects slugs"
+desktop = "web.redirectsSlugs"
+
+[[feature]]
+name = "kor proposal init"
+cli = "kor proposal init"
+tui = "/proposal init"
+desktop = "web.proposal"
+
+[[feature]]
+name = "kor proposal new"
+cli = "kor proposal new"
+tui = "/proposal new"
+desktop = "web.proposal"
+
+[[feature]]
+name = "kor proposal revise"
+cli = "kor proposal revise"
+tui = "/proposal revise"
+desktop = "web.proposalRevise"
+
+[[feature]]
+name = "kor proposal templates"
+cli = "kor proposal templates"
+tui = "/proposal templates"
+desktop = "web.proposal"
+
+[[feature]]
+name = "kor client add"
+cli = "kor client add"
+tui = "/client add"
+desktop = "web.clientAdd"
+
+[[feature]]
+name = "kor client list"
+cli = "kor client list"
+tui = "/client list"
+desktop = "web.clients"
+
+[[feature]]
+name = "kor client log"
+cli = "kor client log"
+tui = "/client log"
+desktop = "web.clientLog"
+
+[[feature]]
+name = "kor client ticket"
+cli = "kor client ticket"
+tui = "/client ticket"
+desktop = "web.clientLog"
+
+[[feature]]
+name = "kor client check"
+cli = "kor client check"
+tui = "/client check"
+desktop = "web.clientCheck"
+
+[[feature]]
+name = "kor client report"
+cli = "kor client report"
+tui = "/client report"
+desktop = "web.clientReport"
+
+[[feature]]
+name = "kor tr check"
+cli = "kor tr check"
+tui = "/tr check"
+desktop = "web.trCheck"
+
+[[feature]]
+name = "kor tr slug"
+cli = "kor tr slug"
+tui = "/tr slug"
+desktop = "web.trSlug"
+
+[[feature]]
+name = "kor tr kdv"
+cli = "kor tr kdv"
+tui = "/tr kdv"
+desktop = "web.trKdv"
+
+[[feature]]
+name = "kor tr kvkk"
+cli = "kor tr kvkk"
+tui = "/tr kvkk"
+desktop = "web.trKvkk"
+
+[[feature]]
+name = "kor tr efatura"
+cli = "kor tr efatura"
+tui = "/tr efatura"
+desktop = "web.trEfatura"
+
+[[feature]]
+name = "kor tr irsaliye"
+cli = "kor tr irsaliye"
+tui = "/tr irsaliye"
+desktop = "web.trIrsaliye"
+
+[[feature]]
+name = "kor tr payment"
+cli = "kor tr payment"
+tui = "/tr payment"
+desktop = "web.trPayment"
+
+[[feature]]
+name = "kor tr market"
+cli = "kor tr market"
+tui = "/tr market"
+desktop = "web.trMarket"
+
+[[feature]]
+name = "kor tr keywords"
+cli = "kor tr keywords"
+tui = "/tr keywords"
+desktop = "web.trKeywords"
+
+[[feature]]
+name = "Teknik SEO denetimi (robots'a uyan tarama, URL:satır bulguları, CWV, HTML/PDF/SARIF)"
+cli = "kor seo audit"
+tui = "/seo audit"
+desktop = "seo.audit"
+
+[[feature]]
+name = "SEO düzeltmelerini yeniden tarayarak doğrula"
+cli = "kor seo verify"
+tui = "/seo verify"
+desktop = "seo.verify"
+
+[[feature]]
+name = "Bing Webmaster API anahtarı"
+cli = "kor seo bing setup"
+tui = "/seo bing setup"
+desktop = "seo.bingSetup"
+
+[[feature]]
+name = "Bing sorgu istatistikleri"
+cli = "kor seo bing query"
+tui = "/seo bing query"
+desktop = "seo.bingStats"
+
+[[feature]]
+name = "Bing sayfa istatistikleri"
+cli = "kor seo bing pages"
+tui = "/seo bing pages"
+desktop = "seo.bingStats"
+
+[[feature]]
+name = "Search Console/GA4 OAuth istemcisi kur"
+cli = "kor seo gsc setup"
+tui = "/seo gsc setup"
+desktop = "seo.gscSetup"
+
+[[feature]]
+name = "Search Console girişi (loopback, PKCE)"
+cli = "kor seo gsc login"
+tui = "/seo gsc login"
+desktop = "seo.gscLogin"
+
+[[feature]]
+name = "Search Console çıkışı"
+cli = "kor seo gsc logout"
+tui = "/seo gsc logout"
+desktop = "seo.gscLogout"
+
+[[feature]]
+name = "Search Console bağlantı durumu"
+cli = "kor seo gsc status"
+tui = "/seo gsc status"
+desktop = "seo.gscStatus"
+
+[[feature]]
+name = "Search Console mülkleri"
+cli = "kor seo gsc sites"
+tui = "/seo gsc sites"
+desktop = "seo.gscSites"
+
+[[feature]]
+name = "Search Console sorgu/sayfa verisi"
+cli = "kor seo gsc query"
+tui = "/seo gsc query"
+desktop = "seo.gscQuery"
+
+[[feature]]
+name = "Tıklaması düşen sayfalar, neden ipuçları ve anomali uyarısı"
+cli = "kor seo gsc drops"
+tui = "/seo gsc drops"
+desktop = "seo.gscDrops"
+
+[[feature]]
+name = "GA4 raporu"
+cli = "kor seo gsc ga"
+tui = "/seo gsc ga"
+desktop = "seo.gaReport"
+
+[[feature]]
+name = "İçerik hattı: yeni içerik (güncelleme modu dahil)"
+cli = "kor seo content new"
+tui = "/seo content new"
+desktop = "seo.contentNew"
+
+[[feature]]
+name = "İçerik hattı: aşamayı çalıştır (brief, plan, taslak, SEO kontrolü)"
+cli = "kor seo content run"
+tui = "/seo content run"
+desktop = "seo.contentRun"
+
+[[feature]]
+name = "İçerik hattı: liste"
+cli = "kor seo content list"
+tui = "/seo content list"
+desktop = "seo.contentList"
+
+[[feature]]
+name = "İçerik hattı: durum ve dosyalar"
+cli = "kor seo content show"
+tui = "/seo content show"
+desktop = "seo.contentRead"
+
+[[feature]]
+name = "İçerik hattı: insan onayı"
+cli = "kor seo content approve"
+tui = "/seo content approve"
+desktop = "seo.contentApprove"
+
+[[feature]]
+name = "İçerik hattı: WordPress'e gönder ya da dışa aktar"
+cli = "kor seo content publish"
+tui = "/seo content publish"
+desktop = "seo.contentPublish"
+
+[[feature]]
+name = "Toplu meta ve alt metin üret (önizleme, stil örnekleri, maliyet tahmini)"
+cli = "kor seo meta generate"
+tui = "/seo meta generate"
+desktop = "seo.metaGenerate"
+
+[[feature]]
+name = "Toplu meta tablosunu kontrol et"
+cli = "kor seo meta check"
+tui = "/seo meta check"
+desktop = "seo.metaValidate"
+
+[[feature]]
+name = "Toplu metayı WordPress'e uygula (geri alınabilir)"
+cli = "kor seo meta apply"
+tui = "/seo meta apply"
+desktop = "seo.metaApply"
+
+[[feature]]
+name = "Toplu meta değişikliklerini geri al"
+cli = "kor seo meta undo"
+tui = "/seo meta undo"
+desktop = "seo.metaUndo"
+
+[[feature]]
+name = "Log dosyası SEO analizi (botlar, tarama bütçesi, hiç taranmayanlar)"
+cli = "kor seo logs"
+tui = "/seo logs"
+desktop = "seo.logs"
+
+[[feature]]
+name = "Rakip izleme: rakip ekle"
+cli = "kor seo competitors add"
+tui = "/seo competitors add"
+desktop = "seo.competitorsAdd"
+
+[[feature]]
+name = "Rakip izleme: rakibi kaldır"
+cli = "kor seo competitors remove"
+tui = "/seo competitors remove"
+desktop = "seo.competitorsRemove"
+
+[[feature]]
+name = "Rakip izleme: liste"
+cli = "kor seo competitors list"
+tui = "/seo competitors list"
+desktop = "seo.competitorsList"
+
+[[feature]]
+name = "Rakip izleme: anlık görüntü ve fark"
+cli = "kor seo competitors run"
+tui = "/seo competitors run"
+desktop = "seo.competitorsRun"
+
+[[feature]]
+name = "Rakip izleme: zamanla (rutin)"
+cli = "kor seo competitors schedule"
+tui = "/seo competitors schedule"
+desktop = "seo.competitorsSchedule"
+
+[[feature]]
+name = "SEO ajan takımı (Baş Denetçi, uzman ajanlar, tek rapor, nöbet modu)"
+cli = "kor seo agents"
+tui = "/seo agents"
+desktop = "seo.agents"
+
+[[feature]]
+name = "Sıralama fırsat skoru (formüllü, kalibrasyonlu)"
+cli = "kor seo opportunities"
+tui = "/seo opportunities"
+desktop = "seo.opportunities"
+
+[[feature]]
+name = "Doğal dil komutları: hangi cümle hangi komuta gider"
+cli = "kor intents list"
+tui = "/intents list"
+desktop = "intent.list"
+
+[[feature]]
+name = "Bir cümlenin hangi komuta gideceğini dene"
+cli = "kor intents test"
+tui = "/intents test"
+desktop = "intent.route"
+
+[[feature]]
+name = "Cümle → komut öğret"
+cli = "kor intents add"
+tui = "/intents add"
+desktop = "intent.learn"
+
+[[feature]]
+name = "Öğretilen cümleyi unut"
+cli = "kor intents forget"
+tui = "/intents forget"
+desktop = "intent.forget"
+
+[[feature]]
+name = "Bu bilgisayardaki komut satırı araçları ve tipli araçlar"
+cli = "kor tool list"
+tui = "/tool list"
+desktop = "tools.list"
+
+[[feature]]
+name = "Bir programın yardım özeti"
+cli = "kor tool describe"
+tui = "/tool describe"
+desktop = "tools.describe"
+
+[[feature]]
+name = "Bir iş için araç ara"
+cli = "kor tool search"
+tui = "/tool search"
+desktop = "tools.search"
+
+[[feature]]
+name = "Komut şablonundan tipli araç tanımla"
+cli = "kor tool add"
+tui = "/tool add"
+desktop = "tools.add"
+
+[[feature]]
+name = "Araç tanımlarını takım sunucusuna gönder"
+cli = "kor tool share"
+tui = "/tool share"
+desktop = "tools.share"
+
+[[feature]]
+name = "Takımın araç tanımlarını getir"
+cli = "kor tool pull"
+tui = "/tool pull"
+desktop = "tools.pull"
+
+[[feature]]
+name = "kor peer pair"
+cli = "kor peer pair"
+tui = "/peer pair --join"
+desktop = "peer.pairCode"
+
+[[feature]]
+name = "kor peer list"
+cli = "kor peer list"
+tui = "/peer list"
+desktop = "peer.list"
+
+[[feature]]
+name = "kor peer serve"
+cli = "kor peer serve"
+tui = "/peer serve --background"
+desktop = "peer.serve"
+
+[[feature]]
+name = "kor peer run"
+cli = "kor peer run"
+tui = "/peer run --detach"
+desktop = "peer.run"
+
+[[feature]]
+name = "kor peer attach"
+cli = "kor peer attach"
+tui = "/peer attach"
+desktop = "peer.attach"
+
+[[feature]]
+name = "kor peer result"
+cli = "kor peer result"
+tui = "/peer result"
+desktop = "peer.result"
+
+[[feature]]
+name = "kor peer sync"
+cli = "kor peer sync"
+tui = "/peer sync"
+desktop = "peer.sync"
+
+[[feature]]
+name = "kor peer allow"
+cli = "kor peer allow"
+tui = "/peer allow"
+desktop = "peer.allow"
+
+[[feature]]
+name = "kor peer route"
+cli = "kor peer route"
+tui = "/peer route"
+desktop = "peer.route"
+
+[[feature]]
+name = "kor peer remove"
+cli = "kor peer remove"
+tui = "/peer remove"
+desktop = "peer.remove"
+
+[[feature]]
+name = "kor peer standby"
+cli = "kor peer standby"
+tui = "/peer standby --background"
+desktop = "peer.standby"
+
+[[feature]]
+name = "kor peer worker"
+cli = "kor peer worker"
+internal = true
+
+[[feature]]
+name = "kor acp serve"
+cli = "kor acp serve"
+internal = true
+
+[[feature]]
+name = "kor acp run"
+cli = "kor acp run"
+tui = "/acp run"
+desktop = "acp.run"
+
+[[feature]]
+name = "kor acp agents"
+cli = "kor acp agents"
+tui = "/acp agents"
+desktop = "acp.agents"
+
+[[feature]]
+name = "kor acp setup"
+cli = "kor acp setup"
+tui = "/acp setup"
+desktop = "acp.setup"
+
+[[feature]]
+name = "kor acp"
+cli = "kor acp"
+internal = true
+
+[[feature]]
+name = "kor chrome pair"
+cli = "kor chrome pair"
+tui = "/chrome pair"
+desktop = "chromeExtension.pair"
+
+[[feature]]
+name = "kor chrome install"
+cli = "kor chrome install"
+tui = "/chrome install"
+desktop = "chromeExtension.install"
+
+[[feature]]
+name = "kor chrome uninstall"
+cli = "kor chrome uninstall"
+tui = "/chrome uninstall"
+desktop = "chromeExtension.uninstall"
+
+[[feature]]
+name = "kor chrome status"
+cli = "kor chrome status"
+tui = "/chrome status"
+desktop = "chromeExtension.info"
+
+[[feature]]
+name = "kor chrome allow"
+cli = "kor chrome allow"
+tui = "/chrome allow"
+desktop = "chromeExtension.allow"
+
+[[feature]]
+name = "kor chrome deny"
+cli = "kor chrome deny"
+tui = "/chrome deny"
+desktop = "chromeExtension.deny"
+
+[[feature]]
+name = "kor chrome domains"
+cli = "kor chrome domains"
+tui = "/chrome domains"
+desktop = "chromeExtension.domains"
+
+[[feature]]
+name = "kor chrome profile list"
+cli = "kor chrome profile list"
+tui = "/chrome profile list"
+desktop = "chromeExtension.profiles"
+
+[[feature]]
+name = "kor chrome profile show"
+cli = "kor chrome profile show"
+tui = "/chrome profile show"
+desktop = "chromeExtension.profileGet"
+
+[[feature]]
+name = "kor chrome profile set"
+cli = "kor chrome profile set"
+tui = "/chrome profile set"
+desktop = "chromeExtension.profileSet"
+
+[[feature]]
+name = "kor chrome profile remove"
+cli = "kor chrome profile remove"
+tui = "/chrome profile remove"
+desktop = "chromeExtension.profileRemove"
+
+[[feature]]
+name = "kor computer status"
+cli = "kor computer status"
+tui = "/computer status"
+desktop = "computer.status"
+
+[[feature]]
+name = "kor computer on"
+cli = "kor computer on"
+tui = "/computer on"
+desktop = "computer.setEnabled"
+
+[[feature]]
+name = "kor computer off"
+cli = "kor computer off"
+tui = "/computer on"
+desktop = "computer.setEnabled"
+
+[[feature]]
+name = "kor computer allow"
+cli = "kor computer allow"
+tui = "/computer allow"
+desktop = "computer.setTier"
+
+[[feature]]
+name = "kor computer reset"
+cli = "kor computer reset"
+tui = "/computer reset"
+desktop = "computer.resetTier"
+
+[[feature]]
+name = "kor system show"
+cli = "kor system show"
+tui = "/system"
+desktop = "system.profile"
+
+[[feature]]
+name = "kor system refresh"
+cli = "kor system refresh"
+tui = "/system refresh"
+desktop = "system.refresh"
+
+[[feature]]
+name = "kor system health"
+cli = "kor system health"
+tui = "/system health"
+desktop = "system.health"
+
+[[feature]]
+name = "kor system"
+cli = "kor system"
+tui = "/system"
+desktop = "system.profile"
+
+[[feature]]
+name = "kor clean"
+cli = "kor clean"
+tui = "/clean"
+desktop = "system.clean"
+
+[[feature]]
+name = "kor layout save"
+cli = "kor layout save"
+tui = "/layout save"
+desktop = "layout.save"
+
+[[feature]]
+name = "kor layout restore"
+cli = "kor layout restore"
+tui = "/layout restore"
+desktop = "layout.restore"
+
+[[feature]]
+name = "kor layout list"
+cli = "kor layout list"
+tui = "/layout list"
+desktop = "layout.list"
+
+[[feature]]
+name = "kor layout delete"
+cli = "kor layout delete"
+tui = "/layout delete"
+desktop = "layout.delete"
+
+[[feature]]
+name = "Sistem gereksinimleri (Katman C)"
+cli = "kor prereq list"
+tui = "/prereq list"
+desktop = "prereq.list"
+
+[[feature]]
+name = "Sistem gereksinimini onayla kur"
+cli = "kor prereq install"
+tui = "/prereq install"
+desktop = "prereq.install"
+
+[[feature]]
+name = "kor install-hooks post-install"
+cli = "kor install-hooks post-install"
+internal = true
+
+[[feature]]
+name = "kor install-hooks pre-uninstall"
+cli = "kor install-hooks pre-uninstall"
+internal = true
+
+[[feature]]
+name = "kor export"
+cli = "kor export"
+tui = "/export --all"
+desktop = "system.exportAll"
+
+[[feature]]
+name = "kor know digest"
+cli = "kor know digest"
+tui = "/know digest"
+desktop = "know.digest"
+
+[[feature]]
+name = "kor know stale"
+cli = "kor know stale"
+tui = "/know stale"
+desktop = "know.stale"
+
+[[feature]]
+name = "kor know"
+cli = "kor know"
+tui = "/know"
+desktop = "know.search"
+
+[[feature]]
+name = "kor estimate"
+cli = "kor estimate"
+tui = "/estimate"
+desktop = "estimate.task"
+
+[[feature]]
+name = "kor rules check"
+cli = "kor rules check"
+tui = "/rules check"
+desktop = "rules.check"
+
+[[feature]]
+name = "kor rules list"
+cli = "kor rules list"
+tui = "/rules list"
+desktop = "rules.list"
+
+[[feature]]
+name = "kor rules report"
+cli = "kor rules report"
+tui = "/rules report"
+desktop = "rules.report"
+
+[[feature]]
+name = "kor docs add"
+cli = "kor docs add"
+tui = "/docs add"
+desktop = "docs.add"
+
+[[feature]]
+name = "kor docs list"
+cli = "kor docs list"
+tui = "/docs list"
+desktop = "docs.list"
+
+[[feature]]
+name = "kor docs search"
+cli = "kor docs search"
+tui = "/docs search"
+desktop = "docs.search"
+
+[[feature]]
+name = "kor docs refresh"
+cli = "kor docs refresh"
+tui = "/docs refresh"
+desktop = "docs.refresh"
+
+[[feature]]
+name = "kor docs rm"
+cli = "kor docs rm"
+tui = "/docs rm"
+desktop = "docs.remove"
+
+[[feature]]
+name = "Tarayıcıdaki doküman sayfasını projeye uygula (yan panel; masaüstünde önbellek)"
+cli = "kor docs use"
+tui = "/docs use"
+desktop = "chromeExtension.docsCache"
+
+[[feature]]
+name = "kor docs cache"
+cli = "kor docs cache"
+tui = "/docs cache"
+desktop = "chromeExtension.docsCache"
+
+[[feature]]
+name = "kor hooks add"
+cli = "kor hooks add"
+tui = "/hooks add"
+desktop = "hooks.save"
+
+[[feature]]
+name = "kor hooks edit"
+cli = "kor hooks edit"
+tui = "/hooks edit"
+desktop = "hooks.save"
+
+[[feature]]
+name = "kor hooks rm"
+cli = "kor hooks rm"
+tui = "/hooks rm"
+desktop = "hooks.remove"
+
+[[feature]]
+name = "kor hooks test"
+cli = "kor hooks test"
+tui = "/hooks test"
+desktop = "hooks.test"
+
+[[feature]]
+name = "kor hooks log"
+cli = "kor hooks log"
+tui = "/hooks log"
+desktop = "hooks.log"
+
+[[feature]]
+name = "Katalogdan medya üret (eksik parametre kartı, maliyet onayı, arka planda iş)"
+cli = "kor media generate"
+tui = "/media generate"
+desktop = "media.generate"
+
+[[feature]]
+name = "Medya galerisi"
+cli = "kor media gallery"
+tui = "/media gallery"
+desktop = "media.gallery"
+
+[[feature]]
+name = "Galeri öğesi: önizleme, parametreler ve türeme zinciri"
+cli = "kor media show"
+tui = "/media show"
+desktop = "media.item"
+
+[[feature]]
+name = "Galeri öğesine hızlı eylem (referans yap, varyasyon, aynı seed, upscale, videoya çevir, arka planı kaldır)"
+cli = "kor media derive"
+tui = "/media derive"
+desktop = "media.generate"
+
+[[feature]]
+name = "Galeri öğesini projeye kaydet"
+cli = "kor media export"
+tui = "/media export"
+desktop = "media.export"
+
+[[feature]]
+name = "Sağlayıcıda süren, toplanmamış medya istekleri"
+cli = "kor media jobs"
+tui = "/media jobs"
+desktop = "media.pending"
+
+[[feature]]
+name = "Bekleyen medya isteğini topla"
+cli = "kor media collect"
+tui = "/media collect"
+desktop = "media.collect"
+
+[[feature]]
+name = "kor diagram sync"
+cli = "kor diagram sync"
+tui = "/diagram sync"
+desktop = "diagram.sync"
+
+[[feature]]
+name = "kor diagram watch"
+cli = "kor diagram watch"
+tui = "/diagram watch"
+desktop = "diagram.sync"
+
+[[feature]]
+name = "kor diagram check"
+cli = "kor diagram check"
+tui = "/diagram check"
+desktop = "diagram.list"
+
+[[feature]]
+name = "kor diagram list"
+cli = "kor diagram list"
+tui = "/diagram list"
+desktop = "diagram.list"
+
+[[feature]]
+name = "kor diagram add"
+cli = "kor diagram add"
+tui = "/diagram add"
+desktop = "diagram.add"
+
+[[feature]]
+name = "kor providers privacy"
+cli = "kor providers privacy"
+tui = "/providers privacy"
+desktop = "privacy.cards"
+
+[[feature]]
+name = "kor mcp dev"
+cli = "kor mcp dev"
+tui = "/mcp dev"
+desktop = "mcpdev.start"

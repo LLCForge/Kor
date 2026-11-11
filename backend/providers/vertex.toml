@@ -1,0 +1,22 @@
+# Source: https://cloud.google.com/vertex-ai/generative-ai/docs/start/openai
+# OpenAI-compatible endpoint:
+#   https://aiplatform.googleapis.com/v1/projects/<project>/locations/global/endpoints/openapi
+# Auth: OAuth access token (gcloud auth application-default print-access-token, valid 1 h).
+# ADC / service-account token minting is not built in yet; put the token in VERTEX_ACCESS_TOKEN.
+id = "vertex"
+name = "Google Vertex AI"
+category = "cloud"
+adapter = "openai_compat"
+base_url = "https://your-project.invalid/v1/projects/p/locations/global/endpoints/openapi"
+base_url_env = "VERTEX_OPENAI_BASE_URL"
+auth = { kind = "bearer", env = "VERTEX_ACCESS_TOKEN" }
+static_models = ["google/gemini-2.5-pro", "google/gemini-2.5-flash"]
+tool_calling = true
+vision = true
+verified = false
+docs = "https://cloud.google.com/vertex-ai/generative-ai/docs/start/openai"
+
+[privacy]
+tier = "no_train"
+retention = "Google Cloud does not train on customer data; caching may apply (verify)."
+jurisdiction = "per region"

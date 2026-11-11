@@ -1,0 +1,2 @@
+rule codex/project repo/AGENT.md [always] Singular AGENT.md.
+rule codex/project repo/AGENTS.md [always] Universal AGENTS.md.

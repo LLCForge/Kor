@@ -1,0 +1,1 @@
+Kor project standup.

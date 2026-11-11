@@ -1,0 +1,100 @@
+/* Grup 2 stilleri: mesaj kutusu ve çok kipli girdi. Renkler styles.css içindeki :root token'larından. */
+
+.g2-composer { position: relative; }
+
+/* Üst araç satırı: Yaz/Önizle, token sayacı, vim, tam ekran */
+.g2-toolbar { display: flex; align-items: center; gap: 4px; margin: -4px -4px 0; font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g2-tabs { display: flex; gap: 2px; margin-right: auto; }
+.g2-tab {
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--subtle); font: var(--kor-text-12) var(--font-sans);
+  transition: background-color var(--kor-dur-hover) var(--kor-ease), color var(--kor-dur-hover) var(--kor-ease);
+}
+.g2-tab:hover { background: var(--hover); color: var(--text); }
+.g2-tab[aria-selected='true'] { background: var(--hover); color: var(--text); }
+.g2-tokens { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.g2-tool { min-width: 26px; height: 26px; }
+.g2-vim-mode {
+  padding: 0 6px; border-radius: 4px; border: 1px solid var(--border);
+  font: 600 var(--kor-text-12)/16px var(--font-mono); letter-spacing: 0.04em; color: var(--muted);
+}
+.g2-vim-mode.normal { border-color: var(--accent); color: var(--accent); }
+.composer-input.g2-vim-normal { caret-color: var(--accent); caret-shape: block; }
+
+/* Açılır öneri listesi ("/" ve "@") */
+.g2-input-wrap { position: relative; }
+.g2-popup {
+  position: absolute; left: -6px; bottom: calc(100% + 10px); z-index: 30;
+  display: flex; flex-direction: column; width: min(520px, calc(100vw - 48px)); max-height: 320px; padding: 6px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18); font-family: var(--font-sans);
+}
+.g2-option {
+  display: flex; align-items: flex-start; gap: 10px; padding: 6px 8px; border-radius: 8px; cursor: pointer;
+}
+.g2-option.active { background: var(--accent-soft); }
+.g2-option-icon { display: flex; padding-top: 2px; color: var(--subtle); }
+.g2-option.active .g2-option-icon { color: var(--accent); }
+.g2-option-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--kor-text-13) var(--font-mono); color: var(--text); }
+
+/* Önizleme */
+.g2-preview { max-height: 288px; min-height: 24px; overflow-y: auto; font-size: var(--kor-text-14); }
+
+/* Kuyruktaki mesajlar */
+.g2-queue { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0 0 4px; list-style: none; border-bottom: 1px solid var(--border); }
+.g2-queued { display: flex; align-items: center; gap: 8px; min-height: 28px; font: var(--kor-text-13) var(--font-sans); color: var(--muted); }
+.g2-queued-text { flex: 1; }
+.g2-queued .action-btn { min-width: 26px; height: 26px; }
+
+/* Katlanan yapıştırma çipleri */
+.g2-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.g2-chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--muted);
+  font: var(--kor-text-12) var(--font-sans);
+}
+.g2-chip:hover { border-color: var(--subtle); color: var(--text); }
+.g2-chip-action { color: var(--accent); font-weight: 600; }
+
+/* Bilgi / uyarı satırı */
+.g2-note {
+  display: flex; align-items: center; gap: 6px; margin: 0; padding: 4px 4px 4px 10px; border-radius: 8px;
+  background: var(--hover); color: var(--muted); font: var(--kor-text-12)/1.4 var(--font-sans);
+}
+.g2-note > span { flex: 1; }
+.g2-note.warn { background: var(--del-bg); color: var(--del-text); padding-right: 10px; }
+.g2-note-close { min-width: 22px; height: 22px; }
+
+/* Ek kartları: tek satır yatay kaydırılabilir şerit (görsel yüklenince thumbnail dizisi) */
+.g2-cards { flex-wrap: nowrap; overflow-x: auto; }
+.g2-card { cursor: grab; gap: 3px; }
+.g2-card:active { cursor: grabbing; }
+.g2-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.g2-card-over { border-color: var(--accent); background: var(--accent-soft); }
+.g2-card-meta { font: var(--kor-text-12) var(--font-sans); color: var(--subtle); white-space: nowrap; }
+.g2-thumb { width: 44px; height: 36px; object-fit: cover; border-radius: 4px; pointer-events: none; }
+/* Görsel ekleri: resmi tam kaplayan yuvarlak karo (ad/boyut yok; ad başlıkta tooltip) */
+.g2-card-image { padding: 0; }
+.g2-card-image .g2-thumb { width: 100%; height: 100%; border-radius: 7px; }
+
+/* Akıl yürütme düzeyi ve hızlı mod */
+.g2-effort { display: inline-flex; align-items: center; gap: 4px; }
+.menu.g2-effort-menu { width: 220px; }
+.g2-fast { font: var(--kor-text-13) var(--font-sans); }
+.g2-fast.active { color: var(--accent); background: var(--accent-soft); }
+@media (max-width: 1180px) { .g2-fast-label { display: none; } }
+
+/* Sürükle-bırak */
+.g2-drag-over { border-color: var(--accent); border-style: dashed; background: color-mix(in srgb, var(--surface) 92%, var(--accent)); }
+
+/* Tam ekran yazma: arka plan box-shadow ile karartılır (ayrı katman öğesi gerekmez) */
+.composer.g2-fullscreen {
+  position: fixed; inset: 6vh max(16px, calc(50vw - 480px)); z-index: 40; width: auto;
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.45), 0 20px 60px rgb(0 0 0 / 0.3);
+}
+.composer.g2-fullscreen:focus-within { box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.45), 0 0 0 3px var(--accent-soft); }
+.g2-fullscreen .g2-input-wrap { display: flex; flex: 1; min-height: 0; }
+.g2-fullscreen .composer-input, .g2-fullscreen .g2-preview { flex: 1; max-height: none; height: 100%; overflow-y: auto; field-sizing: fixed; }
+
+/* Düzenleme diyaloğu */
+.g2-edit-textarea { min-height: 180px; font: var(--kor-text-14)/1.5 var(--font-serif); }

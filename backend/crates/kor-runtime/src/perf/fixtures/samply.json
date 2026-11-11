@@ -1,0 +1,10 @@
+{"meta":{"interval":1,"version":24,"product":"hot"},
+ "libs":[{"name":"hot","path":"/p/target/release/hot","debugName":"hot","debugPath":"/p/target/release/hot","breakpadId":"ABC0","arch":"x86_64"}],
+ "threads":[{"name":"hot","processType":"default",
+   "stringArray":["0x1010","0x1100","main"],
+   "frameTable":{"length":3,"address":[4112,4352,-1],"func":[0,1,2],"line":[null,null,null]},
+   "funcTable":{"length":3,"name":[0,1,2],"fileName":[null,null,null],"lineNumber":[null,null,null],"resource":[0,0,-1]},
+   "resourceTable":{"length":1,"lib":[0],"name":[0]},
+   "stackTable":{"length":3,"frame":[2,0,1],"prefix":[null,0,0]},
+   "samples":{"length":4,"stack":[1,1,1,2],"weight":null}
+ }]}

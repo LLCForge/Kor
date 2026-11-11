@@ -1,0 +1,18 @@
+[package]
+name = "kor-i18n"
+description = "Localization (tr, en, fr) for the Kor coding agent"
+version = "0.1.6"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+fluent-bundle.workspace = true
+serde.workspace = true
+sys-locale.workspace = true
+unic-langid.workspace = true
+
+[lints]
+workspace = true

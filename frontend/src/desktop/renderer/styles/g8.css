@@ -1,0 +1,157 @@
+/* Grup 8 stilleri: sandbox'lı HTML/SVG güvenli önizleme. Renkler styles.css içindeki :root token'larından. */
+
+.g8-rich .g8-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.g8-rich .g8-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.g8-tabs,
+.g8-presets {
+  display: inline-flex;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.g8-tab,
+.g8-preset {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font: var(--kor-text-12) var(--font-sans);
+  cursor: pointer;
+}
+
+.g8-tab:hover,
+.g8-preset:hover {
+  color: var(--text);
+}
+
+.g8-tab.g8-on,
+.g8-preset.g8-on {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.g8-rich .code-copy.g8-on {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.g8-preview-wrap {
+  margin: 0 auto;
+  transition: max-width var(--kor-dur-hover) var(--kor-ease);
+}
+
+.g8-source {
+  margin: 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  font: var(--kor-text-13)/1.6 var(--font-mono);
+  color: var(--code-text, var(--text));
+  background: var(--code-bg);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.g8-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.g8-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font: var(--kor-text-12) var(--font-sans);
+}
+
+.g8-chip-warn {
+  color: var(--del-text, var(--accent));
+  border-color: var(--del-text, var(--accent));
+}
+
+.g8-info {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font: var(--kor-text-13)/1.55 var(--font-sans);
+  color: var(--text);
+}
+
+.g8-info-row {
+  margin: 0 0 8px;
+}
+
+.g8-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.g8-info-net {
+  display: flex;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--accent-soft);
+}
+
+.g8-info-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.g8-info-list {
+  margin: 2px 0 0;
+  padding-left: 18px;
+  word-break: break-all;
+}
+
+.g8-info-list code,
+.g8-info-net code {
+  font: var(--kor-text-12) var(--font-mono);
+}
+
+.g8-muted {
+  color: var(--subtle);
+}
+
+.g8-note {
+  margin: 0;
+  padding: 8px 14px;
+  font: var(--kor-text-13) var(--font-sans);
+}
+
+/* 79: uygulama içi büyütme modalı. */
+.g8-expand {
+  width: min(92vw, 1100px);
+}
+
+.g8-expand-body {
+  margin: 8px 0;
+}

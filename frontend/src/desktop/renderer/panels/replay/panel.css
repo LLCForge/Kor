@@ -1,0 +1,9 @@
+/* Replay görünümü; kart, liste ve form sınıfları ../graph/panel.css (kg-*) ve ../security/panel.css (ks-*) içinde. */
+.kr-id { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); }
+.kr-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.kr-scrub { flex: 1 1 120px; min-width: 120px; accent-color: var(--accent); }
+.kr-pos { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kr-steps { list-style: none; margin: 0; padding: 4px; max-height: 240px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
+.kr-fact { display: contents; }
+.kr-pre { margin: 0; max-height: 200px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-mono); font-size: 12px; }
+.kr-env-cmd { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }

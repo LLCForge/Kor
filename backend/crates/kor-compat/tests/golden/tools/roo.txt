@@ -1,0 +1,8 @@
+rule roo/project repo/.roorules [always] Legacy roorules: no console.log.
+rule roo/project repo/.roo/rules/01-general.md [always] Roo general rule.
+rule roo/project repo/.roo/rules-architect/plan.md [on-request "Roo Code `architect` mode rules"] Architect mode: write a plan first.
+rule roo/project repo/.roo/rules-code/style.md [on-request "Roo Code `code` mode rules"] Code mode: follow the style guide.
+rule roo/project repo/.roorules-debug [on-request "Roo Code `debug` mode rules"] Debug mode: add logging first.
+rule roo/project repo/.roo/rules/02-paths.md [globs lib/**] Library code is pure.
+command /deploy roo/project repo/.roo/commands/deploy.md
+mcp context7 roo/project repo/.roo/mcp.json

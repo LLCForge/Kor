@@ -1,0 +1,53 @@
+---
+source: apps/kor-cli/tests/e2e.rs
+assertion_line: 279
+expression: lines
+---
+[
+  {
+    "elapsedMs": "[ms]",
+    "tokens": "[tokens]",
+    "type": "status",
+    "verb": "[verb]",
+    "verbIndex": "[index]"
+  },
+  {
+    "files": 3,
+    "line": "≈ 1m27s · ≈ price unknown · ~3 files",
+    "method": "general estimate, no similar tasks yet",
+    "secs": 87,
+    "type": "estimate",
+    "usd": null
+  },
+  {
+    "breakdown": "[breakdown]",
+    "percent": "[percent]",
+    "total": "[total]",
+    "type": "context.usage"
+  },
+  {
+    "delta": "Merhaba! ",
+    "type": "text"
+  },
+  {
+    "delta": "Nasıl ",
+    "type": "text"
+  },
+  {
+    "delta": "yardımcı ",
+    "type": "text"
+  },
+  {
+    "delta": "olabilirim?",
+    "type": "text"
+  },
+  {
+    "input": 640,
+    "output": 11,
+    "type": "usage"
+  },
+  {
+    "text": "Took 0s · $0.00 · 0 files (estimated ≈ 1m27s · ≈ price unknown)",
+    "type": "notice"
+  }
+]

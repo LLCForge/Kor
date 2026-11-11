@@ -1,0 +1,4 @@
+{
+  "permissions": { "allow": ["Bash(cargo test *)"], "deny": ["Read(~/.ssh/**)"], "defaultMode": "default" },
+  "env": { "USER_FLAG": "1" }
+}

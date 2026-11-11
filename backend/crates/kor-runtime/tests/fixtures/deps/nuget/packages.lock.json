@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net8.0": {
+      "Newtonsoft.Json": {
+        "type": "Direct",
+        "requested": "[13.0.1, )",
+        "resolved": "13.0.1",
+        "contentHash": "x"
+      },
+      "System.Buffers": {
+        "type": "Transitive",
+        "resolved": "4.5.1",
+        "contentHash": "y"
+      }
+    }
+  }
+}

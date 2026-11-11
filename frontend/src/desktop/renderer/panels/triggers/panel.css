@@ -1,0 +1,10 @@
+/* Tetikleyiciler görünümü; kart ve form sınıfları ../graph/panel.css (kg-*) ve ../security/panel.css (ks-*) içinde. */
+.kt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.kt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.kt-item { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
+.kt-item.broken { border-color: var(--del-text); }
+.kt-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.kt-grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.kt-form { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; }
+.kt-log { max-height: 240px; overflow: auto; margin: 0; padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; }
+.kt-waiting { display: flex; flex-direction: column; gap: 6px; }

@@ -1,0 +1,26 @@
+{
+  "$comment": "Kor's single theme source (spec 16.1, 16.2 rule 1, 23.1). Edit only this file, then run `node frontend/scripts/theme-gen.ts`; it writes assets/kor-theme.ts, renderer/styles/theme.gen.css, kor-core/src/theme.rs and the Tauri window background. Hand-copied hex values elsewhere fail `node --test frontend/scripts/theme-check.test.ts`.",
+  "ember": { "hi": "#FFD842", "mid": "#F8A21F", "lo": "#E67E0E", "deep": "#B84A0A" },
+  "ink": { "bg": "#14151B", "faceTop": "#34353C", "faceLeft": "#242529", "faceRight": "#1C1D23", "cream": "#F1EBDA" },
+  "surfaces": { "bg": "bg", "surface": "faceRight", "raised": "faceLeft", "overlay": "faceTop" },
+  "border": { "color": "#FFFFFF", "alpha": 0.08 },
+  "status": { "success": "#9BE564", "warning": "#FFD842", "error": "#FF5C5C", "info": "#7FB2FF" },
+  "gradient": ["#FFD842", "#FFC234", "#F8A21F", "#F08A14", "#E67E0E", "#F08A14", "#F8A21F", "#FFC234"],
+  "frames": {
+    "ember": ["✶", "✷", "✸", "✹", "✺", "✹", "✸", "✷"],
+    "braille": ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+    "flame": ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂"],
+    "cube": ["◰", "◳", "◲", "◱"],
+    "spark": ["·", "✦", "✧", "✦"],
+    "forge": ["⚒", "🔥"]
+  },
+  "ansi256": { "ember": 214, "success": 113, "error": 203 },
+  "fonts": { "heading": "Fraunces", "ui": "Inter", "mono": "JetBrains Mono" },
+  "fontSize": [12, 13, 14, 16, 20, 28, 40],
+  "lineHeight": 1.5,
+  "space": [4, 8, 12, 16, 24, 32, 48],
+  "radius": { "chip": 6, "card": 10, "composer": 14 },
+  "focusRing": { "width": 2, "alpha": 0.25 },
+  "motion": { "hover": 150, "menu": 200, "panel": 300, "easing": "cubic-bezier(.2,.8,.2,1)" },
+  "layout": { "railCollapsed": 56, "chatMax": 880, "drawerBelow": 1100, "pageEdge": 32, "cardPad": 16, "sectionGap": 24 }
+}

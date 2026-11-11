@@ -1,0 +1,64 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# Daily model catalog (ADR 0003).
+# Builds catalog.json from keyless public sources (plus Artificial Analysis when the AA_API_KEY
+# secret exists) and force-pushes it as a single commit to the orphan `catalog` branch. Kor reads
+# https://raw.githubusercontent.com/LLCForge/Kor/catalog/catalog.json; no user needs an AA key.
+# When AA fails or is rate-limited, yesterday's AA values are carried forward (with their old
+# `aa_fetched` time) from the current `catalog` branch. One run a day stays far inside the AA free
+# tier (a few paged requests; ADR-0003).
+name: catalog
+
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Self-test
+        run: python3 -I catalog/build_catalog.py --self-test
+      # The published catalog, for AA carry-forward. Missing on the first run (no branch yet).
+      - name: Previous catalog
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          ref: catalog
+          path: prev
+          persist-credentials: false
+      - name: Build
+        env:
+          AA_API_KEY: ${{ secrets.AA_API_KEY }}
+        run: |
+          mkdir -p out
+          python3 -I catalog/build_catalog.py --out out/catalog.json --previous prev/catalog.json
+          python3 -I -c "import json,sys; d=json.load(open('out/catalog.json')); sys.exit(0 if len(d['models']) > 50 else 'too few models')"
+      - name: Publish to the catalog branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          cd out
+          cat > README.md <<'EOF'
+          Generated daily by `.github/workflows/catalog.yml` on the main branch. Do not edit.
+          Data: Artificial Analysis https://artificialanalysis.ai/ . Prices and context: https://openrouter.ai/ .
+          Licences: https://huggingface.co/ .
+          EOF
+          git init -q -b catalog
+          git config user.name "kor-catalog-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add catalog.json README.md
+          git commit -q -m "catalog $(date -u +%Y-%m-%d)"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" catalog

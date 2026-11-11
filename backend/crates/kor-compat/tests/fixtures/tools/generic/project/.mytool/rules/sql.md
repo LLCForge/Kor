@@ -1,0 +1,4 @@
+---
+globs: ["**/*.sql"]
+---
+SQL rule.

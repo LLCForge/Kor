@@ -1,0 +1,21 @@
+# Source: https://docs.perplexity.ai/docs/getting-started/quickstart (Orchestrator API, OpenAI Chat
+# Completions at /orchestrator/v1). Web-grounded answers; routed to research tasks.
+# Verified 2026-11-10: docs.perplexity.ai/docs/orchestrator/quickstart.md — base URL
+# https://api.perplexity.ai/orchestrator/v1, GET /orchestrator/v1/models is the allowlist,
+# `Authorization: Bearer`. The Orchestrator API is in private preview (access by email to
+# api@perplexity.ai); the older /router/v1 base keeps working.
+id = "perplexity"
+name = "Perplexity"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.perplexity.ai/orchestrator/v1"
+auth = { kind = "bearer", env = "PERPLEXITY_API_KEY" }
+models_endpoint = "/models"
+verified = false
+docs = "https://docs.perplexity.ai/docs/getting-started/quickstart"
+tags = ["web-search"]
+
+[privacy]
+tier = "no_train"
+retention = "Provider states API data is not used for training (verify)."
+jurisdiction = "US"

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-kor-call"
+description = "Enables the kor_call command without any pre-configured scope."
+commands.allow = ["kor_call"]
+
+[[permission]]
+identifier = "deny-kor-call"
+description = "Denies the kor_call command without any pre-configured scope."
+commands.deny = ["kor_call"]

@@ -1,0 +1,4 @@
+{"head":{"callFrame":{"functionName":"(root)","scriptId":"0","url":"","lineNumber":-1,"columnNumber":-1},"selfSize":0,"id":1,"children":[
+  {"callFrame":{"functionName":"","scriptId":"9","url":"file:///C:/proj/a.js","lineNumber":0,"columnNumber":0},"selfSize":4096,"id":2,"children":[
+    {"callFrame":{"functionName":"grow","scriptId":"9","url":"file:///C:/proj/a.js","lineNumber":2,"columnNumber":13},"selfSize":98304,"id":3,"children":[]}]}]},
+ "samples":[]}

@@ -1,0 +1,10 @@
+rule claude/user home/.claude/CLAUDE.md [always] User-wide Claude preference: be terse.
+rule claude/project repo/CLAUDE.md [always] # Project
+rule claude/local repo/CLAUDE.local.md [always] Local note: my sandbox DB is on 5433.
+rule claude/project repo/.claude/rules/general.md [always] General Claude rule.
+rule claude/project repo/.claude/rules/api.md [globs src/api/**/*.ts] API handlers validate input.
+command /fix claude/project repo/.claude/commands/fix.md
+agent reviewer claude/project repo/.claude/agents/reviewer.md
+skill pdf claude/project repo/.claude/skills/pdf/SKILL.md
+mcp sentry claude/project repo/.mcp.json
+skipped allow `Bash(npm test)` from /repo/.claude/settings.json

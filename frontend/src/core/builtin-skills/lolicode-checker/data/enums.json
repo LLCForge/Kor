@@ -1,0 +1,260 @@
+{
+ "BrowserMouseButton": [
+  "Left",
+  "Middle",
+  "Right"
+ ],
+ "BrowserWaitUntilNavigation": [
+  "Load",
+  "DOMContentLoaded",
+  "Networkidle0",
+  "Networkidle2"
+ ],
+ "CaptchaLanguage": [
+  "NotSpecified",
+  "English",
+  "Russian",
+  "Spanish",
+  "Portuguese",
+  "Ukrainian",
+  "Vietnamese",
+  "French",
+  "Indonesian",
+  "Arab",
+  "Japanese",
+  "Turkish",
+  "German",
+  "Chinese",
+  "Philippine",
+  "Polish",
+  "Thai",
+  "Italian",
+  "Dutch",
+  "Slovak",
+  "Bulgarian",
+  "Romanian",
+  "Hungarian",
+  "Korean",
+  "Czech",
+  "Azerbaijani",
+  "Persian",
+  "Bengali",
+  "Greek",
+  "Lithuanian",
+  "Latvian",
+  "Swedish",
+  "Serbian",
+  "Croatian",
+  "Hebrew",
+  "Hindi",
+  "Norwegian",
+  "Slovenian",
+  "Danish",
+  "Uzbek",
+  "Finnish",
+  "Catalan",
+  "Georgian",
+  "Malay",
+  "Telugu",
+  "Estonian",
+  "Malayalam",
+  "Belorussian",
+  "Kazakh",
+  "Marathi",
+  "Nepali",
+  "Burmese",
+  "Bosnian",
+  "Armenian",
+  "Macedonian",
+  "Punjabi"
+ ],
+ "CaptchaLanguageGroup": [
+  "NotSpecified",
+  "Cyrillic",
+  "Latin"
+ ],
+ "CharacterSet": [
+  "NotSpecified",
+  "OnlyNumbers",
+  "OnlyLetters",
+  "OnlyNumbersOrOnlyLetters",
+  "BothNumbersAndLetters"
+ ],
+ "CipherMode": [
+  "CBC",
+  "ECB",
+  "OFB",
+  "CFB",
+  "CTS"
+ ],
+ "DnsRecordType": [
+  "A",
+  "AAAA",
+  "CAA",
+  "CNAME",
+  "MX",
+  "NAPTR",
+  "NS",
+  "PTR",
+  "SOA",
+  "SRV",
+  "TLSA",
+  "TXT",
+  "URI"
+ ],
+ "DnsTransportProtocol": [
+  "DnsOverHttps",
+  "Udp",
+  "Tcp"
+ ],
+ "FileEncoding": [
+  "UTF8",
+  "ASCII",
+  "Unicode",
+  "BigEndianUnicode",
+  "UTF32",
+  "Latin1"
+ ],
+ "FindElementBy": [
+  "Id",
+  "Class",
+  "Selector",
+  "XPath"
+ ],
+ "FtpItemKind": [
+  "Folder",
+  "File",
+  "FilesAndFolders"
+ ],
+ "FtpLocalExists": [
+  "Overwrite",
+  "Resume",
+  "Skip"
+ ],
+ "FtpRemoteExists": [
+  "NoCheck",
+  "ResumeNoCheck",
+  "AddToEndNoCheck",
+  "Skip",
+  "Overwrite",
+  "OverwriteInPlace",
+  "Resume",
+  "AddToEnd",
+  "then"
+ ],
+ "GuidFormat": [
+  "D",
+  "N",
+  "B",
+  "P"
+ ],
+ "GuidVersion": [
+  "V4",
+  "V7"
+ ],
+ "HashFunction": [
+  "MD4",
+  "MD5",
+  "SHA1",
+  "SHA256",
+  "SHA384",
+  "SHA512"
+ ],
+ "HttpLibrary": [
+  "SystemNet",
+  "RuriLibHttp",
+  "CurlImpersonate"
+ ],
+ "HttpMethod": [
+  "GET",
+  "POST",
+  "HEAD",
+  "PUT",
+  "DELETE",
+  "PATCH",
+  "TRACE",
+  "CONNECT",
+  "OPTIONS"
+ ],
+ "ImapAutoConnectMode": [
+  "Full",
+  "KnownServersOnly"
+ ],
+ "JwtAlgorithmName": [
+  "HS256",
+  "HS384",
+  "HS512",
+  "RS256",
+  "RS384",
+  "RS512",
+  "ES256",
+  "ES384",
+  "ES512",
+  "PS256",
+  "PS384",
+  "PS512"
+ ],
+ "PaddingMode": [
+  "None",
+  "PKCS7",
+  "Zeros",
+  "ANSIX923",
+  "ISO10126"
+ ],
+ "Pop3AutoConnectMode": [
+  "Full",
+  "KnownServersOnly"
+ ],
+ "SaltRevision": [
+  "_2a",
+  "_2b",
+  "_2x",
+  "_2y"
+ ],
+ "SearchField": [
+  "From",
+  "To",
+  "Subject",
+  "Body"
+ ],
+ "SecurityProtocol": [
+  "SystemDefault",
+  "TLS10",
+  "TLS11",
+  "TLS12",
+  "TLS13"
+ ],
+ "SmtpAutoConnectMode": [
+  "Full",
+  "KnownServersOnly"
+ ],
+ "StrComparison": [
+  "EqualTo",
+  "NotEqualTo",
+  "Contains",
+  "DoesNotContain",
+  "Exists",
+  "DoesNotExist",
+  "MatchesRegex",
+  "DoesNotMatchRegex"
+ ],
+ "StringEncoding": [
+  "UTF8",
+  "ASCII",
+  "Unicode",
+  "BigEndianUnicode",
+  "UTF32",
+  "Latin1"
+ ],
+ "UAPlatform": [
+  "All",
+  "Desktop",
+  "Mobile",
+  "iPad",
+  "iPhone",
+  "Android",
+  "Linux",
+  "Mac",
+  "Windows"
+ ]
+}

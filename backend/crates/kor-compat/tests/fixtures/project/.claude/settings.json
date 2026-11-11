@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": ["Bash(npm run *)"],
+    "ask": ["Bash(git push *)"],
+    "deny": ["Read(.env)"],
+    "defaultMode": "acceptEdits"
+  },
+  "env": { "PROJECT_FLAG": "x" },
+  "model": "claude-sonnet-4-5",
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Bash", "hooks": [ { "type": "command", "command": "echo pre", "timeout": 5 } ] }
+    ],
+    "Stop": [ { "hooks": [ { "type": "command", "command": "echo stop" } ] } ]
+  }
+}

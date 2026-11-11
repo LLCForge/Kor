@@ -1,0 +1,8 @@
+rule copilot/user home/.github/copilot-instructions.md [always] Global Copilot instructions.
+rule copilot/project repo/.github/copilot-instructions.md [always] Copilot repo instructions.
+rule copilot/project repo/.github/instructions/docs.instructions.md [on-request "Writing documentation"] Docs rule.
+rule copilot/project repo/.github/instructions/everything.instructions.md [always] Applies to every file.
+rule copilot/project repo/.github/instructions/manual.instructions.md [manual] Attach by hand.
+rule copilot/project repo/.github/instructions/ts.instructions.md [globs **/*.ts **/*.tsx] TS instructions.
+command /explain copilot/project repo/.github/prompts/explain.prompt.md
+mcp playwright copilot/project repo/.vscode/mcp.json

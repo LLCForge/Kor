@@ -1,0 +1,20 @@
+# Source: https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions.html
+# OpenAI-compatible Chat Completions: https://bedrock-runtime.<region>.amazonaws.com/openai/v1
+# Auth: Bedrock API key as Bearer (AWS_BEARER_TOKEN_BEDROCK). SigV4/IAM and the native
+# Converse API are not implemented yet. No /models on this surface.
+id = "bedrock"
+name = "AWS Bedrock"
+category = "cloud"
+adapter = "openai_compat"
+base_url = "https://bedrock-runtime.your-region.invalid/openai/v1"
+base_url_env = "BEDROCK_OPENAI_BASE_URL"
+auth = { kind = "bearer", env = "AWS_BEARER_TOKEN_BEDROCK" }
+static_models = ["openai.gpt-oss-120b-1:0", "openai.gpt-oss-20b-1:0"]
+tool_calling = true
+verified = false
+docs = "https://docs.aws.amazon.com/bedrock/latest/userguide/inference-chat-completions.html"
+
+[privacy]
+tier = "no_train"
+retention = "AWS states Bedrock does not store or train on prompts and completions (verify)."
+jurisdiction = "per region"

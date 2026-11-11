@@ -1,0 +1,18 @@
+# §17.2 "maliyet güncelleme": one answer is written to the cost ledger and the cost report shows it.
+name: cost-update
+title: "Maliyet panosu güncellenir"
+project:
+  files:
+    README.md: "# Demo\n"
+mock:
+  - text: "Merhaba! Nasıl yardımcı olabilirim?"
+    usage: { prompt: 640, completion: 11 }
+steps:
+  - prompt: "merhaba"
+  - command: "kor cost"
+expect:
+  events:
+    - status
+    - { type: text, text: "Merhaba! Nasıl yardımcı olabilirim?" }
+  usage_requests: 1
+  output: ["kor-mock"]

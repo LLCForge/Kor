@@ -1,0 +1,51 @@
+[package]
+name = "kor-tools"
+description = "Built-in tools (files, search, shell) for the Kor coding agent"
+version = "0.2.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[features]
+default = ["computer"]
+# Desktop control (input + screen capture, in kor-computer). Off builds return an error from those tools.
+computer = ["kor-computer/live"]
+
+[dependencies]
+base64.workspace = true
+# Per-app tiers, human-first stop, indicator, audit, screen/input, layouts (§19.1, ADR 0059).
+kor-computer.workspace = true
+async-trait.workspace = true
+futures.workspace = true
+globset.workspace = true
+ignore.workspace = true
+kor-components.workspace = true
+kor-core.workspace = true
+kor-sandbox.workspace = true
+# Browser extension pairing (§18.1, ADR 0058): keys in the OS keychain, hashed, random codes.
+kor-secrets.workspace = true
+sha2.workspace = true
+getrandom.workspace = true
+# `browser_gif` recordings (ADR 0058).
+image = { workspace = true, features = ["gif"] }
+# PDF rendering through the `pdfium` component; the build feature must match its version (8125).
+pdfium-render = { version = "0.9.5", default-features = false, features = ["pdfium_8125", "image_025", "thread_safe"] }
+regex.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+kor-platform.workspace = true
+kor-graph.workspace = true
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+tokio-util.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio.workspace = true
+wiremock.workspace = true
+
+[lints]
+workspace = true

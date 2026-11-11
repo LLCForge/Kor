@@ -1,0 +1,16 @@
+# Source: https://docs.x.ai/docs/api-reference
+id = "xai"
+name = "xAI (Grok)"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.x.ai/v1"
+auth = { kind = "bearer", env = "XAI_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.x.ai/docs/api-reference"
+vision = true
+[privacy]
+tier = "no_train"
+retention = "Provider states API data is not used for training by default (verify)."
+jurisdiction = "US"

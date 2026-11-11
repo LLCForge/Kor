@@ -1,0 +1,3 @@
+rule other/project repo/.mytool/rules/style.md [always] Unknown tool rule.
+rule other/project repo/.mytool/rules/sql.md [globs **/*.sql] SQL rule.
+mcp notes other/project repo/.mytool/mcp.json

@@ -1,0 +1,20 @@
+# Source: https://learn.microsoft.com/en-us/azure/ai-foundry/openai/api-version-lifecycle
+# Azure AI Foundry Models (OpenAI, Llama, Mistral, DeepSeek...) on the same v1 surface:
+# https://<resource>.services.ai.azure.com/openai/v1, api-key header.
+# Successor of GitHub Models (retired 2026-07-30).
+id = "microsoft-foundry"
+name = "Microsoft Foundry Models"
+category = "cloud"
+adapter = "openai_compat"
+base_url = "https://your-resource.invalid/openai/v1"
+base_url_env = "AZURE_FOUNDRY_BASE_URL"
+auth = { kind = "header", env = "AZURE_FOUNDRY_API_KEY", header = "api-key" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://learn.microsoft.com/en-us/azure/ai-foundry/"
+
+[privacy]
+tier = "no_train"
+retention = "Per Azure product terms (verify)."
+jurisdiction = "per region"

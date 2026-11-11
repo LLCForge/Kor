@@ -1,0 +1,10 @@
+/* Uzak sunucular görünümü; kart ve form sınıfları ../graph/panel.css (kg-*) ve ../security/panel.css (ks-*) içinde. */
+.kr-log { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow: auto; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+.kr-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kr-tool, .kr-confirm { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.kr-tool code, .kr-confirm code { font-family: var(--font-mono); font-size: 12px; }
+.kr-confirm.danger { color: var(--del-text); }
+.kr-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.kr-table th, .kr-table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.kr-table th { color: var(--muted); font-weight: 500; }
+.kr h4 { margin: 10px 0 4px; font-size: 13px; }

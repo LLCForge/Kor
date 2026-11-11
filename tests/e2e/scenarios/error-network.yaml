@@ -1,0 +1,17 @@
+# §17.2 error path "ağ kesintisi": the provider drops the connection; the surface shows an error and
+# nothing is written.
+name: error-network
+title: "Hata yolu: ağ kesintisi"
+project:
+  files:
+    README.md: "# Demo\n"
+mock:
+  - disconnect: true
+  - disconnect: true
+  - disconnect: true
+  - disconnect: true
+steps:
+  - prompt: "merhaba"
+expect:
+  error: true
+  usage_requests: 0

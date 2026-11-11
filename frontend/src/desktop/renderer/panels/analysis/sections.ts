@@ -1,0 +1,12 @@
+// Analiz paneli bölümleri, görünme sırasıyla. Yeni bölüm: bir `import './<Bölüm>.tsx'` satırı.
+import './SecuritySection.tsx'
+import './ComplianceSection.tsx'
+import './DepsSection.tsx'
+import './QualitySection.tsx'
+import './DebtSection.tsx'
+import './StyleSection.tsx'
+import './StatsSection.tsx'
+import './ImpactSection.tsx'
+import './DeadCodeSection.tsx'
+import './ExplainSection.tsx'
+import './CommentSection.tsx'

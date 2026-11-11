@@ -1,0 +1,1 @@
+rule devin/project repo/.devin/knowledge.md [always] Devin knowledge note.

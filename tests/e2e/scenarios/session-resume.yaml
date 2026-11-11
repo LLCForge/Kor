@@ -1,0 +1,17 @@
+# §17.2 "oturum kaydet / devam et": the conversation is saved and listed for `kor resume`.
+name: session-resume
+title: "Oturum kaydet ve listele"
+project:
+  files:
+    README.md: "# Demo\n"
+mock:
+  - text: "Kaydedildi."
+    usage: { prompt: 200, completion: 2 }
+steps:
+  - prompt: "oturum testi mesajı"
+  - command: "kor sessions"
+expect:
+  events:
+    - status
+    - { type: text, text: "Kaydedildi." }
+  output: ["oturum testi mesajı"]

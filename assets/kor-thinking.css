@@ -1,0 +1,20 @@
+/* Kor — thinking indicators (CSS version; pair with the inline SVG in KorThinking.tsx) */
+/* Renk değişkenleri (--kor-ember-hi/mid/lo) assets/theme.json'dan üretilir: frontend/src/desktop/renderer/styles/theme.gen.css */
+@keyframes kor-glow{0%,100%{opacity:.15}50%{opacity:1}}
+@keyframes kor-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes kor-spark{0%{transform:translateY(0) scale(1);opacity:0}15%{opacity:.95}60%{opacity:.8}100%{transform:translateY(-54px) scale(.4);opacity:0}}
+@keyframes kor-spin{to{transform:rotate(360deg)}}
+@keyframes kor-dash{0%,100%{stroke-dasharray:20 93}50%{stroke-dasharray:60 53}}
+@keyframes kor-dot{0%,100%{transform:scale(.8);opacity:.45}50%{transform:scale(1.25);opacity:1}}
+.kor-thinking{display:inline-block;animation:kor-bob 3.6s ease-in-out infinite}
+.kor-thinking .kor-glow{animation:kor-glow 1.8s ease-in-out infinite}
+@keyframes kor-hot{0%,100%{opacity:0}50%{opacity:.7}}
+.kor-thinking .kor-hot{animation:kor-hot 1.8s ease-in-out infinite}
+.kor-thinking .kor-spark{transform-box:fill-box;transform-origin:center;animation:kor-spark var(--d,2s) linear infinite;animation-delay:var(--delay,0s)}
+.kor-spinner{animation:kor-spin 1s linear infinite;transform-origin:center}
+.kor-spinner circle:last-child{animation:kor-dash 1.6s ease-in-out infinite}
+.kor-dots circle{transform-box:fill-box;transform-origin:center;animation:kor-dot 1.2s ease-in-out infinite}
+.kor-dots circle:nth-child(2){animation-delay:.2s}.kor-dots circle:nth-child(3){animation-delay:.4s}
+/* Masaüstünde Ayarlar > Animasyonlar = Açık (`data-motion="on"`) OS isteğini geçersiz kılar; Kapalı her zaman durdurur. */
+@media (prefers-reduced-motion:reduce){:root:not([data-motion="on"]) :is(.kor-thinking,.kor-thinking *,.kor-spinner,.kor-spinner *,.kor-dots *){animation:none!important}}
+:is(:root[data-motion="off"],:root[data-low-power="1"],:root.kor-ui-still) :is(.kor-thinking,.kor-thinking *,.kor-spinner,.kor-spinner *,.kor-dots *){animation:none!important}

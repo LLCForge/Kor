@@ -1,0 +1,16 @@
+/* Niyet önerisi kartı (§30): yalnızca mevcut değişkenler. */
+.ki-card { display: flex; flex-direction: column; gap: var(--kor-space-2); margin: 0 0 var(--kor-space-2); padding: var(--kor-space-3) var(--kor-space-3); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); background: var(--surface); font-size: var(--kor-text-13); }
+.ki-head { display: flex; align-items: center; justify-content: space-between; gap: var(--kor-space-2); }
+.ki-plan { display: flex; flex-direction: column; gap: calc(var(--kor-space-1) / 2); min-width: 0; }
+.ki-line { font-family: var(--font-mono); font-size: var(--kor-text-12); overflow-wrap: anywhere; }
+.ki-meta { font-size: var(--kor-text-12); color: var(--muted); }
+.ki-options, .ki-steps { margin: 0; padding-left: var(--kor-space-4); display: flex; flex-direction: column; gap: var(--kor-space-2); }
+.ki-options { list-style: none; padding-left: 0; }
+.ki-option { width: 100%; text-align: left; padding: var(--kor-space-2) var(--kor-space-2); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); background: transparent; color: inherit; cursor: pointer; }
+.ki-option:hover, .ki-option:focus-visible { border-color: var(--accent); }
+.ki-form { display: flex; align-items: flex-end; gap: var(--kor-space-2); flex-wrap: wrap; }
+.ki-field { display: flex; flex-direction: column; gap: calc(var(--kor-space-1) / 2); font-size: var(--kor-text-12); color: var(--muted); }
+.ki-output { margin: 0; display: flex; flex-direction: column; gap: var(--kor-space-1); }
+.ki-output pre { margin: 0; max-height: calc(var(--kor-space-1) * 70); overflow: auto; padding: var(--kor-space-2); border-radius: var(--kor-radius-chip); background: var(--code-bg); font-family: var(--font-mono); font-size: var(--kor-text-12); white-space: pre-wrap; overflow-wrap: anywhere; }
+.ki-error { margin: 0; color: var(--del-text); font-size: var(--kor-text-12); }
+.ki-actions { display: flex; gap: var(--kor-space-2); justify-content: flex-end; flex-wrap: wrap; }

@@ -1,0 +1,5 @@
+model: sonnet
+read:
+  - CONVENTIONS.md
+  - docs/extra.md
+  - ../outside.md

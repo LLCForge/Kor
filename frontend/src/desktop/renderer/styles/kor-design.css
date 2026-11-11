@@ -1,0 +1,612 @@
+/* Kor görsel dili (spec §23.1, §23.3, §23.4, §21.1; ADR 0053). En son yüklenir: eski bileşen stillerini yeniden
+   yazmadan, uygulamanın anlamsal değişkenlerini assets/theme.json token'larına (theme.gen.css) bağlar.
+   Bu dosyada serbest #hex / px yoktur (scripts/design-check.ts); her değer var(--kor-…) token'ıdır. */
+
+/* ---------- Yazı tipleri: paketli, CDN yok (SIL OFL 1.1, bkz. fonts/*-OFL.txt) ---------- */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../fonts/inter-latin-opsz-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../fonts/inter-latin-ext-opsz-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../fonts/fraunces-latin-opsz-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../fonts/fraunces-latin-ext-opsz-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('../fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('../fonts/jetbrains-mono-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* ---------- Token eşlemesi (her iki tema) ---------- */
+:root {
+  --font-serif: var(--kor-font-heading);
+  --font-sans: var(--kor-font-ui);
+  --font-mono: var(--kor-font-mono);
+  /* Sohbet sütunu azami 880 px, ortalanmış (§23.4). */
+  --chat-width: min(100%, var(--kor-chat-max));
+  /* Ember yalnızca vurgu: birincil buton, odak, etkin durum, spinner, logo (§23.1). */
+  --accent: var(--kor-ember-mid);
+  --accent-hover: var(--kor-ember-hi);
+  --accent-soft: var(--kor-ember-soft);
+  --on-accent: var(--kor-ink-bg);
+  --radius-xs: var(--kor-radius-chip);
+  --radius-sm: var(--kor-radius-chip);
+  --radius: var(--kor-radius-chip);
+  --radius-lg: var(--kor-radius-card);
+  --success: var(--kor-success);
+  --warning: var(--kor-warning);
+  --danger: var(--kor-error);
+  --info: var(--kor-info);
+  /* Katman sırası (tek ölçek): taban → yapışkan araç çubuğu → yüzen şerit → composer → çekmece → popover/menü
+   * → diyalog → bildirim. Popover'lar kendi kapları yükselerek her sayfa öğesinin üstüne çıkar. */
+  --kor-z-base: 0;
+  --kor-z-raised: 1;
+  --kor-z-main: 2;
+  --kor-z-sticky: 5;
+  --kor-z-float: 6;
+  --kor-z-composer: 10;
+  --kor-z-drawer: 20;
+  --kor-z-popover: 40;
+  --kor-z-dialog: 50;
+  --kor-z-toast: 60;
+}
+
+/* Koyu tema: 4 INK katmanı + katmanlar arası 1 px %8 beyaz kenarlık (§23.1). */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: var(--kor-layer-bg);
+    --rail: var(--kor-layer-bg);
+    --surface: var(--kor-layer-surface);
+    --bubble: var(--kor-layer-raised);
+    --raised: var(--kor-layer-raised);
+    --overlay: var(--kor-layer-overlay);
+    --border: var(--kor-border);
+    --rail-border: var(--kor-border);
+    --text: var(--kor-ink-cream);
+    --user-bubble-bg: var(--kor-layer-raised);
+    --warn: var(--kor-warning);
+    --add-text: var(--kor-success);
+    --del-text: var(--kor-error);
+    --code-bg: var(--kor-layer-bg);
+  }
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --raised: var(--bubble);
+    --overlay: var(--surface);
+    --user-bubble-bg: var(--bubble);
+  }
+}
+
+/* ---------- Tipografi: ölçek 12/13/14/16/20/28/40, satır yüksekliği 1,5 ---------- */
+html, body {
+  font-family: var(--kor-font-ui);
+  font-size: var(--kor-text-14);
+  line-height: var(--kor-leading);
+  /* Inter tabular rakamlar: sayaçlar, maliyet, token (§23.1). */
+  font-variant-numeric: tabular-nums;
+  font-optical-sizing: auto;
+}
+/* Fraunces yalnızca H1/H2 ve karşılama cümlesinde, 500 ağırlık, optik boyut açık. */
+h1, h2, .empty-title, .kor-greeting {
+  font-family: var(--kor-font-heading);
+  font-weight: 500;
+  font-optical-sizing: auto;
+  font-variant-numeric: normal;
+}
+h1 { font-size: var(--kor-text-28); }
+h2 { font-size: var(--kor-text-20); }
+h3, h4, h5, h6 { font-family: var(--kor-font-ui); }
+code, pre, kbd, samp, .mono { font-family: var(--kor-font-mono); font-variant-ligatures: none; }
+/* Prose mesaj gövdesi UI fontuyla akar; serif yalnızca başlıklarda. */
+.prose { font-family: var(--kor-font-ui); }
+.prose h1, .prose h2 { font-family: var(--kor-font-heading); }
+
+/* ---------- Butonlar ve odak ---------- */
+.btn.primary, .send-btn:not(:disabled) {
+  background: var(--kor-ember-mid);
+  border-color: var(--kor-ember-mid);
+  color: var(--on-accent);
+}
+.btn.primary:hover:not(:disabled), .send-btn:hover:not(:disabled) { background: var(--kor-ember-hi); color: var(--kor-ink-bg); }
+/* Onay düğmesi: açık zeminde koyu yazı; filtre parlaklığı okunurluğu bozmasın. */
+.approval-actions .btn.approve:hover:not(:disabled) { filter: none; color: var(--kor-ink-bg); }
+:focus-visible {
+  outline: 1px solid var(--kor-ember-mid);
+  outline-offset: 1px;
+  box-shadow: var(--kor-ring);
+}
+
+/* ---------- Hareket: 150 / 200 / 300 ms, tek eğri (§23.1) ---------- */
+/* Hover 150 ms: düğmeler, menü satırları, sekmeler, kartlar (araç, alt ajan, onay), model listesi, ağaç satırları. */
+.btn, .send-btn, .action-btn, .suggestion, .rail-btn, .kor-chip, .menu-item, .mode-item, .menu-row, .titlebar-btn,
+[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="option"], [role="tab"], .panel-tabs button,
+.tool, .tool-row, .tool-head, .agent-card, .agent-head, .ksh-card, .ksh-note, .ksh-pill, .ksh-chip-btn, .kor-release-pill,
+.g7-model-list li, .g7-model-list button, .g7-nav-btn, .tree-row, .change-row, .session-row, .session-more, .group-head {
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--kor-dur-hover);
+  transition-timing-function: var(--kor-ease);
+}
+/* Menü 200 ms: açılış ve kapanış (use-popover `data-closing`, diyalog `data-closing`, başlık açılırları `.closing`). */
+.menu, .pop-in { animation-duration: var(--kor-dur-menu); animation-timing-function: var(--kor-ease); }
+.ksh-popover { animation: kor-menu-in var(--kor-dur-menu) var(--kor-ease) backwards; }
+.dialog[open] { animation: pop-in var(--kor-dur-menu) var(--kor-ease) backwards; }
+[data-closing] :is(.menu, .pop-in, [role="menu"], [role="listbox"]), .ksh-popover.closing, .dialog[data-closing] {
+  animation: kor-pop-out var(--kor-dur-menu) var(--kor-ease) forwards;
+  pointer-events: none;
+}
+.dialog[open]::backdrop { animation: backdrop-in var(--kor-dur-menu) var(--kor-ease) both; }
+.dialog[data-closing]::backdrop { animation: kor-fade-out var(--kor-dur-menu) var(--kor-ease) forwards; }
+/* Panel 300 ms: sağ panel (ve 1100 px altı çekmecesi), bildirim çekmecesi, sağlık kartları sağdan kayar. */
+.side-panel, .rail { transition-duration: var(--kor-dur-panel); transition-timing-function: var(--kor-ease); }
+.side-panel, .ksh-drawer, .ksys-toast { animation: kor-slide-in var(--kor-dur-panel) var(--kor-ease) backwards; }
+.side-panel.closing, .ksh-drawer.closing, .ksys-toast.leaving {
+  animation: kor-slide-out var(--kor-dur-panel) var(--kor-ease) forwards;
+  pointer-events: none;
+}
+/* Güncelleme hapı ve sürüm rozeti belirirken; masaüstü denetim göstergesi (kendi translateX'i var: yalnız saydamlık). */
+.ksh-pill, .kor-release-pill { animation: pop-in var(--kor-dur-panel) var(--kor-ease) backwards; }
+.ksys-control { animation: backdrop-in var(--kor-dur-panel) var(--kor-ease) backwards; }
+@keyframes kor-pop-out { to { opacity: 0; transform: translateY(var(--kor-space-1)) scale(0.98); } }
+@keyframes kor-fade-out { to { opacity: 0; } }
+@keyframes kor-slide-in { from { opacity: 0; transform: translateX(var(--kor-space-5)); } }
+@keyframes kor-slide-out { to { opacity: 0; transform: translateX(var(--kor-space-5)); } }
+/* Kor gibi sönüp parlama (spinner değil): kenar çubuğunda çalışan oturum. */
+@keyframes kor-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+/* Giriş animasyonları yalnızca ilk açılışta (§23.1): `data-entered` motion.ts markEntered() ile konur. */
+:root[data-entered] :is(.empty-inner, .session-item) { animation: none; }
+
+/* Hareket politikası (motion.ts): OS "hareketi azalt" isteği Animasyonlar = Sistem iken uygulanır; "Açık" onu
+   geçersiz kılar (token'lar normal değerinde kalır), "Kapalı", düşük güç ve ui.reduced_motion her zaman durdurur. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="on"]) *, :root:not([data-motion="on"]) *::before, :root:not([data-motion="on"]) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* theme.gen.css bu sorguda token'ları 0 ms yapar; "Açık" seçiliyse theme.json değerleri (150/200/300) geri gelir. */
+  :root[data-motion="on"] { --kor-dur-hover: 150ms; --kor-dur-menu: 200ms; --kor-dur-panel: 300ms; }
+}
+:root[data-motion="off"] { --kor-dur-hover: 0ms; --kor-dur-menu: 0ms; --kor-dur-panel: 0ms; }
+:root[data-motion="off"] *, :root[data-motion="off"] *::before, :root[data-motion="off"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Karşılama ekranı: ember kor işareti boştayken hafifçe süzülür ve parlar (KorThinking bob 3,6 s / glow 1,8 s). */
+.kor-home-mark { display: inline-flex; animation: kor-bob 3.6s ease-in-out infinite; }
+.kor-home-mark img { animation: kor-home-glow 3.6s ease-in-out infinite; }
+@keyframes kor-home-glow {
+  0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+  50% { filter: drop-shadow(0 0 var(--kor-space-3) color-mix(in srgb, var(--kor-ember-mid) 55%, transparent)); }
+}
+/* Sohbetteki canlı durum küpü (KorThinking): satır yüksekliğinde, fiilin solunda. */
+.kor-live-cube { display: inline-flex; align-items: center; flex: none; }
+.kor-live-cube svg { display: block; }
+/* Açılış ekranı (§16.1): kor küpü ortada, uygulama hazır olunca söner. */
+.kor-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--kor-space-4);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: var(--kor-text-13);
+}
+.g27-firstrun-card > .kor-thinking { align-self: center; }
+.kor-splash.closing { animation: kor-fade-out var(--kor-dur-panel) var(--kor-ease) forwards; pointer-events: none; }
+
+/* ---------- WebView kilidi (§21.1): krom seçilmez, yalnızca içerik seçilir; görseller sürüklenmez ---------- */
+.titlebar, .rail, .main-header, .panel-tabs, .composer-row, .g2-toolbar, button, [role="menu"], [role="tablist"],
+.kor-segmented, .kor-chip, .kor-tooltip, .suggestions {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+img, svg { -webkit-user-drag: none; }
+.messages, .prose, .user-text, pre, code, textarea, input, [contenteditable="true"], .tool-output, .kor-selectable,
+.diff, .code-block {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ---------- Düzen (§23.4) ---------- */
+/* Sol kenar çubuğu daraltılınca 56 px. */
+.rail.collapsed { width: var(--kor-rail-collapsed); }
+/* Sohbet belge gibi akar: balon yok; kullanıcı mesajı tam genişlikte hafif raised yüzeyde, aralarında 24 px. */
+.messages { gap: var(--kor-section-gap); }
+.message { padding-block: 0; }
+.message.user { align-items: stretch; }
+.message.user .user-bubble {
+  width: 100%;
+  max-width: none;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-card);
+  padding: var(--kor-space-3) var(--kor-space-4);
+}
+/* Pencere 1100 px altındaysa sağ panel çekmeceye döner (sohbetin üstünden açılır). */
+@media (max-width: 1100px) {
+  .app-body > .side-panel {
+    position: absolute;
+    inset: 0 0 0 auto;
+    z-index: 20;
+    width: min(100%, calc(var(--kor-chat-max) * 0.64));
+    min-width: 0;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: none;
+  }
+}
+
+/* ---------- Composer (§23.1, §23.3) ---------- */
+.composer {
+  border-radius: var(--kor-radius-composer);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: var(--kor-space-3) var(--kor-space-4);
+  transition: border-color var(--kor-dur-hover) var(--kor-ease), box-shadow var(--kor-dur-hover) var(--kor-ease);
+}
+/* Odakta kenarlık ember'e döner ve 2 px %25 ember halka çıkar. */
+.composer:focus-within {
+  border-color: var(--kor-ember-mid);
+  box-shadow: var(--kor-ring);
+}
+/* Durum tek yerde: gönderdikten sonra alt kenarda ince ember ilerleme çizgisi (+ KorStatus fiili). */
+.composer.kor-running { position: relative; overflow: hidden; }
+.composer.kor-running::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--kor-ember-mid), transparent);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: kor-progress calc(var(--kor-dur-panel) * 5) linear infinite;
+}
+@keyframes kor-progress {
+  from { background-position: -50% 0; }
+  to { background-position: 150% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion="on"]) .composer.kor-running::after { animation: none; background-size: 100% 100%; }
+}
+:is(:root[data-motion="off"], :root[data-low-power="1"], :root.kor-ui-still) .composer.kor-running::after { animation: none; background-size: 100% 100%; }
+.kor-composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--kor-space-3);
+  flex-wrap: wrap;
+}
+/* Kenarlık yalnızca kartta: genel :focus-visible halkası textarea'da ikinci bir çerçeve çizmesin. */
+.composer-input:focus-visible { outline: none; box-shadow: none; }
+/* Kenar grupları içeriği kadar yer tutar ve küçülmez; orta grup kalan yeri alır, model adı "…" ile kısalır.
+ * (Eski flex: 1 + min-width: 0 orta grubu sıfır genişliğe indirip içeriği komşuların üstüne taşırıyordu.) */
+.kor-composer-group { display: flex; align-items: center; gap: var(--kor-space-1); min-width: 0; flex: none; }
+.kor-composer-group.center { flex: 1 1 0; min-width: calc(var(--kor-space-7) * 3); justify-content: safe center; }
+.kor-composer-group.center > * { flex: none; }
+.kor-composer-group.center > .model-picker { flex: 0 1 auto; min-width: 0; }
+.kor-composer-group.center .model-trigger { max-width: 100%; }
+.kor-composer-group.center .model-trigger > * { flex: none; }
+.kor-composer-group.center .model-trigger > .model-trigger-name { flex: 0 1 auto; min-width: 0; }
+/* Alt satıra sararsa gönder grubu sağda kalır. */
+.kor-composer-bar .composer-right { flex: none; margin-left: auto; }
+/* Halka düğmeleri 32 px kare; yanında metin olanlar (bağlam %, maliyet) içerik kadar genişler, üst üste binmez. */
+.usage-trigger { width: auto; min-width: var(--kor-space-6); gap: var(--kor-space-1); padding-inline: var(--kor-space-1); }
+.kor-composer-meta {
+  font-size: var(--kor-text-12);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.kor-composer-more { position: relative; }
+.kor-composer-more-panel {
+  position: absolute;
+  bottom: calc(100% + var(--kor-space-2));
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: var(--kor-space-2);
+  /* max-content: 32 px'lik düğme kapsayıcısına göre daralıp etiketleri kırpmasın. */
+  width: max-content;
+  min-width: calc(var(--kor-space-7) * 5);
+  max-width: calc(100vw - var(--kor-space-6));
+  padding: var(--kor-space-3);
+  background: var(--overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-card);
+}
+.kor-composer-more-row { display: flex; align-items: center; justify-content: space-between; gap: var(--kor-space-3); }
+.kor-composer-more-label { flex: none; font-size: var(--kor-text-13); color: var(--muted); white-space: nowrap; }
+/* Alt menüler (düzey, stil, profil) panelin üstüne değil soluna açılır: konum panele göre hesaplanır. */
+.kor-composer-more-panel .popover-anchor { position: static; }
+.kor-composer-more-panel .menu {
+  top: auto;
+  bottom: 0;
+  left: auto;
+  right: calc(100% + var(--kor-space-2));
+  max-height: calc(100vh - var(--kor-space-7) * 2);
+  overflow-y: auto;
+}
+.kor-composer-top {
+  display: flex;
+  align-items: center;
+  gap: var(--kor-space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--kor-space-2);
+}
+.kor-composer-top .kor-spacer { flex: 1; }
+
+/* ---------- Boş durumlar (§23.4) ---------- */
+.kor-empty-action { display: flex; gap: var(--kor-space-2); justify-content: center; flex-wrap: wrap; }
+.kor-greeting { font-size: var(--kor-text-28); margin: 0; text-align: center; }
+.kor-release-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kor-space-1);
+  padding: 0 var(--kor-space-2);
+  font-size: var(--kor-text-12);
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-chip);
+  cursor: pointer;
+}
+.kor-release-pill:hover { color: var(--text); border-color: var(--kor-ember-mid); }
+
+/* ---------- Kor bağlam menüsü (§21.1) ---------- */
+.kor-context-menu {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: calc(var(--kor-space-7) * 4);
+  padding: var(--kor-space-1);
+  background: var(--overlay);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-card);
+  font-family: var(--kor-font-ui);
+  font-size: var(--kor-text-13);
+  animation: kor-menu-in var(--kor-dur-menu) var(--kor-ease);
+}
+.kor-context-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--kor-space-4);
+  padding: var(--kor-space-1) var(--kor-space-3);
+  border: 0;
+  border-radius: var(--kor-radius-chip);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+}
+.kor-context-menu button:hover:not(:disabled), .kor-context-menu button:focus-visible { background: var(--hover); }
+.kor-context-menu button:disabled { opacity: 0.45; }
+.kor-context-menu kbd { color: var(--muted); font-size: var(--kor-text-12); }
+.kor-context-menu hr { border: 0; border-top: 1px solid var(--border); margin: var(--kor-space-1) 0; }
+@keyframes kor-menu-in { from { opacity: 0; transform: translateY(calc(var(--kor-space-1) * -1)); } to { opacity: 1; transform: none; } }
+
+/* Sağlayıcı logosu (§23.2) */
+.kor-provider-logo { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; }
+.kor-provider-logo img { display: block; width: 100%; height: 100%; }
+.kor-provider-monogram {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--kor-ember-mid);
+  color: var(--kor-ember-mid);
+  font-family: var(--kor-font-ui);
+  font-weight: 600;
+  line-height: 1;
+}
+.kor-provider-logo-wrap { display: inline-flex; flex-shrink: 0; align-items: center; gap: var(--kor-space-1); vertical-align: middle; }
+.kor-provider-local { color: var(--muted); }
+.kor-provider-chip {
+  padding: 0 var(--kor-space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-chip);
+  color: var(--muted);
+  font-size: var(--kor-text-12);
+  line-height: var(--kor-leading);
+}
+.kor-provider-via { display: inline-flex; color: var(--muted); opacity: 0.8; }
+.kor-model-ref { display: inline-flex; align-items: center; gap: var(--kor-space-1); min-width: 0; }
+.kor-answer-head {
+  display: flex;
+  align-items: center;
+  gap: var(--kor-space-2);
+  margin-bottom: var(--kor-space-1);
+  font-size: var(--kor-text-12);
+  color: var(--text-soft);
+}
+.model-trigger { display: inline-flex; align-items: center; gap: var(--kor-space-1); }
+.kor-fav.active { color: var(--kor-ember-mid); }
+.kor-empty-hint { margin: 0; text-align: center; }
+.kor-connect-card { display: flex; flex-direction: column; align-items: center; gap: var(--kor-space-2); }
+.kor-code-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-family: var(--kor-font-mono);
+  font-size: var(--kor-text-12);
+}
+/* Çalışan araç dönmez (tek spinner kuralı); ember renkle işaretlenir. */
+.tool-icon.running { color: var(--kor-ember-mid); }
+/* Sayfa kenarı 32, dar pencerede 16 (§23.1 boşluk ölçeği). */
+.viewport, .empty-state { padding-inline: var(--kor-page-edge); }
+@media (max-width: 700px) {
+  .viewport, .empty-state { padding-inline: var(--kor-space-4); }
+}
+.empty-inner { gap: var(--kor-section-gap); }
+
+/* ---------- Katmanlar (z ölçeği, :root --kor-z-*) ---------- */
+/* Ana sütun kendi katmanı: içindeki popover'lar kenar çubuğundaki konumlu öğelerin (sekme, rozet) üstünde kalır;
+ * çekmece (--kor-z-drawer) yine ana sütunun üstündedir. */
+.main { z-index: var(--kor-z-main); }
+.app-body > .side-panel { z-index: var(--kor-z-drawer); }
+/* Composer, sohbet araç çubuğunun (yapışkan) ve yüzen eylem şeridinin üstünde: model seçici ve mod menüsü onların
+ * altında kalmaz. Açık menüsü olan kap popover katmanına yükselir. */
+.viewport-footer { z-index: var(--kor-z-composer); }
+.g17-bar { z-index: var(--kor-z-sticky); }
+.cdx-rail { z-index: var(--kor-z-float); }
+:is(.viewport-footer, .g17-bar, .cdx-rail, .main-header, .rail, .side-panel):has(.menu, [role="menu"], [role="listbox"], .g17-menu-panel) {
+  z-index: var(--kor-z-popover);
+}
+.menu, .g17-menu-panel, .kor-composer-more-panel, .g2-popup { z-index: var(--kor-z-popover); background: var(--surface); }
+.kor-context-menu, .g4-context-menu { z-index: var(--kor-z-popover); }
+.kor-toaster, .ksys-toasts { z-index: var(--kor-z-toast); }
+
+/* ---------- Ana sütun duyarlılığı ---------- */
+/* Kapsayıcı ana sütunda (sohbet akışında değil): akış kap olsaydı içindeki popover'lar onun katmanına hapsolurdu. */
+.main { container: kor-main / inline-size; }
+/* Yüzen eylem şeridi kendi oluğunda: sohbet sütunu ve composer şeridin altına girmez. */
+.main:has(> .cdx-rail) .viewport { padding-inline-end: calc(var(--kor-rail-collapsed) + var(--kor-space-2)); }
+/* Model adı her zaman okunur kalır ("…" ile kısalır); sığmazsa sağ grup alt satıra iner. Çok dar sütunda ad
+ * görsel olarak gizlenir ama erişilebilir adda ve araç ipucunda kalır. */
+.kor-composer-group.center { min-width: min-content; }
+.kor-composer-group.center .model-trigger > .model-trigger-name { min-width: calc(var(--kor-space-7) + var(--kor-space-5)); }
+@container kor-main (max-width: 520px) {
+  .kor-composer-group.center .model-trigger > .model-trigger-name {
+    position: absolute; width: 1px; height: 1px; min-width: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+}
+
+/* ---------- Ayarlar diyaloğu: dar genişlikte tek sütun, bölüm listesi üstte seçiciye iner ---------- */
+.dialog.g7-settings { container: kor-settings / inline-size; }
+.g7-nav-select { display: none; }
+@container kor-settings (max-width: 880px) {
+  .g7-settings-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .g7-settings-nav {
+    flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--kor-space-2);
+    padding: var(--kor-space-2) var(--kor-space-4); border-right: 0; border-bottom: 1px solid var(--border); overflow: visible;
+  }
+  .g7-settings-nav > .g7-search { flex: 1 1 calc(var(--kor-space-7) * 4); margin-bottom: 0; }
+  .g7-nav-select { display: block; flex: 1 1 calc(var(--kor-space-7) * 4); min-width: 0; }
+  .g7-nav-group-wrap { display: none; }
+  .g7-settings-content { padding: var(--kor-space-3) var(--kor-space-5) var(--kor-space-6); }
+}
+
+/* ---------- Tıklama hedefi en az 32 px (dokunmatik ve %125/%150 ölçek) ---------- */
+.btn.small, .cdx-rail-btn, .g7-row-expand { min-height: var(--kor-space-6); }
+.cdx-rail-btn, .g7-row-expand { min-width: var(--kor-space-6); }
+
+/* ---------- Sağ panel: içindeki görünümler kendi genişliğine göre akar (çekmece, dar panel) ---------- */
+/* Ayarlar'da barındırılan panel görünümleri (.kor-settings-panel) aynı kuralları kendi genişliğine göre uygular. */
+:is(.side-panel, .kor-settings-panel) { container: kor-panel / inline-size; }
+:is(.side-panel, .kor-settings-panel) :is(.ks-row, .kg-card-head, .panel-actions, .kpe-actions) { flex-wrap: wrap; }
+/* Yollar ve kimlikler panel genişliğini aşmaz; satır içinde kırılır. */
+:is(.side-panel, .kor-settings-panel) :is(p, li, dd) > code { overflow-wrap: anywhere; }
+@container kor-panel (max-width: 480px) {
+  .kpe-grid, .g7-probe-pickers, .g7-probe-results, .g14-split { grid-template-columns: minmax(0, 1fr); }
+  /* Tablolar dar panelde kendi içinde yatay kayar; sayfa taşmaz. */
+  :is(.side-panel, .kor-settings-panel) table { display: block; max-width: 100%; overflow-x: auto; }
+  :is(.side-panel, .kor-settings-panel) :is(th, .kor-chip) { white-space: nowrap; }
+  :is(.side-panel, .kor-settings-panel) .kmem-row { flex-wrap: wrap; }
+}
+
+/* ---------- Ayar bölümleri: içerik sütunu kendi genişliğine göre akar ---------- */
+.g7-settings-content { container: kor-settings-content / inline-size; }
+.cdx-agents-chips { flex: 1 1 calc(var(--kor-space-7) * 5); }
+@container kor-settings-content (max-width: 640px) {
+  /* Ana-ayrıntı yan yana sığmıyorsa alt alta; anahtar/değer satırları tek sütun. */
+  .cdx-agents { grid-template-columns: minmax(0, 1fr); }
+  .cdx-agents-col + .cdx-agents-col { border-left: 0; border-top: 1px solid var(--border); }
+  .cdx-agent-row { grid-template-columns: minmax(0, 1fr); gap: var(--kor-space-1); }
+  .cdx-agents-toolbar .cdx-mcp-search { width: 100%; }
+}
+/* Başlık çubuğu metni ölçek ve yazı tipi ölçüsünden bağımsız olarak dikeyde ortalı; üstten kesilmez. */
+.titlebar-name { display: inline-flex; align-items: center; align-self: stretch; line-height: 1; }
+
+/* ---------- Görünüm yerleşimi: panel başlığı sekmeleri, "Diğer görünümler" menüsü ---------- */
+.panel-head { justify-content: flex-start; padding-inline-start: var(--kor-space-2); }
+.panel-head-actions { margin-inline-start: auto; flex: none; }
+.kor-panel-tabs { display: inline-flex; align-items: center; gap: calc(var(--kor-space-1) / 2); flex: none; }
+.kor-panel-tab { position: relative; color: var(--muted); }
+.kor-panel-tab[aria-selected="true"] { background: var(--hover); color: var(--text); }
+.kor-panel-tab-count {
+  position: absolute; inset: 0 0 auto auto; transform: translate(25%, -20%);
+  padding: 0 var(--kor-space-1); font-size: var(--kor-text-12); line-height: var(--kor-leading); pointer-events: none;
+}
+.kor-panel-current { flex: 0 1 auto; padding-inline-start: var(--kor-space-2); border-inline-start: 1px solid var(--border); }
+.panel-head .menu.panel-view-menu { width: calc(var(--kor-space-7) * 5); }
+.kor-view-row { display: flex; align-items: center; gap: var(--kor-space-1); }
+.kor-view-row > .menu-row { flex: 1; min-width: 0; }
+.kor-view-pin { flex: none; color: var(--muted); }
+.kor-view-pin[aria-pressed="true"] { color: var(--accent); }
+
+/* ---------- Kenar çubuğu "Araçlar" başlatıcısı: katlanır gruplar; daraltılmış şeritte grup ikonu + yan liste ---------- */
+.kor-launcher { display: flex; flex-direction: column; min-height: 0; }
+.kor-launcher-body { display: flex; flex-direction: column; max-height: 30vh; overflow-y: auto; overflow-x: hidden; }
+.kor-launcher-head > .kor-launch-chev { margin-inline-start: auto; }
+.kor-launch-chev { flex: none; color: var(--muted); transition: transform var(--kor-dur-menu) var(--kor-ease); }
+[aria-expanded="true"] > .kor-launch-chev { transform: rotate(90deg); }
+.kor-launch-group-head {
+  display: flex; align-items: center; gap: var(--kor-space-2); width: 100%;
+  min-height: calc(var(--kor-space-5) + var(--kor-space-1)); padding: 0 var(--kor-space-2);
+  border: 0; border-radius: var(--kor-radius-chip); background: transparent; color: var(--muted);
+  font: 600 var(--kor-text-12) var(--font-sans); text-align: start; cursor: pointer;
+}
+.kor-launch-group-head:hover { background: var(--hover); color: var(--text); }
+.kor-launch-group-head > svg { flex: none; }
+.kor-launch-items { display: flex; flex-direction: column; padding-inline-start: var(--kor-space-3); }
+.kor-launch-items .rail-btn, .kor-rail-flyout .rail-btn { height: auto; min-height: calc(var(--kor-space-5) + var(--kor-space-1)); }
+.rail.collapsed:has(.kor-rail-flyout) { overflow: visible; }
+.kor-rail-flyout-anchor { display: block; }
+.menu.kor-rail-flyout {
+  inset: auto auto 0 calc(100% + var(--kor-space-2));
+  width: calc(var(--kor-space-7) * 5); max-height: 70vh; overflow-y: auto;
+}
+.kor-rail-flyout .rail-btn { width: 100%; justify-content: flex-start; }
+.rail.collapsed .kor-rail-flyout .rail-btn-label { opacity: 1; }
+
+/* ---------- Bağlamsal girişler: ölçerlerdeki "Ayrıntılar", composer ek menüsü ---------- */
+.kor-meter-details { display: inline-flex; align-items: center; gap: var(--kor-space-1); margin-inline-start: auto; }
+.menu.menu-left.kor-attach-menu { width: calc(var(--kor-space-7) * 5); }

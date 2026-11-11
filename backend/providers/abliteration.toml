@@ -1,0 +1,16 @@
+# Source: https://docs.abliteration.ai/api/openai-compatibility
+id = "abliteration"
+name = "Abliteration.ai"
+category = "uncensored"
+adapter = "openai_compat"
+base_url = "https://api.abliteration.ai/v1"
+auth = { kind = "bearer", env = "ABLIT_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.abliteration.ai/api/openai-compatibility"
+tags = ["no-log"]
+[privacy]
+tier = "no_log"
+retention = "Provider states zero retention by default: prompts and outputs processed in memory, only billing metadata kept (https://abliteration.ai/data-handling)."
+jurisdiction = "US"

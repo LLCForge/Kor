@@ -1,0 +1,7 @@
+{
+  "uuid": "kor@kor.dev",
+  "name": "Kor",
+  "description": "Kor coding agent: status, approvals, recent projects and sessions in the top bar.",
+  "shell-version": ["45", "46", "47", "48", "49"],
+  "url": "https://github.com/LLCForge/Kor"
+}

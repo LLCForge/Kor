@@ -1,0 +1,18 @@
+---
+source: apps/kor-cli/tests/e2e.rs
+assertion_line: 308
+expression: v
+---
+[
+  {
+    "archived": false,
+    "color": null,
+    "folder": null,
+    "id": "[id]",
+    "modified": "[time]",
+    "pinned": false,
+    "root": "[root]",
+    "tags": [],
+    "title": "merhaba"
+  }
+]

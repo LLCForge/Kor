@@ -1,0 +1,20 @@
+# Source: https://mancer.tech/docs-api/ -> OpenAPI spec https://mancer.tech/resources/api-docs-webui.yml
+# (read 2026-11-10): server https://neuro.mancer.tech, paths /oai/v1/chat/completions,
+# /oai/v1/completions, /oai/v1/models (public; with a key also private models and discounts).
+# Auth: `Authorization: Bearer <key>`. SSE streaming ending in `data: [DONE]`; tools and tool_choice
+# on chat. Busy machines answer 429 at no cost; failed requests are refunded.
+id = "mancer"
+name = "Mancer"
+category = "uncensored"
+adapter = "openai_compat"
+base_url = "https://neuro.mancer.tech/oai/v1"
+auth = { kind = "bearer", env = "MANCER_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://mancer.tech/docs-api/"
+
+[privacy]
+tier = "unknown"
+retention = "The API docs make no statement about prompt logging or retention."
+jurisdiction = "US"

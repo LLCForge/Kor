@@ -1,0 +1,175 @@
+/* kor-ui bileşenleri (§23.5, ADR 0053). Yalnızca token: serbest #hex / px yok (scripts/design-check.ts). */
+
+/* Button: .btn stillerinin üstüne köşe/boşluk token'ları */
+.kor-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--kor-space-2);
+  border-radius: var(--kor-radius-chip);
+  font-family: var(--kor-font-ui);
+}
+.kor-btn.kor-btn-icon { padding: 0; aspect-ratio: 1; }
+.kor-btn.loading { cursor: progress; }
+
+/* Chip */
+.kor-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-chip);
+  background: var(--surface);
+  color: var(--text-soft);
+  font-size: var(--kor-text-13);
+}
+.kor-chip.selected { border-color: var(--kor-ember-mid); color: var(--text); }
+.kor-chip.disabled { opacity: 0.5; }
+.kor-chip-main {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kor-space-1);
+  min-width: 0;
+  padding: var(--kor-space-1) var(--kor-space-2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+button.kor-chip-main:hover:not(:disabled) { color: var(--text); background: var(--hover); border-radius: var(--kor-radius-chip); }
+.kor-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kor-chip-remove {
+  display: inline-flex;
+  padding: var(--kor-space-1);
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--kor-radius-chip);
+}
+.kor-chip-remove:hover { color: var(--text); background: var(--hover); }
+
+/* Select */
+.kor-select { display: inline-flex; flex-direction: column; gap: var(--kor-space-1); }
+.kor-select-label { font-size: var(--kor-text-12); color: var(--muted); }
+.kor-select select {
+  padding: var(--kor-space-1) var(--kor-space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-chip);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--kor-text-13);
+}
+.kor-select-hint { font-size: var(--kor-text-12); color: var(--muted); }
+
+/* Tooltip: 400 ms gecikme bileşende; görünüm burada */
+.kor-tooltip-anchor { position: relative; display: inline-flex; }
+.kor-tooltip {
+  position: absolute;
+  left: 50%;
+  z-index: var(--kor-z-popover, 50);
+  transform: translateX(-50%);
+  padding: var(--kor-space-1) var(--kor-space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-chip);
+  background: var(--overlay);
+  color: var(--text);
+  font-size: var(--kor-text-12);
+  /* Kısa ipucu tek satır; uzun olan (yol, model kimliği) pencere içinde sarar. */
+  width: max-content;
+  max-width: min(calc(var(--kor-space-7) * 8), calc(100vw - var(--kor-space-4)));
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  animation: kor-ui-fade var(--kor-dur-hover) var(--kor-ease);
+}
+.kor-tooltip.top { bottom: calc(100% + var(--kor-space-1)); }
+.kor-tooltip.bottom { top: calc(100% + var(--kor-space-1)); }
+
+/* Card */
+.kor-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kor-space-3);
+  padding: var(--kor-card-pad);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-card);
+  background: var(--surface);
+}
+.kor-card.raised { background: var(--raised); }
+.kor-card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--kor-space-2); }
+.kor-card-title { margin: 0; font-size: var(--kor-text-14); font-weight: 600; }
+.kor-card-actions { display: inline-flex; gap: var(--kor-space-1); }
+
+/* Segmented */
+.kor-segmented {
+  display: inline-flex;
+  padding: 1px;
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-chip);
+  background: var(--bg);
+}
+.kor-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kor-space-1);
+  padding: 0 var(--kor-space-2);
+  min-height: var(--kor-space-5);
+  border: 0;
+  border-radius: var(--kor-radius-chip);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--kor-text-12);
+}
+.kor-segment:hover:not(:disabled) { color: var(--text); }
+.kor-segment.checked { background: var(--raised); color: var(--text); box-shadow: inset 0 -1px 0 var(--kor-ember-mid); }
+
+/* Toast */
+.kor-toaster {
+  position: fixed;
+  right: var(--kor-space-5);
+  bottom: var(--kor-space-5);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: var(--kor-space-2);
+  max-width: min(calc(100vw - var(--kor-space-6)), calc(var(--kor-space-7) * 9));
+}
+.kor-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--kor-space-3);
+  padding: var(--kor-space-3) var(--kor-space-4);
+  border: 1px solid var(--border);
+  border-left: 1px solid var(--kor-info);
+  border-radius: var(--kor-radius-card);
+  background: var(--overlay);
+  color: var(--text);
+  font-size: var(--kor-text-13);
+  animation: kor-ui-fade var(--kor-dur-menu) var(--kor-ease);
+}
+.kor-toast.success { border-left-color: var(--kor-success); }
+.kor-toast.warning { border-left-color: var(--kor-warning); }
+.kor-toast.error { border-left-color: var(--kor-error); }
+.kor-toast-text { flex: 1; overflow-wrap: anywhere; }
+.kor-toast-close { display: inline-flex; padding: 0; border: 0; background: transparent; color: var(--muted); }
+.kor-toast-close:hover { color: var(--text); }
+
+/* Modal içeriği (kabuk mevcut .dialog) */
+.kor-modal { display: flex; flex-direction: column; gap: var(--kor-space-4); padding: var(--kor-space-5); }
+.kor-modal-title { margin: 0; font-size: var(--kor-text-20); }
+.kor-modal-desc { margin: 0; color: var(--muted); }
+.kor-modal-footer { display: flex; justify-content: flex-end; gap: var(--kor-space-2); }
+
+@keyframes kor-ui-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* Uygulama geneli `title` ipucu (title-tooltips.ts): pencereye göre konumlanır. */
+.kor-tooltip.kor-tooltip-floating {
+  position: fixed;
+  left: 0;
+  top: 0;
+  transform: none;
+  z-index: var(--kor-z-toast, 90);
+}
+.kor-tooltip.kor-tooltip-floating[hidden] { display: none; }

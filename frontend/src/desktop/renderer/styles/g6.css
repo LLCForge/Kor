@@ -1,0 +1,82 @@
+/* Grup 6 stilleri. Renkler için styles.css içindeki :root token'larını kullan. */
+
+/* ---------- Bağlam göstergesi (mesaj kutusu) ---------- */
+.g6-context-trigger { width: auto; gap: 4px; padding: 0 6px; }
+.g6-context-pct { font: var(--kor-text-12) var(--font-sans); font-variant-numeric: tabular-nums; color: var(--muted); }
+.g6-ring-fill { stroke: var(--muted); }
+.g6-level-high .g6-ring-fill { stroke: var(--warn); }
+.g6-level-full .g6-ring-fill { stroke: var(--del-text); }
+.g6-level-high .g6-context-pct { color: var(--warn); }
+.g6-level-full .g6-context-pct { color: var(--del-text); }
+.g6-bar-normal { background: var(--muted); }
+.g6-bar-high { background: var(--warn); }
+.g6-bar-full { background: var(--del-text); }
+.g6-note { margin: 0; font: var(--kor-text-12)/1.45 var(--font-sans); color: var(--subtle); }
+.usage-head .btn.small { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---------- Akıştaki sıkıştırma ayracı ---------- */
+.g6-compaction { padding: 10px 0; }
+.g6-compaction-line {
+  display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none;
+  color: var(--subtle); font: var(--kor-text-12) var(--font-sans);
+}
+.g6-compaction-line::-webkit-details-marker { display: none; }
+.g6-compaction-line::before, .g6-compaction-line::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.g6-compaction-line:hover { color: var(--text-soft); }
+.g6-compaction-summary {
+  margin-top: 10px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface); font-size: var(--kor-text-14);
+}
+/* Katlanmış eski bloklar DOM'dan çıktığı için ayraçta geri getirme düğmesi durur. */
+.g6-compaction-reveal {
+  display: flex; align-items: center; gap: 6px; margin: 0 auto 8px;
+  padding: 4px 12px; border: 1px solid var(--border); border-radius: 999px;
+  background: transparent; color: var(--subtle); font: var(--kor-text-12) var(--font-sans); cursor: pointer;
+}
+.g6-compaction-reveal:hover { color: var(--text); border-color: var(--text-soft); }
+
+/* ---------- Kenar çubuğu: harita durumu ---------- */
+.g6-map-icon { position: relative; display: inline-flex; flex-shrink: 0; }
+.g6-dot {
+  position: absolute; right: -3px; bottom: -2px; width: 7px; height: 7px; border-radius: 50%;
+  border: 1.5px solid var(--rail); background: var(--subtle);
+}
+.g6-dot-fresh { background: var(--add-text); }
+.g6-dot-stale { background: var(--warn); }
+.g6-dot-building { background: var(--accent); animation: dot-pulse 1.2s ease-in-out infinite; }
+
+/* ---------- Harita diyaloğu ---------- */
+.g6-map-dialog { width: min(560px, calc(100vw - 32px)); }
+.g6-map-dialog .btn { display: inline-flex; align-items: center; gap: 6px; }
+.g6-map-facts { display: flex; flex-direction: column; gap: 4px; font: var(--kor-text-14)/1.5 var(--font-sans); }
+.g6-map-facts p { margin: 0; }
+.g6-state { font-weight: 600; }
+.g6-state-fresh { color: var(--add-text); }
+.g6-state-stale { color: var(--warn); }
+.g6-state-none { color: var(--muted); }
+.g6-map-bar { background: var(--accent); }
+.g6-confirm {
+  display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--accent-soft); font: var(--kor-text-13)/1.5 var(--font-sans);
+}
+
+/* ---------- İlk açılış önerisi ---------- */
+.g6-map-prompt {
+  position: fixed; top: 56px; right: 16px; z-index: 30; display: flex; flex-direction: column; gap: 8px;
+  width: min(360px, calc(100vw - 32px)); padding: 14px 16px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+}
+.g6-map-prompt-title { display: flex; align-items: center; gap: 8px; margin: 0; font: 600 var(--kor-text-14) var(--font-sans); }
+.g6-map-prompt-actions { justify-content: flex-end; }
+
+/* Ayarlar > Bağlam: eşik alanı dar olsun */
+.g6-num { width: 120px !important; }
+/* Sıkıştırma sürerken ve özet düzenlemede */
+.g6-compaction-running { margin: 0 0 6px; font: var(--kor-text-12) var(--font-sans); color: var(--accent); }
+.g6-compaction-meta { font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g6-summary-edit { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; background: none; border: 0; padding: 0; color: var(--subtle); font: var(--kor-text-12) var(--font-sans); cursor: pointer; }
+.g6-summary-edit:hover { color: var(--text); }
+.g6-summary-editor { display: flex; flex-direction: column; gap: 8px; }
+.g6-summary-editor textarea { width: 100%; font: var(--kor-text-12)/1.55 var(--font-mono); resize: vertical; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
+.g6-summary-editor-actions { display: flex; gap: 8px; }

@@ -1,0 +1,1 @@
+[{"hwnd": 4321000, "title": "gedit", "process": "gedit", "pid": 4321, "x": 0, "y": 32, "w": 800, "h": 600, "state": "normal", "focused": true}, {"hwnd": 977001, "title": "Terminal", "process": "gnome-terminal-server", "pid": 977, "x": 10, "y": 10, "w": 700, "h": 400, "state": "minimized", "focused": false}]

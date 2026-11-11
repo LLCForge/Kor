@@ -1,0 +1,16 @@
+# Source: https://www.arliai.com/quick-start
+id = "arliai"
+name = "Arli AI"
+category = "uncensored"
+adapter = "openai_compat"
+base_url = "https://api.arliai.com/v1"
+auth = { kind = "bearer", env = "ARLIAI_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://www.arliai.com/quick-start"
+tags = ["no-log", "fixed-price"]
+[privacy]
+tier = "no_log"
+retention = "Provider markets a zero-log policy; no formal policy page found (verify)."
+jurisdiction = "US"

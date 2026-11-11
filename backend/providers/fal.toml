@@ -1,0 +1,20 @@
+# Source: https://fal.ai/models/openrouter/router/llms.txt - OpenAI-compatible LLM router,
+# "Authorization: Key $FAL_KEY". The same key drives every fal model through the queue API
+# (https://fal.ai/docs/model-apis/model-endpoints/queue) and model search/pricing
+# (https://fal.ai/docs/platform-apis/v1/models): see kor-providers/src/fal.rs, `kor media`,
+# and the agent tools image_generate / image_edit / video_generate / fal_run.
+id = "fal"
+name = "fal.ai (LLM router)"
+category = "aggregator"
+adapter = "openai_compat"
+base_url = "https://fal.run/openrouter/router/openai/v1"
+auth = { kind = "bearer", env = "FAL_KEY", prefix = "Key" }
+tool_calling = true
+verified = false
+docs = "https://fal.ai/models/openrouter/router/openai/v1/chat/completions"
+tags = ["media"]
+
+[privacy]
+tier = "unknown"
+retention = "No published retention statement for the LLM router found."
+jurisdiction = "US"

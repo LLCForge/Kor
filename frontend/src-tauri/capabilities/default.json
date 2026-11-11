@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Yalnızca ana webview (etiket main; alt webview'ler — önizleme, ajan tarayıcısı — hiçbir yetki almaz): kor_call komutu, kor:* olaylarını dinleme ve özel başlık çubuğu (sürükle/küçült/büyüt/kapat). Dosya/kabuk eklentileri arayüze açılmaz; her şey Rust üzerinden.",
+  "webviews": ["main"],
+  "permissions": [
+    "core:default",
+    "allow-kor-call",
+    "allow-kor-bytes",
+    "allow-kor-perf",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-close"
+  ]
+}

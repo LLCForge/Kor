@@ -1,0 +1,23 @@
+/* [g22] Model desteği: kabul edilen dosya tipleri, eklerin gönderiliş biçimi, araç modu. */
+.g22-trigger { gap: 4px; }
+.g22-trigger.active { color: var(--accent); }
+.g22-trigger.warn { color: var(--warn); }
+.g22-mode-name { font: var(--kor-text-13) var(--font-sans); }
+.g22-count.warn { background: var(--del-bg); color: var(--del-text); }
+
+.g22-menu { width: 340px; max-height: min(560px, 70vh); overflow-y: auto; }
+.g22-caps { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 10px 8px; padding: 0; list-style: none; }
+.g22-chip {
+  padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px;
+  font: var(--kor-text-12)/18px var(--font-sans); color: var(--muted);
+}
+.g22-chip.yes { border-color: transparent; background: var(--add-bg); color: var(--add-text); }
+.g22-chip.convert { border-color: transparent; background: var(--accent-soft); color: var(--accent); }
+.g22-chip.no { text-decoration: line-through; color: var(--subtle); }
+
+.g22-files { display: flex; flex-direction: column; gap: 4px; margin: 0 10px 8px; padding: 0; list-style: none; }
+.g22-files li { display: flex; align-items: center; justify-content: space-between; gap: 8px; font: var(--kor-text-12) var(--font-sans); }
+.g22-file-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-soft); font-family: var(--font-mono); }
+.g22-plan.native { background: var(--add-bg); color: var(--add-text); }
+.g22-plan.unsupported { background: var(--del-bg); color: var(--del-text); }
+.g22-error { color: var(--del-text); }

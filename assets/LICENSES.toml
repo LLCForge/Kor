@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# Licence of every file under assets/ (spec §22.1: brand assets are CC-BY-4.0, ADR 0064).
+# `just oss-check` fails on a file that no rule covers, or on a licence outside
+# scripts/oss-check.toml [licenses].assets. Rules are tried in order; the first matching glob wins.
+
+[[rule]]
+globs = ["sounds/*.wav"]
+license = "CC-BY-4.0"
+source = "Kor notification sounds, synthesised by Kor from the same tones as the desktop (scripts in the repository history); §28.4"
+
+[[rule]]
+globs = ["providers/abliteration.svg", "providers/abliteration-color.svg"]
+license = "LicenseRef-Trademark"
+source = "Abliteration.ai official mark, downloaded 2026-11-11 from https://abliteration.ai/_next/static/media/icon-abliteration.3-oj2d-d0yh5c.svg; sanitised (scripts/styles/ids removed, geometry and colours unchanged); nominative use only: providers/LICENSES.md"
+
+[[rule]]
+globs = ["providers/arliai.svg", "providers/arliai-color.svg"]
+license = "LicenseRef-Trademark"
+source = "Arli AI official mark, downloaded 2026-11-11 from https://www.arliai.com/arli_white.svg; sanitised (scripts/styles/ids removed, geometry and colours unchanged); nominative use only: providers/LICENSES.md"
+
+[[rule]]
+globs = ["providers/localai.svg", "providers/localai-color.svg"]
+license = "LicenseRef-Trademark"
+source = "LocalAI (Ettore Di Giacinto) official mark, downloaded 2026-11-11 from https://raw.githubusercontent.com/mudler/LocalAI/master/core/http/static/favicon.svg (official LocalAI repository); sanitised (scripts/styles/ids removed, geometry and colours unchanged); nominative use only: providers/LICENSES.md"
+
+[[rule]]
+globs = ["providers/mancer.svg", "providers/mancer-color.svg"]
+license = "LicenseRef-Trademark"
+source = "Mancer official mark, downloaded 2026-11-11 from https://mancer.tech/resources/Phantom%20Favicon.svg; sanitised (scripts/styles/ids removed, geometry and colours unchanged); nominative use only: providers/LICENSES.md"
+
+[[rule]]
+globs = ["providers/uncensoredllm.svg", "providers/uncensoredllm-color.svg"]
+license = "LicenseRef-Trademark"
+source = "UncensoredLLM.ai official mark, downloaded 2026-11-11 from https://uncensoredllm.ai/icon.svg; sanitised (scripts/styles/ids removed, geometry and colours unchanged); nominative use only: providers/LICENSES.md"
+
+[[rule]]
+globs = ["providers/*"]
+license = "MIT"
+source = "@lobehub/icons-static-svg 1.102.0 (MIT, (c) LobeHub), copied unchanged; trademark use: providers/LICENSES.md"
+
+[[rule]]
+globs = ["Figtree-*"]
+license = "OFL-1.1"
+source = "Figtree by Erik Kennedy, SIL Open Font License 1.1 (Figtree-OFL.txt)"
+
+[[rule]]
+globs = ["*.png", "*.svg", "*.ico", "*.icns", "*.gif"]
+license = "CC-BY-4.0"
+source = "Kor brand assets (logos, icons, spinners)"
+
+[[rule]]
+globs = ["*.ts", "*.tsx", "*.rs", "*.css", "*.json", "*.toml", "*.txt", "*.md", "intents/*", "panels/*"]
+license = "Apache-2.0 OR MIT"
+source = "Kor source: theme, banners, verbs, spinner code, intent and hosting-panel data"

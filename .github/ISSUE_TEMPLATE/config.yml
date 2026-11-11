@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/LLCForge/Kor/security/advisories/new
+    about: Report privately (SECURITY.md). Never in a public issue.
+  - name: Question or idea
+    url: https://github.com/LLCForge/Kor/discussions
+    about: Ask and discuss before opening a feature request.

@@ -1,0 +1,85 @@
+# Negative fixtures: ordinary coding/chat requests that must NOT route to a kor command.
+- { text: "parse fonksiyonundaki null hatasını düzelt", expect: null }
+- { text: "bu testteki hatayı düzelt", expect: null }
+- { text: "add a cost column to the invoice table", expect: null }
+- { text: "graph component'ine legend ekle", expect: null }
+- { text: "write a commit message parser", expect: null }
+- { text: "login sayfasındaki buton hizasını düzelt", expect: null }
+- { text: "kullanıcı servisine birim testi yaz", expect: null }
+- { text: "bu fonksiyonu daha okunur hale getir", expect: null }
+- { text: "readme dosyasına kurulum bölümü ekle", expect: null }
+- { text: "api'ye sayfalama ekle", expect: null }
+- { text: "maliyet hesaplama fonksiyonunda yuvarlama hatası var", expect: null }
+- { text: "sepet toplamını hesaplayan kodu yaz", expect: null }
+- { text: "grafik kütüphanesini recharts ile değiştir", expect: null }
+- { text: "bu react bileşenine dark mode desteği ekle", expect: null }
+- { text: "docker compose dosyasına redis servisi ekle", expect: null }
+- { text: "sandbox ortamı için yeni bir env değişkeni tanımla kodda", expect: null }
+- { text: "kullanıcı tablosuna created_at sütunu ekle modelde", expect: null }
+- { text: "bu regex neden eşleşmiyor", expect: null }
+- { text: "typescript tiplerini düzelt bu dosyada", expect: null }
+- { text: "deploy scriptindeki yazım hatasını düzelt", expect: null }
+- { text: "audit tablosu için bir orm modeli yaz", expect: null }
+- { text: "graf veri yapısını bağlı liste yerine dizi ile yaz", expect: null }
+- { text: "bu sorguyu daha hızlı hale getir", expect: null }
+- { text: "merhaba nasılsın", expect: null }
+- { text: "rust'ta lifetime ne demek", expect: null }
+- { text: "explain how async await works in javascript", expect: null }
+- { text: "fix the off by one error in the pagination helper", expect: null }
+- { text: "write unit tests for the cart service", expect: null }
+- { text: "refactor this function to use early returns", expect: null }
+- { text: "add a dark mode toggle to the settings page", expect: null }
+- { text: "the login form doesn't validate emails, fix that", expect: null }
+- { text: "implement a graph traversal with bfs", expect: null }
+- { text: "add a quality field to the product schema", expect: null }
+- { text: "write a function that calculates shipping cost", expect: null }
+- { text: "rename the variable foo to userCount everywhere", expect: null }
+- { text: "create a dockerfile for this node app", expect: null }
+- { text: "why is this useEffect running twice", expect: null }
+- { text: "add error handling to the fetch call", expect: null }
+- { text: "convert this class component to hooks", expect: null }
+- { text: "write a sql query that returns the top 10 customers", expect: null }
+- { text: "add a sandbox flag to the payment client config", expect: null }
+- { text: "build a dependency injection container in c#", expect: null }
+- { text: "the review page shows wrong dates, fix the formatting", expect: null }
+- { text: "add an audit trail model to the django app", expect: null }
+- { text: "write a changelog component for the website", expect: null }
+- { text: "make the stats card responsive on mobile", expect: null }
+- { text: "add a doctor role to the hospital app permissions", expect: null }
+- { text: "write a cli parser for the update subcommand in my tool", expect: null }
+- { text: "the dead letter queue isn't draining, why", expect: null }
+- { text: "optimize this loop for performance", expect: null }
+- { text: "add types for the session object in the express app", expect: null }
+- { text: "translate this error message to turkish", expect: null }
+- { text: "what is the difference between let and const", expect: null }
+- { text: "hi there, how are you", expect: null }
+- { text: "write a python script that renames files", expect: null }
+- { text: "add a voice recording button to the chat ui", expect: null }
+- { text: "implement undo and redo in the text editor component", expect: null }
+- { text: "add a find and replace feature to the editor", expect: null }
+- { text: "the explain button in the ui does nothing, fix the handler", expect: null }
+- { text: "add impact analysis section to the design doc", expect: null }
+- { text: "write integration tests for the deploy controller", expect: null }
+- { text: "corrige le bug dans la fonction de tri", expect: null }
+- { text: "écris des tests unitaires pour le service panier", expect: null }
+- { text: "ajoute une colonne coût à la table des factures", expect: null }
+- { text: "refactorise ce composant react", expect: null }
+- { text: "pourquoi ce test échoue sur la ligne 42", expect: null }
+- { text: "ajoute la pagination à l'api des utilisateurs", expect: null }
+- { text: "explique moi comment fonctionnent les closures", expect: null }
+- { text: "bonjour, ça va ?", expect: null }
+- { text: "crée un graphique en barres pour les ventes", expect: null }
+- { text: "écris un parser de messages de commit", expect: null }
+- { text: "graph bileşenindeki tooltip rengini değiştir", expect: null }
+- { text: "maliyet raporu sayfasına filtre ekle", expect: null }
+- { text: "commit geçmişini gösteren bir react bileşeni yaz", expect: null }
+- { text: "doctor modelinin validasyonunu düzelt", expect: null }
+- { text: "bu dosyadaki import sırasını düzenle", expect: null }
+- { text: "kullanıcı kaydı için e-posta doğrulama ekle", expect: null }
+- { text: "jwt doğrulama middleware'i yaz", expect: null }
+- { text: "bu sınıfı iki parçaya böl", expect: null }
+- { text: "neden bu döngü sonsuza gidiyor", expect: null }
+- { text: "fiyat hesaplayan servise indirim kuralı ekle", expect: null }
+- { text: "add a cost estimate tooltip to the pricing page", expect: null }
+- { text: "write a review component that shows star ratings", expect: null }
+- { text: "fix the null pointer in the graph renderer", expect: null }

@@ -1,0 +1,7 @@
+{"nodes":[
+ {"id":1,"callFrame":{"functionName":"(root)","scriptId":"0","url":"","lineNumber":-1,"columnNumber":-1},"hitCount":0,"children":[2,3]},
+ {"id":2,"callFrame":{"functionName":"(program)","scriptId":"0","url":"","lineNumber":-1,"columnNumber":-1},"hitCount":1},
+ {"id":3,"callFrame":{"functionName":"","scriptId":"9","url":"file:///C:/proj/a.js","lineNumber":0,"columnNumber":0},"hitCount":1,"children":[4]},
+ {"id":4,"callFrame":{"functionName":"fib","scriptId":"9","url":"file:///C:/proj/a.js","lineNumber":0,"columnNumber":12},"hitCount":3,"children":[5]},
+ {"id":5,"callFrame":{"functionName":"fib","scriptId":"9","url":"file:///C:/proj/a.js","lineNumber":0,"columnNumber":12},"hitCount":1}
+],"startTime":0,"endTime":6000,"samples":[2,3,4,4,4,5],"timeDeltas":[1000,1000,1000,1000,1000,1000]}

@@ -1,0 +1,16 @@
+# Source: https://abacus.ai/help/developer-platform/route-llm/chat-completions/
+id = "abacus"
+name = "Abacus.ai RouteLLM"
+category = "aggregator"
+adapter = "openai_compat"
+base_url = "https://routellm.abacus.ai/v1"
+auth = { kind = "bearer", env = "ABACUS_API_KEY" }
+static_models = ["route-llm"]
+tool_calling = true
+verified = false
+docs = "https://abacus.ai/help/developer-platform/route-llm/chat-completions/"
+# No documented /models endpoint; RouteLLM picks the model for route-llm.
+[privacy]
+tier = "unknown"
+retention = "No published retention statement found."
+jurisdiction = "US"

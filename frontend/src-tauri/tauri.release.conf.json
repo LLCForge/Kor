@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "externalBin": ["binaries/kor"],
+    "resources": { "../extension/dist/": "extension/", "integrations/": "integrations/" },
+    "windows": {
+      "nsis": { "installerHooks": "windows/hooks.nsh" },
+      "wix": { "fragmentPaths": ["windows/kor-cli.wxs"], "componentRefs": ["KorCliPath"] }
+    },
+    "linux": {
+      "deb": { "postInstallScript": "linux/postinst.sh", "preRemoveScript": "linux/prerm.sh" },
+      "rpm": { "postInstallScript": "linux/postinst.sh", "preRemoveScript": "linux/prerm.sh" }
+    }
+  }
+}

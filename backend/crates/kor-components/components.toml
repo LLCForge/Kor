@@ -1,0 +1,496 @@
+# Kor's on-demand components (Master Build Prompt §24.2). Every sha256 below was taken from the
+# publisher's own checksum list or computed by downloading the exact file (see
+# docs/decisions/0007-components.md). Never edit a hash by hand without re-downloading the file.
+#
+# target = "<os>-<arch>[-musl]" (os: windows, linux, macos; arch: x86_64, aarch64) or "any".
+# archive = "zip" | "tar.gz" | "tar.xz" | "file". `exe` is the path inside the extracted archive
+# (for "file": the name the download is saved under).
+
+[[component]]
+name = "python"
+version = "3.13.18+20261026"
+about = "CPython 3.13.18 (python-build-standalone, install_only)"
+
+[[component.target]]
+target = "windows-x86_64"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-x86_64-pc-windows-msvc-install_only.tar.gz"
+sha256 = "ebe90cc1dce2dd2d7afa1f0aa9b6c269c7c0174aeabdc6a801381602b7283424"
+size = 48077770
+archive = "tar.gz"
+exe = "python/python.exe"
+
+[[component.target]]
+target = "windows-aarch64"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-aarch64-pc-windows-msvc-install_only.tar.gz"
+sha256 = "13f8bb6ff296a826dd903ea732255ca02fc3a4db4287c2b0ebe0781360b6028d"
+size = 45375836
+archive = "tar.gz"
+exe = "python/python.exe"
+
+[[component.target]]
+target = "linux-x86_64"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-x86_64-unknown-linux-gnu-install_only.tar.gz"
+sha256 = "126343c54daff4068efc1ac269518d0cc202d57857794948103dd1454e8881be"
+size = 76935188
+archive = "tar.gz"
+exe = "python/bin/python3"
+
+[[component.target]]
+target = "linux-aarch64"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-aarch64-unknown-linux-gnu-install_only.tar.gz"
+sha256 = "b48451865bde9a39e2f3e71d7fdcbf1f32615f50f24d78dc50d04ede6501cf81"
+size = 58894021
+archive = "tar.gz"
+exe = "python/bin/python3"
+
+[[component.target]]
+target = "linux-x86_64-musl"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-x86_64-unknown-linux-musl-install_only.tar.gz"
+sha256 = "73311f36fbb303345d10d658b6a9f939de9c51a2eed7997e257d55c12a9d4293"
+size = 53130395
+archive = "tar.gz"
+exe = "python/bin/python3"
+
+[[component.target]]
+target = "linux-aarch64-musl"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-aarch64-unknown-linux-musl-install_only.tar.gz"
+sha256 = "2ee36197b4a57926ed6052ce1c54eae1e34a2d75c8fdaf8a52c5e7ffda00f8d4"
+size = 52938434
+archive = "tar.gz"
+exe = "python/bin/python3"
+
+[[component.target]]
+target = "macos-x86_64"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-x86_64-apple-darwin-install_only.tar.gz"
+sha256 = "708be9e7df297f68bdae589ea9e62a621db5abe7708f79e851c41410347452d1"
+size = 25155145
+archive = "tar.gz"
+exe = "python/bin/python3"
+
+[[component.target]]
+target = "macos-aarch64"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20261026/cpython-3.13.18%2B20261026-aarch64-apple-darwin-install_only.tar.gz"
+sha256 = "e5af2fde6a937a0e0c795a0c595c4efb70578d57463a2657c819992b9b9acbac"
+size = 25394044
+archive = "tar.gz"
+exe = "python/bin/python3"
+
+[[component]]
+name = "node"
+version = "24.22.2"
+about = "Node.js 24.22.2 LTS (nodejs.org)"
+
+[[component.target]]
+target = "windows-x86_64"
+url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2-win-x64.zip"
+sha256 = "ca1bff5d8ead13c9f2ea404a176db46bd430704d5b5113734049fa365e7799e2"
+size = 37754834
+archive = "zip"
+exe = "node-v24.22.2-win-x64/node.exe"
+
+[[component.target]]
+target = "windows-aarch64"
+url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2-win-arm64.zip"
+sha256 = "f47968c213105077f64c6510f007632c0ca2574802a0b5067c327c49abe1c468"
+size = 33789289
+archive = "zip"
+exe = "node-v24.22.2-win-arm64/node.exe"
+
+[[component.target]]
+target = "linux-x86_64"
+url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2-linux-x64.tar.xz"
+sha256 = "48cc0e21e048790e54c0cf5749c2725005313d652651c40b7a21feb9697aaf75"
+size = 32039312
+archive = "tar.xz"
+exe = "node-v24.22.2-linux-x64/bin/node"
+
+[[component.target]]
+target = "linux-aarch64"
+url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2-linux-arm64.tar.xz"
+sha256 = "eb187837a2230d4047161ac0be008584e16b46f726e9c9490ee35dc6b17d9ba8"
+size = 30968168
+archive = "tar.xz"
+exe = "node-v24.22.2-linux-arm64/bin/node"
+
+[[component.target]]
+target = "linux-x86_64-musl"
+url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2-linux-x64-musl.tar.xz"
+sha256 = "d1601d1defdbb0f02963c89bd979e858aa97f0a3d08a55a1eeb4ddd2b8fa374a"
+size = 33868324
+archive = "tar.xz"
+exe = "node-v24.22.2-linux-x64-musl/bin/node"
+
+[[component.target]]
+target = "macos-x86_64"
+url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2-darwin-x64.tar.gz"
+sha256 = "d5e336d588c45be0c37dbd52cc29895593009ca4997a77a1fd02815131ed0e52"
+size = 54383415
+archive = "tar.gz"
+exe = "node-v24.22.2-darwin-x64/bin/node"
+
+[[component.target]]
+target = "macos-aarch64"
+url = "https://nodejs.org/dist/v24.22.2/node-v24.22.2-darwin-arm64.tar.gz"
+sha256 = "aa9549349e47dffaa42dcf95d6e06ade8c4bdafc980979883b88767670df385a"
+size = 53068959
+archive = "tar.gz"
+exe = "node-v24.22.2-darwin-arm64/bin/node"
+
+# PDF page renderer: the PDFium shared library, loaded by `kor-tools` (pdfium-render, feature
+# pdfium_8125). The build number must match that feature.
+[[component]]
+name = "pdfium"
+version = "8125"
+about = "PDFium chromium/8125 (bblanchon/pdfium-binaries)"
+
+[[component.target]]
+target = "windows-x86_64"
+url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8125/pdfium-win-x64.tgz"
+sha256 = "9a964261760cff52570aabf038ab346d3a5034dd8b30d0d5fe8861235d356b8b"
+size = 3904987
+archive = "tar.gz"
+exe = "bin/pdfium.dll"
+
+[[component.target]]
+target = "windows-aarch64"
+url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8125/pdfium-win-arm64.tgz"
+sha256 = "d394ba61991fb53f4d87f70988035f337d9e73f2bd2c3c1b966df8c43fcabb05"
+size = 3654486
+archive = "tar.gz"
+exe = "bin/pdfium.dll"
+
+[[component.target]]
+target = "linux-x86_64"
+url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8125/pdfium-linux-x64.tgz"
+sha256 = "e1c3ce6e270cb5e0c20816b379ad9f2c1309972697c505f508de92bf5e7d6659"
+size = 3828800
+archive = "tar.gz"
+exe = "lib/libpdfium.so"
+
+[[component.target]]
+target = "linux-aarch64"
+url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8125/pdfium-linux-arm64.tgz"
+sha256 = "8b8818f2ec57d1b213d952ca6d7f0ffeca9d0110487d0e20ad83ba918bc92efa"
+size = 3728574
+archive = "tar.gz"
+exe = "lib/libpdfium.so"
+
+[[component.target]]
+target = "linux-x86_64-musl"
+url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8125/pdfium-linux-musl-x64.tgz"
+sha256 = "280e965dd262d22e7c34e5eda1052a072553db50fa4e92be3399ac484e43eb39"
+size = 7385868
+archive = "tar.gz"
+exe = "lib/libpdfium.so"
+
+[[component.target]]
+target = "linux-aarch64-musl"
+url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8125/pdfium-linux-musl-arm64.tgz"
+sha256 = "d13a4e6e7863b9223f80a0cf55421d929e51943a3e39f34b4b7ae5446b1ce764"
+size = 7258434
+archive = "tar.gz"
+exe = "lib/libpdfium.so"
+
+[[component.target]]
+target = "macos-x86_64"
+url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8125/pdfium-mac-x64.tgz"
+sha256 = "8a5193535b80c7215d8932f6647ae5097465b6dba2811602c21e120c2af112b0"
+size = 3749070
+archive = "tar.gz"
+exe = "lib/libpdfium.dylib"
+
+[[component.target]]
+target = "macos-aarch64"
+url = "https://github.com/bblanchon/pdfium-binaries/releases/download/chromium/8125/pdfium-mac-arm64.tgz"
+sha256 = "4939bd935ac83ddc09a3a4f038bc43a19cea1660316a3667f26cb07a070e139d"
+size = 3540999
+archive = "tar.gz"
+exe = "lib/libpdfium.dylib"
+
+# No publisher ships a portable (non-installer, no-admin) Tesseract build for all targets. The
+# archives will come from Kor's own release repo (LLCForge/kor-components); until they are
+# published and pinned here, `ensure("tesseract")` reports that no build exists for the target.
+[[component]]
+name = "tesseract"
+version = "5.5.1"
+about = "Tesseract OCR engine (Kor build, not yet published)"
+
+[[component]]
+name = "tesseract-lang-tur"
+version = "4.1.0"
+about = "Tesseract Turkish model (tessdata_fast 4.1.0)"
+
+[[component.target]]
+target = "any"
+url = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0/tur.traineddata"
+sha256 = "7393381111e1152420fc4092cb44eef4237580d21b92bf30d7d221aad192c6b7"
+size = 4550554
+archive = "file"
+exe = "tur.traineddata"
+
+[[component]]
+name = "tesseract-lang-eng"
+version = "4.1.0"
+about = "Tesseract English model (tessdata_fast 4.1.0)"
+
+[[component.target]]
+target = "any"
+url = "https://raw.githubusercontent.com/tesseract-ocr/tessdata_fast/4.1.0/eng.traineddata"
+sha256 = "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+size = 4113088
+archive = "file"
+exe = "eng.traineddata"
+
+# Local text embeddings (kor-memory `embed`, ADR 0023): intfloat/multilingual-e5-small (MIT) at
+# revision 614241f6, the f32 weights and the tokenizer. sha256 and size are the files' Hugging Face
+# LFS metadata (api/models/intfloat/multilingual-e5-small/tree/<rev>), checked by downloading.
+[[component]]
+name = "embed-e5-small-tokenizer"
+version = "614241f6"
+about = "multilingual-e5-small tokenizer (Hugging Face, MIT)"
+
+[[component.target]]
+target = "any"
+url = "https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3/tokenizer.json"
+sha256 = "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39"
+size = 17082730
+archive = "file"
+exe = "tokenizer.json"
+
+[[component]]
+name = "embed-e5-small"
+version = "614241f6"
+about = "Local text embeddings: multilingual-e5-small, 384 dims, CPU (Hugging Face, MIT)"
+requires = ["embed-e5-small-tokenizer"]
+
+[[component.target]]
+target = "any"
+url = "https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3/model.safetensors"
+sha256 = "1a55775f53449dac10a2bcbc312469fac40b96d53198c407081a831f81c98477"
+size = 470641600
+archive = "file"
+exe = "model.safetensors"
+
+# Chrome for Testing has no Windows-on-Arm build: Windows arm64 runs the x64 build under
+# emulation. No musl build exists.
+[[component]]
+name = "chromium"
+version = "157.0.8103.50"
+about = "Chrome for Testing headless shell 157.0.8103.50 (stable)"
+
+[[component.target]]
+target = "windows-x86_64"
+url = "https://storage.googleapis.com/chrome-for-testing-public/157.0.8103.50/win64/chrome-headless-shell-win64.zip"
+sha256 = "9e59432baf484387bdc9cc4a8efca499fb558aeda93e536eb8b859a065ddb884"
+size = 126512350
+archive = "zip"
+exe = "chrome-headless-shell-win64/chrome-headless-shell.exe"
+
+[[component.target]]
+target = "windows-aarch64"
+url = "https://storage.googleapis.com/chrome-for-testing-public/157.0.8103.50/win64/chrome-headless-shell-win64.zip"
+sha256 = "9e59432baf484387bdc9cc4a8efca499fb558aeda93e536eb8b859a065ddb884"
+size = 126512350
+archive = "zip"
+exe = "chrome-headless-shell-win64/chrome-headless-shell.exe"
+
+[[component.target]]
+target = "linux-x86_64"
+url = "https://storage.googleapis.com/chrome-for-testing-public/157.0.8103.50/linux64/chrome-headless-shell-linux64.zip"
+sha256 = "7bf0d41e424efd1d6281c4162993ab9dc5de92fac213c211614905a71c057d0f"
+size = 128166087
+archive = "zip"
+exe = "chrome-headless-shell-linux64/chrome-headless-shell"
+
+[[component.target]]
+target = "linux-aarch64"
+url = "https://storage.googleapis.com/chrome-for-testing-public/157.0.8103.50/linux-arm64/chrome-headless-shell-linux-arm64.zip"
+sha256 = "55add1fa634756811fd644094ec226fc7e405be698fb07dbf0634bca689e293a"
+size = 128169705
+archive = "zip"
+exe = "chrome-headless-shell-linux-arm64/chrome-headless-shell"
+
+[[component.target]]
+target = "macos-x86_64"
+url = "https://storage.googleapis.com/chrome-for-testing-public/157.0.8103.50/mac-x64/chrome-headless-shell-mac-x64.zip"
+sha256 = "886beb07d8237b8acc2b879843a3506b3a56284264b82c806c7d80546e24e0ad"
+size = 110442622
+archive = "zip"
+exe = "chrome-headless-shell-mac-x64/chrome-headless-shell"
+
+[[component.target]]
+target = "macos-aarch64"
+url = "https://storage.googleapis.com/chrome-for-testing-public/157.0.8103.50/mac-arm64/chrome-headless-shell-mac-arm64.zip"
+sha256 = "082e3fe8fcfac75aec2ef0949d70e8d2254a99ea465450e287e6c06a3f1863ed"
+size = 104775379
+archive = "zip"
+exe = "chrome-headless-shell-mac-arm64/chrome-headless-shell"
+
+# llama.cpp server (ggml-org/llama.cpp release b12244, CPU builds; macOS builds include Metal).
+# sha256 = the `digest` GitHub publishes for each release asset (ADR 0034). The win-cpu-x64,
+# ubuntu-x64 and macos-arm64 archives were also downloaded and hashed. No musl build exists.
+[[component]]
+name = "llama-server"
+version = "b12244"
+about = "llama.cpp server b12244 (local OpenAI-compatible model runtime, CPU/Metal)"
+
+[[component.target]]
+target = "windows-x86_64"
+url = "https://github.com/ggml-org/llama.cpp/releases/download/b12244/llama-b12244-bin-win-cpu-x64.zip"
+sha256 = "318f11fadcbc3a86541ec55d9930cc76646c6b8d2ff18798c8477e9ff0dc452a"
+size = 24930349
+archive = "zip"
+exe = "llama-server.exe"
+
+[[component.target]]
+target = "windows-aarch64"
+url = "https://github.com/ggml-org/llama.cpp/releases/download/b12244/llama-b12244-bin-win-cpu-arm64.zip"
+sha256 = "f22c55525593b93922e6acc40eeb19d1d1fc69eed6bbb63a321485d78eeac006"
+size = 13280461
+archive = "zip"
+exe = "llama-server.exe"
+
+[[component.target]]
+target = "linux-x86_64"
+url = "https://github.com/ggml-org/llama.cpp/releases/download/b12244/llama-b12244-bin-ubuntu-x64.tar.gz"
+sha256 = "c1d7e7f31b5c43f3e5d44f667b4d57104217be3e5f2060320cd3735651238849"
+size = 23158204
+archive = "tar.gz"
+exe = "llama-b12244/llama-server"
+
+[[component.target]]
+target = "linux-aarch64"
+url = "https://github.com/ggml-org/llama.cpp/releases/download/b12244/llama-b12244-bin-ubuntu-arm64.tar.gz"
+sha256 = "cb00825e1d4b51a674ef1aa92af5445852719ed54c79bfe66675f0daca69efa1"
+size = 18802425
+archive = "tar.gz"
+exe = "llama-b12244/llama-server"
+
+[[component.target]]
+target = "macos-x86_64"
+url = "https://github.com/ggml-org/llama.cpp/releases/download/b12244/llama-b12244-bin-macos-x64.tar.gz"
+sha256 = "e3eb4faf62a593efe838599083cf71b5e1de82393b5c234810d11cea37e28b4b"
+size = 12490567
+archive = "tar.gz"
+exe = "llama-b12244/llama-server"
+
+[[component.target]]
+target = "macos-aarch64"
+url = "https://github.com/ggml-org/llama.cpp/releases/download/b12244/llama-b12244-bin-macos-arm64.tar.gz"
+sha256 = "79ae4ca84303cfae2e2c573a6e0b8aa79b21f35c654cc67bea7c079028fcd41f"
+size = 16742962
+archive = "tar.gz"
+exe = "llama-b12244/llama-server"
+
+# GGUF chat models for `kor offline init` (names start with `model-`). Pinned Hugging Face
+# revisions; sha256 and size from the LFS metadata (`/api/models/<repo>/tree/<rev>`). The
+# Qwen3-0.6B file was downloaded, hashed and served by llama-server b12244. All Apache-2.0.
+[[component]]
+name = "model-qwen3-0-6b"
+version = "23749fef"
+about = "Qwen3 0.6B Q8_0 GGUF (very small, quick tests and weak machines)"
+
+[[component.target]]
+target = "any"
+url = "https://huggingface.co/Qwen/Qwen3-0.6B-GGUF/resolve/23749fefcc72300e3a2ad315e1317431b06b590a/Qwen3-0.6B-Q8_0.gguf"
+sha256 = "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+size = 639446688
+archive = "file"
+exe = "Qwen3-0.6B-Q8_0.gguf"
+
+[[component]]
+name = "model-qwen3-4b"
+version = "bc640142"
+about = "Qwen3 4B Q4_K_M GGUF (8 GB RAM, tool calling)"
+
+[[component.target]]
+target = "any"
+url = "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/bc640142c66e1fdd12af0bd68f40445458f3869b/Qwen3-4B-Q4_K_M.gguf"
+sha256 = "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5"
+size = 2497280256
+archive = "file"
+exe = "Qwen3-4B-Q4_K_M.gguf"
+
+[[component]]
+name = "model-qwen3-8b"
+version = "7c41481f"
+about = "Qwen3 8B Q4_K_M GGUF (16 GB RAM, tool calling)"
+
+[[component.target]]
+target = "any"
+url = "https://huggingface.co/Qwen/Qwen3-8B-GGUF/resolve/7c41481f57cb95916b40956ab2f0b139b296d974/Qwen3-8B-Q4_K_M.gguf"
+sha256 = "d98cdcbd03e17ce47681435b5150e34c1417f50b5c0019dd560e4882c5745785"
+size = 5027783488
+archive = "file"
+exe = "Qwen3-8B-Q4_K_M.gguf"
+
+[[component]]
+name = "model-qwen25-coder-7b"
+version = "13fb94bf"
+about = "Qwen2.5 Coder 7B Instruct Q4_K_M GGUF (16 GB RAM, code)"
+
+[[component.target]]
+target = "any"
+url = "https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/13fb94bfda8c8cf22497dc57b78f391a9acb426a/qwen2.5-coder-7b-instruct-q4_k_m.gguf"
+sha256 = "509287f78cb4d4cf6b3843734733b914b2c158e43e22a7f4bf5e963800894d3c"
+size = 4683073536
+archive = "file"
+exe = "qwen2.5-coder-7b-instruct-q4_k_m.gguf"
+
+# `kor voice` (spec §10, ADR 0048): whisper.cpp v1.9.2 official release builds (CPU). sha256 = the
+# `digest` GitHub publishes per asset; the win x64, ubuntu x64 and ubuntu arm64 archives were also
+# downloaded and hashed (all match). Windows on Arm runs the x64 build under emulation. There is
+# no macOS command-line build (only an xcframework): macOS uses `whisper-cli` from PATH
+# (Homebrew `whisper-cpp`). No musl build exists.
+[[component]]
+name = "whisper"
+version = "1.9.2"
+about = "whisper.cpp 1.9.2 speech-to-text (local, CPU)"
+
+[[component.target]]
+target = "windows-x86_64"
+url = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.9.2/whisper-bin-x64.zip"
+sha256 = "49dcc16de826f20bd53d44f947a1ae49dfa81f86cad67a64d80820cb192d674a"
+size = 8194445
+archive = "zip"
+exe = "Release/whisper-cli.exe"
+
+[[component.target]]
+target = "windows-aarch64"
+url = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.9.2/whisper-bin-x64.zip"
+sha256 = "49dcc16de826f20bd53d44f947a1ae49dfa81f86cad67a64d80820cb192d674a"
+size = 8194445
+archive = "zip"
+exe = "Release/whisper-cli.exe"
+
+[[component.target]]
+target = "linux-x86_64"
+url = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.9.2/whisper-bin-ubuntu-x64.tar.gz"
+sha256 = "46811a3ecf584307480a220b9ef5ff81b7b22dc41577cbc274ce3afc61f753b1"
+size = 9497583
+archive = "tar.gz"
+exe = "whisper-bin-ubuntu-x64/whisper-cli"
+
+[[component.target]]
+target = "linux-aarch64"
+url = "https://github.com/ggml-org/whisper.cpp/releases/download/v1.9.2/whisper-bin-ubuntu-arm64.tar.gz"
+sha256 = "7e26fa6a36d9174d5c0bf033ccbc026c3b5e569e2ee787058241346ef5392719"
+size = 4572842
+archive = "tar.gz"
+exe = "whisper-bin-ubuntu-arm64/whisper-cli"
+
+# Multilingual Whisper base model (MIT) in ggml format, ggerganov/whisper.cpp at revision
+# 5359861c. sha256 and size are the Hugging Face LFS metadata (`/api/models/<repo>/tree/<rev>`);
+# the file was downloaded, hashed and used by whisper-cli 1.9.2 on Windows x64.
+[[component]]
+name = "whisper-model-base"
+version = "5359861c"
+about = "Whisper base multilingual speech model, ggml (Hugging Face, MIT)"
+
+[[component.target]]
+target = "any"
+url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.bin"
+sha256 = "60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe"
+size = 147951465
+archive = "file"
+exe = "ggml-base.bin"

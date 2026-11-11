@@ -1,0 +1,37 @@
+/* [temel] Zengin içerik güvenli önizleme (SandboxedPreview) ortak stilleri. */
+.g-rich-preview {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.g-rich-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+}
+.g-rich-run {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--hover);
+  color: var(--text);
+  font: var(--kor-text-13) var(--font-sans);
+  cursor: pointer;
+}
+.g-rich-run:hover {
+  background: var(--accent-soft);
+}
+.g-rich-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  color: var(--subtle);
+  font: var(--kor-text-13) var(--font-sans);
+}

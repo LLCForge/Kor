@@ -1,0 +1,16 @@
+# Source: https://console.groq.com/docs/openai
+id = "groq"
+name = "Groq"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.groq.com/openai/v1"
+auth = { kind = "bearer", env = "GROQ_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://console.groq.com/docs/openai"
+tags = ["low-latency"]
+[privacy]
+tier = "no_train"
+retention = "Provider states API data is not used for training (verify)."
+jurisdiction = "US"

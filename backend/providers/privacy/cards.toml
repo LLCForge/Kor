@@ -1,0 +1,131 @@
+# Provider privacy cards (spec §31.2, ADR 0057).
+#
+# Rule: every value below is what the cited page states, read on the `retrieved` date. A field the
+# page does not state is left out and shown as "unknown" ("bilinmiyor"); nothing is inferred.
+# Local providers need no entry: they never send data anywhere (training "no", retention 0,
+# region "local" by construction).
+#
+# training:        "no" | "opt-out" (used unless you opt out) | "yes"
+# retention_days:  default retention of API inputs/outputs in days (0 = none); or
+# retention = "indefinite"
+# zdr:             "required" (zero retention only by agreement/approval) | "not-needed"
+# region:          where API data is processed by default: "eu" | "us" | "tr" | "cn" | "other"
+# eu_residency:    an EU processing option exists (may need a plan or approval)
+# gateway:         the provider routes to other hosts; the model vendor is shown as sub-processor
+# notes:           facts from the same pages that do not fit a field (English; shown as is)
+
+[[provider]]
+id = "anthropic"
+training = "no"
+retention_days = 30
+zdr = "required"
+notes = ["Inputs/outputs flagged under the Usage Policy may be kept up to 2 years."]
+sources = [
+  { url = "https://www.anthropic.com/legal/commercial-terms", retrieved = "2026-11-10", quote = "Anthropic may not train models on Customer Content from Services." },
+  { url = "https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data", retrieved = "2026-11-10", quote = "automatically delete inputs and outputs on our backend within 30 days" },
+]
+
+[[provider]]
+id = "openai"
+training = "no"
+retention_days = 30
+zdr = "required"
+eu_residency = true
+notes = ["EU processing (eu.api.openai.com) needs approval for abuse-monitoring controls."]
+sources = [
+  { url = "https://developers.openai.com/api/docs/guides/your-data", retrieved = "2026-11-10", quote = "not used to train or improve OpenAI models" },
+]
+
+[[provider]]
+id = "google"
+# The free tier trains on inputs, the paid tier does not; Kor cannot see the billing tier, so the
+# card shows the weaker case and says so in the note.
+training = "yes"
+region = "other"
+notes = ["Paid tier: prompts are not used for training (free tier: they are)."]
+sources = [
+  { url = "https://aistudio.google.com/docs/terms", retrieved = "2026-11-10", quote = "Google uses the content you submit to the Services" },
+]
+
+[[provider]]
+id = "mistral"
+zdr = "required"
+notes = ["Zero retention: pay-as-you-go, stateless endpoints, approved on request."]
+sources = [
+  { url = "https://help.mistral.ai/en/articles/347612-can-i-activate-zero-data-retention-zdr", retrieved = "2026-11-10", quote = "we will review your request and, at our discretion, approve or deny it" },
+]
+
+[[provider]]
+id = "codestral"
+zdr = "required"
+notes = ["Mistral's Codestral endpoint; Mistral's zero-retention rules apply."]
+sources = [
+  { url = "https://help.mistral.ai/en/articles/347612-can-i-activate-zero-data-retention-zdr", retrieved = "2026-11-10", quote = "we will review your request and, at our discretion, approve or deny it" },
+]
+
+[[provider]]
+id = "deepseek"
+region = "cn"
+sources = [
+  { url = "https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html", retrieved = "2026-11-10", quote = "we directly collect, process and store your Personal Data in People's Republic of China" },
+]
+
+[[provider]]
+id = "groq"
+retention_days = 30
+zdr = "not-needed"
+region = "us"
+notes = ["Inference requests are not retained by default; reliability/abuse logs up to 30 days. ZDR is a self-serve setting."]
+sources = [
+  { url = "https://console.groq.com/docs/your-data", retrieved = "2026-11-10", quote = "By default, Groq does not retain customer data for inference requests." },
+]
+
+[[provider]]
+id = "openrouter"
+gateway = true
+eu_residency = true
+notes = ["Training and retention depend on the host OpenRouter routes to; EU routing on Business/Enterprise plans."]
+sources = [
+  { url = "https://openrouter.ai/docs/features/privacy-and-logging", retrieved = "2026-11-10", quote = "prompts will not be trained on, but there are exceptions" },
+]
+
+[[provider]]
+id = "together"
+training = "no"
+zdr = "not-needed"
+notes = ["Zero retention by choosing not to store prompts in the account settings."]
+sources = [
+  { url = "https://www.together.ai/privacy", retrieved = "2026-11-10", quote = "will not be used to train the Company's models without your explicit opt-in" },
+]
+
+[[provider]]
+id = "fireworks"
+retention_days = 0
+zdr = "not-needed"
+notes = ["Open models; the Responses API stores conversations up to 30 days when store=true."]
+sources = [
+  { url = "https://docs.fireworks.ai/guides/security_compliance/data_handling", retrieved = "2026-11-10", quote = "does not log or store prompt or generation data" },
+]
+
+[[provider]]
+id = "cohere"
+training = "opt-out"
+retention_days = 30
+zdr = "required"
+sources = [
+  { url = "https://cohere.com/data-usage-policy", retrieved = "2026-11-10", quote = "We automatically delete logged prompts and generations after 30 days." },
+]
+
+[[provider]]
+id = "cerebras"
+region = "other"
+sources = [
+  { url = "https://www.cerebras.ai/privacy-policy", retrieved = "2026-11-10", quote = "may be stored and processed in the United States and other countries" },
+]
+
+[[provider]]
+id = "venice"
+notes = ["The cited page covers the consumer app's Private mode; API terms were not stated there."]
+sources = [
+  { url = "https://venice.ai/privacy", retrieved = "2026-11-10", quote = "no prompt or response is stored" },
+]

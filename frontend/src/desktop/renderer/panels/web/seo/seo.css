@@ -1,0 +1,16 @@
+/* SEO bölümleri; ortak sınıflar ../../graph (kg-*), ../../security (ks-*), ../../perf (kp-*) içinde. */
+.kseo { display: flex; flex-direction: column; gap: var(--kor-space-3); }
+.kseo-findings { display: flex; flex-direction: column; gap: var(--kor-space-2); }
+.kseo-fix { margin-top: calc(var(--kor-space-1) / 2); font-size: var(--kor-text-12); }
+.kseo-critical td:first-child, .kseo-high td:first-child { color: var(--del-text); font-weight: 500; }
+.kseo-medium td:first-child { color: var(--text); font-weight: 500; }
+.kseo-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--kor-space-1) * 40), 1fr)); gap: var(--kor-space-2); }
+.kseo-card { display: flex; flex-direction: column; gap: calc(var(--kor-space-1) / 2); padding: var(--kor-space-2); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); font-size: var(--kor-text-12); }
+.kseo-card[data-state='running'] { border-color: var(--accent); }
+.kseo-card[data-state='skipped'] { opacity: 0.7; }
+.kseo-card strong { font-size: var(--kor-text-13); font-weight: 500; }
+.kseo-text { width: 100%; min-height: calc(var(--kor-space-1) * 40); padding: var(--kor-space-2); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); background: var(--surface); color: var(--text); font-family: var(--font-mono); font-size: var(--kor-text-12); resize: vertical; }
+.kseo-check { display: flex; align-items: center; gap: var(--kor-space-2); font-size: var(--kor-text-12); color: var(--muted); }
+.kseo-cell { width: 100%; min-width: calc(var(--kor-space-1) * 40); padding: calc(var(--kor-space-1) / 2) var(--kor-space-1); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); background: var(--surface); color: var(--text); font: inherit; font-size: var(--kor-text-12); }
+.kseo-tabs { display: flex; gap: var(--kor-space-1); flex-wrap: wrap; }
+.kseo-short { min-height: calc(var(--kor-space-1) * 15); }

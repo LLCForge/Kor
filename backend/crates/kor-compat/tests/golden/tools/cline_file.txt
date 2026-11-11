@@ -1,0 +1,1 @@
+rule cline/project repo/.clinerules [always] Single-file clinerules.

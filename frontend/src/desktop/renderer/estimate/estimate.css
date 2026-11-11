@@ -1,0 +1,3 @@
+/* §27.16 tahmin çipi; yalnızca mevcut değişkenler. */
+.k14-estimate { display: inline-flex; align-items: center; gap: var(--kor-space-1); padding: 0 var(--kor-space-2); border-radius: var(--kor-radius-chip); font-size: var(--kor-text-12); color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.k14-estimate.drift { color: var(--warn); }

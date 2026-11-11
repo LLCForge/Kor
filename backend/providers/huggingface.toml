@@ -1,0 +1,20 @@
+# Source: https://huggingface.co/docs/inference-providers/index
+id = "huggingface"
+name = "Hugging Face Inference Providers"
+category = "aggregator"
+adapter = "openai_compat"
+base_url = "https://router.huggingface.co/v1"
+auth = { kind = "bearer", env = "HF_TOKEN" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://huggingface.co/docs/inference-providers/index"
+# Model suffixes :fastest, :cheapest, :<provider> select the backend.
+# The same token (optional for public Hub reads) drives task inference on
+# router.huggingface.co/hf-inference, fal-ai media models via the router, Inference Endpoints,
+# Hub search/info and downloads: see kor-providers/src/huggingface.rs and `kor hf`.
+tags = ["media"]
+[privacy]
+tier = "standard"
+retention = "Depends on the routed provider (verify)."
+jurisdiction = "US"

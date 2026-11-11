@@ -1,0 +1,14 @@
+{
+  "KPlugin": {
+    "Id": "dev.kor.status",
+    "Name": "Kor",
+    "Description": "Kor coding agent: status, approvals, recent projects and sessions.",
+    "Icon": "utilities-terminal",
+    "Authors": [{ "Name": "Kor" }],
+    "License": "Apache-2.0 OR MIT",
+    "Version": "1",
+    "Website": "https://github.com/LLCForge/Kor"
+  },
+  "KPackageStructure": "Plasma/Applet",
+  "X-Plasma-API-Minimum-Version": "6.0"
+}

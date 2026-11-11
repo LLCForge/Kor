@@ -1,0 +1,157 @@
+/* [g19] Harita blokları (```map, ```geojson). Yalnızca :root token'ları kullanılır; harita renkleri SVG sunum
+   özniteliklerindedir (dışa aktarılan SVG/PNG temayla aynı görünsün diye CSS'e bağlı değildir). */
+
+.g19-map .g8-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Minyatür kart: küçük başlar, tıklayınca sütun genişliğine büyür. */
+.g19-host {
+  max-width: 360px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+.g19-host.g19-expanded {
+  max-width: none;
+  cursor: default;
+}
+.g19-host svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.g19-host.g19-expanded [data-k] {
+  cursor: pointer;
+}
+.g19-host.g19-expanded path[data-k]:hover {
+  opacity: 0.82;
+}
+.g19-host.g19-drawing,
+.g19-host.g19-drawing [data-k] {
+  cursor: crosshair;
+}
+
+.g19-tool-text {
+  font: 600 var(--kor-text-12) var(--font-sans);
+  letter-spacing: 0.02em;
+}
+
+/* g17 dışa aktarma menüsünün düğmesi koyu kod başlığı içindir; açık kart başlığına uyarlanır. */
+.g19-map .g17-menu > summary.code-copy {
+  color: var(--muted);
+}
+.g19-map .g17-menu > summary.code-copy:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.g19-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  font: var(--kor-text-13) var(--font-sans);
+}
+.g19-fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0 4px 4px;
+  border: 0;
+}
+.g19-fieldset legend {
+  padding: 0 0 4px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.g19-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.g19-check input {
+  accent-color: var(--accent);
+}
+
+.g19-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  font: var(--kor-text-13) var(--font-sans);
+  color: var(--text-soft);
+}
+.g19-info-main {
+  font-weight: 600;
+  color: var(--text);
+}
+.g19-coord {
+  font: var(--kor-text-12) var(--font-mono);
+}
+.g19-muted {
+  margin: 0;
+  font: var(--kor-text-12) var(--font-sans);
+  color: var(--muted);
+}
+
+.g19-tables {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-x: auto;
+}
+.g19-tables table {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--kor-text-13) var(--font-sans);
+}
+.g19-tables caption {
+  padding: 0 0 4px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+}
+.g19-tables th,
+.g19-tables td {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.g19-tables thead th {
+  background: var(--bubble);
+}
+.g19-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.g19-tables .g19-num {
+  text-align: right;
+}
+.g19-row-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.g19-row-btn:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 600px) {
+  .g19-host {
+    max-width: none;
+  }
+}

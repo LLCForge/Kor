@@ -1,0 +1,12 @@
+hot 1234 [000] 100.000001:     250000 cpu-clock:u: 
+	    55d4c3a1b2c3 hot::fib+0x23 (/home/u/hot/target/release/hot)
+	    55d4c3a1b2d0 main+0x10 (/home/u/hot/target/release/hot)
+	    7f0000001000 __libc_start_main+0xf3 (/usr/lib/libc.so.6)
+
+hot 1234 [000] 100.000251:     250000 cpu-clock:u: 
+	    55d4c3a1b2c3 hot::fib+0x23 (/home/u/hot/target/release/hot)
+	    55d4c3a1b2c4 hot::fib+0x40 (/home/u/hot/target/release/hot)
+	    55d4c3a1b2d0 main+0x10 (/home/u/hot/target/release/hot)
+
+hot 1234 [000] 100.000501:     250000 cpu-clock:u: 
+	    55d4c3a1b2d0 main+0x10 (/home/u/hot/target/release/hot)

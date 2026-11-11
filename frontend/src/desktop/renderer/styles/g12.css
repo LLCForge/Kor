@@ -1,0 +1,22 @@
+/* [g12] Güvenlik diyaloğu (sandbox, araç izinleri) ve toplu silme onayı */
+.g12-section { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border); }
+.g12-heading { margin: 0; font: 600 var(--kor-text-14) var(--font-sans); }
+.g12-check { display: flex; align-items: flex-start; gap: 8px; font: var(--kor-text-14)/1.5 var(--font-sans); }
+.g12-check input { margin-top: 4px; accent-color: var(--accent); }
+.g12-warning { display: flex; align-items: flex-start; gap: 6px; margin: 0; color: var(--warn); font: 600 var(--kor-text-13)/1.5 var(--font-sans); }
+.g12-warning svg { flex: none; margin-top: 3px; }
+
+.g12-tools { display: flex; flex-direction: column; gap: 4px; max-height: 280px; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.g12-tool-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
+.g12-tool-name { display: flex; align-items: baseline; gap: 8px; min-width: 0; font: var(--kor-text-13) var(--font-sans); }
+.g12-tool-name code { font: var(--kor-text-13) var(--font-mono); overflow-wrap: anywhere; }
+.g12-select {
+  flex: none; height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font: var(--kor-text-13) var(--font-sans); outline: none;
+}
+.g12-select:focus-visible { border-color: var(--accent); outline: 2px solid var(--accent-soft); }
+
+.g12-file-list {
+  max-height: 220px; margin: 0; padding: 8px 10px 8px 28px; overflow: auto; border-radius: 8px;
+  background: var(--code-bg); color: var(--code-text); font: var(--kor-text-12)/1.6 var(--font-mono); overflow-wrap: anywhere;
+}

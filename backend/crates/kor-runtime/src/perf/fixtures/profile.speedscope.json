@@ -1,0 +1,6 @@
+{"$schema":"https://www.speedscope.app/file-format-schema.json",
+ "shared":{"frames":[{"name":"main","file":"app.py","line":1},{"name":"fib","file":"app.py","line":4}]},
+ "profiles":[
+  {"type":"sampled","name":"t1","unit":"milliseconds","startValue":0,"endValue":40,"samples":[[0,1],[0,1,1],[0,1],[0]],"weights":[10,10,10,10]},
+  {"type":"evented","name":"t2","unit":"milliseconds","startValue":0,"endValue":5,"events":[{"type":"O","frame":0,"at":0},{"type":"O","frame":1,"at":1},{"type":"C","frame":1,"at":4},{"type":"C","frame":0,"at":5}]}
+ ]}

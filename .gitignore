@@ -1,0 +1,187 @@
+# Only what the build, the release/catalog/CI workflows, the README and the standard repo files need is
+# committed. Everything below stays on the maintainer's disk but never reaches GitHub.
+
+# ---- Signing keys and secrets (never committed) ----
+/scripts/privacy_check.py
+# Updater signing key pair generated at the repo root.
+/kor-update.*
+# Folder created by an unexpanded `%USERPROFILE%` (holds a Tauri updater key).
+/%USERPROFILE%/
+# Tauri updater signing keys (`tauri signer generate` default dir), at any depth.
+**/.tauri/
+*.key
+*.minisign
+*.sig.key
+*.pem
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.ppk
+*.mobileprovision
+*.provisionprofile
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+# Env files (examples stay committed).
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# ---- Private notes and planning, never published ----
+okuma_bunu_llm/
+/kalanlar.md
+/kalanlar-eski.md
+/AUDIT.md
+/Kor*Master Build Prompt.md
+
+# ---- Docs not needed by the build or the README (only the README's images in docs/media/ are kept) ----
+/docs/*
+!/docs/media/
+/ARCHITECTURE.md
+/GOVERNANCE.md
+/CHANGELOG.md
+/backend/docs/
+/backend/GOVERNANCE.md
+/backend/CODE_OF_CONDUCT.md
+/backend/CONTRIBUTING.md
+/backend/SECURITY.md
+
+# ---- Dev environments and editor config (not used by the build or CI) ----
+/flake.nix
+/.devcontainer/
+/backend/.editorconfig
+/backend/examples/
+
+# ---- Maintainer-only tooling and workflows (not called by build, release, catalog or CI) ----
+/.github/labels.yml
+/.github/workflows/labels.yml
+/.github/workflows/clean-vm.yml
+/.github/workflows/perf-weekly.yml
+/scripts/oss_check.py
+/scripts/oss-check.toml
+/scripts/rebrand.py
+/scripts/smoke.py
+/scripts/mock_llm.py
+/frontend/scripts/icon-gen.ts
+/frontend/scripts/i18n-extract.ts
+# Translation batches already merged into the en/fr catalogues.
+/frontend/src/desktop/renderer/i18n/pending/
+
+# ---- Brand-kit exports not used by the app, CI or the README ----
+# (icon-gen.ts output and the font it draws with; the app uses frontend/src-tauri/icons and the files kept here).
+/assets/android-chrome-192x192.png
+/assets/android-chrome-512x512.png
+/assets/app-icon-1024.png
+/assets/app-icon-256.png
+/assets/app-icon-rounded-1024.png
+/assets/app-icon-rounded-512.png
+/assets/app-icon-square-1024.png
+/assets/app-icon-square-512.png
+/assets/app-icon-square.svg
+/assets/app-icon.icns
+/assets/app-icon.ico
+/assets/AppIcon-1024.png
+/assets/AppIcon-dark-1024.png
+/assets/apple-touch-icon.png
+/assets/favicon-64x64.png
+/assets/Figtree-ExtraBold.ttf
+/assets/Figtree-OFL.txt
+/assets/icon.png
+/assets/ic_launcher-144.png
+/assets/ic_launcher-192.png
+/assets/ic_launcher-72.png
+/assets/ic_launcher-96.png
+/assets/ic_launcher_background-1024.png
+/assets/ic_launcher_background.svg
+/assets/ic_launcher_monochrome-1024.png
+/assets/ic_launcher_monochrome.svg
+/assets/kor-logo-dark-1024w.png
+/assets/kor-logo-dark-2048w.png
+/assets/kor-logo-dark-4096w.png
+/assets/kor-logo-dark-bg-2048w.png
+/assets/kor-logo-dark.svg
+/assets/kor-logo-light-1024w.png
+/assets/kor-logo-light-2048w.png
+/assets/kor-logo-light-4096w.png
+/assets/kor-logo-light-bg-2048w.png
+/assets/kor-logo-light.svg
+/assets/kor-logo-mono.svg
+/assets/kor-logo-stacked-auto.svg
+/assets/kor-logo-stacked-dark-1024w.png
+/assets/kor-logo-stacked-dark-2048w.png
+/assets/kor-logo-stacked-dark.svg
+/assets/kor-logo-stacked-light-1024w.png
+/assets/kor-logo-stacked-light-2048w.png
+/assets/kor-logo-stacked-light.svg
+/assets/kor-logo-stacked-mono.svg
+/assets/kor-mark-1024h.png
+/assets/kor-mark-2048h.png
+/assets/kor-mark-256h.png
+/assets/kor-mark-512h.png
+/assets/kor-wordmark-auto.svg
+/assets/kor-wordmark-dark-2048w.png
+/assets/kor-wordmark-dark.svg
+/assets/kor-wordmark-light-2048w.png
+/assets/kor-wordmark-light.svg
+/assets/kor-wordmark-mono.svg
+/assets/maskable-icon-512x512.png
+/assets/play-store-512.png
+/assets/spinner-ember.gif
+/assets/spinner.rs
+/assets/thinking-cube-light.gif
+/assets/thinking-cube.gif
+/assets/thinking-dots.gif
+
+# ---- Third-party reference checkout used only for parity research (not built, not tested) ----
+/tests/CLIProxyAPI-main/
+
+# ---- Build outputs ----
+**/target/
+node_modules/
+/frontend/dist/
+/frontend/extension/dist/
+/frontend/src-tauri/gen/
+# Desktop release inputs produced by `just release` / CI.
+/frontend/src-tauri/binaries/
+/frontend/src-tauri/integrations/
+# Nix build output (`nix build`).
+/result
+*.tsbuildinfo
+__pycache__/
+*.py[cod]
+
+# ---- Test / scratch / generated reports (snapshot baselines `*.snap` and e2e `__screenshots__` ARE committed) ----
+*.snap.new
+*.pending-snap
+coverage/
+lcov.info
+*.profraw
+test-results/
+playwright-report/
+blob-report/
+/reports/
+*.log
+/bench/
+/PERFORMANCE.md
+/UI_AUDIT.md
+# `just rebrand --apply` backups.
+/.rebrand/
+
+# ---- Per-user local state of this checkout (fixtures under tests/ keep their .kor/.claude dirs) ----
+/.kor/
+/.claude/
+/.vscode/
+/.idea/
+
+# ---- OS / editor junk ----
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+*.orig
+*.rej

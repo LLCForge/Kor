@@ -1,0 +1,5 @@
+rule gemini/user home/.gemini/GEMINI.md [always] Global Gemini context.
+rule gemini/project repo/GEMINI.md [always] Gemini project context.
+rule gemini/project repo/.gemini/styleguide.md [always] Gemini style guide.
+command /git:commit gemini/project repo/.gemini/commands/git/commit.toml
+mcp weather gemini/project repo/.gemini/settings.json

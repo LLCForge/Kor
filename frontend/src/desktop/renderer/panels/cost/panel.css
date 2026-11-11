@@ -1,0 +1,18 @@
+/* G2 Maliyet / Bağlam panelleri: yalnızca mevcut değişkenler; ortak sınıflar g7/g14'ten. */
+.g2c-panel { display: flex; flex-direction: column; min-width: 0; }
+.g2c-panel .g14-tabs { flex-wrap: wrap; }
+.g2c-body { padding: 12px 16px; min-width: 0; }
+.g2c-stack { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.g2c-form { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 8px 12px; align-items: center; }
+.g2c-form .text-input, .g2c-form .g7-select { width: 100%; min-width: 0; }
+@media (max-width: 480px) { .g2c-form { grid-template-columns: minmax(0, 1fr); } }
+.bar-fill.g2c-ok { background: var(--accent); }
+.bar-fill.g2c-alert { background: var(--warn); }
+.bar-fill.g2c-over { background: var(--del-text); }
+.g2c-decisions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.g2c-decision { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; min-width: 0; }
+.g2c-decision p { margin: 0; }
+.g2c-ok, .g2c-fail { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.g2c-ok { color: var(--add-text); }
+.g2c-fail { color: var(--del-text); }
+.g2c-failover { margin: 0; padding-left: 20px; font-size: 13px; }

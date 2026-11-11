@@ -1,0 +1,53 @@
+[graph]
+all-features = false
+
+[advisories]
+version = 2
+yanked = "deny"
+# zbus sub-crates were folded back into zbus (z-galaxy/zbus#2043); "unmaintained" notices
+# only, no vulnerability. Pulled in by keyring's Linux Secret Service store. Revisit when
+# secret-service moves to the merged zbus.
+ignore = [
+  { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained proc-macro pulled in by ratatui; build-time only, no vulnerability" },
+  { id = "RUSTSEC-2026-0370", reason = "zvariant merged into zbus; not a vulnerability" },
+  { id = "RUSTSEC-2026-0371", reason = "zbus_names merged into zbus; not a vulnerability" },
+  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive merged into zbus; not a vulnerability" },
+]
+
+[licenses]
+version = 2
+confidence-threshold = 0.9
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "MPL-2.0",
+  "CDLA-Permissive-2.0",
+  # Boost Software License: OSI-approved, permissive (clipboard-win, error-code; ADR 0064).
+  "BSL-1.0",
+]
+# Public-domain dedication; not an OSI licence, accepted for these crates only (ADR 0064).
+exceptions = [
+  { crate = "notify", allow = ["CC0-1.0"] },
+  { crate = "tiny-keccak", allow = ["CC0-1.0"] },
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+deny = [
+  # TLS must be rustls; see ADR-0001.
+  { name = "openssl" },
+  { name = "openssl-sys" },
+  { name = "native-tls" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

@@ -1,0 +1,838 @@
+/* cdesktop (Apache-2.0) ile birebir bileşen stilleri — en sonda yüklenir, bu yüzden
+   g*.css bileşen kurallarını ezer. Jetonlar claude-theme.css'te; burada yalnızca
+   cdesktop'un ölçü/biçim dili: 29px kontrol (CTA), küçük (keskin) radius, nötr seçim.
+   Kaynak referansları: cdesktop tailwind.new.config.js (height.cta=29px, borderRadius
+   md≈4px) ve bileşen Tailwind sınıfları. */
+
+/* ============ 1) KENAR ÇUBUĞU (oturum listesi) ============ */
+
+/* Kontrol yüksekliği cdesktop CTA = 29px; köşeler keskin (md ≈ 4px). */
+.rail-btn {
+  height: 29px;
+  border-radius: 4px;
+  gap: 8px;
+  font-size: var(--kor-text-13);
+}
+
+/* Oturum satırı: daha sıkı, keskin köşe, nötr seçim (cdesktop markayı seçimde kullanmaz). */
+.session-row { border-radius: 4px; }
+.session-open {
+  height: 30px;
+  font-size: var(--kor-text-13);
+}
+.session-row:hover,
+.session-row.menu-open {
+  background: rgb(from var(--text) r g b / 0.06);
+}
+.session-row.active {
+  background: rgb(from var(--text) r g b / 0.09);
+}
+.session-row.active .session-open { color: var(--text); }
+
+.session-more { border-radius: 4px; }
+.session-menu { border-radius: 6px; }
+.menu-row { border-radius: 4px; height: 30px; }
+
+/* Grup başlıkları: cdesktop küçük, büyük harf, düşük kontrast. */
+.group-head {
+  height: 26px;
+  font-size: var(--kor-text-12);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Segmentli anahtar (Sohbetler/Dosyalar): keskin köşe, cdesktop pill. */
+.segmented { border-radius: 6px; }
+.segmented button,
+.segmented-pill { border-radius: 4px; }
+
+/* Rail üst marka alanı ve başlık çubuğu: nötr yüzey, ince ayraç. */
+.rail-heading {
+  font-size: var(--kor-text-12);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* İnce, nötr scrollbar (cdesktop/VS Code dili). */
+.rail-scroll::-webkit-scrollbar { width: 10px; }
+.rail-scroll::-webkit-scrollbar-thumb {
+  background: rgb(from var(--text) r g b / 0.18);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 6px;
+}
+.rail-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(from var(--text) r g b / 0.3);
+  background-clip: padding-box;
+}
+.rail-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* ============ 2) TRANSCRIPT (mesajlar, araç kartları, kod/diff) ============ */
+
+/* Kullanıcı mesajı: cdesktop mavi vurgulu, keskin köşe (16px balon değil). */
+.message.user .user-bubble {
+  background: var(--user-bubble-bg);
+  border: 1px solid transparent;
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+/* Kod blokları: keskin köşe, cdesktop konsol dili. */
+.code-block { border-radius: 6px; }
+.code-head { height: 30px; }
+.code-copy { border-radius: 4px; }
+.prose :not(pre) > code { border-radius: 3px; }
+
+/* Araç kartları: keskin köşe, kompakt satır. */
+.tool { border-radius: 6px; }
+.tool-row { min-height: 34px; padding: 6px 12px; }
+.tool-output { border-radius: 4px; }
+.approval-subject { border-radius: 4px; }
+.error-box { border-radius: 6px; }
+
+/* Transcript kaydırma çubuğu: ince, nötr (cdesktop/VS Code). */
+.viewport::-webkit-scrollbar { width: 12px; }
+.viewport::-webkit-scrollbar-thumb {
+  background: rgb(from var(--text) r g b / 0.16);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 7px;
+}
+.viewport::-webkit-scrollbar-thumb:hover {
+  background: rgb(from var(--text) r g b / 0.28);
+  background-clip: padding-box;
+}
+.viewport::-webkit-scrollbar-track { background: transparent; }
+
+/* Boş durum önerileri: keskin köşe. */
+.suggestion { border-radius: 6px; height: 29px; }
+
+/* ============ 3) SAĞ PANEL + ENTEGRE TERMİNAL ============ */
+
+/* Sekmeler: cdesktop daha kompakt; etkin sekme marka alt çizgisi. */
+.panel-tabs { height: 40px; }
+.panel-tab { height: 40px; font-size: var(--kor-text-13); }
+
+/* Dosya/değişiklik listesi: nötr seçim (marka değil), keskin köşe. */
+.change-row { border-radius: 4px; }
+.change-row.selected { background: rgb(from var(--text) r g b / 0.09); color: var(--text); }
+
+/* Diyaloglar ve kartlar: cdesktop keskin köşe (16px → 8px). */
+.dialog { border-radius: 8px; }
+.dialog-textarea { border-radius: 4px; }
+.key-card { border-radius: 8px; }
+
+/* Entegre terminal / REPL / konsol çerçevesi: keskin köşe, mono, konsol yüzeyi. */
+.g20-code,
+.g20-output,
+.g20-result { border-radius: 4px; }
+.g20-badge { border-radius: 4px; }
+
+/* Sağ panel kaydırma çubuğu: ince, nötr. */
+.side-panel ::-webkit-scrollbar,
+.change-list::-webkit-scrollbar,
+.diff::-webkit-scrollbar,
+.code-view::-webkit-scrollbar { width: 12px; height: 12px; }
+.side-panel ::-webkit-scrollbar-thumb,
+.change-list::-webkit-scrollbar-thumb,
+.diff::-webkit-scrollbar-thumb,
+.code-view::-webkit-scrollbar-thumb {
+  background: rgb(from var(--text) r g b / 0.16);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 7px;
+}
+.side-panel ::-webkit-scrollbar-thumb:hover,
+.change-list::-webkit-scrollbar-thumb:hover,
+.diff::-webkit-scrollbar-thumb:hover,
+.code-view::-webkit-scrollbar-thumb:hover {
+  background: rgb(from var(--text) r g b / 0.28);
+  background-clip: padding-box;
+}
+.side-panel ::-webkit-scrollbar-track,
+.change-list::-webkit-scrollbar-track,
+.diff::-webkit-scrollbar-track,
+.code-view::-webkit-scrollbar-track { background: transparent; }
+
+/* ============ 4) BUTONLAR / INPUTLAR / MENÜLER ============ */
+
+/* Düğmeler: cdesktop CTA = 29px, keskin köşe (md ≈ 4px), 13px. */
+.btn {
+  height: 29px;
+  padding: 0 12px;
+  border-radius: 4px;
+  font-size: var(--kor-text-13);
+}
+.btn.small { height: 26px; padding: 0 9px; font-size: var(--kor-text-12); }
+
+/* Mesaj kutusu: cdesktop keskin köşeli bordürlü alan (18px → 8px). */
+.composer { border-radius: 8px; padding: 12px 12px 8px; }
+.send-btn { width: 29px; height: 29px; border-radius: 4px; }
+.action-btn { border-radius: 4px; }
+
+/* Metin girişleri: 29px kontrol, keskin köşe. */
+.text-input, .g7-settings-nav .g7-search { height: 29px; border-radius: 4px; }
+
+/* Menüler/dropdown: keskin köşe (12px → 6px), kompakt öğe. */
+.menu { border-radius: 6px; }
+.menu-search { height: 29px; border-radius: 4px; }
+.menu-item { border-radius: 4px; }
+.menu-title { font-size: var(--kor-text-13); }
+
+/* Rozetler/sayaçlar: cdesktop tam pill değil, hafif yuvarlak dikdörtgen. */
+.badge { border-radius: 4px; }
+.count { border-radius: 4px; }
+.file-pill { border-radius: 4px; }
+
+/* Odak halkası: cdesktop marka turuncusu (ring = brand). */
+.btn:focus-visible,
+.text-input:focus-visible,
+.menu-item:focus-visible,
+.rail-btn:focus-visible,
+.send-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ============ 5) DÜZEN ORANLARI ============ */
+
+/* Kenar çubuğu genişliği: cdesktop ~300px. */
+.rail { width: 300px; }
+
+/* Üst başlık ve ana başlık yükseklikleri: cdesktop kompakt (48px → 44px). */
+.titlebar { height: 36px; }
+.rail-top { height: 44px; }
+.main-header { height: 44px; }
+.panel-tabs { height: 44px; }
+.panel-tab { height: 44px; }
+
+/* ============ 6) DOSYA DÜZENLEME / DIFF (cdesktop @git-diff-view dili) ============ */
+
+/* cdesktop diff satırında metin nötr kalır, yalnızca arka plan tonlanır.
+   (Renk jetonları --add-bg/--del-bg claude-theme.css'te cdesktop değerlerine çekildi.) */
+.diff-line.add,
+.diff-line.del,
+.g4-split-cell.add,
+.g4-split-cell.del { color: var(--text); }
+
+/* Satır numarası sütunu: cdesktop düşük kontrast, ince. */
+.diff-sign,
+.g4-ln { color: var(--subtle); }
+.diff-line.add .diff-sign,
+.diff-line.del .diff-sign { color: var(--text); opacity: 0.6; }
+
+/* Diff görünümü mono + sıkı satır (cdesktop). */
+.diff,
+.code-view { font-size: var(--kor-text-13); line-height: 1.55; }
+
+/* Değişiklik sekmesi sayacı: nötr rozet. */
+.diff-stats .stat-add { color: var(--add-text); }
+.diff-stats .stat-del { color: var(--del-text); }
+
+/* ============ 7) İZİN MODU MENÜSÜ (cdesktop: ikon + etiket) ============ */
+.mode-item { display: flex; align-items: center; gap: 10px; }
+.mode-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; flex-shrink: 0; color: var(--muted);
+}
+.mode-icon.danger { color: var(--del-text); }
+.mode-item[aria-checked='true'] .mode-icon { color: var(--text); }
+
+/* ============ 8) SAĞLAYICI MARKA İKONLARI (cdesktop agents/*.svg) ============ */
+.g9-provider-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.g9-provider-badge svg { display: block; }
+
+/* ============ 9) EFFORT SEGMENTİ (cdesktop model popover alt satırı) ============ */
+.menu.g2-effort-menu { width: max-content; min-width: 260px; max-width: calc(100vw - 32px); padding: 10px; } /* 7 düzeyde 'Maks' kesilmesin */
+.cdx-effort-seg { flex-wrap: wrap; justify-content: flex-end; }
+.cdx-effort-row { display: flex; align-items: center; gap: 10px; }
+.cdx-effort-label {
+  font: 600 var(--kor-text-12) var(--font-sans); letter-spacing: 0.06em;
+  color: var(--subtle); text-transform: uppercase; flex-shrink: 0;
+}
+.cdx-effort-seg {
+  display: flex; align-items: center; gap: 2px; margin-left: auto;
+  padding: 2px; border-radius: 6px; background: var(--hover);
+}
+.cdx-effort-opt {
+  height: 24px; padding: 0 9px; border: 0; border-radius: 4px;
+  background: transparent; color: var(--muted);
+  font: 500 var(--kor-text-12) var(--font-sans); white-space: nowrap; transition: background-color var(--kor-dur-hover) var(--kor-ease), color var(--kor-dur-hover) var(--kor-ease), border-color var(--kor-dur-hover) var(--kor-ease), box-shadow var(--kor-dur-hover) var(--kor-ease);
+}
+.cdx-effort-opt:hover { color: var(--text); }
+.cdx-effort-opt.on { background: var(--accent); color: #fff; }
+
+/* ============ 10) SAĞLAYICI BAŞLIK LOGOSU (Venice wordmark + vendor) ============ */
+.g9-provider-title {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.g9-provider-title > svg { flex: none; color: var(--text); }
+
+/* ============ 11) MODEL MARKA İKONLARI (lobehub/venice seti) ============ */
+.brand-ic svg { display: block; width: 1em; height: 1em; }
+.g9-brand-only { padding: 2px 5px; }
+.g9-brand-only .brand-ic { font-size: var(--kor-text-14); }
+
+/* ============ 12) SAĞ PANEL BAŞLIĞI + GÖRÜNÜM MENÜSÜ (cdesktop) ============ */
+.panel-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 44px; padding: 0 8px 0 14px; flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+.panel-title {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 600 var(--kor-text-13) var(--font-sans); color: var(--text); min-width: 0;
+}
+.panel-title > svg { color: var(--muted); flex: none; }
+.panel-head-actions { display: inline-flex; align-items: center; gap: 2px; }
+.panel-view-trigger { display: inline-flex; align-items: center; gap: 1px; }
+.panel-view-menu { min-width: 200px; padding: 4px; }
+.panel-view-menu .menu-row { gap: 10px; }
+.panel-view-menu .menu-row > svg:first-child { color: var(--muted); flex: none; }
+.panel-view-menu .menu-row[aria-checked='true'] > svg:first-child { color: var(--text); }
+.panel-view-label { flex: 1; text-align: left; }
+.panel-view-check { color: var(--accent); flex: none; }
+
+/* ============ 13) ROUTINES (zamanlanmış görevler) ============ */
+.routine-form { display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px; }
+.routine-form label { font: 600 var(--kor-text-12) var(--font-sans); color: var(--text-soft); margin-top: 6px; }
+.routine-prompt { min-height: 90px; }
+.routine-folder { margin: 0; padding: 7px 10px; border-radius: 4px; background: var(--hover); font: var(--kor-text-12) var(--font-mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.routine-presets { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.routine-custom { display: inline-flex; align-items: center; gap: 6px; font: var(--kor-text-13) var(--font-sans); color: var(--muted); }
+.routine-min-input { width: 72px; text-align: center; font-family: var(--font-sans) !important; }
+.routine-actions { margin-top: 10px; }
+.routine-error { margin: 2px 0; color: var(--del-text); font: var(--kor-text-13) var(--font-sans); }
+.routine-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.routine-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.routine-item.off { opacity: 0.6; }
+.routine-ic { display: inline-flex; color: var(--accent); flex: none; }
+.routine-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.routine-name { font: 500 var(--kor-text-14) var(--font-sans); color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.routine-meta { font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.routine-del:hover { color: var(--del-text); }
+
+/* ============ 14) ENTEGRE TERMİNAL (cdesktop Terminal görünümü) ============ */
+.terminal-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; background: var(--code-bg); }
+.terminal-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px; font: var(--kor-text-13)/1.5 var(--font-mono); color: var(--code-text); }
+.terminal-hint { margin: 0; color: var(--subtle); font: var(--kor-text-12) var(--font-sans); }
+.terminal-entry { margin-bottom: 8px; }
+.terminal-cmd { display: flex; align-items: center; gap: 6px; color: var(--code-text); }
+.terminal-prompt { color: var(--accent); font-weight: 700; flex: none; }
+.terminal-code { margin-left: auto; color: var(--del-text); font-size: var(--kor-text-12); }
+.terminal-out { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #c9c9c9; }
+.terminal-busy { color: var(--subtle); font-style: italic; }
+.terminal-input-row { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-top: 1px solid var(--border); background: var(--code-bg); }
+.terminal-input { flex: 1; border: 0; outline: none; background: transparent; color: var(--code-text); font: var(--kor-text-13) var(--font-mono); }
+.terminal-input::placeholder { color: var(--subtle); }
+
+/* ============ 15) ÇOKLU OTURUM IZGARASI (cdesktop 2×2) ============ */
+.session-grid { display: grid; flex: 1 1 0; min-width: 0; min-height: 0; gap: 1px; background: var(--rail-border); }
+.session-grid[data-panes='1'] { grid-template-columns: 1fr; }
+.session-grid[data-panes='2'] { grid-template-columns: 1fr 1fr; }
+.session-grid[data-panes='3'],
+.session-grid[data-panes='4'] { grid-template-columns: 1fr 1fr; grid-auto-rows: 1fr; }
+.session-grid > * { min-width: 0; min-height: 0; }
+/* Izgara kendi ince ayraçlarını çizer; bölme kenarlığı iki katına çıkmasın. */
+.session-grid > .g1-split-pane { border-left: 0; }
+
+/* ============ 16) DOSYA KARTI: DİL ROZETİ + SATIR İÇİ DIFF (cdesktop / Claude Code) ============ */
+/* Yolun önünde mavi "TS" karesi gibi marka renkli rozet. */
+.lang-badge {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  min-width: 20px; height: 18px; padding: 0 4px; border-radius: 3px;
+  font: 700 var(--kor-text-12)/1 var(--font-sans); letter-spacing: 0.02em; text-transform: none;
+}
+/* Kart açılınca o çağrının düzenlemeleri: dosya başlığı + gerçek diff, kaydırılabilir. */
+.tool-diffs { border-top: 1px solid var(--border); }
+.tool-diff + .tool-diff { border-top: 1px solid var(--border); }
+.tool-diff-head {
+  display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 4px 12px;
+  background: var(--hover); font: var(--kor-text-12) var(--font-mono); color: var(--text-soft);
+}
+.tool-diff-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tool-diff-body { max-height: 360px; overflow: auto; background: var(--code-bg); }
+/* DiffView yan panel için flex:1 tasarlandı; kart içinde doğal yükseklikte aksın. */
+.tool-diff-body .diff { flex: none; max-height: none; padding: 6px 0 10px; }
+.tool-diff-body::-webkit-scrollbar { width: 10px; height: 10px; }
+.tool-diff-body::-webkit-scrollbar-thumb { background: rgb(from var(--text) r g b / 0.16); border: 3px solid transparent; background-clip: padding-box; border-radius: 6px; }
+.tool-diff-body::-webkit-scrollbar-track { background: transparent; }
+
+/* ============ 17) ONAY KARTI: DEĞİŞİKLİK ÖNİZLEMESİ (cdesktop approval card ✓ / ✕) ============ */
+/* Onay bekleyen dosya aracı: yapılacak değişikliğin diff'i kartın içinde, altında onay düğmeleri. */
+.approval-preview { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--code-bg); }
+.approval-preview .tool-diffs { border-top: 0; }
+.approval-preview .tool-diff-body { max-height: 320px; }
+.approval-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+.approval-actions .btn.approve { background: var(--accent); border-color: var(--accent); color: #fff; }
+.approval-actions .btn.approve:hover { filter: brightness(1.08); }
+.approval-actions .btn.deny { color: var(--danger); }
+.approval-actions .btn.deny:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+
+/* ============ 18) MCP "POPÜLER SUNUCULAR" KARTLARI (cdesktop Popular servers) ============ */
+.mcp-popular { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.mcp-popular-card {
+  display: flex; flex-direction: column; gap: 10px; padding: 12px; text-align: left;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text);
+  font: var(--kor-text-13)/1.4 var(--font-sans); transition: border-color var(--kor-dur-hover) var(--kor-ease), box-shadow var(--kor-dur-hover) var(--kor-ease);
+}
+.mcp-popular-card:hover { border-color: rgb(from var(--text) r g b / 0.25); }
+.mcp-popular-card.installed { border-color: rgb(from var(--add-text) r g b / 0.4); }
+.mcp-popular-card.busy { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(from var(--accent) r g b / 0.15); }
+.mcp-popular-top { display: flex; align-items: flex-start; gap: 10px; }
+.mcp-popular-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.mcp-popular-tags .badge { display: inline-flex; align-items: center; gap: 3px; }
+.mcp-popular-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: auto; min-height: 26px; }
+.cdx-mcp-busy { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-size: var(--kor-text-12); }
+.cdx-mcp-done { display: inline-flex; align-items: center; gap: 4px; color: var(--add-text); font-size: var(--kor-text-12); font-weight: 600; }
+.cdx-mcp-star { color: var(--accent); }
+.cdx-mcp-store { gap: 10px; }
+.cdx-mcp-store .g7-h4 { display: inline-flex; align-items: center; gap: 6px; }
+.cdx-mcp-search { width: 240px; flex: none; }
+.cdx-mcp-cats { display: flex; flex-wrap: wrap; gap: 4px; }
+.cdx-mcp-cat { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 13px; background: transparent; color: var(--text-soft); font: var(--kor-text-12) var(--font-sans); cursor: pointer; }
+.cdx-mcp-cat:hover { background: var(--hover); color: var(--text); }
+.cdx-mcp-cat.on { background: var(--accent-soft); border-color: rgb(from var(--accent) r g b / 0.5); color: var(--accent); }
+.cdx-mcp-cat-n { font-size: var(--kor-text-12); color: var(--muted); }
+.cdx-mcp-cat.on .cdx-mcp-cat-n { color: var(--accent); }
+.cdx-mcp-inputs { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px dashed var(--border); border-radius: 6px; background: var(--bg); }
+.cdx-mcp-input { display: flex; flex-direction: column; gap: 3px; font: var(--kor-text-12) var(--font-sans); color: var(--text-soft); }
+.cdx-mcp-input .text-input { width: 100%; font-size: var(--kor-text-12); }
+.cdx-mcp-inputs .g7-button-row { justify-content: flex-end; }
+.mcp-popular-logo.mono svg { fill: #fff; }
+.mcp-popular-logo {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px;
+  border-radius: 6px; background: var(--hover); overflow: hidden; font: 700 var(--kor-text-12) var(--font-mono); color: #fff;
+}
+.mcp-popular-logo svg, .mcp-popular-logo img { width: 20px; height: 20px; display: block; }
+.mcp-popular-logo > span { display: contents; }
+.mcp-popular-logo.text { background: #2f54eb; }
+.mcp-popular-logo.text.rea { background: #7c3aed; }
+.mcp-popular-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.mcp-popular-name { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.mcp-popular-desc { color: var(--text-soft); font-size: var(--kor-text-12); }
+.mcp-popular-add { flex: none; color: var(--muted); margin-top: 2px; }
+
+/* ============ 19) KENAR ÇUBUĞU SATIRI: ARAMA + DURUM + ZAMAN + DOSYA İSTATİSTİĞİ (cdesktop Workspaces) ============ */
+.cdx-search {
+  display: flex; align-items: center; gap: 6px; height: 29px; margin: 4px 0 2px; padding: 0 8px;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--muted);
+}
+.cdx-search:focus-within { border-color: var(--accent); }
+.cdx-search input {
+  flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; color: var(--text); outline: none;
+  font: var(--kor-text-13) var(--font-sans);
+}
+.cdx-search input::placeholder { color: var(--muted); }
+.cdx-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+/* Satır: başlık + ikinci satır; cdesktop 2 satırlı, ikon yok. */
+.session-open.cdx-two-line { gap: 0; min-height: 44px; padding-top: 5px; padding-bottom: 5px; }
+.session-row.active .session-open.cdx-two-line .session-title { font-weight: 500; }
+.session-title { font-size: var(--kor-text-13); }
+.cdx-session-meta {
+  display: flex; align-items: center; gap: 6px; min-width: 0; margin-top: 2px;
+  font: var(--kor-text-12) var(--font-sans); color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.cdx-session-time { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cdx-session-stats { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; flex: none; }
+.cdx-session-stats .stat-add { color: var(--add-text); }
+.cdx-session-stats .stat-del { color: var(--del-text); }
+
+/* Durum ikonları (styles.css'teki yuvarlak işaretleri ezer): ▶ turuncu, ! turuncu, ● turuncu nokta. */
+.session-status { width: auto; height: auto; border: 0; border-radius: 0; animation: none; background: none; }
+/* Çalışan oturum: dönen halka değil, kor gibi hafifçe sönüp parlayan ▶ (§23.1 tek spinner kuralı; hareket kapalıyken durur). */
+.session-status.running { color: var(--accent); border: 0; animation: kor-breathe 1.8s ease-in-out infinite; }
+.session-status.waiting { color: var(--accent); background: none; animation: dot-pulse 1.4s ease-in-out infinite; }
+.session-status.unread { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.session-status.unread::after { content: none; }
+.session-open.cdx-two-line .g1-session-text { flex: 1; min-width: 0; }
+
+/* ============ 20) DEĞİŞİKLİKLER PANELİ: DOSYA AĞACI (cdesktop Changes) ============ */
+.cdx-changes { display: flex; flex-direction: column; max-height: 40%; min-height: 0; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.cdx-changes-tools { display: flex; align-items: center; gap: 4px; padding: 6px 8px 2px; }
+.cdx-changes-tools .cdx-search { flex: 1; margin: 0; }
+.cdx-changes-tools .action-btn { width: 26px; height: 26px; }
+.cdx-change-tree { overflow: auto; padding: 2px 6px 6px; }
+.cdx-change-tree .tree-row { height: 26px; font-size: var(--kor-text-13); }
+.cdx-change-dir .tree-name { color: var(--text-soft); }
+.cdx-change-file .tree-name { color: var(--text); }
+.cdx-change-file.deleted .tree-name { text-decoration: line-through; color: var(--muted); }
+.cdx-change-stats { display: inline-flex; gap: 6px; flex: none; margin-left: auto; font: var(--kor-text-12) var(--font-mono); font-variant-numeric: tabular-nums; }
+.lang-badge.sm { min-width: 18px; height: 16px; font-size: var(--kor-text-12); }
+.panel-file-head { gap: 8px; }
+.panel-file-head code { flex: 1; min-width: 0; }
+.cdx-head-stats { display: inline-flex; gap: 6px; flex: none; font: var(--kor-text-12) var(--font-mono); }
+
+/* ============ 21) DOSYA TİPİ SVG İKONLARI (material-icon-theme, MIT) ============ */
+.lang-badge.icon { background: transparent; padding: 0; min-width: 18px; width: 18px; height: 18px; }
+.lang-badge.icon svg { width: 100%; height: 100%; display: block; }
+.lang-badge.icon.sm { width: 16px; height: 16px; min-width: 16px; }
+
+/* ============ 22) GIT PANELİ (cdesktop Git kartı + Çalışma dalı) ============ */
+.cdx-git { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; overflow: auto; }
+.cdx-git-card { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.cdx-git-repo { font: 600 var(--kor-text-13) var(--font-sans); color: var(--text); }
+.cdx-git-row { display: flex; align-items: center; gap: 8px; }
+.cdx-branch-pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; max-width: 60%;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--hover); font: var(--kor-text-13) var(--font-sans); color: var(--text);
+}
+.cdx-git-counts { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; font: var(--kor-text-12) var(--font-mono); font-variant-numeric: tabular-nums; }
+.cdx-git-counts > span { display: inline-flex; align-items: center; gap: 1px; }
+.cdx-git-actions { display: flex; align-items: center; gap: 8px; }
+.cdx-split { display: inline-flex; }
+.cdx-split .btn:first-child { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.cdx-split-more { border-top-left-radius: 0; border-bottom-left-radius: 0; margin-left: -1px; padding: 0 6px; }
+.cdx-pr-btn { color: var(--text); }
+.cdx-git-subtitle { display: inline-flex; align-items: center; gap: 6px; font: 600 var(--kor-text-13) var(--font-sans); color: var(--text); }
+.cdx-branch-box { display: flex; align-items: center; height: 29px; padding: 0 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--hover); font: var(--kor-text-13) var(--font-mono); color: var(--text); }
+.cdx-pr-form { display: flex; flex-direction: column; gap: 6px; min-width: 460px; }
+.cdx-pr-form label { font: 600 var(--kor-text-12) var(--font-sans); color: var(--text-soft); margin-top: 4px; }
+.cdx-pr-form .g7-select, .cdx-pr-form .text-input { width: 100%; }
+.cdx-pr-form .dialog-textarea { min-height: 96px; resize: vertical; }
+.spin { animation: spin 0.9s linear infinite; }
+
+/* Sağ panel başlığındaki görünüm menüsü ve Git ⋯ menüsü ekranın ÜSTÜNDE: aşağı doğru, sağa yaslı açılır
+   (.menu varsayılanı composer için yukarı açılır; burada viewport dışına taşıyordu). */
+.panel-head .menu, .cdx-git-row .menu { top: calc(100% + 4px); bottom: auto; right: 0; left: auto; width: 210px; max-height: none; }
+
+/* ============ 23) MESAJ KUTUSU ÜST ŞERİDİ (cdesktop: "N files changed +X −Y" · görevler · Latest ⌄) ============ */
+.cdx-status-row { display: flex; align-items: center; gap: 6px; margin: -4px -4px 2px; padding: 0 0 6px; border-bottom: 1px solid var(--border); }
+.cdx-files-pill {
+  display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border: 0; border-radius: 4px;
+  background: var(--hover); color: var(--text-soft); font: var(--kor-text-13) var(--font-sans); font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.cdx-files-pill:hover { background: rgb(from var(--text) r g b / 0.1); color: var(--text); }
+.cdx-status-spacer { flex: 1; }
+.cdx-status-spin { color: var(--muted); }
+.cdx-todo-btn { position: relative; }
+.cdx-todo-btn.has-dot::after { content: ''; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--info); }
+.cdx-session-switch { height: 26px; gap: 4px; }
+.cdx-session-menu, .cdx-todo-menu { top: calc(100% + 4px); bottom: auto; right: 0; left: auto; width: 280px; max-height: 360px; overflow: auto; }
+.cdx-session-when { margin-left: auto; flex: none; font: var(--kor-text-12) var(--font-sans); color: var(--muted); }
+.cdx-todo-bar { height: 4px; margin: 0 10px 6px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.cdx-todo-bar > span { display: block; height: 100%; background: var(--add-text); }
+.cdx-todo-list { list-style: none; margin: 0; padding: 0 6px 4px; display: flex; flex-direction: column; gap: 2px; }
+.cdx-todo { display: flex; align-items: center; gap: 8px; min-height: 26px; padding: 0 6px; font: var(--kor-text-13) var(--font-sans); color: var(--text-soft); }
+.cdx-todo.completed { color: var(--muted); text-decoration: line-through; }
+.cdx-todo.in_progress { color: var(--text); }
+.cdx-todo-mark { display: inline-flex; width: 14px; justify-content: center; color: var(--add-text); flex: none; }
+
+/* ============ 24) NOTLAR + GÜNLÜKLER PANELLERİ (cdesktop Notes / Logs) ============ */
+.cdx-notes { display: flex; flex-direction: column; flex: 1; min-height: 0; padding: 10px 12px; gap: 6px; }
+.cdx-notes-input {
+  flex: 1; min-height: 160px; resize: none; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text); font: var(--kor-text-13)/1.5 var(--font-sans); outline: none;
+}
+.cdx-notes-input:focus { border-color: var(--accent); }
+.cdx-notes-input::placeholder { color: var(--muted); }
+.cdx-notes-status { margin: 0; font: var(--kor-text-12) var(--font-sans); color: var(--muted); }
+.cdx-logs { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.cdx-log-list { list-style: none; margin: 0; padding: 4px 8px 10px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.cdx-log-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 4px; }
+.cdx-log-row:hover { background: var(--hover); }
+.cdx-log-icon { display: inline-flex; margin-top: 2px; color: var(--muted); flex: none; }
+.cdx-log-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.cdx-log-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cdx-log-tool { font: 600 var(--kor-text-13) var(--font-sans); color: var(--text); }
+.cdx-log-time { margin-left: auto; flex: none; font: var(--kor-text-12) var(--font-sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+.cdx-log-args { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--kor-text-12) var(--font-mono); color: var(--text-soft); }
+.cdx-log-reason { font: var(--kor-text-12) var(--font-sans); color: var(--warn); }
+.cdx-log-decision.deny, .cdx-log-decision.rejected, .cdx-log-fail { color: var(--del-text); }
+.cdx-log-decision.approved { color: var(--add-text); }
+
+/* ============ 25) KOMUT PALETİ + KISAYOLLAR (cdesktop Ctrl+K) ============ */
+dialog.dialog:has(> .cdx-palette) { padding: 0; width: min(640px, calc(100vw - 32px)); border-radius: 8px; overflow: hidden; }
+.cdx-palette { display: flex; flex-direction: column; max-height: min(520px, 80vh); }
+.cdx-palette-input { display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-bottom: 1px solid var(--border); color: var(--muted); }
+.cdx-palette-input input { flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent; color: var(--text); font: var(--kor-text-14) var(--font-sans); }
+.cdx-palette-input input::placeholder { color: var(--muted); }
+.cdx-palette-input:focus-within { border-bottom-color: var(--accent); box-shadow: inset 0 -1px 0 var(--accent); }
+.cdx-palette-list { overflow: auto; padding: 6px; }
+.cdx-palette-group + .cdx-palette-group { margin-top: 4px; }
+.cdx-palette-heading { margin: 6px 10px 2px; font: 600 var(--kor-text-12) var(--font-sans); color: var(--muted); }
+.cdx-palette-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 34px; padding: 0 10px; border: 0; border-radius: 4px;
+  background: transparent; color: var(--text); font: var(--kor-text-14) var(--font-sans); text-align: left; cursor: pointer;
+}
+.cdx-palette-row > svg { color: var(--muted); flex: none; }
+.cdx-palette-row.active, .cdx-palette-row:hover { background: rgb(from var(--text) r g b / 0.08); }
+.cdx-palette-hint { margin-left: auto; flex: none; font: var(--kor-text-12) var(--font-mono); color: var(--muted); letter-spacing: 0.08em; }
+.cdx-palette-empty { margin: 0; padding: 14px 10px; color: var(--muted); font: var(--kor-text-13) var(--font-sans); }
+.cdx-shortcut-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cdx-shortcut-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--border); font: var(--kor-text-13) var(--font-sans); color: var(--text); }
+.cdx-shortcut-list kbd { padding: 2px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--hover); font: var(--kor-text-12) var(--font-mono); color: var(--text-soft); }
+
+/* ============ 26) AYARLAR > AJANLAR: 2 SÜTUN (cdesktop Agents | Configuration) ============ */
+.cdx-agents { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(0, 1.4fr); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.cdx-agents-col { display: flex; flex-direction: column; min-width: 0; }
+.cdx-agents-col + .cdx-agents-col { border-left: 1px solid var(--border); }
+.cdx-agents-head { height: 36px; padding: 0 12px; display: flex; align-items: center; border-bottom: 1px solid var(--border); font: 600 var(--kor-text-13) var(--font-sans); color: var(--text-soft); background: var(--hover); }
+.cdx-agents-list { list-style: none; margin: 0; padding: 4px; max-height: 320px; overflow: auto; }
+.cdx-agents-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 32px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--text); font: var(--kor-text-13) var(--font-sans); text-align: left; cursor: pointer; }
+.cdx-agents-item > svg { color: var(--muted); flex: none; }
+.cdx-agents-item:hover { background: var(--hover); }
+.cdx-agents-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.cdx-agents-item.active > svg { color: var(--accent); }
+.cdx-agents-src { margin-left: auto; flex: none; }
+.cdx-agent-form { display: flex; flex-direction: column; padding: 4px 12px 8px; }
+.cdx-agent-row { display: grid; grid-template-columns: 140px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font: var(--kor-text-13)/1.45 var(--font-sans); }
+.cdx-agent-row:last-child { border-bottom: 0; }
+.cdx-agent-row-label { font-weight: 600; color: var(--text); }
+.cdx-agent-row-value { color: var(--text-soft); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; overflow-wrap: anywhere; }
+.cdx-check { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 1px solid var(--border); border-radius: 3px; background: var(--surface); color: #fff; }
+.cdx-check.on { background: #2563eb; border-color: #2563eb; }
+
+/* ============ 27) KELİME DÜZEYİ DIFF + SATIR İÇİ İNCELEME YORUMLARI (cdesktop) ============ */
+.diff-line.add .diff-word, .g4-split-cell.add .diff-word { background: rgb(from var(--add-text) r g b / 0.28); color: inherit; border-radius: 2px; }
+.diff-line.del .diff-word, .g4-split-cell.del .diff-word { background: rgb(from var(--del-text) r g b / 0.28); color: inherit; border-radius: 2px; }
+.diff-word { padding: 0 1px; }
+.cdx-diff-line-wrap { display: block; position: relative; }
+.cdx-review-add {
+  position: absolute; left: 2px; top: 1px; display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border: 0; border-radius: 3px; background: var(--accent); color: #fff; opacity: 0; cursor: pointer;
+}
+.cdx-diff-line-wrap:hover > .diff-line > .cdx-review-add, .cdx-diff-row:hover .cdx-review-add { opacity: 1; }
+.cdx-review-gutter { position: relative; width: 20px; vertical-align: top; }
+.cdx-review-gutter .cdx-review-add { position: static; }
+.cdx-review-float { position: absolute; right: 0; top: 100%; z-index: 5; width: min(420px, 60vw); }
+.cdx-review-slot { display: flex; flex-direction: column; gap: 6px; margin: 4px 12px 8px 60px; white-space: normal; font: var(--kor-text-13) var(--font-sans); }
+.cdx-review-editor {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--accent); border-radius: 6px;
+  background: rgb(from var(--accent) r g b / 0.12);
+}
+.cdx-review-input { width: 100%; min-height: 56px; resize: vertical; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font: var(--kor-text-13)/1.45 var(--font-sans); outline: none; }
+.cdx-review-input:focus { border-color: var(--accent); }
+.cdx-review-actions { display: flex; gap: 8px; }
+.cdx-review-actions .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cdx-review-cancel { background: rgb(from var(--accent) r g b / 0.35) !important; border-color: transparent !important; color: var(--text) !important; }
+.cdx-review-card { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 6px; background: rgb(from var(--accent) r g b / 0.08); color: var(--text); }
+.cdx-review-card > svg { color: var(--accent); flex: none; margin-top: 2px; }
+.cdx-review-text { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cdx-review-card .action-btn { width: 22px; height: 22px; }
+.cdx-review-count { display: inline-flex; align-items: center; gap: 3px; flex: none; margin-left: 6px; font: var(--kor-text-12) var(--font-sans); color: var(--accent); }
+.cdx-review-banner {
+  display: flex; align-items: center; gap: 8px; margin: -4px -4px 4px; padding: 8px 10px; border-bottom: 1px solid var(--border);
+  color: var(--text); font: var(--kor-text-13) var(--font-sans);
+}
+.cdx-review-banner > svg { color: var(--accent); }
+.cdx-review-banner > span { flex: 1; }
+
+/* ============ 28) AYARLAR EKLERİ: ETİKETLER, BİLDİRİMLER, MCP JSON (cdesktop) ============ */
+.cdx-toggles { display: flex; flex-direction: column; gap: 6px; }
+.cdx-tags { display: flex; flex-direction: column; gap: 10px; }
+.cdx-tags-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.cdx-tags-table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; font: var(--kor-text-13) var(--font-sans); }
+.cdx-tags-table th, .cdx-tags-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.cdx-tags-table th { font-weight: 600; color: var(--text-soft); background: var(--hover); }
+.cdx-tags-table tr:last-child td { border-bottom: 0; }
+.cdx-tags-content { color: var(--text-soft); max-width: 0; width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cdx-tags-actions { width: 72px; text-align: right; white-space: nowrap; }
+.cdx-tag-form { display: flex; flex-direction: column; gap: 4px; min-width: 520px; }
+.cdx-tag-form label { font: 600 var(--kor-text-13) var(--font-sans); color: var(--text); margin-top: 8px; }
+.cdx-tag-form .text-input { width: 100%; }
+.cdx-tag-form .dialog-textarea { min-height: 140px; resize: vertical; }
+.cdx-req { color: var(--del-text); }
+.cdx-mcp-json { display: flex; flex-direction: column; gap: 8px; }
+.cdx-mcp-json-input { width: 100%; min-height: 240px; font-size: var(--kor-text-12); }
+.cdx-unsaved { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--hover); font: var(--kor-text-13) var(--font-sans); color: var(--text); }
+.cdx-unsaved > span { flex: 1; }
+.cdx-unsaved .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ============ 29) TAKIMLAR (rol tabanlı ajan ekipleri) ============ */
+.cdx-teams { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.cdx-teams .g7-h4 { display: inline-flex; align-items: center; gap: 6px; }
+.cdx-team-actions { margin-left: auto; display: inline-flex; gap: 2px; }
+.cdx-team-desc { margin: 8px 0 4px; }
+.cdx-team-flow { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cdx-team-step { border: 1px solid var(--border); border-radius: 6px; background: var(--hover); padding: 8px 10px; }
+.cdx-team-step-head { display: flex; align-items: center; gap: 8px; font: var(--kor-text-13) var(--font-sans); color: var(--text); }
+.cdx-team-step-head code { font: var(--kor-text-12) var(--font-mono); color: var(--accent); }
+.cdx-team-role-no { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #fff; font: 700 var(--kor-text-12) var(--font-sans); flex: none; }
+.cdx-team-instr { margin: 6px 0 0; white-space: pre-wrap; font: var(--kor-text-12)/1.5 var(--font-sans); color: var(--text-soft); max-height: 120px; overflow: auto; }
+.cdx-team-form { display: flex; flex-direction: column; gap: 4px; min-width: 620px; max-height: 80vh; overflow: auto; }
+.cdx-team-form label { font: 600 var(--kor-text-13) var(--font-sans); color: var(--text); margin-top: 8px; }
+.cdx-team-form .text-input, .cdx-team-form .g7-select { width: 100%; }
+.cdx-team-roles-head { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; font: 600 var(--kor-text-13) var(--font-sans); color: var(--text); }
+.cdx-team-role { display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; margin-top: 6px; }
+.cdx-team-role-row { display: grid; grid-template-columns: 18px 1fr 1fr 26px; align-items: center; gap: 8px; }
+.cdx-team-role .dialog-textarea { min-height: 64px; resize: vertical; }
+
+/* ============ 30) DİKEY EYLEM ŞERİDİ + ÜST SAĞ ARAÇ ÇUBUĞU (cdesktop) ============ */
+.main { position: relative; }
+.cdx-rail {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%); z-index: 6;
+  display: flex; flex-direction: column; gap: 2px; padding: 4px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--surface); box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
+}
+.cdx-rail-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); cursor: pointer; }
+.cdx-rail-btn:hover:not(:disabled) { background: var(--hover); color: var(--text); }
+.cdx-rail-btn:disabled { opacity: 0.4; cursor: default; }
+.cdx-rail-vscode { display: inline-flex; width: 16px; height: 16px; }
+.cdx-rail-vscode svg { width: 100%; height: 100%; }
+.cdx-rail-menu { top: 0; bottom: auto; right: calc(100% + 6px); left: auto; width: 230px; max-height: none; }
+.cdx-rail-note { position: absolute; right: calc(100% + 8px); top: 0; margin: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--warn); font: var(--kor-text-12) var(--font-sans); white-space: nowrap; }
+.cdx-header-sep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; }
+.main-header .action-btn { flex: none; }
+/* Başlık: yol solda esner, araç düğmeleri sağda sıkı grup (space-between düğmeleri dağıtıyordu) */
+.main-header { justify-content: flex-start; gap: 4px; }
+.main-header .header-path { flex: 1; min-width: 0; margin-right: 8px; }
+.main-header .bg-pill { margin-right: 8px; }
+
+/* ============ 31) MESAJI DÜZENLE (cdesktop: turuncu çerçeve, İptal / Yeniden dene) ============ */
+.g2-edit-textarea { border: 1px solid var(--accent) !important; border-radius: 6px; min-height: 120px; }
+.g2-edit-textarea:focus { box-shadow: 0 0 0 3px rgb(from var(--accent) r g b / 0.2); }
+
+/* ============ 32) GIT: MERGE / REBASE / ÇAKIŞMA ŞERİDİ (cdesktop rebase banner) ============ */
+.cdx-git-banner { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--warn); border-radius: var(--kor-radius-chip); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.cdx-git-banner-title { display: flex; align-items: center; gap: 6px; margin: 0; font: 600 var(--kor-text-13) var(--font-sans); color: var(--text); }
+.cdx-git-banner-title > svg { color: var(--warn); }
+.cdx-git-conflicts { margin: 0; padding-left: 18px; font: var(--kor-text-12) var(--font-mono); color: var(--text-soft); max-height: 120px; overflow: auto; }
+.cdx-btn-accent { background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important; }
+.cdx-btn-danger { color: var(--del-text) !important; border-color: var(--del-text) !important; }
+.cdx-btn-merge { color: var(--add-text) !important; border-color: rgb(from var(--add-text) r g b / 0.5) !important; }
+.cdx-btn-rebase { color: var(--warn) !important; border-color: color-mix(in srgb, var(--warn) 50%, transparent) !important; }
+.cdx-git-actions { flex-wrap: wrap; }
+
+/* ============ 33) DIFF KATLAMA (cdesktop "N unmodified lines", dosya kartı chevron) ============ */
+.cdx-fold, .cdx-fold-row td { background: rgb(from var(--text) r g b / 0.05); }
+.cdx-fold { display: inline-flex; align-items: center; gap: 6px; width: 100%; height: 24px; padding: 0 0 0 60px; border: 0; color: var(--muted); font: var(--kor-text-12) var(--font-sans); text-align: left; cursor: pointer; }
+.cdx-fold:hover { color: var(--text); background: rgb(from var(--text) r g b / 0.09); }
+.cdx-fold-line { display: block; white-space: normal; }
+.cdx-fold-row td { padding: 0; }
+.cdx-diff-collapse { width: 22px; height: 22px; }
+.cdx-sound-row { display: inline-flex; align-items: center; gap: 6px; }
+.cdx-sound-row .g7-select { width: 220px; }
+.cdx-sound-play { width: 30px; height: 30px; border: 1px solid var(--border); border-radius: 6px; }
+.cdx-editor-fields { min-width: 300px; width: 420px; max-width: 100%; }
+.cdx-editor-fields .text-input, .cdx-editor-fields .g7-select { width: 100%; }
+
+/* ============ 34) KENAR ÇUBUĞU FİLTRELERİ, DURUM GRUPLARI, ARŞİV ALT SATIRI, MENÜ KISAYOL İPUÇLARI ============ */
+.cdx-filters { display: flex; align-items: center; gap: 4px; margin: 0 0 4px; }
+.cdx-pill { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 6px 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-soft); font: var(--kor-text-12) var(--font-sans); min-width: 0; flex: 1; }
+.cdx-pill select { border: 0; background: transparent; color: inherit; font: inherit; outline: none; min-width: 0; width: 100%; cursor: pointer; }
+.cdx-group-toggle { width: 26px; height: 26px; flex: none; }
+.cdx-group-toggle.active { color: var(--accent); background: var(--accent-soft); }
+.cdx-archive-foot { display: flex; align-items: center; gap: 6px; width: 100%; height: 30px; margin-top: 8px; padding: 0 8px; border: 0; border-top: 1px solid var(--border); background: transparent; color: var(--muted); font: var(--kor-text-13) var(--font-sans); text-align: left; cursor: pointer; }
+.cdx-archive-foot:hover { color: var(--text); }
+.cdx-archive-foot span:first-of-type { flex: 1; }
+.cdx-archive-count { font-variant-numeric: tabular-nums; }
+.cdx-menu-hint { margin-left: auto; flex: none; font: var(--kor-text-12) var(--font-mono); color: var(--muted); letter-spacing: 0.06em; }
+.cdx-shortcut-groups { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 28px; align-items: start; max-height: calc(100vh - 230px); overflow-x: hidden; overflow-y: auto; padding-right: 4px; }
+.cdx-shortcut-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.cdx-shortcut-list li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cdx-shortcut-list kbd { flex: none; white-space: nowrap; }
+.cdx-shortcut-group h3 { margin: 10px 0 2px; font: 600 var(--kor-text-12) var(--font-sans); color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.cdx-shortcuts { min-width: 0; width: 100%; box-sizing: border-box; }
+.dialog:has(> .cdx-shortcuts) { width: min(880px, calc(100vw - 32px)); }
+
+/* ============ 35) SATIR İÇİ MESAJ DÜZENLEME (cdesktop: turuncu kutu, İptal / Yeniden dene) ============ */
+.message.user.editing { align-items: stretch; }
+.cdx-inline-edit { display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 10px 12px; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface); }
+.cdx-inline-edit-input { width: 100%; resize: vertical; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); font: var(--kor-text-14)/1.5 var(--font-sans); outline: none; }
+.cdx-inline-edit-input:focus { border-color: var(--accent); }
+.cdx-inline-edit-actions { display: flex; align-items: center; gap: 8px; }
+.cdx-inline-edit-actions .dialog-meta { flex: 1; font: var(--kor-text-12) var(--font-sans); color: var(--muted); }
+
+/* ============ 36) AJAN PROFİLLERİ (cdesktop "Default ⌄" pill + Ayarlar > Profiller) ============ */
+.cdx-profile-trigger { gap: 5px; }
+.cdx-profile-trigger.active { color: var(--accent); }
+.cdx-profile-menu { min-width: 300px; }
+.cdx-profile-menu .menu-footer-btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ============ 37) WEB ÖNİZLEME (cdesktop Dev Server Preview + Browser Companion) ============ */
+.cdx-preview { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.cdx-preview-bar { display: flex; align-items: center; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.cdx-preview-url { flex: 1; min-width: 80px; height: 26px; padding: 0 8px; font: var(--kor-text-12) var(--font-mono); }
+.cdx-preview-devices { display: inline-flex; gap: 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.cdx-preview-devices .action-btn { border-radius: 0; width: 26px; height: 24px; }
+.cdx-preview-bar .action-btn.active, .cdx-preview-devices .action-btn.active { color: var(--accent); background: var(--accent-soft); }
+.cdx-preview-error { margin: 0; padding: 4px 10px; font-size: var(--kor-text-12); }
+.cdx-preview-hint { display: flex; align-items: center; gap: 6px; margin: 0; padding: 4px 10px; background: var(--accent-soft); color: var(--accent); font: var(--kor-text-12) var(--font-sans); }
+.cdx-preview-host { position: relative; flex: 1; min-height: 0; background: rgb(from var(--text) r g b / 0.03); }
+.cdx-preview-host.device-tablet, .cdx-preview-host.device-mobile { background: repeating-linear-gradient(45deg, transparent 0 8px, rgb(from var(--text) r g b / 0.04) 8px 9px); }
+.cdx-preview-empty { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: var(--muted); }
+.cdx-preview-empty h3 { margin: 4px 0 0; font: 500 var(--kor-text-14) var(--font-sans); color: var(--text); }
+.cdx-preview-empty p { margin: 0; font-size: var(--kor-text-13); max-width: 360px; }
+.cdx-preview-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
+.cdx-preview-foot { border-top: 1px solid var(--border); background: var(--surface); }
+.cdx-preview-foot-toggle { display: flex; align-items: center; gap: 6px; width: 100%; height: 26px; padding: 0 10px; border: 0; background: transparent; color: var(--muted); font: var(--kor-text-12) var(--font-sans); text-align: left; cursor: pointer; }
+.cdx-preview-foot-toggle:hover { color: var(--text); }
+.cdx-preview-errors { margin-left: auto; color: var(--del-text); }
+.cdx-preview-log { margin: 0; max-height: 180px; overflow: auto; padding: 6px 10px; font: var(--kor-text-12)/1.5 var(--font-mono); color: var(--text-soft); background: var(--bg); white-space: pre-wrap; word-break: break-all; }
+.cdx-console-error { color: var(--del-text); }
+.cdx-console-warn { color: var(--warn); }
+.cdx-spin { animation: cdx-spin 0.8s linear infinite; }
+@keyframes cdx-spin { to { transform: rotate(360deg); } }
+.cdx-preview-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px 0; color: var(--accent); font: var(--kor-text-12) var(--font-sans); }
+.cdx-preview-chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 4px 0 8px; border: 1px solid rgb(from var(--accent) r g b / 0.5); border-radius: 11px; background: var(--accent-soft); color: var(--text); font: var(--kor-text-12) var(--font-mono); }
+.cdx-preview-chip-x { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+.cdx-preview-chip-x:hover { background: rgb(from var(--text) r g b / 0.12); color: var(--text); }
+
+/* ============ 38) YAN PANEL GENİŞLİK TUTAMACI (cdesktop resize handle) ============ */
+.side-panel { position: relative; min-width: 340px; max-width: 70vw; }
+.cdx-panel-resizer { position: absolute; left: -3px; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 5; background: transparent; }
+.cdx-panel-resizer::after { content: ''; position: absolute; left: 3px; top: 0; bottom: 0; width: 1px; background: transparent; transition: background var(--kor-dur-hover) var(--kor-ease); }
+.cdx-panel-resizer:hover::after, .cdx-panel-resizer.active::after { background: var(--accent); }
+.cdx-panel-resizer.active { width: 100vw; left: auto; right: 0; } /* sürüklerken fare WebContentsView üstüne geçse de olaylar kaçmaz */
+
+/* ============ 39) AYARLAR PENCERESİ CİLASI (arama kutusu boşluğu, ince kaydırma çubukları) ============ */
+.g7-settings-nav { padding-top: 14px; }
+.g7-settings-nav .g7-search { margin: 0 0 12px; padding: 0 var(--kor-space-3); flex: none; } /* taşan sütunda ezilmesin */
+.g7-settings-nav, .g7-settings-content { scrollbar-width: thin; scrollbar-color: rgb(from var(--text) r g b / 0.18) transparent; }
+.g7-settings-nav::-webkit-scrollbar, .g7-settings-content::-webkit-scrollbar { width: 8px; }
+.g7-settings-nav::-webkit-scrollbar-thumb, .g7-settings-content::-webkit-scrollbar-thumb { background: rgb(from var(--text) r g b / 0.18); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+.g7-settings-nav::-webkit-scrollbar-thumb:hover, .g7-settings-content::-webkit-scrollbar-thumb:hover { background: rgb(from var(--text) r g b / 0.32); background-clip: padding-box; }
+.g7-settings-nav::-webkit-scrollbar-track, .g7-settings-content::-webkit-scrollbar-track, .g7-settings-nav::-webkit-scrollbar-button, .g7-settings-content::-webkit-scrollbar-button { background: transparent; display: none; }
+
+/* ============ 40) AJANLAR: sayaç + köken süzgeci + arama ============ */
+.cdx-agents-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cdx-agents-count { font: var(--kor-text-13) var(--font-sans); color: var(--text-soft); margin-right: 4px; }
+.cdx-agents-count strong { font-size: var(--kor-text-14); color: var(--text); }
+.cdx-agents-chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; }
+.cdx-agents-toolbar .cdx-mcp-search { width: 200px; }
+.cdx-agents-src.plugin { color: var(--accent); border-color: rgb(from var(--accent) r g b / 0.4); }
+.cdx-agents-list { max-height: 420px; }
+
+/* ============ 41) ÖNİZLEME KONSOL HATASI → AJANA GÖNDER ============ */
+.cdx-preview-foot { display: flex; flex-wrap: wrap; align-items: center; }
+.cdx-preview-foot .cdx-preview-foot-toggle { width: auto; flex: 1; }
+.cdx-preview-fix { margin: 0 8px; }
+.cdx-preview-foot .cdx-preview-log { width: 100%; }
+.cdx-console-fix { margin-left: 8px; padding: 0 6px; border: 1px solid rgb(from var(--del-text) r g b / 0.5); border-radius: 3px; background: transparent; color: var(--del-text); font: var(--kor-text-12) var(--font-sans); cursor: pointer; vertical-align: middle; }
+.cdx-console-fix:hover { background: rgb(from var(--del-text) r g b / 0.12); }
+
+/* ============ 42) DEĞİŞİKLİK KARTI KATLAMA/KAPATMA + BÜYÜK DOSYA ============ */
+.cdx-changes-head { gap: 6px; }
+.cdx-changes-toggle { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; padding: 0; }
+.cdx-changes-toggle:hover { color: var(--text); }
+.cdx-chevron { transition: transform var(--kor-dur-hover) var(--kor-ease); }
+.cdx-chevron.closed { transform: rotate(-90deg); }
+.cdx-changes-open, .cdx-changes-close { width: 22px; height: 22px; opacity: 0.7; }
+.cdx-changes-open:hover, .cdx-changes-close:hover { opacity: 1; }
+.g3-changes.collapsed { padding-bottom: 8px; }
+.cdx-lazy-change { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px; }
+
+/* ============ 43) ALT ŞERİT ARAÇLAR MENÜSÜ ============ */
+.cdx-tools-anchor { display: block; }
+.cdx-tools-chev { margin-left: auto; }
+.cdx-tools-menu { bottom: calc(100% + 4px); top: auto; left: 0; right: auto; width: 240px; padding: 4px; }
+.cdx-tools-menu .rail-btn { width: 100%; justify-content: flex-start; }
+.cdx-tools-menu .rail-btn-label { display: inline; }
+
+/* ============ 44) AJAN TARAYICISI PANELİ ============ */
+.cdx-browser { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.cdx-browser-tabs { display: flex; align-items: flex-end; gap: 2px; padding: 6px 6px 0; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.cdx-browser-tab { display: inline-flex; align-items: center; gap: 6px; max-width: 180px; height: 28px; padding: 0 6px 0 10px; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; color: var(--muted); font: var(--kor-text-12) var(--font-sans); cursor: pointer; flex: none; }
+.cdx-browser-tab:hover { color: var(--text); background: var(--hover); }
+.cdx-browser-tab.on { background: var(--bg); border-color: var(--border); color: var(--text); margin-bottom: -1px; }
+.cdx-browser-tab-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cdx-browser-tab-x { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 0; border-radius: 3px; background: transparent; color: inherit; opacity: 0.6; cursor: pointer; }
+.cdx-browser-tab-x:hover { opacity: 1; background: rgb(from var(--text) r g b / 0.12); }
+.cdx-browser-newtab { width: 26px; height: 26px; margin-bottom: 1px; }
+.cdx-browser-action { display: inline-flex; align-items: center; gap: 4px; max-width: 220px; padding: 0 8px; height: 24px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font: var(--kor-text-12) var(--font-sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cdx-browser-host { background: #fff; }

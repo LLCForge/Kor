@@ -1,0 +1,50 @@
+[package]
+name = "kor-agent"
+description = "Agent loop, permissions and sessions for the Kor coding agent"
+version = "0.6.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+base64.workspace = true
+chrono.workspace = true
+# MCP-call hooks find the configured servers (ADR 0063).
+dirs.workspace = true
+futures.workspace = true
+globset.workspace = true
+ignore.workspace = true
+kor-compat.workspace = true
+kor-core.workspace = true
+kor-graph.workspace = true
+# §19.3: writes stop up front on a critically full disk (ADR 0059).
+kor-health.workspace = true
+kor-memory.workspace = true
+kor-providers.workspace = true
+kor-secrets.workspace = true
+kor-tools.workspace = true
+kor-sandbox.workspace = true
+kor-platform.workspace = true
+regex.workspace = true
+rusqlite.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+sha2.workspace = true
+serde_json.workspace = true
+# OpenAPI documents in YAML (`kor mcp add`, ADR 0038).
+serde_yaml.workspace = true
+thiserror.workspace = true
+tokio-util.workspace = true
+toml.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio.workspace = true
+wiremock.workspace = true
+
+[lints]
+workspace = true

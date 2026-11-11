@@ -1,0 +1,16 @@
+# Default port per https://jan.ai/docs/api-server
+id = "local-jan"
+name = "Local (Jan)"
+category = "local"
+adapter = "openai_compat"
+base_url = "http://localhost:1337/v1"
+auth = { kind = "none" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://jan.ai/docs/api-server"
+
+[privacy]
+tier = "local"
+retention = "Never leaves this machine."
+training_on_data = false

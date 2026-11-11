@@ -1,0 +1,3 @@
+rule aider/project repo/CONVENTIONS.md [always] Aider conventions.
+rule aider/project repo/docs/extra.md [always] Extra read-only context.
+skipped read `../outside.md` outside the project from /repo/.aider.conf.yml

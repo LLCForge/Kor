@@ -1,0 +1,19 @@
+id = "anthropic"
+name = "Anthropic"
+category = "standard"
+adapter = "anthropic"
+base_url = "https://api.anthropic.com/v1"
+auth = { kind = "header", env = "ANTHROPIC_API_KEY", header = "x-api-key" }
+models_endpoint = "/models"
+tool_calling = true
+vision = true
+thinking = true
+verified = false
+docs = "https://docs.anthropic.com/en/api/messages"
+
+[privacy]
+tier = "no_train"
+retention = "Provider states API inputs/outputs are retained for a limited period and not used for training by default (verify)."
+training_on_data = false
+jurisdiction = "US"
+policy_url = "https://www.anthropic.com/legal/commercial-terms"

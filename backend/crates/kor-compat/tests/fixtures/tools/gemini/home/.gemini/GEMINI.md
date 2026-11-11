@@ -1,0 +1,1 @@
+Global Gemini context.

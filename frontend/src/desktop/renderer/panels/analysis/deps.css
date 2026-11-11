@@ -1,0 +1,12 @@
+/* Bağımlılıklar bölümü (DepsSection.tsx); yalnızca mevcut değişkenler. */
+.kd-list { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.kd-check { display: inline-flex; align-items: center; gap: 4px; }
+.kd-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.kd-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.kd-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+.kd-via { font-size: 12px; }
+.kd-loc { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.kd-class { display: inline-block; padding: 0 6px; border-radius: 6px; font-size: 12px; background: var(--hover); color: var(--muted); }
+.kd-class.kd-strong-copyleft, .kd-class.kd-proprietary { background: var(--del-bg); color: var(--del-text); }
+.kd-class.kd-weak-copyleft, .kd-class.kd-unknown { color: var(--warn); }
+.kd-class.kd-permissive { background: var(--add-bg); color: var(--add-text); }

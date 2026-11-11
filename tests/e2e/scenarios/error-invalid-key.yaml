@@ -1,0 +1,14 @@
+# §17.2 error path "geçersiz key": 401 from the provider is shown as an authentication error.
+name: error-invalid-key
+title: "Hata yolu: geçersiz anahtar"
+project:
+  files:
+    README.md: "# Demo\n"
+mock:
+  - status: 401
+    error: "Incorrect API key provided"
+steps:
+  - prompt: "merhaba"
+expect:
+  error: true
+  usage_requests: 0

@@ -1,0 +1,5 @@
+[packages]
+flask = "*"
+
+[dev-packages]
+black = "*"

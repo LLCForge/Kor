@@ -1,0 +1,19 @@
+/* Yazmadan önce dosya bazında onay (§12.3). Yalnızca mevcut değişkenler. */
+.review { display: flex; flex-direction: column; gap: 8px; }
+.review.danger { border-left: 3px solid var(--del-text); padding-left: 8px; }
+.review-danger { display: flex; align-items: center; gap: 6px; margin: 0; color: var(--del-text); font-weight: 600; }
+.review-files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.review-file { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.review-file.reject { opacity: 0.6; }
+.review-file.reject .review-path { text-decoration: line-through; }
+.review-file-head { display: flex; align-items: center; gap: 6px; padding: 4px 6px; }
+.review-path { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono); font-size: 0.875rem; }
+.review-tag { font-size: 0.75rem; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; }
+.review-tag.del { color: var(--del-text); border-color: var(--del-text); }
+.review-choice { display: inline-flex; gap: 2px; }
+.review-choice .action-btn[aria-pressed='true'] { background: var(--accent-soft); color: var(--text); }
+.review-choice .action-btn.reject[aria-pressed='true'] { background: var(--del-bg); color: var(--del-text); }
+.review-choice .action-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.review-diff { max-height: 320px; overflow: auto; border-top: 1px solid var(--border); background: var(--code-bg); }
+.review-editor { min-width: min(880px, 90vw); }
+.review-editor .g4-editor { height: 60vh; }

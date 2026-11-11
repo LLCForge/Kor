@@ -1,0 +1,5 @@
+---
+globs: "**/*.test.ts"
+alwaysApply: false
+---
+Use vitest.

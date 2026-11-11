@@ -1,0 +1,57 @@
+[package]
+name = "kor-shellext"
+description = "Kor's Windows 11 Explorer context menu (IExplorerCommand) and Widgets board provider, registered through a sparse package"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+publish = false
+
+# Lives under kor-platform/ on purpose: its Win32/COM code is OS-specific, and the `leak` ratchet
+# (kor-platform/tests/leak.rs) keeps every OS branch inside kor-platform (ADR 0052).
+
+[lib]
+name = "kor_shellext"
+# cdylib: the COM server Explorer loads (dllhost surrogate); rlib: the widgets exe and tests.
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "kor-widgets"
+path = "src/bin/kor-widgets.rs"
+
+[dependencies]
+dirs.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-core = "0.62"
+windows = { version = "0.62", features = [
+    "Foundation",
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_System_Com",
+    "Win32_System_LibraryLoader",
+    "Win32_System_SystemServices",
+    "Win32_System_Threading",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+# Same as kor-platform: `unsafe_code` is `deny` so the COM module and generated WinRT bindings can
+# allow it locally (every vtable call is FFI).
+[lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+must_use_candidate = "allow"

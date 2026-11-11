@@ -1,0 +1,18 @@
+# Source: https://mistral.ai/news/codestral
+id = "codestral"
+name = "Mistral Codestral"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://codestral.mistral.ai/v1"
+auth = { kind = "bearer", env = "CODESTRAL_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://mistral.ai/news/codestral"
+# Separate host and key for IDE use. FIM: POST /fim/completions on this base
+# (https://docs.mistral.ai/api/endpoint/fim). Env var name follows the common convention; Mistral does not name one.
+tags = ["fim"]
+[privacy]
+tier = "no_train"
+retention = "Same terms as Mistral La Plateforme (verify)."
+jurisdiction = "EU"

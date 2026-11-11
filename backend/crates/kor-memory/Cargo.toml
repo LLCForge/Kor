@@ -1,0 +1,31 @@
+[package]
+name = "kor-memory"
+description = "Kor's persistent project memory and the global, searchable knowledge base"
+version = "0.2.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# Local CPU embeddings (ADR 0023): pure Rust, no system libraries.
+candle-core = "0.11"
+candle-nn = "0.11"
+candle-transformers = "0.11"
+chrono.workspace = true
+dirs.workspace = true
+globset.workspace = true
+kor-components.workspace = true
+kor-tools.workspace = true
+tokenizers = { version = "0.22", default-features = false, features = ["fancy-regex"] }
+regex.workspace = true
+rusqlite.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

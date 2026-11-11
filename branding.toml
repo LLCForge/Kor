@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# Brand single source (spec §22.2 "Marka değiştirilebilir", ADR 0064).
+#
+# A fork changes its name with `just rebrand <Name>` (dry run first, `just rebrand <Name> --apply` writes,
+# `just rebrand-revert` undoes). The script (scripts/rebrand.py) rewrites this file and every place that
+# carries these values: bundle ids, binary names, package-manager ids, user-visible strings, URLs.
+# Colours and fonts live in assets/theme.json (spec §16, ADR 0053); logos and verbs in assets/.
+# kor-platform embeds this file (`kor_platform::brand()`), so the binaries read the same values.
+
+[product]
+# Display name in windows, installers and messages.
+name = "Kor"
+# Command and binary name (`kor`, `kor.exe`), config/data folder name, URL scheme.
+slug = "kor"
+# Desktop bundle identifier (reverse DNS): macOS bundle id, Linux app id, Windows AUMID.
+identifier = "dev.kor.desktop"
+# Publisher shown by installers and package managers (winget `Publisher.Name` prefix).
+publisher = "LLCForge"
+description = "Open-source coding agent (desktop app and kor CLI)"
+
+[urls]
+repository = "https://github.com/LLCForge/Kor"
+components = "https://github.com/LLCForge/kor-components"
+# `curl -fsSL https://get.kor.dev | sh` serves scripts/install.sh from the latest release.
+install = "https://get.kor.dev"
+security = "https://github.com/LLCForge/Kor/security/advisories/new"
+
+[theme]
+# Colours, fonts and spinner frames; `node frontend/scripts/theme-gen.ts` turns it into CSS/Rust/TS.
+file = "assets/theme.json"
+
+[chrome]
+# Native messaging host name (spec §18, §24.4): registered by the installers.
+native_host = "dev.kor.chrome"
+# Chrome Web Store / Edge Add-ons ids of the published extension. The installers register the
+# native host only for these origins; an empty list registers nothing.
+extension_ids = []

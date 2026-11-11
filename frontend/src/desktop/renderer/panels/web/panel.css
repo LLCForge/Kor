@@ -1,0 +1,13 @@
+/* Web siteleri görünümü; ortak kart/satır sınıfları ../graph/panel.css (kg-*) ve ../security/panel.css (ks-*) içinde. */
+.kw { display: flex; flex-direction: column; gap: var(--kor-space-3); }
+.kw summary { cursor: pointer; }
+.kw-inline { display: inline; }
+.kw-body { display: flex; flex-direction: column; gap: var(--kor-space-2); padding-top: var(--kor-space-2); }
+.kw-grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.kw-action > summary { font-size: var(--kor-text-13); }
+.kw-result { display: flex; flex-direction: column; gap: var(--kor-space-2); }
+.kw-out { max-height: calc(var(--kor-space-1) * 90); }
+.kw-files { margin: 0; padding-left: var(--kor-space-4); font-family: var(--font-mono); font-size: var(--kor-text-12); overflow-wrap: anywhere; }
+.kw-table { width: 100%; border-collapse: collapse; font-size: var(--kor-text-12); }
+.kw-table th, .kw-table td { padding: var(--kor-space-1) var(--kor-space-2); border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.kw-table th { color: var(--muted); font-weight: 500; }

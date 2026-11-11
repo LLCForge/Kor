@@ -1,0 +1,55 @@
+/* Güvenlik ve Takım görünümleri; kart sınıfları ../graph/panel.css (kg-*) içinde. */
+.ks { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; padding: 12px; overflow-y: auto; }
+.ks-title { margin: 0; font-size: 14px; }
+.ks-note { margin: 0; font-size: 12px; line-height: 1.5; }
+.ks-label { font-size: 12px; color: var(--muted); }
+.ks-warn { margin: 0; font-size: 12px; color: var(--warn); }
+.ks-empty { margin: 0; padding: 12px; border: 1px dashed var(--border); border-radius: 8px; font-size: 13px; text-align: center; }
+.ks-facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 13px; }
+.ks-facts dt { color: var(--muted); }
+.ks-facts dd { margin: 0; overflow-wrap: anywhere; }
+.ks-badge { margin-left: auto; padding: 1px 8px; border-radius: 999px; background: var(--hover); color: var(--muted); font-size: 12px; font-weight: 400; }
+.ks-badge.on { background: var(--accent-soft); color: var(--accent); }
+.ks-privacy-on { border-color: var(--accent); }
+.ks-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.5; }
+.ks-check input { margin-top: 3px; }
+
+.ks-list, .ks-entries { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ks-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 4px 4px 8px; border: 1px solid var(--border); border-radius: 8px; }
+.ks-row > .text-input { flex: 1 1 calc(var(--kor-space-7) * 3); min-width: 0; }
+.ks-row code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-mono); font-size: 12px; }
+.ks-more { border-top: 1px solid var(--border); padding-top: 8px; }
+.ks-more > summary { cursor: pointer; font-size: 13px; }
+.ks-form { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
+.ks-form > .btn { align-self: flex-start; }
+.ks-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.ks-inline { display: flex; flex-wrap: wrap; gap: 8px; }
+.ks-inline .text-input { flex: 1; min-width: 0; }
+.ks-preview { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-radius: 8px; background: var(--hover); font-size: 13px; }
+.ks-preview p { margin: 0; }
+.ks-preview .btn { align-self: flex-start; }
+.ks-names { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+
+.ks-ok, .ks-broken { display: flex; align-items: center; gap: 6px; margin: 0; padding: 6px 8px; border-radius: 8px; font-size: 13px; }
+.ks-ok { background: var(--add-bg); color: var(--add-text); }
+.ks-broken { background: var(--del-bg); color: var(--del-text); }
+.ks-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.ks-filters > select, .ks-filters > .text-input { flex: 1 1 140px; min-width: 0; }
+.ks-entry { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; }
+.ks-entry-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ks-chip { padding: 0 6px; border-radius: 6px; background: var(--hover); font-size: 12px; }
+.ks-chip.bad { background: var(--del-bg); color: var(--del-text); }
+.ks-time { margin-left: auto; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ks-entry-text { margin: 0; font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.ks-entry-meta { margin: 0; font-size: 12px; }
+.ks-pager { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ks-code { margin: 0; max-height: 200px; overflow: auto; padding: 8px; border-radius: 8px; background: var(--code-bg); color: var(--code-text); font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ks-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ks-textarea { min-height: 120px; resize: vertical; font-family: var(--font-mono); font-size: 12px; }
+
+/* Ayarlar > Kabuk / Şablonlar ve Git paneli bölümleri (renderer/g5) */
+.ks-settings { padding: 0; overflow: visible; }
+.k5-card { display: flex; flex-direction: column; gap: 8px; }
+.k5-card .ks-inline .btn { flex: none; }
+.k5-parts { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 0; padding-left: 20px; }
+.k5-parts p { margin: 0; }

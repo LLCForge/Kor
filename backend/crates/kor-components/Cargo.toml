@@ -1,0 +1,33 @@
+[package]
+name = "kor-components"
+description = "On-demand, verified downloads of Kor's helper programs (Python, Node, PDF renderer, OCR, headless Chromium)"
+version = "0.1.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+flate2 = "1"
+futures.workspace = true
+kor-core.workspace = true
+kor-platform.workspace = true
+lzma-rust2 = { version = "0.25", default-features = false, features = ["std", "xz"] }
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tar = "0.4"
+tokio.workspace = true
+toml.workspace = true
+zip = { version = "9", default-features = false, features = ["deflate-flate2"] }
+
+[dev-dependencies]
+lzma-rust2 = { version = "0.25", default-features = false, features = ["std", "xz", "encoder"] }
+tempfile.workspace = true
+tokio.workspace = true
+wiremock.workspace = true
+
+[lints]
+workspace = true

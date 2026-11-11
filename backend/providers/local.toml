@@ -1,0 +1,17 @@
+id = "local"
+name = "Local (Ollama)"
+category = "local"
+adapter = "ollama"
+base_url = "http://localhost:11434"
+auth = { kind = "none" }
+models_endpoint = "/api/tags"
+tool_calling = true
+vision = true
+thinking = true
+verified = false
+docs = "https://github.com/ollama/ollama/blob/main/docs/api.md"
+
+[privacy]
+tier = "local"
+retention = "Never leaves this machine."
+training_on_data = false

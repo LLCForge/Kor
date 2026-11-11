@@ -1,0 +1,22 @@
+# Source: https://learn.microsoft.com/en-us/azure/ai-foundry/openai/api-version-lifecycle
+# v1 API: https://<resource>.openai.azure.com/openai/v1, api-key header, no api-version.
+# The model field is the deployment name; map public ids with [quirks] model_map in a user
+# override. Entra ID (Bearer, scope https://ai.azure.com/.default) is not supported yet.
+id = "azure"
+name = "Azure OpenAI"
+category = "cloud"
+adapter = "openai_compat"
+base_url = "https://your-resource.invalid/openai/v1"
+base_url_env = "AZURE_OPENAI_BASE_URL"
+auth = { kind = "header", env = "AZURE_OPENAI_API_KEY", header = "api-key" }
+models_endpoint = "/models"
+tool_calling = true
+vision = true
+json_mode = true
+verified = false
+docs = "https://learn.microsoft.com/en-us/azure/ai-foundry/openai/reference"
+
+[privacy]
+tier = "no_train"
+retention = "Abuse-monitoring retention unless exempted; not used for training (verify)."
+jurisdiction = "per region"

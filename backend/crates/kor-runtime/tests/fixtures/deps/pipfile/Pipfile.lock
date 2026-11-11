@@ -1,0 +1,10 @@
+{
+    "_meta": { "hash": { "sha256": "x" } },
+    "default": {
+        "flask": { "version": "==3.0.0" },
+        "werkzeug": { "version": "==3.0.1" }
+    },
+    "develop": {
+        "black": { "version": "==23.11.0" }
+    }
+}

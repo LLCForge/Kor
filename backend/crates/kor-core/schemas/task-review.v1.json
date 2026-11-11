@@ -1,0 +1,11 @@
+{
+  "$id": "kor/task-review.v1",
+  "title": "Review of one sub-agent result before merge (kor task, spec 8.2)",
+  "type": "object",
+  "properties": {
+    "approved": { "type": "boolean" },
+    "notes": { "type": "string", "maxLength": 4000 }
+  },
+  "required": ["approved", "notes"],
+  "additionalProperties": false
+}

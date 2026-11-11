@@ -1,0 +1,6 @@
+---
+source: apps/kor-cli/src/brand.rs
+assertion_line: 262
+expression: "shown(&s.line(Depth::TrueColor).unwrap())"
+---
+\e[38;2;248;162;31m✸\e[39m \e[38;2;248;162;31mKözlüyor…\e[39m \e[2m(3s · ctx 62% · esc/ctrl+c)\e[22m

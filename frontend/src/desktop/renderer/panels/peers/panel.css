@@ -1,0 +1,11 @@
+/* Makineler görünümü (§31.1, §28.8); kart/form sınıfları ../graph (kg-*), ../security (ks-*), ../remote (kr-*). */
+.kpe-qr { width: calc(var(--kor-space-1) * 42); height: calc(var(--kor-space-1) * 42); background: var(--bg); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); }
+.kpe-qr rect { fill: var(--text); }
+.kpe-code { font-family: var(--font-mono); font-size: var(--kor-text-12); overflow-wrap: anywhere; user-select: text; }
+.kpe-pair { display: flex; gap: var(--kor-space-3); align-items: flex-start; flex-wrap: wrap; }
+.kpe-row { display: flex; flex-direction: column; gap: var(--kor-space-2); padding: var(--kor-space-2); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); }
+.kpe-row-head { display: flex; align-items: center; gap: var(--kor-space-2); flex-wrap: wrap; }
+.kpe-row-head strong { font-size: var(--kor-text-13); }
+.kpe-diff { max-height: calc(var(--kor-space-1) * 70); overflow: auto; margin: 0; padding: var(--kor-space-2) var(--kor-space-2); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); font-family: var(--font-mono); font-size: var(--kor-text-12); white-space: pre; }
+.kpe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--kor-space-2); }
+.kpe-grid textarea { min-height: calc(var(--kor-space-1) * 14); resize: vertical; }

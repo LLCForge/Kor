@@ -1,0 +1,18 @@
+# Amazon SageMaker runtime endpoints need SigV4 request signing, which Kor does not implement
+# yet. Workaround: serve the model with an OpenAI-compatible container (vLLM / LMI exposing
+# /v1) and add it with: kor provider add <id> --url <base>. Nova models: use bedrock.
+id = "sagemaker"
+name = "Amazon SageMaker"
+category = "cloud"
+adapter = "sagemaker"
+base_url = "https://runtime.sagemaker.your-region.invalid"
+base_url_env = "SAGEMAKER_RUNTIME_URL"
+auth = { kind = "none" }
+verified = false
+docs = "https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_runtime_InvokeEndpoint.html"
+tags = ["not-yet"]
+
+[privacy]
+tier = "no_train"
+retention = "Your own endpoint in your AWS account."
+jurisdiction = "per region"

@@ -1,0 +1,179 @@
+/* Grup 4 stilleri. Renkler için styles.css içindeki :root token'larını kullan. */
+
+/* Editör (gölge DOM) sözdizimi renkleri için ek değişkenler; CSS değişkenleri gölge sınırından geçer. */
+.g4-editor {
+  --g4-syn-type: #2f6f9f;
+  --g4-syn-fn: #7a4a12;
+}
+@media (prefers-color-scheme: dark) {
+  .g4-editor {
+    --g4-syn-type: #7fb4e0;
+    --g4-syn-fn: #e6c07b;
+  }
+}
+
+/* ---------- Ortak parçalar ---------- */
+.g4-bar-actions { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
+/* Dar panelde uzun yol kısalır, düğmeler alt satıra iner. */
+.side-panel .panel-file-head > code { min-width: 0; }
+.g4-warn { color: var(--warn); }
+.g4-shrink { flex-shrink: 0; }
+.g4-meta { display: inline-flex; align-items: center; gap: 6px; margin: 0; font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g4-inline { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; font-size: var(--kor-text-12); }
+
+.g4-toggle { display: inline-flex; padding: 2px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.g4-toggle button {
+  height: 22px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent;
+  color: var(--muted); font: var(--kor-text-12) var(--font-sans);
+}
+.g4-toggle button:hover { color: var(--text); }
+.g4-toggle button[aria-pressed='true'] { background: var(--accent-soft); color: var(--text); }
+
+.g4-banner {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0;
+  padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--accent-soft);
+  color: var(--text-soft); font: var(--kor-text-12)/1.5 var(--font-sans);
+}
+.g4-banner svg { flex-shrink: 0; color: var(--warn); }
+.g4-banner > span:not(.g4-bar-actions) { flex: 1 1 200px; min-width: 0; }
+.g4-banner > .g4-bar-actions { margin-left: auto; }
+
+.g4-toast {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: 260px; margin: 0; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface); box-shadow: 0 6px 18px rgb(0 0 0 / 0.15);
+  font: var(--kor-text-12)/1.45 var(--font-sans); color: var(--text-soft);
+}
+
+/* ---------- Dosya ağacı ---------- */
+.g4-tree-head { display: flex; align-items: center; gap: 2px; padding-right: 8px; }
+.g4-tree-head .rail-heading { flex: 1; }
+.g4-tree-head .action-btn { min-width: 26px; height: 26px; }
+.g4-tree-search {
+  display: flex; align-items: center; gap: 6px; margin: 4px 8px 6px; padding: 0 4px 0 8px; height: 30px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--subtle);
+}
+.g4-tree-search:focus-within { border-color: var(--subtle); }
+.g4-tree-search input {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: transparent;
+  font: var(--kor-text-13) var(--font-sans); color: var(--text);
+}
+.g4-tree-search input::-webkit-search-cancel-button { display: none; }
+.g4-tree-search .action-btn { min-width: 22px; height: 22px; }
+
+.g4-context-menu { position: fixed; right: auto; bottom: auto; width: 220px; max-height: none; padding: 4px; z-index: 50; }
+.g4-context-menu .menu-row:disabled { opacity: 0.45; cursor: default; }
+.g4-context-menu .menu-row:disabled:hover { background: transparent; }
+.g4-context-menu .menu-row:focus-visible { outline-offset: -2px; }
+
+/* ---------- Değişiklik listesi ---------- */
+.g4-change-summary { margin: 0; padding: 8px 12px 0; font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g4-status {
+  flex-shrink: 0; min-width: 52px; padding: 0 6px; border-radius: 999px; text-align: center;
+  font: 600 var(--kor-text-12)/16px var(--font-sans);
+}
+.g4-status.new { background: var(--add-bg); color: var(--add-text); }
+.g4-status.modified { background: var(--accent-soft); color: var(--accent); }
+.g4-status.deleted { background: var(--del-bg); color: var(--del-text); }
+.g4-row-stats { margin-left: auto; flex-shrink: 0; padding-left: 8px; font: var(--kor-text-12) var(--font-mono); white-space: nowrap; }
+
+/* ---------- Diff ---------- */
+.g4-diff-scroll { flex: 1; min-height: 0; overflow: auto; }
+.g4-unified { overflow: visible; }
+.g4-ln {
+  display: inline-block; width: 4ch; padding-right: 6px; text-align: right;
+  color: var(--subtle); user-select: none; font-variant-numeric: tabular-nums;
+}
+.diff-line.add .g4-ln, .diff-line.del .g4-ln { color: inherit; opacity: 0.7; }
+
+.g4-split { width: 100%; border-collapse: collapse; table-layout: fixed; font: var(--kor-text-12)/1.6 var(--font-mono); }
+.g4-col-ln { width: 5ch; }
+.g4-split td { padding: 0; vertical-align: top; }
+.g4-split td.g4-ln { display: table-cell; width: auto; padding: 0 6px 0 4px; }
+.g4-split-cell { padding-right: 8px; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-soft); }
+.g4-split-cell.left { border-right: 1px solid var(--border); }
+.g4-split-cell.add, .g4-ln.add { background: var(--add-bg); color: var(--add-text); }
+.g4-split-cell.del, .g4-ln.del { background: var(--del-bg); color: var(--del-text); }
+.g4-split-cell.empty { background: var(--hover); }
+
+/* ---------- Önizleme ---------- */
+.g4-menu { top: calc(100% + 6px); bottom: auto; width: 240px; padding: 4px; }
+.g4-image-wrap { display: flex; flex: 1; flex-direction: column; align-items: center; gap: 8px; min-height: 0; overflow: auto; padding: 16px; }
+.g4-image {
+  max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 6px;
+  /* Saydam görsellerde dama deseni zemin */
+  background: repeating-conic-gradient(var(--hover) 0% 25%, transparent 0% 50%) 50% / 16px 16px;
+}
+.g4-pdf { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.g4-pdf > .g4-meta { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.g4-markdown { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px; font-family: var(--font-serif); }
+
+.g4-vlines { position: relative; flex: 1; min-height: 0; overflow: auto; font: var(--kor-text-12) var(--font-mono); outline: none; }
+.g4-vlines:focus-visible { box-shadow: inset 0 0 0 2px var(--accent); border-radius: 0; }
+.g4-vlines-spacer { position: relative; }
+.g4-vlines-window { position: absolute; top: 0; left: 0; right: 0; will-change: transform; }
+.g4-vline { display: flex; height: 20px; line-height: 20px; white-space: pre; tab-size: 2; }
+.g4-vline.highlight { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.g4-vline-no {
+  flex-shrink: 0; padding-right: 12px; text-align: right; color: var(--subtle);
+  user-select: none; font-variant-numeric: tabular-nums;
+}
+.g4-vline-text { color: var(--text-soft); }
+
+/* ---------- Editör ---------- */
+.g4-editor { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.g4-editor-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 12px; border-bottom: 1px solid var(--border); font: var(--kor-text-12) var(--font-sans);
+}
+.g4-dirty { display: inline-flex; align-items: center; gap: 6px; color: var(--subtle); }
+.g4-dirty::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--add-text); }
+.g4-dirty.on { color: var(--text); }
+.g4-dirty.on::before { background: var(--accent); }
+.g4-editor-error { margin: 0; padding: 6px 12px; font: var(--kor-text-12) var(--font-sans); }
+.g4-editor-host { flex: 1; min-height: 0; overflow: hidden; }
+
+
+/* ---------- Tanılama ---------- */
+.g4-diag-body { flex: 1; min-height: 0; overflow: auto; padding-bottom: 12px; }
+.g4-diag-section { padding: 8px 6px 0; }
+.g4-diag-title {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 4px 6px 6px;
+  font: 600 var(--kor-text-13) var(--font-sans); color: var(--text);
+}
+.g4-diag-counts { font: 400 var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g4-diag-note { margin: 0 6px 8px; font: var(--kor-text-12) var(--font-sans); }
+.g4-diag-list { list-style: none; margin: 0; padding: 0; }
+.g4-diag-row {
+  display: flex; align-items: flex-start; gap: 8px; width: 100%; padding: 6px; border: 0; border-radius: 6px;
+  background: transparent; text-align: left; color: var(--text-soft);
+}
+.g4-diag-row svg { flex-shrink: 0; margin-top: 2px; }
+.g4-diag-row:hover:not(:disabled) { background: var(--hover); }
+.g4-diag-row:disabled { cursor: default; }
+.g4-diag-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.g4-diag-loc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--kor-text-12) var(--font-mono); color: var(--subtle); }
+.g4-diag-msg { font: var(--kor-text-12)/1.45 var(--font-sans); white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* ---------- Diyaloglar ---------- */
+.g4-dialog { width: min(520px, calc(100vw - 32px)); }
+.g4-field-error { min-height: 1.4em; margin: -4px 0 0; font: var(--kor-text-12) var(--font-sans); }
+.g4-quote { font-style: italic; color: var(--text-soft); }
+.g4-rewind-list {
+  display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow: auto; margin: 0; padding: 8px 12px;
+  list-style: none; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); font: var(--kor-text-13) var(--font-sans);
+}
+.g4-rewind-list code { font: var(--kor-text-12) var(--font-mono); }
+.g4-check { display: flex; align-items: flex-start; gap: 8px; font: var(--kor-text-14)/1.45 var(--font-sans); color: var(--text-soft); cursor: pointer; }
+.g4-check input { margin-top: 3px; accent-color: var(--accent); }
+
+/* ---------- Sohbet: geri sarma düğmesi ---------- */
+.g4-rewind-btn { font: var(--kor-text-12) var(--font-sans); }
+.g4-rewind-btn span { white-space: nowrap; }
+
+/* Birleşik fark: satırlar en uzun satır kadar geniş → yatay kaydırmada zemin rengi yarıda kesilmez. */
+.g4-unified { width: max-content; min-width: 100%; }
+/* Yeni dosya: yeşil duvar yerine düz kod; eski satır numarası sütunu (hep boş) gizlenir, + işareti yeşil kalır. */
+.g4-new-file .diff-line.add { background: transparent; color: var(--text-soft); }
+.g4-new-file .diff-line.add .diff-sign { color: var(--add-text); }
+.g4-new-file .diff-line > .g4-ln:first-child { display: none; }
+.g4-new-file .diff-line.add .g4-ln { color: var(--subtle); opacity: 1; }

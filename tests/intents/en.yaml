@@ -1,0 +1,304 @@
+# English intent fixtures: free text -> expected kor command (null = normal agent).
+- { text: "how much money have I spent this month", expect: "kor cost" }
+- { text: "can you show me my costs", expect: "kor cost" }
+- { text: "whats my total spending so far", expect: "kor cost" }
+- { text: "show me how much the models cost me", expect: "kor cost" }
+- { text: "please show spending for the last 30 days", expect: "kor cost" }
+- { text: "fix the last error please", expect: "kor fix" }
+- { text: "can you fix my last failed command", expect: "kor fix" }
+- { text: "the command I just ran failed, fix it", expect: "kor fix" }
+- { text: "repair the last failing command in my terminal", expect: "kor fix" }
+- { text: "fix teh last error", expect: "kor fix" }
+- { text: "why did my last command fail again", expect: "kor why" }
+- { text: "explain the last error to me", expect: "kor why" }
+- { text: "what went wrong with the command i just ran", expect: "kor why" }
+- { text: "why did the last command blow up", expect: "kor why" }
+- { text: "commit my changes please", expect: "kor commit" }
+- { text: "write me a commit message", expect: "kor commit" }
+- { text: "can you commit the staged stuff", expect: "kor commit" }
+- { text: "generate a commit msg for the staged diff", expect: "kor commit" }
+- { text: "open the graph for me", expect: "kor graph" }
+- { text: "show me the project graph", expect: "kor graph" }
+- { text: "lets look at the code graph", expect: "kor graph" }
+- { text: "what's the graph status", expect: "kor graph status" }
+- { text: "when was the graph last updated", expect: "kor graph status" }
+- { text: "how many nodes are in the graph", expect: "kor graph status" }
+- { text: "rescan the project graph", expect: "kor graph update" }
+- { text: "please update the graph", expect: "kor graph update" }
+- { text: "rebuild the code graph from scratch", expect: "kor graph update" }
+- { text: "explain the symbol parseConfig in the graph", expect: "kor graph explain", params: { name: "parseConfig" } }
+- { text: "who calls handleLogin in the graph", expect: "kor graph explain", params: { name: "handleLogin" } }
+- { text: "shortest path between auth and billing", expect: "kor graph path", params: { from: "auth", to: "billing" } }
+- { text: "query the graph for session handling", expect: "kor graph query" }
+- { text: "show me the hotspots", expect: "kor graph hotspots" }
+- { text: "which files are the riskiest in this project", expect: "kor graph hotspots" }
+- { text: "how did the graph change since v1.2", expect: "kor graph diff", params: { rev: "v1.2" } }
+- { text: "what depends on UserService in the graph", expect: "kor graph impact", params: { target: "UserService" } }
+- { text: "export the graph as mermaid please", expect: "kor graph export" }
+- { text: "can you test the sandbox", expect: "kor sandbox test" }
+- { text: "does the sandbox really block writes outside the project", expect: "kor sandbox test" }
+- { text: "run a sandbox self test", expect: "kor sandbox test" }
+- { text: "show the sandbox status", expect: "kor sandbox status" }
+- { text: "is the sandbox turned on", expect: "kor sandbox status" }
+- { text: "what's on the sandbox network allowlist", expect: "kor sandbox status" }
+- { text: "pull the sandbox docker image", expect: "kor sandbox pull" }
+- { text: "diagnose my setup", expect: "kor doctor" }
+- { text: "is something wrong with my installation", expect: "kor doctor" }
+- { text: "run kor doctor", expect: "kor doctor" }
+- { text: "why isnt kor working, check the environment", expect: "kor doctor" }
+- { text: "update kor to the latest version", expect: "kor update" }
+- { text: "please upgrade yourself", expect: "kor update" }
+- { text: "install the latest kor release", expect: "kor update" }
+- { text: "is there a newer version of kor", expect: "kor update check" }
+- { text: "check if kor is up to date", expect: "kor update check" }
+- { text: "any updates available", expect: "kor update check" }
+- { text: "switch me to the beta update channel", expect: "kor update channel", params: { name: "beta" } }
+- { text: "roll back to the previous kor version", expect: "kor update rollback" }
+- { text: "undo everything kor changed in this session", expect: "kor undo" }
+- { text: "revert the agent's file changes", expect: "kor undo" }
+- { text: "roll back the session's edits", expect: "kor undo" }
+- { text: "review my changes before I push", expect: "kor review" }
+- { text: "can you code review my uncommitted work", expect: "kor review" }
+- { text: "please review the diff", expect: "kor review" }
+- { text: "review my changes with the security persona", expect: "kor review", params: { persona: "security" } }
+- { text: "run a security audit on this project", expect: "kor audit" }
+- { text: "scan the repo for vulnerabilities", expect: "kor audit" }
+- { text: "check if any secrets leaked in the code", expect: "kor audit" }
+- { text: "do a security scan", expect: "kor audit" }
+- { text: "show me the audit log", expect: "kor audit list" }
+- { text: "list audit log entries", expect: "kor audit list" }
+- { text: "verify the audit log hash chain", expect: "kor audit verify" }
+- { text: "has anyone tampered with the audit log", expect: "kor audit verify" }
+- { text: "make a gdpr compliance report from the audit log", expect: "kor audit report" }
+- { text: "export the audit log to jsonl", expect: "kor audit export" }
+- { text: "run a gdpr personal data analysis", expect: "kor audit --compliance", params: { compliance: "gdpr" } }
+- { text: "save the security report as sarif", expect: "kor audit --out" }
+- { text: "verify the report.sarif analysis report", expect: "kor audit verify-report", params: { file: "report.sarif" } }
+- { text: "audit our dependency licenses", expect: "kor audit --licenses" }
+- { text: "check my dependencies", expect: "kor deps check" }
+- { text: "are any of my dependencies vulnerable", expect: "kor deps check" }
+- { text: "find unused packages in this project", expect: "kor deps check" }
+- { text: "which deps should I upgrade", expect: "kor deps check" }
+- { text: "list my dependencies", expect: "kor deps list" }
+- { text: "what packages do we depend on", expect: "kor deps list" }
+- { text: "show all dependencies and their licenses", expect: "kor deps list" }
+- { text: "explain src/main.rs", expect: "kor explain", params: { file: "src/main.rs" } }
+- { text: "tell me the history of lib/auth.ts", expect: "kor explain", params: { file: "lib/auth.ts" } }
+- { text: "walk me through router.go", expect: "kor explain", params: { file: "router.go" } }
+- { text: "why is config.py written like this", expect: "kor explain", params: { file: "config.py" } }
+- { text: "what's the project's quality grade", expect: "kor quality" }
+- { text: "how good is our code quality", expect: "kor quality" }
+- { text: "show the quality score", expect: "kor quality" }
+- { text: "how much tech debt do we have", expect: "kor debt" }
+- { text: "how many hours of technical debt", expect: "kor debt" }
+- { text: "technical debt report please", expect: "kor debt" }
+- { text: "learn my coding style profile", expect: "kor style" }
+- { text: "do my changes match my style profile", expect: "kor style check" }
+- { text: "run the style check on staged code", expect: "kor style check" }
+- { text: "my developer stats for this week", expect: "kor stats" }
+- { text: "how much code did i write this week", expect: "kor stats" }
+- { text: "show weekly stats", expect: "kor stats" }
+- { text: "what else does this change affect", expect: "kor impact" }
+- { text: "what breaks if I change payment.rs", expect: "kor impact", params: { target: "payment.rs" } }
+- { text: "show the impact of my staged changes", expect: "kor impact" }
+- { text: "find the dead code", expect: "kor dead-code" }
+- { text: "is there any unreachable code in the project", expect: "kor dead-code" }
+- { text: "list code nobody uses", expect: "kor dead-code" }
+- { text: "list the tools", expect: "kor tool list" }
+- { text: "what tools do I have", expect: "kor tool list" }
+- { text: "show me available tools", expect: "kor tool list" }
+- { text: "which tools are installed right now", expect: "kor tool list" }
+- { text: "what does the http_get tool do", expect: "kor tool describe", params: { name: "http_get" } }
+- { text: "search for a tool that reads pdfs", expect: "kor tool search" }
+- { text: "add a new tool to kor", expect: "kor tool add" }
+- { text: "share my tool with the team", expect: "kor tool share" }
+- { text: "pull the tool my team shared", expect: "kor tool pull" }
+- { text: "list my sessions", expect: "kor sessions" }
+- { text: "show past sessions", expect: "kor sessions" }
+- { text: "which saved conversations do I have", expect: "kor sessions" }
+- { text: "resume the last session", expect: "kor resume" }
+- { text: "which tool files did you read for compat", expect: "kor compat status" }
+- { text: "are there conflicting rules between tools", expect: "kor compat conflicts" }
+- { text: "export my rules in cursor format", expect: "kor compat export" }
+- { text: "trust this folder", expect: "kor trust" }
+- { text: "show me the model catalog with prices", expect: "kor catalog" }
+- { text: "show the configured hooks for this project", expect: "kor hooks list" }
+- { text: "list installed components", expect: "kor component list" }
+- { text: "install the chromium component", expect: "kor component add", params: { name: "chromium" } }
+- { text: "remove the python component", expect: "kor component remove", params: { name: "python" } }
+- { text: "add my openai api key", expect: "kor auth login", params: { provider: "openai" } }
+- { text: "which api keys are stored", expect: "kor auth status" }
+- { text: "delete my anthropic key", expect: "kor auth logout", params: { provider: "anthropic" } }
+- { text: "test the openrouter provider", expect: "kor provider test", params: { id: "openrouter" } }
+- { text: "provider latency and errors please", expect: "kor provider status" }
+- { text: "start the proxy", expect: "kor proxy serve" }
+- { text: "is the proxy up, show usage", expect: "kor proxy status" }
+- { text: "show my proxy access key", expect: "kor proxy key" }
+- { text: "add my local ollama server as a provider", expect: "kor provider add" }
+- { text: "remove the custom provider I added", expect: "kor provider remove" }
+- { text: "discover model servers on this machine", expect: "kor provider discover" }
+- { text: "show the openai key pool", expect: "kor provider keys", params: { id: "openai" } }
+- { text: "add a backup key to the openai pool", expect: "kor provider add-key", params: { id: "openai" } }
+- { text: "remove key slot 2 from the openai pool", expect: "kor provider remove-key", params: { id: "openai", slot: 2 } }
+- { text: "where do my effective settings come from", expect: "kor config explain" }
+- { text: "where is my config file", expect: "kor config paths" }
+- { text: "set the config value computer.enabled to true", expect: "kor config set" }
+- { text: "list configured providers", expect: "kor providers" }
+- { text: "list the models I can use", expect: "kor models" }
+- { text: "ask the model one question without tools", expect: "kor chat" }
+- { text: "show configured mcp servers", expect: "kor mcp" }
+- { text: "list mcp servers and their tool counts", expect: "kor mcp list" }
+- { text: "add a new plugin marketplace", expect: "kor plugin marketplace add" }
+- { text: "list my plugin marketplaces", expect: "kor plugin marketplace list" }
+- { text: "remove that plugin marketplace", expect: "kor plugin marketplace remove" }
+- { text: "install this plugin", expect: "kor plugin install" }
+- { text: "uninstall the plugin", expect: "kor plugin uninstall" }
+- { text: "list my installed plugins", expect: "kor plugin list" }
+- { text: "enable the plugin", expect: "kor plugin enable" }
+- { text: "disable the plugin please", expect: "kor plugin disable" }
+- { text: "update the plugin to latest", expect: "kor plugin update" }
+- { text: "validate the plugin for problems", expect: "kor plugin doctor" }
+- { text: "which subagents can I use", expect: "kor agents" }
+- { text: "what's in the project memory", expect: "kor memory" }
+- { text: "list my ssh and database connections", expect: "kor connections" }
+- { text: "list scheduled routines", expect: "kor routines list" }
+- { text: "add a routine that runs every morning", expect: "kor routines add" }
+- { text: "remove that routine", expect: "kor routines remove" }
+- { text: "re-enable the paused routine", expect: "kor routines enable" }
+- { text: "pause the routine for now", expect: "kor routines disable" }
+- { text: "generate an mcp server from my postgres database", expect: "kor mcp add" }
+- { text: "remove the github mcp server", expect: "kor mcp remove" }
+- { text: "enable the disabled mcp server", expect: "kor mcp enable" }
+- { text: "disable that mcp server", expect: "kor mcp disable" }
+- { text: "test whether the postgres mcp works", expect: "kor mcp test" }
+- { text: "search fal for image models", expect: "kor media models" }
+- { text: "run the fal model", expect: "kor media run" }
+- { text: "generate an image of a cat at sunset", expect: "kor media image" }
+- { text: "search hugging face for whisper models", expect: "kor hf search", params: { query: "whisper" } }
+- { text: "show the hf model card for this repo", expect: "kor hf info" }
+- { text: "download the model from huggingface", expect: "kor hf download" }
+- { text: "run hugging face inference on this text", expect: "kor hf infer" }
+- { text: "show my context budget", expect: "kor context" }
+- { text: "how full is my context window", expect: "kor context" }
+- { text: "race the models on my test suite", expect: "kor bench" }
+- { text: "install the shell integration", expect: "kor shell install" }
+- { text: "please uninstall shell integration", expect: "kor shell uninstall" }
+- { text: "is the shell integration installed", expect: "kor shell status" }
+- { text: "capture npm test with its output", expect: "kor shell capture" }
+- { text: "generate a changelog since the last tag", expect: "kor changelog" }
+- { text: "write the release notes for me", expect: "kor changelog" }
+- { text: "run the release template", expect: "kor run" }
+- { text: "list task templates", expect: "kor templates list" }
+- { text: "show the steps of the bugfix template", expect: "kor templates show" }
+- { text: "scaffold a new task template", expect: "kor templates new" }
+- { text: "why did the router choose that model", expect: "kor cost why" }
+- { text: "export my costs as csv", expect: "kor cost --export" }
+- { text: "how much quota do I have left", expect: "kor quota" }
+- { text: "show provider quotas", expect: "kor quota" }
+- { text: "list the monorepo packages", expect: "kor packages" }
+- { text: "which packages did my changes affect", expect: "kor packages affected" }
+- { text: "show the dependencies of the web package", expect: "kor packages deps", params: { name: "web" } }
+- { text: "show cost per package", expect: "kor packages cost" }
+- { text: "push our decisions to git notes", expect: "kor memory notes push" }
+- { text: "pull decisions out of git notes", expect: "kor memory notes pull" }
+- { text: "link ../api into the context", expect: "kor context add", params: { path: "../api" } }
+- { text: "unlink the linked project", expect: "kor context remove" }
+- { text: "which projects are linked to context", expect: "kor context projects" }
+- { text: "recall what we did for rate limiting before", expect: "kor recall" }
+- { text: "search past work for jwt", expect: "kor recall", params: { query: "jwt" } }
+- { text: "delete knowledge record 42", expect: "kor forget", params: { id: 42 } }
+- { text: "export the knowledge base as markdown", expect: "kor knowledge export" }
+- { text: "reindex the knowledge base now", expect: "kor knowledge reindex" }
+- { text: "add the projects folder to the workspace", expect: "kor workspace add" }
+- { text: "list my workspace folders", expect: "kor workspace list" }
+- { text: "remove this folder from the workspace", expect: "kor workspace remove" }
+- { text: "show me the database schema", expect: "kor db" }
+- { text: "connect the prod database to the graph", expect: "kor db connect", params: { name: "prod" } }
+- { text: "refresh the schema of connected databases", expect: "kor db refresh" }
+- { text: "list the tables in the graph", expect: "kor db tables" }
+- { text: "show the columns of the users table", expect: "kor db show", params: { table: "users" } }
+- { text: "suggest missing database indexes", expect: "kor db indexes" }
+- { text: "write a new migration adding a phone column", expect: "kor db migrate new" }
+- { text: "apply fix.sql on the prod connection", expect: "kor db apply", params: { name: "prod", file: "fix.sql" } }
+- { text: "add a new secret to the vault", expect: "kor vault add" }
+- { text: "which secrets are in the vault", expect: "kor vault list" }
+- { text: "delete STRIPE_KEY from the vault", expect: "kor vault remove", params: { name: "STRIPE_KEY" } }
+- { text: "import my .env into the vault", expect: "kor vault import" }
+- { text: "prepare kor for working without internet", expect: "kor offline init" }
+- { text: "can I work offline right now", expect: "kor offline status" }
+- { text: "start kor in offline mode", expect: "kor offline run" }
+- { text: "build an air gap bundle", expect: "kor offline bundle" }
+- { text: "import the air gap bundle", expect: "kor offline import" }
+- { text: "split this goal across several agents", expect: "kor task" }
+- { text: "list the multi agent tasks", expect: "kor task list" }
+- { text: "how are the task's sub agents doing", expect: "kor task status" }
+- { text: "resume the crashed task", expect: "kor task resume" }
+- { text: "fork the task from here", expect: "kor task fork" }
+- { text: "cancel the running task", expect: "kor task cancel" }
+- { text: "resolve the merge conflict in the task", expect: "kor task resolve" }
+- { text: "open a pull request for this branch", expect: "kor pr create" }
+- { text: "create a pr with my changes", expect: "kor pr create" }
+- { text: "review pr 42", expect: "kor pr review", params: { target: "42" } }
+- { text: "address the review comments on my pr", expect: "kor pr respond" }
+- { text: "list open prs", expect: "kor pr list" }
+- { text: "what's the status of my pr", expect: "kor pr status" }
+- { text: "start the daemon please", expect: "kor daemon start" }
+- { text: "stop the daemon now", expect: "kor daemon stop" }
+- { text: "is the daemon running right now", expect: "kor daemon status" }
+- { text: "show me the daemon logs", expect: "kor daemon logs" }
+- { text: "start the daemon when I log in", expect: "kor daemon install" }
+- { text: "don't start the daemon at login anymore", expect: "kor daemon uninstall" }
+- { text: "list the triggers", expect: "kor triggers list" }
+- { text: "fire the nightly trigger now", expect: "kor triggers test", params: { name: "nightly" } }
+- { text: "show trigger history", expect: "kor triggers history" }
+- { text: "approve that pending request", expect: "kor triggers approve" }
+- { text: "reject that pending request", expect: "kor triggers reject" }
+- { text: "install the git hook for push triggers", expect: "kor triggers hook install" }
+- { text: "remove the git hook for triggers", expect: "kor triggers hook uninstall" }
+- { text: "deploy the changed services to staging", expect: "kor deploy" }
+- { text: "deploy the app to production", expect: "kor deploy" }
+- { text: "is it risky to deploy to prod now", expect: "kor deploy risk-check" }
+- { text: "when was the last deploy done", expect: "kor deploy status" }
+- { text: "watch app.log and catch errors", expect: "kor watch logs" }
+- { text: "show incidents caught from the logs", expect: "kor watch incidents" }
+- { text: "start fixing the captured incident", expect: "kor watch fix" }
+- { text: "open the incident fix as a pr now", expect: "kor watch pr" }
+- { text: "clear the captured incidents", expect: "kor watch clear" }
+- { text: "find where user login is handled in the code", expect: "kor find" }
+- { text: "search the codebase for where emails get sent", expect: "kor find" }
+- { text: "list my session recordings", expect: "kor replay list" }
+- { text: "replay the recorded session", expect: "kor replay" }
+- { text: "export the session recording as one file", expect: "kor replay export" }
+- { text: "are my dev environment versions right", expect: "kor env status" }
+- { text: "discover what's running on the server over ssh", expect: "kor discover" }
+- { text: "turn this screenshot into react components", expect: "kor screenshot" }
+- { text: "scaffold modules from the architecture diagram", expect: "kor diagram" }
+- { text: "visualize the project architecture", expect: "kor visualize" }
+- { text: "I want to give a task by voice", expect: "kor voice" }
+- { text: "profile the tests performance", expect: "kor perf" }
+- { text: "read the cpu.pprof profile", expect: "kor perf report", params: { file: "cpu.pprof" } }
+- { text: "list previous profile runs", expect: "kor perf list" }
+- { text: "list the natural language commands kor knows", expect: "kor intents list" }
+- { text: "test which command show my cost maps to", expect: "kor intents test" }
+- { text: "map my own sentence to a command", expect: "kor intents add" }
+- { text: "forget the intent phrase I added", expect: "kor intents forget" }
+- { text: "show me the available agents", expect: "kor agents" }
+- { text: "benchmark the models on my tests for routing", expect: "kor bench" }
+- { text: "plain chat with the model, no tools", expect: "kor chat" }
+- { text: "single prompt to the model without tools please", expect: "kor chat" }
+- { text: "show saved server connections", expect: "kor connections" }
+- { text: "show my database and ssh connections", expect: "kor connections" }
+- { text: "turn arch.png diagram into a module skeleton", expect: "kor diagram", params: { image: "arch.png" } }
+- { text: "scan the live server and tell me what runs", expect: "kor discover" }
+- { text: "discover deploy@10.0.0.5 over ssh", expect: "kor discover", params: { target: "deploy@10.0.0.5" } }
+- { text: "do my pinned tool versions match", expect: "kor env status" }
+- { text: "forget knowledge record 7", expect: "kor forget", params: { id: 7 } }
+- { text: "which hooks are configured here", expect: "kor hooks list" }
+- { text: "which providers have I configured", expect: "kor providers" }
+- { text: "run template:release", expect: "kor run", params: { target: "template:release" } }
+- { text: "make components from the ui.png screenshot", expect: "kor screenshot", params: { image: "ui.png" } }
+- { text: "generate svelte components from this screenshot", expect: "kor screenshot" }
+- { text: "mark this project as trusted", expect: "kor trust" }
+- { text: "trust the current workspace please", expect: "kor trust" }
+- { text: "listen to my voice and make it a task", expect: "kor voice" }
+- { text: "take a voice command", expect: "kor voice" }

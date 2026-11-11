@@ -1,0 +1,11 @@
+# §17.2 "MCP sunucu bağlama": a project MCP server (Kor itself, `kor mcp serve`) is listed once trusted.
+name: mcp-bind
+title: "MCP sunucusu bağlama"
+project:
+  trust: true
+  files:
+    .mcp.json: "{ \"mcpServers\": { \"kor-self\": { \"command\": \"${KOR}\", \"args\": [\"mcp\", \"serve\"] } } }\n"
+steps:
+  - command: "kor mcp list"
+expect:
+  output: ["kor-self"]

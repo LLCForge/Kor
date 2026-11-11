@@ -1,0 +1,4 @@
+{"string_table":["hot::fib","hot::work","src/lib.rs"],
+ "data":[{"debug_name":"hot","debug_id":"ABC0","code_id":null,
+   "symbol_table":[{"rva":4096,"size":64,"symbol":0,"frames":[{"function":0,"file":2,"line":5}]},
+                   {"rva":4300,"size":100,"symbol":1}]}]}

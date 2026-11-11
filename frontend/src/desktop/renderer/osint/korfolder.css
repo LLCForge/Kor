@@ -1,0 +1,26 @@
+/* ~/Kor kartı ve toplu düzenleme penceresi (ADR 0052); kart sınıfları ../panels/graph/panel.css (kg-*) ve
+   ../panels/security/panel.css (ks-*) içinde. */
+.kb-dialog { display: flex; flex-direction: column; gap: var(--kor-space-3); width: min(calc(var(--kor-space-1) * 180), calc(100vw - var(--kor-space-6))); }
+.kb-head { display: flex; align-items: center; justify-content: space-between; gap: var(--kor-space-2); }
+.kb-head .dialog-title { display: flex; align-items: center; gap: var(--kor-space-2); margin: 0; }
+.kb-files summary { cursor: pointer; font-size: var(--kor-text-13); color: var(--muted); }
+.kb-files ul { margin: var(--kor-space-2) 0 0; padding-left: var(--kor-space-4); max-height: calc(var(--kor-space-1) * 30); overflow: auto; font-family: var(--font-mono); font-size: var(--kor-text-12); }
+.kb-form { display: flex; flex-direction: column; gap: var(--kor-space-2); }
+.kb-label { font-size: var(--kor-text-13); font-weight: 600; }
+.kb-input { width: 100%; resize: vertical; font: inherit; padding: var(--kor-space-2); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); background: var(--bg); color: var(--text); }
+.kb-input:focus-visible { outline: calc(var(--kor-space-1) * 0.5) solid var(--accent); outline-offset: 1px; }
+.kb-examples { display: flex; flex-wrap: wrap; gap: var(--kor-space-2); }
+.kb-examples .ks-chip { cursor: pointer; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: var(--kor-text-12); }
+.kb-note { font-size: var(--kor-text-12); display: flex; align-items: center; gap: var(--kor-space-2); flex-wrap: wrap; }
+.kb-table-wrap { max-height: calc(var(--kor-space-1) * 80); overflow: auto; border: 1px solid var(--border); border-radius: var(--kor-radius-chip); }
+.kb-table { width: 100%; border-collapse: collapse; font-size: var(--kor-text-13); }
+.kb-table th, .kb-table td { padding: var(--kor-space-2) var(--kor-space-2); text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.kb-table th { position: sticky; top: 0; background: var(--bg); font-weight: 600; }
+.kb-table td:nth-child(2), .kb-table td:nth-child(3) { font-family: var(--font-mono); font-size: var(--kor-text-12); }
+.kb-chip { margin-left: var(--kor-space-2); font-size: var(--kor-text-12); }
+.kb-detail { font-family: inherit; }
+.kb-warnings { margin: 0; padding-left: var(--kor-space-4); font-size: var(--kor-text-12); color: var(--del-text); }
+.kb-done { display: flex; flex-direction: column; gap: var(--kor-space-2); }
+.kb-folders { margin: 0; padding-left: var(--kor-space-4); font-size: var(--kor-text-13); display: flex; flex-direction: column; gap: calc(var(--kor-space-1) / 2); }
+.kb-dialog .spin { animation: spin 1s linear infinite; }
+@media (prefers-reduced-motion: reduce) { :root:not([data-motion="on"]) .kb-dialog .spin { animation: none; } }

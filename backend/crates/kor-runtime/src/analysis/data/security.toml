@@ -1,0 +1,416 @@
+# Kor's built-in `kor audit --security` line rules (ADR 0045).
+#
+# Fields: id, severity (critical|high|medium|low|info), cwe, ext (file extensions; empty = all),
+# pattern (Rust regex, matched per line; comment-only lines are skipped), unless (+ near: lines
+# around the match that are also checked), requires (regex the whole file must match),
+# rationale and fix ({ en, tr, fr }), enabled.
+#
+# Extend or override per project in `.kor/audit/rules/*.toml` (same id replaces a rule here).
+# Hardcoded secrets with distinctive prefixes come from kor-tools' secret scanner (gitleaks rule
+# ids); the generic assignment rule below catches the rest.
+
+# ---------------------------------------------------------------------------------------------
+# Secrets
+# ---------------------------------------------------------------------------------------------
+
+[[rule]]
+id = "kor.hardcoded-credential"
+severity = "high"
+cwe = "CWE-798"
+pattern = '''(?i)\b[\w-]*(password|passwd|pwd|secret|api_?key|apikey|access_?token|auth_?token|client_?secret|private_?key)\b["']?\s*(:=|=>|=|:)\s*["'][^"'\s]{8,}["']'''
+unless = '''(?i)(example|sample|changeme|change_me|placeholder|dummy|your[_-]|xxx|\*\*\*|<[a-z_]+>|\$\{|\{\{|process\.env|getenv|env\(|environ|config\(|settings\.|os\.Getenv|test_?only)'''
+rationale = { en = "Credential written into the source", tr = "Kimlik bilgisi kaynak koda yazılmış", fr = "Identifiant écrit dans le code source" }
+fix = { en = "Read it from the environment or a secret store (kor vault) and rotate the exposed value", tr = "Ortam değişkeninden veya gizli kasadan (kor vault) okuyun, açığa çıkan değeri yenileyin", fr = "Lisez-le depuis l'environnement ou un coffre (kor vault) et renouvelez la valeur exposée" }
+
+# ---------------------------------------------------------------------------------------------
+# SQL injection (CWE-89)
+# ---------------------------------------------------------------------------------------------
+
+[[rule]]
+id = "kor.sql-injection.python"
+severity = "high"
+cwe = "CWE-89"
+ext = ["py"]
+pattern = '''(?i)\.(execute|executemany|executescript|raw|extra)\s*\(\s*(f["']|["'][^"']*\b(select|insert|update|delete|where)\b[^"']*["']\s*(%|\+|\.format\())'''
+rationale = { en = "SQL built from strings with interpolation", tr = "SQL, araya değer eklenen metinle kurulmuş", fr = "SQL construit par interpolation de chaînes" }
+fix = { en = "Pass values as query parameters (cursor.execute(sql, params))", tr = "Değerleri sorgu parametresi olarak verin (cursor.execute(sql, params))", fr = "Passez les valeurs en paramètres (cursor.execute(sql, params))" }
+
+[[rule]]
+id = "kor.sql-injection.js"
+severity = "high"
+cwe = "CWE-89"
+ext = ["js", "mjs", "cjs", "jsx", "ts", "tsx", "mts", "cts"]
+pattern = '''(?i)\.(query|execute|raw|unsafe|\$queryRawUnsafe|\$executeRawUnsafe|whereRaw)\s*\(\s*(`[^`]*\$\{|["'][^"']*\b(select|insert|update|delete|where)\b[^"']*["']\s*\+)'''
+rationale = { en = "SQL built from strings with interpolation", tr = "SQL, araya değer eklenen metinle kurulmuş", fr = "SQL construit par interpolation de chaînes" }
+fix = { en = "Use placeholders ($1 / ?) and pass the values separately", tr = "Yer tutucu ($1 / ?) kullanın, değerleri ayrı verin", fr = "Utilisez des paramètres ($1 / ?) et passez les valeurs à part" }
+
+[[rule]]
+id = "kor.sql-injection.php"
+severity = "high"
+cwe = "CWE-89"
+ext = ["php"]
+pattern = '''(?i)(mysqli_query|mysql_query|pg_query|->query|->exec|::select|::statement|::unprepared|whereRaw|selectRaw|orderByRaw|havingRaw|DB::raw)\s*\([^;]*(\$_(GET|POST|REQUEST|COOKIE)|["']\s*\.\s*\$|"[^"]*\$\w)'''
+rationale = { en = "SQL built from request data or string interpolation", tr = "SQL, istek verisi veya metin birleştirme ile kurulmuş", fr = "SQL construit à partir de la requête ou par interpolation" }
+fix = { en = "Use prepared statements or query-builder bindings (?, :name)", tr = "Hazır ifade (prepared statement) veya sorgu oluşturucu bağlamaları (?, :ad) kullanın", fr = "Utilisez des requêtes préparées ou des liaisons (?, :nom)" }
+
+[[rule]]
+id = "kor.sql-injection.rust"
+severity = "medium"
+cwe = "CWE-89"
+ext = ["rs"]
+pattern = '''(?i)format!\(\s*"[^"]*\b(select\s|insert\s+into|update\s+\w+\s+set|delete\s+from)[^"]*\{'''
+rationale = { en = "SQL text built with format!", tr = "SQL metni format! ile kurulmuş", fr = "Texte SQL construit avec format!" }
+fix = { en = "Bind values (sqlx::query(..).bind(x), rusqlite params![])", tr = "Değerleri bağlayın (sqlx::query(..).bind(x), rusqlite params![])", fr = "Liez les valeurs (sqlx::query(..).bind(x), rusqlite params![])" }
+
+[[rule]]
+id = "kor.sql-injection.dotnet"
+severity = "high"
+cwe = "CWE-89"
+ext = ["cs"]
+pattern = '''(FromSqlRaw|ExecuteSqlRaw|ExecuteSqlRawAsync|new\s+SqlCommand|\.CommandText\s*=)\s*\(?\s*(\$"|"[^"]*"\s*\+)'''
+rationale = { en = "SQL built from strings with interpolation", tr = "SQL, araya değer eklenen metinle kurulmuş", fr = "SQL construit par interpolation de chaînes" }
+fix = { en = "Use FromSqlInterpolated / SqlParameter", tr = "FromSqlInterpolated / SqlParameter kullanın", fr = "Utilisez FromSqlInterpolated / SqlParameter" }
+
+[[rule]]
+id = "kor.sql-injection.java"
+severity = "high"
+cwe = "CWE-89"
+ext = ["java", "kt"]
+pattern = '''(createQuery|createNativeQuery|executeQuery|executeUpdate|execute|prepareStatement)\s*\(\s*"[^"]*"\s*\+'''
+rationale = { en = "SQL built by string concatenation", tr = "SQL, metin birleştirme ile kurulmuş", fr = "SQL construit par concaténation" }
+fix = { en = "Use PreparedStatement parameters or named JPA parameters", tr = "PreparedStatement parametreleri veya adlandırılmış JPA parametreleri kullanın", fr = "Utilisez les paramètres de PreparedStatement ou JPA" }
+
+[[rule]]
+id = "kor.sql-injection.go"
+severity = "high"
+cwe = "CWE-89"
+ext = ["go"]
+pattern = '''\.(Query|Exec|QueryRow)(Context)?\(\s*(ctx\s*,\s*)?fmt\.Sprintf\('''
+rationale = { en = "SQL built with fmt.Sprintf", tr = "SQL fmt.Sprintf ile kurulmuş", fr = "SQL construit avec fmt.Sprintf" }
+fix = { en = "Use placeholders and pass args to Query/Exec", tr = "Yer tutucu kullanıp değerleri Query/Exec'e argüman olarak verin", fr = "Utilisez des paramètres passés à Query/Exec" }
+
+# ---------------------------------------------------------------------------------------------
+# Command injection / code evaluation (CWE-78, CWE-95)
+# ---------------------------------------------------------------------------------------------
+
+[[rule]]
+id = "kor.command-injection.python-shell"
+severity = "high"
+cwe = "CWE-78"
+ext = ["py"]
+pattern = '''subprocess\.\w+\([^#]*shell\s*=\s*True'''
+rationale = { en = "subprocess runs through a shell", tr = "subprocess bir kabuk üzerinden çalışıyor", fr = "subprocess passe par un shell" }
+fix = { en = "Pass an argument list and drop shell=True", tr = "Argüman listesi verin, shell=True'yu kaldırın", fr = "Passez une liste d'arguments sans shell=True" }
+
+[[rule]]
+id = "kor.command-injection.python-os"
+severity = "high"
+cwe = "CWE-78"
+ext = ["py"]
+pattern = '''\bos\.(system|popen)\s*\(\s*(f["']|["'][^"']*["']\s*(\+|%|\.format)|[A-Za-z_])'''
+rationale = { en = "Shell command built from a variable", tr = "Kabuk komutu bir değişkenden kurulmuş", fr = "Commande shell construite à partir d'une variable" }
+fix = { en = "Use subprocess.run([...]) with an argument list", tr = "Argüman listesiyle subprocess.run([...]) kullanın", fr = "Utilisez subprocess.run([...]) avec une liste d'arguments" }
+
+[[rule]]
+id = "kor.command-injection.node"
+severity = "high"
+cwe = "CWE-78"
+ext = ["js", "mjs", "cjs", "jsx", "ts", "tsx", "mts", "cts"]
+requires = '''child_process'''
+pattern = '''\b(exec|execSync)\s*\(\s*(`[^`]*\$\{|["'][^"']*["']\s*\+|[A-Za-z_$][\w$.]*\s*[,)])'''
+unless = '''\.exec\(|RegExp|/\w*\.exec'''
+rationale = { en = "child_process.exec runs a shell command built from data", tr = "child_process.exec veriden kurulan bir kabuk komutu çalıştırıyor", fr = "child_process.exec exécute une commande shell construite à partir de données" }
+fix = { en = "Use execFile/spawn with an argument array", tr = "Argüman dizisiyle execFile/spawn kullanın", fr = "Utilisez execFile/spawn avec un tableau d'arguments" }
+
+[[rule]]
+id = "kor.command-injection.php"
+severity = "high"
+cwe = "CWE-78"
+ext = ["php"]
+pattern = '''(?i)\b(shell_exec|system|exec|passthru|popen|proc_open)\s*\([^;]*\$'''
+unless = '''escapeshellarg'''
+rationale = { en = "Shell command built from a variable", tr = "Kabuk komutu bir değişkenden kurulmuş", fr = "Commande shell construite à partir d'une variable" }
+fix = { en = "Avoid the shell; if unavoidable wrap every argument in escapeshellarg()", tr = "Kabuktan kaçının; zorunluysa her argümanı escapeshellarg() ile sarın", fr = "Évitez le shell ; sinon entourez chaque argument d'escapeshellarg()" }
+
+[[rule]]
+id = "kor.command-injection.rust-shell"
+severity = "medium"
+cwe = "CWE-78"
+ext = ["rs"]
+pattern = '''Command::new\(\s*"(sh|bash|zsh|cmd|cmd\.exe|powershell|powershell\.exe|pwsh)"\s*\)'''
+rationale = { en = "A shell is spawned; arguments built from data are injectable", tr = "Bir kabuk başlatılıyor; veriden kurulan argümanlar enjeksiyona açık", fr = "Un shell est lancé ; des arguments construits à partir de données sont injectables" }
+fix = { en = "Call the program directly with Command::new(prog).args([...])", tr = "Programı doğrudan Command::new(prog).args([...]) ile çağırın", fr = "Appelez le programme directement avec Command::new(prog).args([...])" }
+
+[[rule]]
+id = "kor.command-injection.dotnet"
+severity = "high"
+cwe = "CWE-78"
+ext = ["cs"]
+pattern = '''Process\.Start\(\s*"(cmd|cmd\.exe|bash|sh|powershell)(\.exe)?"\s*,\s*(\$"|"[^"]*"\s*\+|[A-Za-z_])'''
+rationale = { en = "A shell command is built from data", tr = "Kabuk komutu veriden kurulmuş", fr = "Commande shell construite à partir de données" }
+fix = { en = "Start the program directly with ProcessStartInfo.ArgumentList", tr = "Programı doğrudan ProcessStartInfo.ArgumentList ile başlatın", fr = "Lancez le programme avec ProcessStartInfo.ArgumentList" }
+
+[[rule]]
+id = "kor.command-injection.go"
+severity = "high"
+cwe = "CWE-78"
+ext = ["go"]
+pattern = '''exec\.Command(Context)?\([^)]*"(sh|bash)"\s*,\s*"-c"\s*,\s*(fmt\.Sprintf|[A-Za-z_])'''
+rationale = { en = "sh -c with a command built from data", tr = "Veriden kurulan komutla sh -c", fr = "sh -c avec une commande construite à partir de données" }
+fix = { en = "Call the program directly: exec.Command(prog, args...)", tr = "Programı doğrudan çağırın: exec.Command(prog, args...)", fr = "Appelez le programme directement : exec.Command(prog, args...)" }
+
+[[rule]]
+id = "kor.eval"
+severity = "medium"
+cwe = "CWE-95"
+ext = ["js", "mjs", "cjs", "jsx", "ts", "tsx", "py", "php", "rb"]
+pattern = '''(^|[^\w.])(eval|exec)\s*\(\s*[^"'`)\s]|\bnew\s+Function\s*\('''
+unless = '''(?i)\.exec\(|regex|re\.compile'''
+rationale = { en = "Code evaluated from a runtime value", tr = "Çalışma anındaki bir değer kod olarak değerlendiriliyor", fr = "Code évalué à partir d'une valeur à l'exécution" }
+fix = { en = "Remove eval; parse data with JSON or a dispatch table", tr = "eval'i kaldırın; veriyi JSON veya bir eşleme tablosuyla işleyin", fr = "Supprimez eval ; utilisez JSON ou une table de correspondance" }
+
+# ---------------------------------------------------------------------------------------------
+# Weak cryptography (CWE-916, CWE-328, CWE-327, CWE-338, CWE-329)
+# ---------------------------------------------------------------------------------------------
+
+[[rule]]
+id = "kor.weak-password-hash"
+severity = "high"
+cwe = "CWE-916"
+pattern = '''(?i)\b(md5|sha1|sha-1)\b.*\b(pass(word|wd)?|pwd|parola|sifre)\b|\b(pass(word|wd)?|pwd|parola|sifre)\b.*\b(md5|sha1)\s*\('''
+rationale = { en = "Password hashed with MD5/SHA-1", tr = "Parola MD5/SHA-1 ile özetlenmiş", fr = "Mot de passe haché en MD5/SHA-1" }
+fix = { en = "Use Argon2id or bcrypt (cost >= 12)", tr = "Argon2id veya bcrypt (maliyet >= 12) kullanın", fr = "Utilisez Argon2id ou bcrypt (coût >= 12)" }
+
+[[rule]]
+id = "kor.weak-hash"
+severity = "low"
+cwe = "CWE-328"
+pattern = '''(?i)(hashlib\.(md5|sha1)\(|createHash\(\s*["'](md5|sha1)["']|\bmd5\s*\(|\bsha1\s*\(|MessageDigest\.getInstance\(\s*"(MD5|SHA-?1)"|\b(MD5|SHA1)\.Create\(|\bMd5::new\(|\bSha1::new\(|md5::compute\(|crypto/(md5|sha1)")'''
+rationale = { en = "MD5/SHA-1 are broken for integrity and signatures", tr = "MD5/SHA-1 bütünlük ve imza için kırılmış durumda", fr = "MD5/SHA-1 sont cassés pour l'intégrité et les signatures" }
+fix = { en = "Use SHA-256 or BLAKE3 (fine for non-security checksums: mark it so)", tr = "SHA-256 veya BLAKE3 kullanın (güvenlik dışı sağlama toplamıysa öyle işaretleyin)", fr = "Utilisez SHA-256 ou BLAKE3 (pour une somme non sécuritaire, indiquez-le)" }
+
+[[rule]]
+id = "kor.ecb-mode"
+severity = "medium"
+cwe = "CWE-327"
+pattern = '''(?i)(AES/ECB|MODE_ECB|CipherMode\.ECB|aes-\d+-ecb|\bEcb<|Mode\.ECB|"ECB")'''
+rationale = { en = "ECB mode leaks plaintext patterns", tr = "ECB modu açık metin desenlerini sızdırır", fr = "Le mode ECB révèle les motifs du texte clair" }
+fix = { en = "Use an AEAD mode (AES-GCM, ChaCha20-Poly1305)", tr = "AEAD modu kullanın (AES-GCM, ChaCha20-Poly1305)", fr = "Utilisez un mode AEAD (AES-GCM, ChaCha20-Poly1305)" }
+
+[[rule]]
+id = "kor.weak-cipher"
+severity = "medium"
+cwe = "CWE-327"
+pattern = '''(?i)(Cipher\.getInstance\(\s*"(DES|DESede|RC4|RC2|Blowfish)|createCipheriv\(\s*["'](des|des-ede3?|rc4|rc2|bf)[-"']|\bDES\.new\(|\bARC4\.new\(|DESCryptoServiceProvider|RC2CryptoServiceProvider|TripleDESCryptoServiceProvider|openssl_encrypt\([^)]*["'](des|rc4|bf)-)'''
+rationale = { en = "Obsolete cipher (DES/3DES/RC4/RC2/Blowfish)", tr = "Eskimiş şifre (DES/3DES/RC4/RC2/Blowfish)", fr = "Chiffrement obsolète (DES/3DES/RC4/RC2/Blowfish)" }
+fix = { en = "Use AES-GCM or ChaCha20-Poly1305", tr = "AES-GCM veya ChaCha20-Poly1305 kullanın", fr = "Utilisez AES-GCM ou ChaCha20-Poly1305" }
+
+[[rule]]
+id = "kor.insecure-random"
+severity = "medium"
+cwe = "CWE-338"
+pattern = '''(?i)(Math\.random\(\)|\brandom\.(random|randint|choice|choices|randrange|getrandbits)\(|\b(mt_rand|rand|uniqid|lcg_value|str_shuffle)\s*\(|new\s+Random\(|rand\.(Intn|Int63|Int31|Read)\()[^\n]*(token|secret|passw|salt|nonce|session|csrf|api_?key|reset)|\b\w*(token|secret|passw\w*|salt|otp|nonce|session_?id|csrf|api_?key|reset_?code)\w*\s*(=|:|\+=)[^\n]*(Math\.random\(\)|\brandom\.(random|randint|choice|choices|randrange|getrandbits)\(|\b(mt_rand|rand|uniqid|lcg_value|str_shuffle)\s*\(|new\s+Random\(|rand\.(Intn|Int63|Int31)\()'''
+rationale = { en = "Predictable random numbers used for a security value", tr = "Güvenlik değeri için tahmin edilebilir rastgele sayı kullanılmış", fr = "Nombres aléatoires prévisibles pour une valeur de sécurité" }
+fix = { en = "Use a CSPRNG: crypto.randomBytes/getRandomValues, secrets, random_bytes, RandomNumberGenerator, crypto/rand", tr = "Kriptografik üreteç kullanın: crypto.randomBytes/getRandomValues, secrets, random_bytes, RandomNumberGenerator, crypto/rand", fr = "Utilisez un CSPRNG : crypto.randomBytes/getRandomValues, secrets, random_bytes, RandomNumberGenerator, crypto/rand" }
+
+[[rule]]
+id = "kor.hardcoded-iv"
+severity = "medium"
+cwe = "CWE-329"
+pattern = '''(?i)(\b(iv|nonce|init_?vector|initialization_?vector)\b\s*(:=|=|:)\s*(b?["'][^"']{8,}["']|bytes\(\s*\[|\[\s*0x|new\s+byte\[\]\s*\{|Buffer\.from\(\s*["']|&?\[\s*0u8)|IvParameterSpec\(\s*("|new\s+byte\[\]\s*\{|"[^"]*"\.getBytes))'''
+unless = '''(?i)(random|urandom|getrandom|randomBytes|getRandomValues|generate|OsRng|SecureRandom)'''
+rationale = { en = "Fixed IV/nonce: identical plaintexts encrypt identically (and GCM breaks)", tr = "Sabit IV/nonce: aynı açık metinler aynı şifrelenir (GCM ise çöker)", fr = "IV/nonce fixe : textes identiques chiffrés à l'identique (GCM est cassé)" }
+fix = { en = "Generate a fresh random IV per message and store it with the ciphertext", tr = "Her mesaj için yeni rastgele IV üretip şifreli metinle saklayın", fr = "Générez un IV aléatoire par message et stockez-le avec le chiffré" }
+
+# ---------------------------------------------------------------------------------------------
+# TLS verification disabled (CWE-295)
+# ---------------------------------------------------------------------------------------------
+
+[[rule]]
+id = "kor.tls-verify-disabled"
+severity = "high"
+cwe = "CWE-295"
+pattern = '''(?i)(\bverify\s*=\s*False\b|ssl\._create_unverified_context|\bCERT_NONE\b|rejectUnauthorized\s*:\s*false|NODE_TLS_REJECT_UNAUTHORIZED["']?\]?\s*=\s*["']?0|danger_accept_invalid_(certs|hostnames)\(\s*true|InsecureSkipVerify\s*:\s*true|ServerCertificate(Custom)?ValidationCallback\s*[+]?=.*=>\s*true|DangerousAcceptAnyServerCertificateValidator|CURLOPT_SSL_VERIFY(PEER|HOST)\s*,\s*(false|0)\b|["']verify["']\s*=>\s*false|NoopHostnameVerifier|ALLOW_ALL_HOSTNAME_VERIFIER|setHostnameVerifier\([^)]*->\s*true|\bcurl\b[^\n]*\s(-k|--insecure)\b|\bwget\b[^\n]*--no-check-certificate|strict-ssl\s*[=:]\s*false)'''
+rationale = { en = "TLS certificate verification is turned off", tr = "TLS sertifika doğrulaması kapatılmış", fr = "La vérification des certificats TLS est désactivée" }
+fix = { en = "Keep verification on; trust a private CA explicitly instead", tr = "Doğrulamayı açık tutun; özel CA'ya açıkça güvenin", fr = "Gardez la vérification ; faites confiance explicitement à une CA privée" }
+
+# ---------------------------------------------------------------------------------------------
+# Path traversal (CWE-22)
+# ---------------------------------------------------------------------------------------------
+
+[[rule]]
+id = "kor.path-traversal.python"
+severity = "medium"
+cwe = "CWE-22"
+ext = ["py"]
+pattern = '''(\bopen|send_file|send_from_directory|os\.path\.join|Path|FileResponse|os\.remove|shutil\.\w+)\s*\([^#]*\brequest\.(args|form|files|values|GET|POST|json|query_params|path_params|data)'''
+unless = '''secure_filename|safe_join'''
+rationale = { en = "Request data flows into a file path", tr = "İstek verisi bir dosya yoluna giriyor", fr = "Des données de la requête entrent dans un chemin de fichier" }
+fix = { en = "Resolve the path and check it stays under the base directory (secure_filename / safe_join)", tr = "Yolu çözümleyip temel dizin altında kaldığını doğrulayın (secure_filename / safe_join)", fr = "Résolvez le chemin et vérifiez qu'il reste sous le répertoire de base (secure_filename / safe_join)" }
+
+[[rule]]
+id = "kor.path-traversal.node"
+severity = "medium"
+cwe = "CWE-22"
+ext = ["js", "mjs", "cjs", "jsx", "ts", "tsx", "mts", "cts"]
+pattern = '''(readFile|readFileSync|createReadStream|createWriteStream|sendFile|download|writeFile|writeFileSync|unlink|unlinkSync|path\.join|path\.resolve)\s*\([^)]*\breq\.(params|query|body|files)'''
+rationale = { en = "Request data flows into a file path", tr = "İstek verisi bir dosya yoluna giriyor", fr = "Des données de la requête entrent dans un chemin de fichier" }
+fix = { en = "path.resolve the result and check it starts with the base directory; reject '..'", tr = "Sonucu path.resolve ile çözüp temel dizinle başladığını doğrulayın; '..' reddedin", fr = "Résolvez avec path.resolve et vérifiez le préfixe du répertoire de base ; refusez '..'" }
+
+[[rule]]
+id = "kor.path-traversal.php"
+severity = "high"
+cwe = "CWE-22"
+ext = ["php"]
+pattern = '''(?i)\b(include|require|include_once|require_once|file_get_contents|fopen|readfile|unlink|file_put_contents|file|Storage::\w+|->download)\b\s*\(?[^;]*(\$_(GET|POST|REQUEST|COOKIE)|\$request->(input|get|query|route)\(|request\(\)->(input|get|query)\()'''
+unless = '''basename\('''
+rationale = { en = "Request data flows into a file path or include", tr = "İstek verisi bir dosya yoluna veya include'a giriyor", fr = "Des données de la requête entrent dans un chemin de fichier ou un include" }
+fix = { en = "Map user input to an allow-list or use basename() and realpath() checks", tr = "Kullanıcı girdisini izin listesine eşleyin veya basename()/realpath() denetimi yapın", fr = "Associez l'entrée à une liste autorisée ou vérifiez avec basename()/realpath()" }
+
+[[rule]]
+id = "kor.path-traversal.go"
+severity = "medium"
+cwe = "CWE-22"
+ext = ["go"]
+pattern = '''(os\.Open|os\.ReadFile|ioutil\.ReadFile|os\.Create|os\.Remove|filepath\.Join|path\.Join|http\.ServeFile)\([^)]*\br\.(URL\.Query\(\)|FormValue|PostFormValue|PathValue)'''
+rationale = { en = "Request data flows into a file path", tr = "İstek verisi bir dosya yoluna giriyor", fr = "Des données de la requête entrent dans un chemin de fichier" }
+fix = { en = "filepath.Clean + check the prefix, or use os.Root (Go 1.24)", tr = "filepath.Clean + önek denetimi yapın veya os.Root (Go 1.24) kullanın", fr = "filepath.Clean + vérification du préfixe, ou os.Root (Go 1.24)" }
+
+[[rule]]
+id = "kor.path-traversal.dotnet"
+severity = "medium"
+cwe = "CWE-22"
+ext = ["cs"]
+pattern = '''(File\.(ReadAllText|ReadAllBytes|OpenRead|Open|Delete|WriteAllText|WriteAllBytes)|Path\.Combine|PhysicalFile|Results\.File)\s*\([^)]*\b(Request\.(Query|Form|RouteValues)|HttpContext\.Request)'''
+rationale = { en = "Request data flows into a file path", tr = "İstek verisi bir dosya yoluna giriyor", fr = "Des données de la requête entrent dans un chemin de fichier" }
+fix = { en = "Path.GetFullPath and check it starts with the base directory", tr = "Path.GetFullPath ile çözüp temel dizinle başladığını doğrulayın", fr = "Path.GetFullPath puis vérifiez le préfixe du répertoire de base" }
+
+# ---------------------------------------------------------------------------------------------
+# Insecure deserialization (CWE-502)
+# ---------------------------------------------------------------------------------------------
+
+[[rule]]
+id = "kor.deserialization.python"
+severity = "high"
+cwe = "CWE-502"
+ext = ["py"]
+pattern = '''\b(pickle|cPickle|_pickle|dill|marshal|shelve|jsonpickle)\.(loads?|open|decode|Unpickler)\(|\byaml\.(load|load_all|unsafe_load)\('''
+unless = '''SafeLoader|CSafeLoader|safe_load'''
+rationale = { en = "Deserializing untrusted data can run code", tr = "Güvenilmeyen verinin serileştirmeden çıkarılması kod çalıştırabilir", fr = "Désérialiser des données non fiables peut exécuter du code" }
+fix = { en = "Use JSON, or yaml.safe_load", tr = "JSON veya yaml.safe_load kullanın", fr = "Utilisez JSON ou yaml.safe_load" }
+
+[[rule]]
+id = "kor.deserialization.php"
+severity = "high"
+cwe = "CWE-502"
+ext = ["php"]
+pattern = '''(?i)\bunserialize\s*\('''
+unless = '''allowed_classes'''
+rationale = { en = "unserialize() on input enables object injection", tr = "Girdi üzerinde unserialize() nesne enjeksiyonuna açık", fr = "unserialize() sur une entrée permet l'injection d'objets" }
+fix = { en = "Use json_decode, or pass ['allowed_classes' => false]", tr = "json_decode kullanın veya ['allowed_classes' => false] verin", fr = "Utilisez json_decode, ou ['allowed_classes' => false]" }
+
+[[rule]]
+id = "kor.deserialization.dotnet"
+severity = "high"
+cwe = "CWE-502"
+ext = ["cs"]
+pattern = '''\b(BinaryFormatter|SoapFormatter|NetDataContractSerializer|LosFormatter|ObjectStateFormatter)\b|TypeNameHandling\s*=\s*TypeNameHandling\.(All|Auto|Objects|Arrays)'''
+rationale = { en = "Type-carrying deserializer: remote code execution on untrusted input", tr = "Tür taşıyan serileştirici: güvenilmeyen girdide uzaktan kod çalıştırma", fr = "Désérialiseur porteur de types : exécution de code à distance" }
+fix = { en = "Use System.Text.Json without type names", tr = "Tür adı olmadan System.Text.Json kullanın", fr = "Utilisez System.Text.Json sans noms de types" }
+
+[[rule]]
+id = "kor.deserialization.java"
+severity = "high"
+cwe = "CWE-502"
+ext = ["java", "kt"]
+pattern = '''new\s+ObjectInputStream\(|\bXMLDecoder\(|new\s+XStream\(|enableDefaultTyping\(|activateDefaultTyping\('''
+rationale = { en = "Java native deserialization of untrusted data", tr = "Güvenilmeyen verinin Java yerel serileştirmeden çıkarılması", fr = "Désérialisation Java native de données non fiables" }
+fix = { en = "Use JSON with explicit types; if unavoidable set an ObjectInputFilter", tr = "Açık türlerle JSON kullanın; zorunluysa ObjectInputFilter ayarlayın", fr = "Utilisez JSON avec types explicites ; sinon un ObjectInputFilter" }
+
+[[rule]]
+id = "kor.deserialization.node"
+severity = "high"
+cwe = "CWE-502"
+ext = ["js", "mjs", "cjs", "jsx", "ts", "tsx"]
+pattern = '''require\(\s*["'](node-serialize|serialize-to-js|funcster)["']\)|\bunserialize\(|from\s+["'](node-serialize|serialize-to-js)["']'''
+rationale = { en = "Library that evaluates functions while deserializing", tr = "Serileştirmeden çıkarırken fonksiyon çalıştıran kütüphane", fr = "Bibliothèque qui évalue des fonctions en désérialisant" }
+fix = { en = "Use JSON.parse", tr = "JSON.parse kullanın", fr = "Utilisez JSON.parse" }
+
+[[rule]]
+id = "kor.deserialization.ruby"
+severity = "high"
+cwe = "CWE-502"
+ext = ["rb"]
+pattern = '''\bMarshal\.load\(|\bYAML\.(load|unsafe_load)\('''
+unless = '''safe_load'''
+rationale = { en = "Deserializing untrusted data can run code", tr = "Güvenilmeyen verinin serileştirmeden çıkarılması kod çalıştırabilir", fr = "Désérialiser des données non fiables peut exécuter du code" }
+fix = { en = "Use JSON or YAML.safe_load", tr = "JSON veya YAML.safe_load kullanın", fr = "Utilisez JSON ou YAML.safe_load" }
+
+# ---------------------------------------------------------------------------------------------
+# Open endpoints (CWE-306) — best effort: route definitions with no auth marker nearby.
+# Router-level middleware is invisible to a line rule, so these are low/info.
+# ---------------------------------------------------------------------------------------------
+
+[[rule]]
+id = "kor.open-endpoint.express"
+severity = "low"
+cwe = "CWE-306"
+ext = ["js", "mjs", "cjs", "ts", "mts", "cts"]
+pattern = '''\b(app|router|server)\.(post|put|patch|delete|all)\s*\(\s*["'`]'''
+unless = '''(?i)auth|passport|jwt|verifyToken|ensureLoggedIn|requireUser|protect|guard|session|isLoggedIn'''
+rationale = { en = "State-changing route with no auth middleware on the line", tr = "Durum değiştiren rota, satırda yetkilendirme ara katmanı yok", fr = "Route modifiant l'état sans middleware d'authentification" }
+fix = { en = "Add an auth middleware to the route (or confirm it is public on purpose)", tr = "Rotaya yetkilendirme ara katmanı ekleyin (veya bilerek herkese açık olduğunu doğrulayın)", fr = "Ajoutez un middleware d'authentification (ou confirmez que la route est publique)" }
+
+[[rule]]
+id = "kor.open-endpoint.express-read"
+severity = "info"
+cwe = "CWE-306"
+ext = ["js", "mjs", "cjs", "ts", "mts", "cts"]
+pattern = '''\b(app|router|server)\.get\s*\(\s*["'`]/'''
+unless = '''(?i)auth|passport|jwt|verifyToken|ensureLoggedIn|requireUser|protect|guard|session|isLoggedIn|health|static|favicon'''
+rationale = { en = "Read route with no auth middleware on the line", tr = "Okuma rotası, satırda yetkilendirme ara katmanı yok", fr = "Route de lecture sans middleware d'authentification" }
+fix = { en = "Add an auth middleware if the data is not public", tr = "Veri herkese açık değilse yetkilendirme ara katmanı ekleyin", fr = "Ajoutez une authentification si les données ne sont pas publiques" }
+
+[[rule]]
+id = "kor.open-endpoint.python"
+severity = "low"
+cwe = "CWE-306"
+ext = ["py"]
+pattern = '''^\s*@(app|router|bp|blueprint|api|\w+_bp)\.(post|put|patch|delete|route)\('''
+unless = '''(?i)Depends\(|login_required|auth|permission|jwt_required|Security\(|current_user'''
+near = 3
+rationale = { en = "Route with no auth dependency or decorator nearby", tr = "Yakınında yetkilendirme bağımlılığı veya dekoratörü olmayan rota", fr = "Route sans dépendance ni décorateur d'authentification" }
+fix = { en = "Add Depends(get_current_user) / @login_required (or confirm it is public)", tr = "Depends(get_current_user) / @login_required ekleyin (veya herkese açık olduğunu doğrulayın)", fr = "Ajoutez Depends(get_current_user) / @login_required (ou confirmez qu'elle est publique)" }
+
+[[rule]]
+id = "kor.open-endpoint.rust"
+severity = "info"
+cwe = "CWE-306"
+ext = ["rs"]
+pattern = '''\.route\(\s*"[^"]*"\s*,\s*(post|put|patch|delete)\(|#\[(post|put|patch|delete)\(\s*"'''
+unless = '''(?i)auth|require_|middleware|Identity|Claims|BearerAuth|guard|session'''
+near = 3
+rationale = { en = "State-changing route with no auth extractor or layer nearby", tr = "Yakınında yetkilendirme çıkarıcısı veya katmanı olmayan durum değiştiren rota", fr = "Route modifiant l'état sans extracteur ni couche d'authentification" }
+fix = { en = "Add an auth extractor/layer (or confirm it is public)", tr = "Yetkilendirme çıkarıcısı/katmanı ekleyin (veya herkese açık olduğunu doğrulayın)", fr = "Ajoutez un extracteur/couche d'authentification (ou confirmez qu'elle est publique)" }
+
+[[rule]]
+id = "kor.open-endpoint.dotnet"
+severity = "low"
+cwe = "CWE-306"
+ext = ["cs"]
+pattern = '''\.Map(Get|Post|Put|Patch|Delete|Methods)\(\s*"'''
+unless = '''RequireAuthorization|\[Authorize'''
+near = 2
+rationale = { en = "Minimal API endpoint without RequireAuthorization", tr = "RequireAuthorization olmayan minimal API uç noktası", fr = "Point de terminaison minimal sans RequireAuthorization" }
+fix = { en = "Chain .RequireAuthorization() or use a fallback authorization policy", tr = ".RequireAuthorization() ekleyin veya varsayılan yetkilendirme politikası kullanın", fr = "Ajoutez .RequireAuthorization() ou une stratégie d'autorisation par défaut" }
+
+[[rule]]
+id = "kor.open-endpoint.laravel"
+severity = "info"
+cwe = "CWE-306"
+ext = ["php"]
+pattern = '''Route::(post|put|patch|delete|any|match|get)\s*\('''
+unless = '''(?i)middleware\(.*auth|['"]auth['"]|auth:|can:|Route::middleware'''
+near = 1
+rationale = { en = "Route without auth middleware nearby (group middleware is not seen)", tr = "Yakınında auth ara katmanı olmayan rota (grup ara katmanı görülmez)", fr = "Route sans middleware auth à proximité (les groupes ne sont pas vus)" }
+fix = { en = "Add ->middleware('auth') or put it in an auth group", tr = "->middleware('auth') ekleyin veya auth grubuna alın", fr = "Ajoutez ->middleware('auth') ou placez-la dans un groupe auth" }

@@ -1,0 +1,17 @@
+# Source: https://docs.z.ai/devpack/tool/others
+id = "zai-coding"
+name = "Z.ai GLM Coding Plan"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.z.ai/api/coding/paas/v4"
+auth = { kind = "bearer", env = "ZAI_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.z.ai/devpack/tool/others"
+# Subscription plan endpoint; Anthropic-compatible variant: https://api.z.ai/api/anthropic
+tags = ["fixed-price"]
+[privacy]
+tier = "standard"
+retention = "Retention per provider privacy policy (verify)."
+jurisdiction = "SG"

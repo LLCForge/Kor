@@ -1,0 +1,16 @@
+/* §28.3 kural rozeti; yalnızca mevcut değişkenler. */
+.kr-rules { margin: var(--kor-space-2) 0; padding: var(--kor-space-2) var(--kor-space-2); border: 1px solid var(--border); border-radius: var(--kor-radius-chip); font-size: var(--kor-text-12); }
+.kr-rules.bad { border-color: var(--del-text); }
+.kr-rules > summary { cursor: pointer; color: var(--muted); }
+.kr-rule-n.violated { color: var(--del-text); }
+.kr-rule-n.relevant { color: var(--warn); }
+.kr-rule-n.applied { color: var(--accent); }
+.kr-rule-list { list-style: none; margin: var(--kor-space-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--kor-space-1); }
+.kr-rule { display: flex; flex-wrap: wrap; align-items: center; gap: var(--kor-space-2); }
+.kr-rule.violated svg { color: var(--del-text); }
+.kr-rule.relevant svg { color: var(--warn); }
+.kr-rule.applied svg { color: var(--accent); }
+.kr-rule-text { flex: 1 1 calc(var(--kor-space-1) * 50); min-width: 0; overflow-wrap: anywhere; }
+.kr-rule-src, .kr-rule-at { font-family: var(--font-mono); font-size: var(--kor-text-12); color: var(--muted); }
+.kr-rule-msg { flex-basis: 100%; padding-left: var(--kor-space-5); color: var(--muted); }
+.kr-rule-tag { padding: 0 var(--kor-space-2); border-radius: var(--kor-radius-chip); background: var(--hover); color: var(--muted); }

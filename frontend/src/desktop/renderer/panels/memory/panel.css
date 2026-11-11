@@ -1,0 +1,24 @@
+/* Hafıza ve Uyumluluk panelleri (G3). Yalnızca mevcut değişkenler. */
+.kmem-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.kmem-panel .g14-tabs,
+.kmem-panel .g14-body { padding-left: 16px; padding-right: 16px; }
+.kmem-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; }
+.kmem-row.kmem-wrap { flex-wrap: wrap; justify-content: flex-start; }
+.kmem-grow { flex: 1; min-width: 160px; display: flex; }
+.kmem-grow .text-input { width: 100%; }
+.kmem-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.kmem-inline { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.kmem-search { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.kmem-search .text-input { flex: 1; min-width: 0; }
+.kmem-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-soft); }
+.kmem-textarea { height: auto; min-height: 84px; padding: 6px 8px; resize: vertical; font: 14px/1.5 var(--font-sans); }
+.kmem-card { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; min-width: 0; }
+.kmem-body { margin: 0; font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
+.kmem-preview { padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow-wrap: anywhere; }
+.kmem-editor { display: flex; flex-direction: column; height: 60vh; min-height: 320px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.kmem-editor .g4-editor { flex: 1; min-height: 0; }
+.badge.kmem-edited { background: var(--hover); color: var(--warn); border: 1px solid var(--border); }
+.kmem-tier { flex-shrink: 0; min-width: 2.5em; text-align: right; color: var(--muted); }
+.kmem-winner { color: var(--add-text); }
+.kmem-link { padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.kmem-link:hover { color: var(--accent); text-decoration: underline; }

@@ -1,0 +1,45 @@
+# §17.2 "multi-agent": the orchestrator plans two parts, each sub-agent writes its file in its own
+# worktree, the reviewer approves both diffs, and the task branch merges into the project.
+name: multi-agent
+title: "Çoklu ajan görevi: planla → iki alt ajan → inceleme → birleştir"
+project:
+  git: true
+  files:
+    README.md: "# Demo\n"
+mock:
+  - match: "submit_review"
+    tool: { name: submit_review, input: { approved: true, notes: "doğru" } }
+    usage: { prompt: 500, completion: 10 }
+  - match: "submit_review"
+    tool: { name: submit_review, input: { approved: true, notes: "doğru" } }
+    usage: { prompt: 500, completion: 10 }
+  - match: "submit_plan"
+    tool:
+      name: submit_plan
+      input:
+        summary: "iki parça"
+        subtasks:
+          - { role: alpha, goal: "write the alpha part", files: [alpha.txt] }
+          - { role: beta, goal: "write the beta part", files: [beta.txt] }
+    usage: { prompt: 700, completion: 60 }
+  - match: "write the alpha part"
+    tool: { name: Write, input: { file_path: alpha.txt, content: "alpha\n" } }
+    usage: { prompt: 400, completion: 15 }
+  - match: "write the alpha part"
+    text: "alpha bitti"
+    usage: { prompt: 420, completion: 3 }
+  - match: "write the beta part"
+    tool: { name: Write, input: { file_path: beta.txt, content: "beta\n" } }
+    usage: { prompt: 400, completion: 15 }
+  - match: "write the beta part"
+    text: "beta bitti"
+    usage: { prompt: 420, completion: 3 }
+steps:
+  - command: "kor task"
+    args: ["write alpha and beta", "--agents", "2", "--test", "git status"]
+    desktop_args: [{ goal: "write alpha and beta", agents: 2, test: "git status" }]
+expect:
+  files:
+    alpha.txt: "alpha\n"
+    beta.txt: "beta\n"
+    README.md: "# Demo\n"

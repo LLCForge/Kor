@@ -1,0 +1,16 @@
+/* Ekip görevleri görünümü; kart ve form sınıfları ../graph/panel.css (kg-*), ../security/panel.css (ks-*) ve ../offline/panel.css (ko-*) içinde. */
+.kt-form { display: flex; flex-direction: column; gap: 8px; }
+.kt-goal { width: 100%; resize: vertical; font: inherit; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); }
+.kt-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.kt-field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px; }
+.kt-field input { font: inherit; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.kt-progress { width: 100%; height: 6px; accent-color: var(--accent); }
+.kt-subs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.kt-sub { display: flex; flex-direction: column; gap: 4px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+.kt-sub.conflict, .kt-sub.failed, .kt-sub.rejected { border-color: var(--del-text); }
+.kt-sub-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.kt-goal-text { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.kt-conflict { border-color: var(--del-text); }
+.kt-file { display: flex; flex-direction: column; gap: 4px; }
+.kt-file code { font-family: var(--font-mono); font-size: 12px; }
+.kt-diff { max-height: 320px; overflow: auto; margin: 0; padding: 8px; font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--border); border-radius: 8px; white-space: pre; }

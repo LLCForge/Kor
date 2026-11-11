@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Tauri merges this into the bundle's Info.plist (ADR 0052): folders dropped on the Dock icon or opened
+     with "Open With > Kor" reach the app as file:// URLs (application:openURLs:), opened as projects. -->
+<plist version="1.0">
+<dict>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Folder</string>
+      <key>CFBundleTypeRole</key>
+      <string>Viewer</string>
+      <key>LSHandlerRank</key>
+      <string>Alternate</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>public.folder</string>
+      </array>
+    </dict>
+  </array>
+  <!-- Handoff (§27.10): the active session is offered to the user's other Apple devices. -->
+  <key>NSUserActivityTypes</key>
+  <array>
+    <string>dev.kor.session</string>
+  </array>
+</dict>
+</plist>

@@ -1,0 +1,38 @@
+{
+ "id": "whm",
+ "name": "WHM",
+ "kind": "whm",
+ "match": {
+  "ports": [
+   2087,
+   2086
+  ],
+  "hosts": [],
+  "paths": [],
+  "markers": [
+   "webhost manager"
+  ]
+ },
+ "commands": [
+  {
+   "id": "inventory",
+   "label": {
+    "tr": "Envanteri göster",
+    "en": "Show inventory",
+    "fr": "Afficher l’inventaire"
+   },
+   "action": "api",
+   "task": null,
+   "needs": []
+  },
+  {
+   "id": "explain",
+   "label": {
+    "tr": "Bu ekranı açıkla",
+    "en": "Explain this screen",
+    "fr": "Expliquer cet écran"
+   },
+   "action": "explain"
+  }
+ ]
+}

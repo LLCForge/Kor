@@ -1,0 +1,26 @@
+# §17.2 "sağlayıcı değiştirme": the default model changes between two tasks; the provider is asked for
+# the new one.
+name: provider-switch
+title: "Sağlayıcı / model değiştirme"
+project:
+  files:
+    README.md: "# Demo\n"
+mock:
+  - text: "Birinci model."
+    usage: { prompt: 300, completion: 3 }
+  - text: "İkinci model."
+    usage: { prompt: 300, completion: 3 }
+steps:
+  - prompt: "selam"
+  - command: "kor config set"
+    args: ["agent.model", "mock/kor-mock-large"]
+    desktop_args: ["agent.model", "mock/kor-mock-large"]
+  - prompt: "tekrar selam"
+expect:
+  events:
+    - status
+    - { type: text, text: "Birinci model." }
+    - status
+    - { type: text, text: "İkinci model." }
+  models: ["kor-mock", "kor-mock-large"]
+  usage_requests: 2

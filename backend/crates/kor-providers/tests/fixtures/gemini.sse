@@ -1,0 +1,6 @@
+data: {"candidates":[{"content":{"parts":[{"text":"Mer"}],"role":"model"},"index":0}],"usageMetadata":{"promptTokenCount":12,"candidatesTokenCount":1}}
+
+data: {"candidates":[{"content":{"parts":[{"text":"haba"}],"role":"model"},"index":0}]}
+
+data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"read_file","args":{"path":"a.rs"}}}],"role":"model"},"finishReason":"STOP","index":0}],"usageMetadata":{"promptTokenCount":12,"candidatesTokenCount":7,"totalTokenCount":19}}
+

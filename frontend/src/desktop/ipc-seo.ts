@@ -1,0 +1,5 @@
+// `kor seo` (§29.5–29.10, §29.15, §29.16, ADR 0055) IPC sözleşmesi. Rust: frontend/src-tauri/src/ns/seo.rs
+// (`seo.*`), iş mantığı kor_web::seo. Bulgular kor_runtime::analysis sözleşmesindedir: `file` alanı URL'dir.
+// Types are GENERATED from backend/crates/kor-core/schema/ipc.json (spec §16.3, ADR 0061); edit the schema, not this file.
+import type { SeoSeverity, SeoDepth, SeoFinding, SeoReport, SeoDiff, SeoRich, SeoAuditResult, SeoGscStatus, SeoRow, SeoDrop, SeoContentStage, SeoContentState, SeoContentFiles, SeoMetaRow, SeoMetaEstimate, SeoApplied, SeoBotStats, SeoLogStats, SeoLogsResult, SeoCompetitor, SeoCompDiff, SeoAgentEvent, SeoPriority, SeoTeamReport, SeoOpportunity, SeoBingStat, SeoVerified, SeoProgress, SeoApi } from './ipc.gen.ts'
+export type { SeoSeverity, SeoDepth, SeoFinding, SeoReport, SeoDiff, SeoRich, SeoAuditResult, SeoGscStatus, SeoRow, SeoDrop, SeoContentStage, SeoContentState, SeoContentFiles, SeoMetaRow, SeoMetaEstimate, SeoApplied, SeoBotStats, SeoLogStats, SeoLogsResult, SeoCompetitor, SeoCompDiff, SeoAgentEvent, SeoPriority, SeoTeamReport, SeoOpportunity, SeoBingStat, SeoVerified, SeoProgress, SeoApi }

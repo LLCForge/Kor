@@ -1,0 +1,28 @@
+/* Kod metrikleri bölümleri (Kalite, Teknik borç, Stil, İstatistik, Etki, Ölü kod, Kod arkeolojisi); yalnızca mevcut değişkenler. */
+.km { display: flex; flex-direction: column; gap: 8px; min-width: 0; font-size: 13px; }
+.km-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; }
+.km-grade { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 6px; background: var(--hover); font-weight: 600; font-variant-numeric: tabular-nums; }
+.km-grade-A, .km-grade-B { background: var(--add-bg); color: var(--add-text); }
+.km-grade-D, .km-grade-F { background: var(--del-bg); color: var(--del-text); }
+.km-grade-C { color: var(--warn); }
+.km-dims { display: flex; flex-direction: column; gap: 6px; }
+.km-dim { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; }
+.km-dim > summary { display: flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; }
+.km-dim > summary::-webkit-details-marker { display: none; }
+.km-formula { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; margin: 6px 0; }
+.km-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.km-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.km-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); vertical-align: top; overflow-wrap: anywhere; }
+.km-src { font-size: 12px; color: var(--muted); }
+.km-loc { font-family: var(--font-mono); font-size: 12px; padding: 0; border: 0; background: transparent; color: var(--text-soft); cursor: pointer; text-align: left; }
+.km-loc:hover { color: var(--text); text-decoration: underline; }
+.km-loc:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+.km-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.km-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.km-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); min-width: 0; flex: 1; }
+.km-field input, .km-field select { height: 28px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; font-size: 13px; }
+.km-field input:focus-visible, .km-field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.km-prose { white-space: pre-wrap; line-height: 1.5; padding: 8px; border-radius: 6px; background: var(--code-bg); }
+.km-output { margin: 0; max-height: 200px; overflow: auto; padding: 8px; border-radius: 6px; background: var(--code-bg); font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; }
+.km-ok { color: var(--add-text); }
+.km-bad { color: var(--del-text); }

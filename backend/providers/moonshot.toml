@@ -1,0 +1,16 @@
+# Source: https://platform.kimi.ai/docs/guide/start-using-kimi-api
+id = "moonshot"
+name = "Moonshot AI (Kimi)"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.moonshot.ai/v1"
+auth = { kind = "bearer", env = "MOONSHOT_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://platform.kimi.ai/docs/guide/start-using-kimi-api"
+
+[privacy]
+tier = "standard"
+retention = "Retention per provider privacy policy (verify)."
+jurisdiction = "CN"

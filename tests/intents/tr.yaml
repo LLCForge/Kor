@@ -1,0 +1,321 @@
+# Turkish intent fixtures: free text -> expected kor command (null = normal agent).
+- { text: "bu ay ne kadar para harcadım", expect: "kor cost" }
+- { text: "maliyetlerimi gösterir misin", expect: "kor cost" }
+- { text: "harcamalarima bakalim", expect: "kor cost" }
+- { text: "toplamda ne kadar masraf ettim acaba", expect: "kor cost" }
+- { text: "lütfen bana maliyet dökümünü göster", expect: "kor cost" }
+- { text: "modellere ne kadar para gitti", expect: "kor cost" }
+- { text: "son hatayı düzeltir misin", expect: "kor fix" }
+- { text: "son komutun hatasini duzelt lutfen", expect: "kor fix" }
+- { text: "az önce çalıştırdığım komut patladı düzelt", expect: "kor fix" }
+- { text: "terminalde son başarısız komutu düzeltiver", expect: "kor fix" }
+- { text: "son hatyı düzelt", expect: "kor fix" }
+- { text: "son komut neden başarısız oldu acaba", expect: "kor why" }
+- { text: "son hatanın sebebini açıkla", expect: "kor why" }
+- { text: "son komut niye patladi", expect: "kor why" }
+- { text: "bana son hatayı açıklar mısın", expect: "kor why" }
+- { text: "değişikliklerimi commitle", expect: "kor commit" }
+- { text: "bana bir commit mesajı yazar mısın", expect: "kor commit" }
+- { text: "staged dosyalar için commit at lütfen", expect: "kor commit" }
+- { text: "commit mesajini sen uret", expect: "kor commit" }
+- { text: "grafı açar mısın", expect: "kor graph" }
+- { text: "proje grafına bir bakalım", expect: "kor graph" }
+- { text: "kod grafini goster", expect: "kor graph" }
+- { text: "graf durumunu göster", expect: "kor graph status" }
+- { text: "graf en son ne zaman güncellendi", expect: "kor graph status" }
+- { text: "grafta kac dugum var", expect: "kor graph status" }
+- { text: "grafı baştan tara", expect: "kor graph update" }
+- { text: "proje grafını güncelle lütfen", expect: "kor graph update" }
+- { text: "grafı yeniden oluştur", expect: "kor graph update" }
+- { text: "parseConfig sembolünü grafta açıkla", expect: "kor graph explain", params: { name: "parseConfig" } }
+- { text: "grafta handleLogin fonksiyonunu kim çağırıyor", expect: "kor graph explain", params: { name: "handleLogin" } }
+- { text: "auth ile billing arasındaki en kısa yolu bul", expect: "kor graph path", params: { from: "auth", to: "billing" } }
+- { text: "grafta oturum yönetimi ara", expect: "kor graph query" }
+- { text: "graf üzerinde token kelimesini sorgula", expect: "kor graph query" }
+- { text: "sıcak noktaları göster", expect: "kor graph hotspots" }
+- { text: "projedeki en riskli dosyalar neler", expect: "kor graph hotspots" }
+- { text: "risk haritasına bakalım", expect: "kor graph hotspots" }
+- { text: "v1.2 etiketinden beri graf nasıl değişti", expect: "kor graph diff", params: { rev: "v1.2" } }
+- { text: "UserService sembolüne neler bağımlı grafta", expect: "kor graph impact", params: { target: "UserService" } }
+- { text: "grafı mermaid formatında dışa aktar", expect: "kor graph export" }
+- { text: "grafi obsidiana aktar", expect: "kor graph export" }
+- { text: "sandboxı test eder misin", expect: "kor sandbox test" }
+- { text: "sandbox gerçekten proje dışına yazmayı engelliyor mu bir dene", expect: "kor sandbox test" }
+- { text: "korumalı alanı sına bakalım", expect: "kor sandbox test" }
+- { text: "sandbox durumunu göster", expect: "kor sandbox status" }
+- { text: "sandbox açık mı şu an", expect: "kor sandbox status" }
+- { text: "sandboxın ağ izin listesi ne", expect: "kor sandbox status" }
+- { text: "sandbox için docker imajını indirir misin", expect: "kor sandbox pull" }
+- { text: "sandbox imajini cek", expect: "kor sandbox pull" }
+- { text: "ortamımı tanılar mısın", expect: "kor doctor" }
+- { text: "kurulumumda bir sorun var mı kontrol et", expect: "kor doctor" }
+- { text: "kor doctor çalıştırır mısın", expect: "kor doctor" }
+- { text: "kor niye calismiyor bakar misin", expect: "kor doctor" }
+- { text: "kor'u son sürüme güncelle", expect: "kor update" }
+- { text: "kendini güncelle lütfen", expect: "kor update" }
+- { text: "korun yeni surumunu kur", expect: "kor update" }
+- { text: "yeni sürüm var mı bakar mısın", expect: "kor update check" }
+- { text: "kor guncel mi", expect: "kor update check" }
+- { text: "güncellemeleri denetle", expect: "kor update check" }
+- { text: "beta kanalına geçmek istiyorum", expect: "kor update channel", params: { name: "beta" } }
+- { text: "güncellemeyi geri al eski sürüme dön", expect: "kor update rollback" }
+- { text: "bir önceki kor sürümüne geri dön", expect: "kor update rollback" }
+- { text: "kor'un bu oturumda yaptığı değişiklikleri geri al", expect: "kor undo" }
+- { text: "ajanın dosyalarda yaptığı her şeyi geri al", expect: "kor undo" }
+- { text: "oturumdaki dosya değişikliklerini geri sar", expect: "kor undo" }
+- { text: "değişikliklerimi incele", expect: "kor review" }
+- { text: "kodumu bir gözden geçir lütfen", expect: "kor review" }
+- { text: "commitlenmemiş değişikliklerime kod incelemesi yap", expect: "kor review" }
+- { text: "diffimi güvenlik gözüyle incele", expect: "kor review", params: { persona: "security" } }
+- { text: "güvenlik denetimi yapar mısın", expect: "kor audit" }
+- { text: "projede güvenlik açığı var mı tara", expect: "kor audit" }
+- { text: "kodda sızmış sır var mı bir tara", expect: "kor audit" }
+- { text: "guvenlik taramasi baslat", expect: "kor audit" }
+- { text: "denetim kaydını göster", expect: "kor audit list" }
+- { text: "audit log kayıtlarını listele", expect: "kor audit list" }
+- { text: "kor neler yaptı kayıtlarına bak", expect: "kor audit list" }
+- { text: "denetim günlüğünün hash zincirini doğrula", expect: "kor audit verify" }
+- { text: "audit log ile oynanmış mı kontrol et", expect: "kor audit verify" }
+- { text: "denetim kaydından kvkk uyum raporu çıkar", expect: "kor audit report" }
+- { text: "hangi sağlayıcılara veri gönderildi raporla", expect: "kor audit report" }
+- { text: "denetim kaydını jsonl dosyasına aktar", expect: "kor audit export" }
+- { text: "projede kvkk kişisel veri analizi yap", expect: "kor audit --compliance", params: { compliance: "kvkk" } }
+- { text: "kişisel veri işlenen yerleri bul", expect: "kor audit --compliance" }
+- { text: "güvenlik raporunu sarif dosyasına kaydet", expect: "kor audit --out" }
+- { text: "rapor.sarif analiz raporunu doğrula", expect: "kor audit verify-report", params: { file: "rapor.sarif" } }
+- { text: "bağımlılıkların lisanslarını denetle", expect: "kor audit --licenses" }
+- { text: "projede yasaklı lisans var mı", expect: "kor audit --licenses" }
+- { text: "bağımlılıkları kontrol eder misin", expect: "kor deps check" }
+- { text: "bağımlılıklarda güvenlik açığı var mı", expect: "kor deps check" }
+- { text: "kullanılmayan paketleri bul bana", expect: "kor deps check" }
+- { text: "hangi bagimliliklari yukseltmem lazim", expect: "kor deps check" }
+- { text: "bağımlılıklarımı listele", expect: "kor deps list" }
+- { text: "projede hangi paketleri kullanıyoruz", expect: "kor deps list" }
+- { text: "tüm bağımlılıkları lisanslarıyla göster", expect: "kor deps list" }
+- { text: "src/main.rs dosyasını açıkla", expect: "kor explain", params: { file: "src/main.rs" } }
+- { text: "lib/auth.ts dosyasinin gecmisini anlat", expect: "kor explain", params: { file: "lib/auth.ts" } }
+- { text: "bana router.go dosyasını anlatır mısın", expect: "kor explain", params: { file: "router.go" } }
+- { text: "config.py neden böyle yazılmış", expect: "kor explain", params: { file: "config.py" } }
+- { text: "projenin kalite notu ne", expect: "kor quality" }
+- { text: "kod kalitemiz ne durumda", expect: "kor quality" }
+- { text: "kalite puanını göster", expect: "kor quality" }
+- { text: "kalite geçmişine bakalım", expect: "kor quality" }
+- { text: "teknik borcumuz ne kadar", expect: "kor debt" }
+- { text: "kaç saatlik teknik borç var", expect: "kor debt" }
+- { text: "teknik borc raporu ver", expect: "kor debt" }
+- { text: "kodlama stilimi çıkar", expect: "kor style" }
+- { text: "stil profilimi oluşturur musun", expect: "kor style" }
+- { text: "değişikliklerim stil profilime uyuyor mu", expect: "kor style check" }
+- { text: "stil denetimi yap staged kod için", expect: "kor style check" }
+- { text: "bu haftaki geliştirici istatistiklerim", expect: "kor stats" }
+- { text: "bu hafta ne kadar kod yazdım", expect: "kor stats" }
+- { text: "haftalik istatistikleri goster", expect: "kor stats" }
+- { text: "bu değişiklik başka neleri etkiler sence", expect: "kor impact" }
+- { text: "payment.rs dosyasını değiştirirsem neler bozulur", expect: "kor impact", params: { target: "payment.rs" } }
+- { text: "staged değişikliklerimin etkisini göster", expect: "kor impact" }
+- { text: "ölü kodları bulur musun", expect: "kor dead-code" }
+- { text: "projede kullanılmayan kod var mı", expect: "kor dead-code" }
+- { text: "erisilemeyen kodlari listele", expect: "kor dead-code" }
+- { text: "bana tool listesini göster", expect: "kor tool list" }
+- { text: "hangi araçlarım var", expect: "kor tool list" }
+- { text: "kullanabilecegim araclari listele", expect: "kor tool list" }
+- { text: "kurulu araçlar neler", expect: "kor tool list" }
+- { text: "http_get aracı ne işe yarıyor", expect: "kor tool describe", params: { name: "http_get" } }
+- { text: "pdf okuma için araç ara", expect: "kor tool search" }
+- { text: "araç kataloğunda csv aracı bul", expect: "kor tool search" }
+- { text: "yeni bir araç ekle kor'a", expect: "kor tool add" }
+- { text: "aracımı ekiple paylaş", expect: "kor tool share" }
+- { text: "ekibin paylaştığı aracı indir", expect: "kor tool pull" }
+- { text: "oturumlarımı listele", expect: "kor sessions" }
+- { text: "geçmiş oturumlarım neler", expect: "kor sessions" }
+- { text: "kayitli sohbetleri goster", expect: "kor sessions" }
+- { text: "hangi oturumlarım kayıtlı", expect: "kor sessions" }
+- { text: "en son oturuma devam edelim", expect: "kor resume" }
+- { text: "kaldığım yerden devam et önceki oturum", expect: "kor resume" }
+- { text: "hangi araç dosyalarını okudun uyumluluk", expect: "kor compat status" }
+- { text: "araçlar arasında çakışan kurallar var mı", expect: "kor compat conflicts" }
+- { text: "kurallarımı cursor formatına aktar", expect: "kor compat export" }
+- { text: "bu klasöre güveniyorum güvenilir yap", expect: "kor trust" }
+- { text: "model kataloğuna bakalım", expect: "kor catalog" }
+- { text: "en zeki model hangisi fiyatlarıyla", expect: "kor catalog" }
+- { text: "projede tanımlı hookları göster bana", expect: "kor hooks list" }
+- { text: "kurulu bileşenleri listele", expect: "kor component list" }
+- { text: "chromium bileşenini kur", expect: "kor component add", params: { name: "chromium" } }
+- { text: "python bileşenini kaldır", expect: "kor component remove", params: { name: "python" } }
+- { text: "openai için api anahtarımı ekle", expect: "kor auth login", params: { provider: "openai" } }
+- { text: "hangi api anahtarlarım kayıtlı", expect: "kor auth status" }
+- { text: "anthropic anahtarımı sil", expect: "kor auth logout", params: { provider: "anthropic" } }
+- { text: "openrouter sağlayıcısını sına", expect: "kor provider test", params: { id: "openrouter" } }
+- { text: "sağlayıcılar ayakta mı gecikmeleri nasıl", expect: "kor provider status" }
+- { text: "proxy sunucusunu başlatır mısın", expect: "kor proxy serve" }
+- { text: "proxy çalışıyor mu kullanımı ne", expect: "kor proxy status" }
+- { text: "proxy erişim anahtarımı göster", expect: "kor proxy key" }
+- { text: "yerel ollama sunucumu sağlayıcı olarak ekle", expect: "kor provider add" }
+- { text: "eklediğim özel sağlayıcıyı kaldır", expect: "kor provider remove" }
+- { text: "bilgisayarımdaki model sunucularını keşfet", expect: "kor provider discover" }
+- { text: "openai key havuzunda neler var", expect: "kor provider keys", params: { id: "openai" } }
+- { text: "openai havuzuna yedek anahtar ekle", expect: "kor provider add-key", params: { id: "openai" } }
+- { text: "openai havuzundan 2 numaralı anahtarı sil", expect: "kor provider remove-key", params: { id: "openai", slot: 2 } }
+- { text: "etkin ayarlarım nereden geliyor", expect: "kor config explain" }
+- { text: "config dosyam nerede duruyor", expect: "kor config paths" }
+- { text: "kor ayarını değiştir computer.enabled true yap", expect: "kor config set" }
+- { text: "tanımlı sağlayıcıları listele", expect: "kor providers" }
+- { text: "kullanabileceğim modelleri listele", expect: "kor models" }
+- { text: "araçsız tek bir soru sorayım modele", expect: "kor chat" }
+- { text: "tanımlı mcp sunucularını göster", expect: "kor mcp" }
+- { text: "mcp sunucularını araç sayılarıyla listele", expect: "kor mcp list" }
+- { text: "yeni bir eklenti pazarı ekle", expect: "kor plugin marketplace add" }
+- { text: "eklenti pazarlarımı listele", expect: "kor plugin marketplace list" }
+- { text: "eklenti marketini kaldır", expect: "kor plugin marketplace remove" }
+- { text: "eklentiyi kur lütfen", expect: "kor plugin install" }
+- { text: "bu plugini kaldır", expect: "kor plugin uninstall" }
+- { text: "kurulu eklentilerimi listele", expect: "kor plugin list" }
+- { text: "şu eklentiyi etkinleştirir misin", expect: "kor plugin enable" }
+- { text: "plugini devre dışı bırak", expect: "kor plugin disable" }
+- { text: "eklentiyi en son sürüme güncelle", expect: "kor plugin update" }
+- { text: "eklentide sorun var mı doğrula", expect: "kor plugin doctor" }
+- { text: "hangi alt ajanları kullanabilirim", expect: "kor agents" }
+- { text: "proje belleğinde ne var", expect: "kor memory" }
+- { text: "ssh ve veritabanı bağlantılarımı listele", expect: "kor connections" }
+- { text: "zamanlanmış görevlerimi listele", expect: "kor routines list" }
+- { text: "her sabah çalışacak bir rutin ekle", expect: "kor routines add" }
+- { text: "rutini sil", expect: "kor routines remove" }
+- { text: "duraklattığım rutini tekrar etkinleştir", expect: "kor routines enable" }
+- { text: "rutini duraklat şimdilik", expect: "kor routines disable" }
+- { text: "postgres veritabanından mcp sunucusu üret", expect: "kor mcp add" }
+- { text: "github mcp sunucusunu kaldır", expect: "kor mcp remove" }
+- { text: "kapalı olan mcp sunucusunu aç", expect: "kor mcp enable" }
+- { text: "mcp sunucusunu devre dışı bırak", expect: "kor mcp disable" }
+- { text: "postgres mcp çalışıyor mu test et", expect: "kor mcp test" }
+- { text: "fal üzerinde görsel modellerini ara", expect: "kor media models" }
+- { text: "fal üzerindeki modeli çalıştır flux için", expect: "kor media run" }
+- { text: "gün batımında bir kedi görseli üret", expect: "kor media image" }
+- { text: "hugging face'te whisper modeli ara", expect: "kor hf search", params: { query: "whisper" } }
+- { text: "bu hf modelinin kartını göster", expect: "kor hf info" }
+- { text: "huggingface'ten modeli indir", expect: "kor hf download" }
+- { text: "hugging face ile çıkarım çalıştır", expect: "kor hf infer" }
+- { text: "context bütçemi göster", expect: "kor context" }
+- { text: "bağlam penceresi ne kadar dolu", expect: "kor context" }
+- { text: "modelleri testlerimde yarıştır", expect: "kor bench" }
+- { text: "kabuk entegrasyonunu kurar mısın", expect: "kor shell install" }
+- { text: "shell entegrasyonunu kaldır", expect: "kor shell uninstall" }
+- { text: "kabuk entegrasyonu kurulu mu", expect: "kor shell status" }
+- { text: "npm test komutunu çıktısıyla yakala", expect: "kor shell capture" }
+- { text: "son etiketten beri changelog üret", expect: "kor changelog" }
+- { text: "sürüm notlarını hazırlar mısın", expect: "kor changelog" }
+- { text: "release şablonunu çalıştır", expect: "kor run" }
+- { text: "görev şablonlarını listele", expect: "kor templates list" }
+- { text: "bugfix şablonunun adımlarını göster", expect: "kor templates show" }
+- { text: "yeni bir görev şablonu iskeleti oluştur", expect: "kor templates new" }
+- { text: "router neden hep bu modeli seçti", expect: "kor cost why" }
+- { text: "maliyetleri csv olarak dışa aktar", expect: "kor cost --export" }
+- { text: "ne kadar kotam kaldı acaba", expect: "kor quota" }
+- { text: "sağlayıcı kotalarıma bak", expect: "kor quota" }
+- { text: "monorepodaki paketleri listele", expect: "kor packages" }
+- { text: "değişikliklerimden hangi paketler etkilendi", expect: "kor packages affected" }
+- { text: "web paketinin bağımlılıklarını göster", expect: "kor packages deps", params: { name: "web" } }
+- { text: "paket başına maliyeti göster", expect: "kor packages cost" }
+- { text: "kararları git notlarına kaydet", expect: "kor memory notes push" }
+- { text: "git notlarındaki kararları al", expect: "kor memory notes pull" }
+- { text: "../api projesini bağlama ekle", expect: "kor context add", params: { path: "../api" } }
+- { text: "bağlı projeyi bağlamdan çıkar", expect: "kor context remove" }
+- { text: "bağlama bağlı projeler neler", expect: "kor context projects" }
+- { text: "daha önce rate limit için ne yapmıştık hatırla", expect: "kor recall" }
+- { text: "geçmiş çalışmalarda jwt ara", expect: "kor recall", params: { query: "jwt" } }
+- { text: "bilgi tabanından 42 numaralı kaydı sil", expect: "kor forget", params: { id: 42 } }
+- { text: "bilgi tabanını markdown olarak dışa aktar", expect: "kor knowledge export" }
+- { text: "bilgi tabanını yeniden indeksler misin", expect: "kor knowledge reindex" }
+- { text: "projects klasörünü çalışma alanına ekle", expect: "kor workspace add" }
+- { text: "çalışma alanındaki klasörleri listele", expect: "kor workspace list" }
+- { text: "çalışma alanından bu klasörü çıkar", expect: "kor workspace remove" }
+- { text: "veritabanı şemasını bana göster", expect: "kor db" }
+- { text: "prod veritabanını grafa bağla", expect: "kor db connect", params: { name: "prod" } }
+- { text: "bağlı veritabanlarının şemasını yenile", expect: "kor db refresh" }
+- { text: "graftaki tabloları listele", expect: "kor db tables" }
+- { text: "users tablosunun sütunlarını göster", expect: "kor db show", params: { table: "users" } }
+- { text: "eksik index var mı öneri ver", expect: "kor db indexes" }
+- { text: "yeni migration yaz kullanıcıya telefon sütunu", expect: "kor db migrate new" }
+- { text: "fix.sql dosyasını prod bağlantısında uygula", expect: "kor db apply", params: { name: "prod", file: "fix.sql" } }
+- { text: "kasaya yeni sır ekle", expect: "kor vault add" }
+- { text: "kasada hangi sırlar var", expect: "kor vault list" }
+- { text: "kasadan STRIPE_KEY sırrını sil", expect: "kor vault remove", params: { name: "STRIPE_KEY" } }
+- { text: ".env dosyamı kasaya aktar", expect: "kor vault import" }
+- { text: "internetsiz çalışmak için hazırlık yap", expect: "kor offline init" }
+- { text: "çevrimdışı çalışabilir miyim şu an", expect: "kor offline status" }
+- { text: "kor'u çevrimdışı modda başlat", expect: "kor offline run" }
+- { text: "air-gap kurulum paketi hazırla", expect: "kor offline bundle" }
+- { text: "bu air-gap paketini içe aktar", expect: "kor offline import" }
+- { text: "bu işi birden fazla ajana bölerek yap", expect: "kor task" }
+- { text: "çok ajanlı görevleri listele", expect: "kor task list" }
+- { text: "görevin alt ajanları ne durumda", expect: "kor task status" }
+- { text: "çöken görevi kaldığı yerden sürdürür müsün", expect: "kor task resume" }
+- { text: "görevi aynı noktadan çatalla", expect: "kor task fork" }
+- { text: "çalışan görevi iptal et", expect: "kor task cancel" }
+- { text: "görevdeki merge çakışmasını çöz", expect: "kor task resolve" }
+- { text: "bu dal için pull request aç", expect: "kor pr create" }
+- { text: "değişikliklerimi pr olarak gönder", expect: "kor pr create" }
+- { text: "42 numaralı pr'ı incele", expect: "kor pr review", params: { target: "42" } }
+- { text: "pr yorumlarını cevapla ve düzelt", expect: "kor pr respond" }
+- { text: "açık pr'ları listele", expect: "kor pr list" }
+- { text: "açtığım pr'ım ne durumda", expect: "kor pr status" }
+- { text: "daemonu başlat", expect: "kor daemon start" }
+- { text: "daemonu durdur", expect: "kor daemon stop" }
+- { text: "daemon şu an çalışıyor mu", expect: "kor daemon status" }
+- { text: "daemon loglarına bir bak", expect: "kor daemon logs" }
+- { text: "daemon bilgisayar açılınca başlasın", expect: "kor daemon install" }
+- { text: "daemon açılışta başlamasın artık", expect: "kor daemon uninstall" }
+- { text: "tanımlı tetikleyicileri listele", expect: "kor triggers list" }
+- { text: "nightly tetikleyicisini şimdi dene", expect: "kor triggers test", params: { name: "nightly" } }
+- { text: "tetikleyici geçmişini göster", expect: "kor triggers history" }
+- { text: "bekleyen o isteği onayla", expect: "kor triggers approve" }
+- { text: "bekleyen o isteği reddet", expect: "kor triggers reject" }
+- { text: "push tetikleyicisi için git kancasını kur", expect: "kor triggers hook install" }
+- { text: "tetikleyici için kurulan git kancasını kaldır", expect: "kor triggers hook uninstall" }
+- { text: "değişen servisleri staginge dağıt", expect: "kor deploy" }
+- { text: "uygulamayı prod ortamına deploy et", expect: "kor deploy" }
+- { text: "prod'a deploy etmek riskli mi", expect: "kor deploy risk-check" }
+- { text: "son deploy ne zaman yapıldı", expect: "kor deploy status" }
+- { text: "app.log dosyasını izle hata yakala", expect: "kor watch logs" }
+- { text: "loglardan yakalanan hataları göster", expect: "kor watch incidents" }
+- { text: "yakalanan incident'ı düzeltmeye başla", expect: "kor watch fix" }
+- { text: "incident düzeltmesini pr olarak aç", expect: "kor watch pr" }
+- { text: "yakalanan hata kayıtlarını temizle", expect: "kor watch clear" }
+- { text: "kodda kullanıcı girişini yapan yeri bul", expect: "kor find" }
+- { text: "kod tabanında e-posta gönderimi nerede yapılıyor bul", expect: "kor find" }
+- { text: "oturum kayıtlarımı listele", expect: "kor replay list" }
+- { text: "kayıtlı oturumu tekrar oynat", expect: "kor replay" }
+- { text: "oturum kaydını tek dosya olarak dışa aktar", expect: "kor replay export" }
+- { text: "geliştirme ortamı sürümleri doğru mu", expect: "kor env status" }
+- { text: "sunucuda neler çalışıyor ssh ile keşfet", expect: "kor discover" }
+- { text: "bu ekran görüntüsünden react bileşeni üret", expect: "kor screenshot" }
+- { text: "mimari diyagramdan modül iskeleti çıkar", expect: "kor diagram" }
+- { text: "projenin mimari haritasını görselleştir", expect: "kor visualize" }
+- { text: "sesle görev vermek istiyorum", expect: "kor voice" }
+- { text: "testlerin performans profilini çıkar", expect: "kor perf" }
+- { text: "cpu.pprof profil dosyasını oku", expect: "kor perf report", params: { file: "cpu.pprof" } }
+- { text: "önceki profil çalıştırmalarını listele", expect: "kor perf list" }
+- { text: "tanınan doğal dil komutlarını listele", expect: "kor intents list" }
+- { text: "maliyet göster cümlesi hangi komuta gidiyor test et", expect: "kor intents test" }
+- { text: "kendi cümlemi bir komuta bağlamak istiyorum", expect: "kor intents add" }
+- { text: "eklediğim niyet ifadesini unut", expect: "kor intents forget" }
+- { text: "hangi ajanlar tanımlı bende", expect: "kor agents" }
+- { text: "ajan listesini görebilir miyim", expect: "kor agents" }
+- { text: "hangi modeller testlerimde en iyi kıyasla", expect: "kor bench" }
+- { text: "routing önerisi için modelleri benchmark et", expect: "kor bench" }
+- { text: "modele araçsız tek seferlik soru sor", expect: "kor chat" }
+- { text: "kayıtlı sunucu bağlantılarımı göster", expect: "kor connections" }
+- { text: "bu mimari çizimi koda çevir", expect: "kor diagram" }
+- { text: "diyagramdan proje iskeleti çıkar lütfen", expect: "kor diagram" }
+- { text: "canlı sunucuyu tara ne çalışıyor", expect: "kor discover" }
+- { text: "node ve rust sürümlerim sabitlenenle uyuyor mu", expect: "kor env status" }
+- { text: "geliştirme ortamımın durumunu göster", expect: "kor env status" }
+- { text: "7 numaralı bilgi kaydını unut", expect: "kor forget", params: { id: 7 } }
+- { text: "bilgi tabanındaki 15 numaralı kaydı kaldır", expect: "kor forget", params: { id: 15 } }
+- { text: "hangi kancalar kurulu", expect: "kor hooks list" }
+- { text: "sağlayıcılarımı listeler misin", expect: "kor providers" }
+- { text: "kayıtlı sağlayıcılar hangileri", expect: "kor providers" }
+- { text: "template:release şablonunu çalıştır", expect: "kor run", params: { target: "template:release" } }
+- { text: "görev şablonunu çalıştırır mısın", expect: "kor run" }
+- { text: "ui.png ekran görüntüsünü koda çevir", expect: "kor screenshot", params: { image: "ui.png" } }
+- { text: "bu projeye güvenebilirsin güvenilir işaretle", expect: "kor trust" }
+- { text: "sesli komut vereceğim dinle", expect: "kor voice" }

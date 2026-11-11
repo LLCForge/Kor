@@ -1,0 +1,65 @@
+/* ÜRETİLDİ: frontend/scripts/theme-gen.ts, kaynak assets/theme.json. Elle düzenlemeyin. */
+:root {
+  --kor-ember-hi: #FFD842;
+  --kor-ember-mid: #F8A21F;
+  --kor-ember-lo: #E67E0E;
+  --kor-ember-deep: #B84A0A;
+  --kor-ink-bg: #14151B;
+  --kor-ink-face-top: #34353C;
+  --kor-ink-face-left: #242529;
+  --kor-ink-face-right: #1C1D23;
+  --kor-ink-cream: #F1EBDA;
+  --kor-layer-bg: #14151B;
+  --kor-layer-surface: #1C1D23;
+  --kor-layer-raised: #242529;
+  --kor-layer-overlay: #34353C;
+  --kor-border: rgb(255 255 255 / 0.08);
+  --kor-success: #9BE564;
+  --kor-warning: #FFD842;
+  --kor-error: #FF5C5C;
+  --kor-info: #7FB2FF;
+  --kor-gradient-0: #FFD842;
+  --kor-gradient-1: #FFC234;
+  --kor-gradient-2: #F8A21F;
+  --kor-gradient-3: #F08A14;
+  --kor-gradient-4: #E67E0E;
+  --kor-gradient-5: #F08A14;
+  --kor-gradient-6: #F8A21F;
+  --kor-gradient-7: #FFC234;
+  --kor-ember-soft: rgb(248 162 31 / 0.25);
+  --kor-ring: 0 0 0 2px rgb(248 162 31 / 0.25);
+  --kor-font-heading: 'Fraunces', ui-serif, Georgia, Cambria, 'Times New Roman', serif;
+  --kor-font-ui: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --kor-font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, Menlo, monospace;
+  --kor-text-12: 12px;
+  --kor-text-13: 13px;
+  --kor-text-14: 14px;
+  --kor-text-16: 16px;
+  --kor-text-20: 20px;
+  --kor-text-28: 28px;
+  --kor-text-40: 40px;
+  --kor-leading: 1.5;
+  --kor-space-1: 4px;
+  --kor-space-2: 8px;
+  --kor-space-3: 12px;
+  --kor-space-4: 16px;
+  --kor-space-5: 24px;
+  --kor-space-6: 32px;
+  --kor-space-7: 48px;
+  --kor-radius-chip: 6px;
+  --kor-radius-card: 10px;
+  --kor-radius-composer: 14px;
+  --kor-dur-hover: 150ms;
+  --kor-dur-menu: 200ms;
+  --kor-dur-panel: 300ms;
+  --kor-ease: cubic-bezier(.2,.8,.2,1);
+  --kor-rail-collapsed: 56px;
+  --kor-chat-max: 880px;
+  --kor-drawer-below: 1100px;
+  --kor-page-edge: 32px;
+  --kor-card-pad: 16px;
+  --kor-section-gap: 24px;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --kor-dur-hover: 0ms; --kor-dur-menu: 0ms; --kor-dur-panel: 0ms; }
+}

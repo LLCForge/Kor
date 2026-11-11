@@ -1,0 +1,42 @@
+/* Sınıfsız (ham) form denetimleri için taban görünüm. Bileşenler sınıf verince (.btn, .text-input, .g7-select, kor-ui)
+   onların kuralları geçerli kalır: seçiciler yalnızca class özniteliği olmayan öğeleri hedefler ve :where() ile sıfır
+   özgüllüktedir; bağlamsal kurallar (.x select {…}) her zaman kazanır. Yazı tipi ve renk styles.css'teki
+   `font: inherit; color: inherit` ile gelir. Serbest #hex / px yok (scripts/design-check.ts). */
+
+:where(
+  input:not([class]):not([type='checkbox'], [type='radio'], [type='range'], [type='color'], [type='file'], [type='hidden'], [type='image']),
+  select:not([class]),
+  textarea:not([class])
+) {
+  min-width: 0;
+  padding: var(--kor-space-1) var(--kor-space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-chip);
+  background: var(--surface);
+  outline: none;
+  transition: border-color var(--kor-dur-hover) var(--kor-ease), box-shadow var(--kor-dur-hover) var(--kor-ease);
+}
+:where(input:not([class]), textarea:not([class]))::placeholder { color: var(--placeholder, var(--muted)); }
+:where(input:not([class]), select:not([class]), textarea:not([class])):hover:not(:disabled) { border-color: var(--subtle); }
+:where(input:not([class]), select:not([class]), textarea:not([class])):focus-visible { border-color: var(--accent); box-shadow: var(--kor-ring); }
+:where(input:not([class]), select:not([class]), textarea:not([class]), button:not([class])):disabled { opacity: 0.5; }
+
+:where(button:not([class])) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--kor-space-1);
+  padding: var(--kor-space-1) var(--kor-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-chip);
+  background: transparent;
+  white-space: nowrap;
+}
+:where(button:not([class])):hover:not(:disabled) { background: var(--hover); }
+
+/* Kendi kabının içine gömülü, kenarlıksız denetimler: dolgu tarayıcı varsayılanına döner (önceki görünüm). */
+:where(.cdx-search, .cdx-palette-input, .cdx-pill, .g3-dgm-search, .g4-tree-search, .segmented) :where(input, select, button) { padding: revert; }
+
+/* Yerel açılır listeler (WebView2 select açılır penceresi) seçenek renklerini kullanır: tema yüzeyi. */
+option, optgroup { background-color: var(--surface); color: var(--text); }
+
+:where(input[type='checkbox'], input[type='radio'], input[type='range'], progress) { accent-color: var(--accent); }

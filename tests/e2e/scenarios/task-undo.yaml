@@ -1,0 +1,28 @@
+# §17.2: task → diff → approve → write → undo. Undo restores the project as it was before the turn.
+name: task-undo
+title: "Görev → diff → onay → yazma → geri al"
+project:
+  files:
+    README.md: "# Demo\n"
+mock:
+  - text: "todo.md oluşturuluyor."
+    tool:
+      name: Write
+      input: { file_path: todo.md, content: "- [ ] dene\n" }
+    usage: { prompt: 800, completion: 22 }
+  - text: "Hazır."
+    usage: { prompt: 840, completion: 3 }
+steps:
+  - prompt: "todo.md oluştur"
+  - approve: "yes"
+  - command: "kor undo"
+expect:
+  events:
+    - status
+    - { type: text, text: "todo.md oluşturuluyor." }
+    - { type: confirm, name: Write, files: [todo.md] }
+    - toolResult
+    - { type: text, text: "Hazır." }
+  files:
+    todo.md: ~
+    README.md: "# Demo\n"

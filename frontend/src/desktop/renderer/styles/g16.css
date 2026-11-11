@@ -1,0 +1,25 @@
+/* [g16] Dağıtım ve tanılama penceresi */
+.dialog.g16-panel { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+.g16-body { display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding: 16px 24px 20px; line-height: 1.5; }
+.g16-section { display: flex; flex-direction: column; gap: 8px; }
+.g16-section-title { margin: 0; font-size: var(--kor-text-14); font-weight: 600; color: var(--text); }
+.g16-section p { margin: 0; }
+.g16-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.g16-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+.g16-list {
+  margin: 0; padding: 8px 12px; list-style: none; max-height: 180px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: var(--kor-text-13);
+}
+.g16-list li + li { margin-top: 4px; }
+.g16-mono { font-family: var(--font-mono); font-size: var(--kor-text-12); color: var(--muted); }
+
+/* [g8] Güncelleme bildirimi (sol alt; g14 uyarıları sağ altta) */
+.g16-notice {
+  position: fixed; left: 16px; bottom: 16px; z-index: 50; max-width: min(440px, calc(100vw - 32px));
+  display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px;
+  border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px;
+  background: var(--surface); color: var(--text); box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  font-family: var(--font-sans); font-size: var(--kor-text-13);
+}
+.g16-notice-text { flex: 1; min-width: 0; line-height: 1.4; }
+.g16-notice .btn { display: inline-flex; align-items: center; gap: 6px; }

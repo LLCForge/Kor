@@ -1,0 +1,16 @@
+# Source: https://docs.sambanova.ai/cloud/docs/capabilities/openai-compatibility
+id = "sambanova"
+name = "SambaNova Cloud"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.sambanova.ai/v1"
+auth = { kind = "bearer", env = "SAMBANOVA_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.sambanova.ai/cloud/docs/capabilities/openai-compatibility"
+tags = ["low-latency"]
+[privacy]
+tier = "no_train"
+retention = "Retention per SambaNova terms (verify)."
+jurisdiction = "US"

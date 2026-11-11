@@ -1,0 +1,31 @@
+[package]
+name = "kor-computer"
+description = "Desktop control policy for the Kor coding agent: per-app tiers, human-first stop, indicator, audit, screen and input, window layouts (spec §19.1, §27.7)"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[features]
+default = ["live"]
+# Real screen capture and input (xcap + enigo). Off builds answer with an error.
+live = ["dep:enigo", "dep:xcap", "dep:image", "dep:base64"]
+
+[dependencies]
+base64 = { workspace = true, optional = true }
+enigo = { workspace = true, optional = true }
+image = { workspace = true, optional = true }
+xcap = { workspace = true, optional = true }
+kor-config.workspace = true
+kor-i18n.workspace = true
+kor-platform.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

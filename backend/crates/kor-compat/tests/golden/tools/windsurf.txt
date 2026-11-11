@@ -1,0 +1,9 @@
+rule windsurf/user home/.codeium/windsurf/memories/global_rules.md [always] Global Windsurf rule.
+rule windsurf/user home/.codeium/windsurf/memories/prefers-pnpm.md [on-request "Windsurf memory `prefers-pnpm` (a suggestion, not a rule)"] The user prefers pnpm.
+rule windsurf/project repo/.windsurfrules [always] Legacy windsurfrules.
+rule windsurf/project repo/.windsurf/rules/always.md [always] Windsurf always.
+rule windsurf/project repo/.windsurf/rules/manual.md [manual] Manual Windsurf rule.
+rule windsurf/project repo/.windsurf/rules/model.md [on-request "When writing SQL"] Use CTEs.
+rule windsurf/project repo/.windsurf/rules/glob.md [globs *.py] Python: type hints.
+command /release windsurf/project repo/.windsurf/workflows/release.md
+mcp linear windsurf/user home/.codeium/windsurf/mcp_config.json

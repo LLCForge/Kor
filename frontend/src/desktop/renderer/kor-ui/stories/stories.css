@@ -1,0 +1,5 @@
+/* Yalnızca Ladle hikâyelerinin yerleşimi (uygulamaya girmez). */
+.kor-story-root { padding: var(--kor-space-5); background: var(--bg); color: var(--text); font-family: var(--kor-font-ui); min-height: 100vh; }
+.kor-story-row { display: flex; align-items: center; gap: var(--kor-space-3); flex-wrap: wrap; }
+.kor-story-pad { padding: var(--kor-space-7); }
+.kor-story-narrow { max-width: calc(var(--kor-space-7) * 4); }

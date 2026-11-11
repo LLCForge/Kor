@@ -1,0 +1,23 @@
+/* Sistem görünümü ve sağ alt sağlık kartları / denetim göstergesi (ADR 0059); kart sınıfları ../graph (kg-*),
+   ../security (ks-*), ../offline (ko-*) içinde. Yalnızca mevcut değişkenler. */
+.ksys-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--kor-space-2); }
+.ksys-alert { display: flex; flex-direction: column; gap: var(--kor-space-1); padding: var(--kor-space-2) var(--kor-space-2); border: 1px solid var(--border); border-left-width: calc(var(--kor-space-1) * 0.75); border-radius: var(--kor-radius-chip); font-size: var(--kor-text-13); }
+.ksys-alert.warn { border-left-color: var(--warn); }
+.ksys-alert.critical { border-left-color: var(--del-text); }
+.ksys-tier { display: flex; align-items: center; gap: var(--kor-space-2); flex-wrap: wrap; font-size: var(--kor-text-13); }
+.ksys-tier > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ksys-row { display: contents; }
+.ksys-disk { display: flex; align-items: center; gap: var(--kor-space-2); }
+.ksys-disk meter { width: calc(var(--kor-space-1) * 20); height: var(--kor-space-2); }
+
+.ksys-toasts { position: fixed; right: var(--kor-space-4); bottom: var(--kor-space-4); z-index: 60; display: flex; flex-direction: column; gap: var(--kor-space-2); width: min(calc(var(--kor-space-1) * 85), calc(100vw - var(--kor-space-6))); pointer-events: none; }
+.ksys-toast { pointer-events: auto; display: flex; flex-direction: column; gap: var(--kor-space-2); padding: var(--kor-space-3) var(--kor-space-3); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-left: calc(var(--kor-space-1) * 0.75) solid var(--warn); border-radius: var(--kor-radius-card); box-shadow: 0 calc(var(--kor-space-1) * 1.5) var(--kor-space-5) rgb(0 0 0 / 0.18); font-size: var(--kor-text-13); }
+.ksys-toast.critical { border-left-color: var(--del-text); }
+.ksys-toast-head { display: flex; align-items: flex-start; gap: var(--kor-space-2); }
+.ksys-toast-head strong { flex: 1; min-width: 0; }
+.ksys-toast-body { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.ksys-toast-actions { display: flex; gap: var(--kor-space-2); justify-content: flex-end; }
+
+.ksys-control { position: fixed; top: var(--kor-space-7); left: 50%; transform: translateX(-50%); z-index: 61; display: flex; align-items: center; gap: var(--kor-space-2); padding: var(--kor-space-2) var(--kor-space-2) var(--kor-space-2) var(--kor-space-3); border: 1px solid var(--accent); border-radius: calc(var(--kor-radius-composer) * 100); background: var(--surface); color: var(--text); font-size: var(--kor-text-13); box-shadow: 0 var(--kor-space-1) var(--kor-space-4) rgb(0 0 0 / 0.15); }
+.ksys-control.paused { border-color: var(--warn); }
+

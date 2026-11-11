@@ -1,0 +1,17 @@
+# Source: https://uncensoredllm.ai/docs
+id = "uncensoredllm"
+name = "UncensoredLLM.ai"
+category = "uncensored"
+adapter = "openai_compat"
+base_url = "https://api.uncensoredllm.ai/v1"
+auth = { kind = "bearer", env = "UNCENSOREDLLM_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://uncensoredllm.ai/docs"
+# Model catalog is at /catalog (shape undocumented); /models is tried first.
+tags = ["privacy-focused"]
+[privacy]
+tier = "unknown"
+retention = "No published retention statement found."
+jurisdiction = "US"

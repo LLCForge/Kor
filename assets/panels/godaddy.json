@@ -1,0 +1,75 @@
+{
+ "id": "godaddy",
+ "name": "GoDaddy",
+ "kind": null,
+ "match": {
+  "ports": [],
+  "hosts": [
+   "godaddy.com"
+  ],
+  "paths": [],
+  "markers": []
+ },
+ "commands": [
+  {
+   "id": "nameservers",
+   "label": {
+    "tr": "Ad sunucularını (DNS) doldur",
+    "en": "Fill in nameservers",
+    "fr": "Remplir les serveurs de noms"
+   },
+   "action": "fill",
+   "fields": [
+    {
+     "labels": [
+      "nameserver 1",
+      "ad sunucusu 1",
+      "ns1",
+      "name server 1",
+      "dns 1"
+     ],
+     "value": "ns1"
+    },
+    {
+     "labels": [
+      "nameserver 2",
+      "ad sunucusu 2",
+      "ns2",
+      "name server 2",
+      "dns 2"
+     ],
+     "value": "ns2"
+    },
+    {
+     "labels": [
+      "nameserver 3",
+      "ad sunucusu 3",
+      "ns3",
+      "name server 3",
+      "dns 3"
+     ],
+     "value": "ns3"
+    },
+    {
+     "labels": [
+      "nameserver 4",
+      "ad sunucusu 4",
+      "ns4",
+      "name server 4",
+      "dns 4"
+     ],
+     "value": "ns4"
+    }
+   ]
+  },
+  {
+   "id": "explain",
+   "label": {
+    "tr": "Bu ekranı açıkla",
+    "en": "Explain this screen",
+    "fr": "Expliquer cet écran"
+   },
+   "action": "explain"
+  }
+ ]
+}

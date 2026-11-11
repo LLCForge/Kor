@@ -1,0 +1,5 @@
+---
+source: apps/kor-cli/src/brand.rs
+expression: "shown(&s.line(Depth::Ansi256).unwrap())"
+---
+\e[38;5;214m✸\e[39m \e[38;5;214mKözlüyor…\e[39m \e[2m(3s · ctx 62% · esc/ctrl+c)\e[22m

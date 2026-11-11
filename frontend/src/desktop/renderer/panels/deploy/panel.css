@@ -1,0 +1,32 @@
+/* Dağıtım paneli; ortak kart/alan sınıfları ../graph/panel.css (kg-*) içinde. */
+.kd { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; padding: 12px; overflow-y: auto; }
+.kd-small { margin: 0; font-size: 12px; }
+.kd-grow { flex: 1; }
+.kd-grow input { max-width: none; }
+.kd-h { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 500; }
+.kd-steps, .kd-incidents, .kd-watchers, .kd-health, .kd-cmds, .kd-risks ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.kd-step { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.kd-step.destructive { border-color: var(--del-text); background: var(--del-bg); }
+.kd-step.destructive code, .kd-tag { color: var(--del-text); }
+.kd-step.failed .kd-state, .kd-health .failed, .kd-risk.high { color: var(--del-text); }
+.kd-step-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.kd-step-head code { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.kd-tag { font-size: 11px; font-weight: 500; }
+.kd-state { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.kd-read { width: 13px; text-align: center; color: var(--muted); }
+.kd-detail { margin: 4px 0 0; font-size: 12px; color: var(--del-text); }
+.kd-out { margin: 4px 0 0; max-height: 160px; overflow: auto; padding: 6px 8px; border-radius: 6px; background: var(--code-bg); font-family: var(--font-mono); font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.kd-check { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.kd-risk { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.kd-risk.medium { color: var(--text); }
+.kd-report p { margin: 0; }
+.kd-watchers li, .kd-cmds li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 8px; border-radius: 6px; background: var(--code-bg); font-size: 12px; }
+.kd-watchers li span, .kd-cmds code { flex: 1; min-width: 0; font-family: var(--font-mono); overflow-wrap: anywhere; }
+.kd-inc-head { display: flex; align-items: center; justify-content: space-between; }
+.kd-inc-head h4 { margin: 0; font-size: 12px; font-weight: 500; color: var(--muted); }
+.kd-incidents li { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; }
+.kd-incidents summary { display: flex; gap: 8px; cursor: pointer; font-size: 13px; overflow-wrap: anywhere; }
+.kd-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.kd-sql { display: flex; flex-direction: column; gap: 8px; }
+.kd-sql textarea { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-family: var(--font-mono); font-size: 12px; resize: vertical; }
+.kd-sql textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

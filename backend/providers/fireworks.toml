@@ -1,0 +1,16 @@
+# Source: https://docs.fireworks.ai/tools-sdks/openai-compatibility
+id = "fireworks"
+name = "Fireworks AI"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.fireworks.ai/inference/v1"
+auth = { kind = "bearer", env = "FIREWORKS_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.fireworks.ai/tools-sdks/openai-compatibility"
+tags = ["low-latency"]
+[privacy]
+tier = "no_train"
+retention = "Provider states it does not store prompts for serverless models (verify)."
+jurisdiction = "US"

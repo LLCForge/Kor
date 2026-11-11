@@ -1,0 +1,22 @@
+id = "venice"
+name = "Venice.ai"
+category = "uncensored"
+adapter = "openai_compat"
+base_url = "https://api.venice.ai/api/v1"
+auth = { kind = "bearer", env = "VENICE_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+vision = true
+json_mode = true
+verified = false
+docs = "https://docs.venice.ai"
+
+[privacy]
+tier = "no_log"
+retention = "Provider states prompts and responses are not stored (verify)."
+training_on_data = false
+jurisdiction = "US"
+policy_url = "https://venice.ai/privacy"
+
+[quirks]
+extra_body = { venice_parameters = { include_venice_system_prompt = false } }

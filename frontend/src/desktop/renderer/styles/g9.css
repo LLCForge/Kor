@@ -1,0 +1,73 @@
+/* Grup 9: sağlayıcılar ve maliyet. Yalnızca :root token'ları kullanılır. */
+
+.g9-provider-badge { font-size: var(--kor-text-12); }
+.g9-provider-filter { width: auto; max-width: 180px; }
+
+.g9-provider .g7-h4 { align-items: center; }
+.g9-url { color: var(--subtle); font-size: var(--kor-text-12); overflow-wrap: anywhere; }
+.g9-small { font-size: var(--kor-text-12); margin: 0; }
+.g9-warn { margin: 0; font: var(--kor-text-12)/1.5 var(--font-sans); color: var(--warn); }
+.g9-dim { display: block; color: var(--subtle); font-size: var(--kor-text-12); }
+.g9-grow { flex: 1 1 auto; }
+
+/* Katalogdan kurulum yüzde çubuğu (git clone ilerlemesi); genişlik animasyonla artar. */
+.plugin-progress { position: relative; margin-top: 8px; height: 16px; border-radius: 8px; background: var(--hover); border: 1px solid var(--border); overflow: hidden; }
+.plugin-progress-fill { position: absolute; inset: 0 auto 0 0; height: 100%; background: var(--accent); border-radius: 8px 0 0 8px; transition: width 0.3s ease; }
+.plugin-progress-pct { position: absolute; right: 8px; top: 0; line-height: 16px; font-size: var(--kor-text-12); font-variant-numeric: tabular-nums; color: var(--text); }
+
+.badge.g9-uncensored { border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+.badge.g9-on { background: var(--accent-soft); color: var(--text); border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 3px; }
+.badge.g9-health.ok { background: var(--hover); color: var(--add-text); border: 1px solid var(--border); }
+.badge.g9-health.bad { background: var(--hover); color: var(--warn); border: 1px solid var(--border); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.g9-profiles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.g9-profile { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.g9-profile-name { font: var(--kor-text-13) var(--font-sans); color: var(--text); }
+
+.g9-check { display: inline-flex; align-items: center; gap: 6px; font: var(--kor-text-13) var(--font-sans); color: var(--text); cursor: pointer; }
+.g9-check input { accent-color: var(--accent); }
+
+.g9-add-key { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.g9-add-key .text-input { width: 200px; height: 32px; font-size: var(--kor-text-13); }
+.g9-add-key .text-input.g9-num, .g9-num { width: 96px; }
+.g9-narrow { width: auto; min-width: 140px; }
+
+.g9-details { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+.g9-details > summary { cursor: pointer; font: var(--kor-text-12) var(--font-sans); color: var(--muted); }
+.g9-details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.g9-form { display: grid; grid-template-columns: minmax(140px, max-content) 1fr; align-items: center; gap: 8px 12px; margin-top: 10px; font: var(--kor-text-13) var(--font-sans); }
+.g9-form .text-input { width: 100%; }
+.g9-form .g7-note, .g9-form .g7-button-row { grid-column: 1 / -1; }
+.g9-textarea { min-height: 64px; resize: vertical; font-family: var(--font-mono); font-size: var(--kor-text-12); padding: 6px 8px; }
+
+.g9-ollama { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 8px; background: var(--hover); }
+
+.g9-first-run { margin-top: 16px; max-width: 420px; width: 100%; background: var(--surface); }
+.g9-first-run .g9-form { grid-template-columns: 1fr; }
+
+.g9-cost-trigger { display: inline-flex; align-items: center; gap: 4px; font: var(--kor-text-12) var(--font-sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+.g9-cost-trigger.warn { color: var(--warn); }
+.g9-cost-label { white-space: nowrap; }
+
+/* [g31] Uzak bağlantılar */
+.g31-heading { display: flex; align-items: center; gap: 8px; margin: 12px 0 0; }
+.g31-ok { margin: 4px 0 0; color: var(--add-text); font-size: var(--kor-text-13); }
+.g31-hostkey { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: var(--kor-text-13); }
+.g31-hostkey p { display: flex; align-items: center; gap: 6px; margin: 0; }
+.g31-hostkey code { overflow-wrap: anywhere; }
+.g31-hostkey.danger { border-color: var(--del-text); background: var(--del-bg); }
+.g31-env-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; font-size: var(--kor-text-13); }
+.g31-env-banner.warn { border-color: var(--accent); background: var(--accent-soft); }
+.g31-env-banner.ok { color: var(--muted); }
+.g31-env-banner p { flex-basis: 100%; margin: 0; }
+
+/* Ayarlar > Bağdaştırıcılar: her sağlayıcıda aynı boyutta logo karosu; marka renkleri korunur. */
+.g9-logo-tile {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: var(--kor-space-6); height: var(--kor-space-6);
+  border: 1px solid var(--border); border-radius: var(--kor-radius-chip);
+  background: var(--raised, var(--surface)); color: var(--text);
+}
+/* Koyu marka (siyah/çok koyu) koyu temada kaybolmasın: açık karo. */
+.g9-logo-tile.light { background: var(--kor-ink-cream); border-color: transparent; }
+.g9-logo-fallback { color: var(--muted); font: 600 var(--kor-text-13) var(--font-sans); }

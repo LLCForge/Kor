@@ -1,0 +1,6 @@
+---
+description: Database migrations and schema changes
+globs:
+alwaysApply: false
+---
+Migrations are reversible.

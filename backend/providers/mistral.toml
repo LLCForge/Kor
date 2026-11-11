@@ -1,0 +1,19 @@
+# Source: https://docs.mistral.ai/api
+id = "mistral"
+name = "Mistral"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.mistral.ai/v1"
+auth = { kind = "bearer", env = "MISTRAL_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.mistral.ai/api"
+# Codestral fill-in-the-middle (tab completion): POST https://api.mistral.ai/v1/fim/completions
+# (https://docs.mistral.ai/api/endpoint/fim). Not used by the chat trait; see the `codestral` provider.
+vision = true
+json_mode = true
+[privacy]
+tier = "no_train"
+retention = "Provider states API data is not used for training on paid plans (verify)."
+jurisdiction = "EU"

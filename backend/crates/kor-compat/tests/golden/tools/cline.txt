@@ -1,0 +1,4 @@
+rule cline/user home/Documents/Cline/Rules/me.md [always] Global Cline rule.
+rule cline/project repo/.clinerules/general.md [always] Cline general rule.
+rule cline/project repo/.clinerules/frontend.md [globs web/**] Frontend rule.
+command /pr cline/project repo/.clinerules/workflows/pr.md

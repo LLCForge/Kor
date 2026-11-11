@@ -1,0 +1,78 @@
+/* §32.3 (ADR 0062): gizli performans bindirmesi (Ctrl+Shift+P) ve düşük güç modu. Yalnızca var(--…) değişkenleri. */
+.kpm-overlay {
+  position: fixed;
+  top: var(--kor-space-2);
+  right: var(--kor-space-2);
+  z-index: 2147483000;
+  min-width: calc(var(--kor-space-7) * 5);
+  padding: var(--kor-space-2) var(--kor-space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--kor-radius-chip);
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--kor-text-12);
+  line-height: 1.5;
+  contain: layout paint;
+  pointer-events: auto;
+}
+.kpm-overlay header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--kor-space-2);
+  margin-bottom: var(--kor-space-1);
+  color: var(--muted);
+}
+.kpm-overlay dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0 var(--kor-space-3);
+  margin: 0;
+}
+.kpm-overlay dt { color: var(--muted); }
+.kpm-overlay dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.kpm-overlay .kpm-bad { color: var(--del-text); }
+.kpm-overlay .kpm-causes {
+  margin: var(--kor-space-1) 0 0;
+  padding: var(--kor-space-1) 0 0 var(--kor-space-3);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}
+.kpm-overlay button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  padding: var(--kor-space-1);
+  line-height: 0;
+}
+.kpm-overlay button:hover { color: var(--text); }
+.kpm-overlay button:focus-visible { outline: 1px solid var(--accent); outline-offset: 1px; }
+
+/* `kor bench --ui` ölçüm sahnesi: ölçülen bileşenler gerçek boyutta, her şeyin üstünde. */
+.kpm-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 2147482000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+.kpm-stage > * { flex: 1; min-height: 0; }
+
+/* Düşük güç modu (§32.3): animasyon ve geçiş yok (prefers-reduced-motion ile aynı etki). */
+:root[data-low-power='1'] *,
+:root[data-low-power='1'] *::before,
+:root[data-low-power='1'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* §32.2: uzun sohbette pencere dışındaki eski mesajlar (Thread.tsx THREAD_WINDOW). */
+.thread-more {
+  display: block;
+  margin: var(--kor-space-2) auto;
+}

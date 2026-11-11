@@ -1,0 +1,16 @@
+# Default port per https://github.com/ggml-org/llama.cpp/tree/master/tools/server
+id = "local-llamacpp"
+name = "Local (llama.cpp server)"
+category = "local"
+adapter = "openai_compat"
+base_url = "http://localhost:9931/v1"
+auth = { kind = "none" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://github.com/ggml-org/llama.cpp/tree/master/tools/server"
+
+[privacy]
+tier = "local"
+retention = "Never leaves this machine."
+training_on_data = false

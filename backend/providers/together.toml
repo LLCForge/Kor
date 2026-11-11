@@ -1,0 +1,16 @@
+# Source: https://docs.together.ai/docs/openai-api-compatibility
+id = "together"
+name = "Together AI"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://api.together.xyz/v1"
+auth = { kind = "bearer", env = "TOGETHER_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.together.ai/docs/openai-api-compatibility"
+tags = ["low-latency"]
+[privacy]
+tier = "no_train"
+retention = "Opt-out of training available in account settings (verify)."
+jurisdiction = "US"

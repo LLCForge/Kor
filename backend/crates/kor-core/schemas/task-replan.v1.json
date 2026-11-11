@@ -1,0 +1,15 @@
+{
+  "$id": "kor/task-replan.v1",
+  "title": "New instructions for a sub-task whose merge conflicted (kor task, spec 8.2)",
+  "type": "object",
+  "properties": {
+    "goal": { "type": "string", "minLength": 1, "maxLength": 8000 },
+    "files": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "type": "string", "minLength": 1, "maxLength": 300 }
+    }
+  },
+  "required": ["goal", "files"],
+  "additionalProperties": false
+}

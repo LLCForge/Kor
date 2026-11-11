@@ -1,0 +1,20 @@
+/* Paketler görünümü; ortak kart/liste sınıfları ../graph/panel.css (kg-*) içinde. */
+.kp { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; padding: 12px; overflow-y: auto; }
+.kp-empty { align-items: center; justify-content: center; text-align: center; padding: 32px 16px; color: var(--muted); gap: 8px; }
+.kp-empty p { margin: 0; }
+.kp-empty p:first-of-type { color: var(--text); font-weight: 500; }
+.kp-head { display: flex; align-items: center; gap: 8px 12px; font-size: 13px; }
+.kp-push { margin-left: auto; }
+.kp-list { list-style: none; margin: 0; padding: 4px; max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; }
+.kp-path, .kp-names { font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.kp-title { margin: 0; font-size: 13px; font-weight: 500; }
+.kp-cmd-head { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+.kp-cmd-head h4 { margin: 0; font-size: 12px; font-weight: 500; color: var(--muted); }
+.kp-cmds { width: 100%; display: flex; flex-direction: column; gap: 4px; }
+.kp-cmds li { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 8px; border-radius: 6px; background: var(--code-bg); }
+.kp-cmds code { flex: 1; min-width: 0; font-family: var(--font-mono); font-size: 12px; overflow-wrap: anywhere; }
+.kp-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.kp-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--muted); padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.kp-table td { padding: 4px 8px; border-bottom: 1px solid var(--border); }
+.kp-table th:not(:first-child), .kp-table td:not(:first-child) { text-align: right; }
+.kp-note { margin: 0; font-size: 12px; }

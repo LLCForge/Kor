@@ -1,0 +1,20 @@
+id = "openai"
+name = "OpenAI"
+category = "standard"
+adapter = "openai"
+base_url = "https://api.openai.com/v1"
+auth = { kind = "bearer", env = "OPENAI_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+vision = true
+json_mode = true
+thinking = true
+verified = false
+docs = "https://platform.openai.com/docs/api-reference/responses"
+
+[privacy]
+tier = "no_train"
+retention = "Provider states API data is not used for training by default; abuse-monitoring retention applies (verify). Kor sends store=false."
+training_on_data = false
+jurisdiction = "US"
+policy_url = "https://openai.com/policies/api-data-usage-policies"

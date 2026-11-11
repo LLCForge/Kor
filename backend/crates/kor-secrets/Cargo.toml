@@ -1,0 +1,28 @@
+[package]
+name = "kor-secrets"
+description = "Secret storage (OS keychain, env) and redaction for the Kor coding agent"
+version = "0.2.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+argon2.workspace = true
+base64.workspace = true
+chacha20poly1305.workspace = true
+getrandom.workspace = true
+keyring.workspace = true
+serde_json.workspace = true
+zeroize.workspace = true
+kor-core.workspace = true
+regex.workspace = true
+secrecy.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,19 @@
+# Source: https://docs.cohere.com/v2/reference/chat-stream (Chat v2), models: GET /v1/models.
+# Embed/rerank (semantic index option) use the same key. OpenAI-compatible alternative:
+# https://api.cohere.ai/compatibility/v1
+id = "cohere"
+name = "Cohere"
+category = "standard"
+adapter = "cohere"
+base_url = "https://api.cohere.com"
+auth = { kind = "bearer", env = "CO_API_KEY" }
+models_endpoint = "/v1/models?endpoint=chat"
+tool_calling = true
+vision = true
+verified = false
+docs = "https://docs.cohere.com/v2/reference/chat"
+
+[privacy]
+tier = "no_train"
+retention = "Provider states API data is not used for training by default (verify)."
+jurisdiction = "CA"

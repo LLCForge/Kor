@@ -1,0 +1,7 @@
+rule kiro/project repo/.kiro/steering/deploy.md [manual] Deploy steps.
+rule kiro/project repo/.kiro/steering/product.md [always] Product overview.
+rule kiro/project repo/.kiro/steering/tech.md [always] Tech stack.
+rule kiro/project repo/.kiro/specs/login/design.md [on-request "Kiro spec `login`"] Login design.
+rule kiro/project repo/.kiro/specs/login/requirements.md [on-request "Kiro spec `login`"] Login requirements.
+rule kiro/project repo/.kiro/steering/api.md [globs app/api/**/*] API standards.
+mcp fetch kiro/project repo/.kiro/settings/mcp.json

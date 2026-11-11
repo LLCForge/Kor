@@ -1,0 +1,7 @@
+---
+source: apps/kor-cli/src/brand.rs
+expression: "banner_depth(Depth::None, true)"
+---
+   ▄▄ ▄▄  ▄▄▄  ▄▄▄
+   ██▄█  ██ ██ ██▄▀
+   ██ ▀▄ ▀███▀ ██ ▀▄

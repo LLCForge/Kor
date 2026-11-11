@@ -1,0 +1,283 @@
+/* Grup 3 stilleri. Renkler için styles.css içindeki :root token'larını kullan. */
+
+/* ---------- Akış kabı: kayan katmanlar (arama, içindekiler) için konumlu ---------- */
+.g3-thread { position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.g3-code .spin, .g3-card .spin, .g3-link-card .spin, .g3-todo-icon.spin { animation: spin 1s linear infinite; }
+
+/* ---------- Ctrl+F arama ---------- */
+.g3-search {
+  position: absolute; top: 10px; right: 20px; z-index: 30;
+  display: flex; align-items: center; gap: 2px; padding: 3px 3px 3px 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.16); font: var(--kor-text-13) var(--font-sans);
+}
+.g3-search:focus-within { border-color: var(--accent); }
+.g3-search-input { width: 200px; height: 30px; border: 0; outline: none; background: transparent; color: var(--text); }
+.g3-search-count { min-width: 64px; text-align: right; padding-right: 4px; color: var(--subtle); font: var(--kor-text-12) var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+::highlight(g3-search) { background-color: color-mix(in srgb, var(--accent) 30%, transparent); color: inherit; }
+::highlight(g3-search-current) { background-color: var(--accent); color: #fff; }
+
+/* ---------- İçindekiler (bölümler) ---------- */
+.g3-toc { position: absolute; top: 56px; right: 10px; z-index: 15; max-height: calc(100% - 220px); overflow-y: auto; font: var(--kor-text-13) var(--font-sans); }
+.g3-toc ol { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 6px; list-style: none; border-radius: 10px; border: 1px solid transparent; transition: background-color var(--kor-dur-hover) var(--kor-ease), border-color var(--kor-dur-hover) var(--kor-ease); }
+.g3-toc:hover ol, .g3-toc:focus-within ol { background: var(--surface); border-color: var(--border); box-shadow: 0 8px 24px rgb(0 0 0 / 0.12); }
+.g3-toc-item {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px; width: 100%; padding: 5px 4px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--muted); text-align: right;
+}
+.g3-toc-item:hover { background: var(--hover); color: var(--text); }
+.g3-toc-item.active { color: var(--text); }
+.g3-toc-label { order: -1; max-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; opacity: 0; transition: max-width var(--kor-dur-menu) var(--kor-ease), opacity var(--kor-dur-hover) var(--kor-ease); }
+.g3-toc:hover .g3-toc-label, .g3-toc:focus-within .g3-toc-label { max-width: 240px; opacity: 1; }
+.g3-toc-bar { flex-shrink: 0; width: 14px; height: 2px; border-radius: 1px; background: var(--border); transition: width var(--kor-dur-hover) var(--kor-ease), background-color var(--kor-dur-hover) var(--kor-ease); }
+.g3-toc-item.active .g3-toc-bar { width: 20px; background: var(--accent); }
+@container kor-main (max-width: 640px) { .g3-toc { display: none; } }
+
+/* ---------- En alta git ---------- */
+.g3-jump {
+  position: absolute; top: -40px; left: 50%; transform: translateX(-50%); z-index: 5;
+  display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.14);
+}
+.g3-jump:hover { background: var(--bg); }
+.g3-jump-dot { position: absolute; top: -1px; right: -1px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); }
+
+/* ---------- Mesaj zaman damgası ve yeniden dene ---------- */
+.g3-time { margin: 0 6px; font: var(--kor-text-12) var(--font-sans); color: var(--subtle); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.g3-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.g3-retry { flex-shrink: 0; }
+
+/* ---------- Düşünme bloğu ---------- */
+.g3-thinking { padding: 4px 0; }
+.g3-thinking-head {
+  display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 2px 4px; margin-left: -4px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--subtle); font: var(--kor-text-14) var(--font-sans);
+}
+.g3-thinking-head:hover { color: var(--text-soft); background: var(--hover); }
+.g3-thinking-time { font-variant-numeric: tabular-nums; }
+.g3-thinking-text {
+  margin: 6px 0 4px 2px; padding: 2px 0 2px 12px; max-height: 360px; overflow-y: auto;
+  border-left: 2px solid var(--border); color: var(--muted); font: var(--kor-text-13)/1.6 var(--font-sans); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+/* ---------- İnce ayraçlar: model notu ---------- */
+.g3-divider { flex-direction: row; align-items: center; gap: 10px; color: var(--subtle); font: var(--kor-text-12) var(--font-sans); }
+.g3-divider::before, .g3-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.g3-divider code { font: var(--kor-text-12) var(--font-mono); color: var(--muted); }
+
+/* ---------- Bölüm ayracı ---------- */
+.g3-chapter { margin-top: 12px; padding-top: 18px; border-top: 1px solid var(--border); scroll-margin-top: 16px; }
+.g3-chapter-title { margin: 0; font: 600 1.15rem/1.3 var(--font-serif); color: var(--text); }
+.g3-chapter-summary { margin: 4px 0 0; font: var(--kor-text-14)/1.5 var(--font-sans); color: var(--muted); }
+
+/* ---------- Kartlar (ortak) ---------- */
+.g3-card {
+  display: flex; flex-direction: column; gap: 10px; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface); font: var(--kor-text-14)/1.5 var(--font-sans);
+}
+.g3-card.waiting { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.g3-card-head { display: flex; align-items: center; gap: 8px; color: var(--muted); font: 600 var(--kor-text-13) var(--font-sans); }
+.g3-card-error { margin: 0; font-size: var(--kor-text-13); }
+.g3-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.g3-answer { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--hover); color: var(--text-soft); font-size: var(--kor-text-13); white-space: pre-wrap; overflow-wrap: anywhere; }
+.g3-input {
+  flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text); font: var(--kor-text-13) var(--font-sans); outline: none;
+}
+textarea.g3-input { height: auto; padding: 8px 10px; resize: vertical; line-height: 1.5; }
+.g3-input:focus { border-color: var(--accent); }
+.g3-label { font-size: var(--kor-text-13); color: var(--muted); }
+
+/* Değişiklik özeti */
+.g3-changes .line-stats { margin-left: auto; font-size: var(--kor-text-12); }
+.g3-change-list { display: flex; flex-direction: column; gap: 1px; margin: -4px 0 0; padding: 0; list-style: none; }
+.g3-change-row {
+  display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 6px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--text-soft); font: var(--kor-text-13) var(--font-mono); text-align: left;
+}
+.g3-change-row:hover { background: var(--hover); color: var(--text); }
+.g3-change-row svg { flex-shrink: 0; color: var(--subtle); }
+
+/* Sonraki adım */
+.g3-suggest { border-left: 3px solid var(--accent); }
+.g3-suggest-recap { font-size: var(--kor-text-14); }
+.g3-suggest-question { margin: 0; font-weight: 600; color: var(--text); }
+
+/* Seçenekli soru */
+.g3-ask-question { margin: 0; font: var(--kor-text-14)/1.5 var(--font-serif); color: var(--text); white-space: pre-wrap; }
+.g3-options { display: flex; flex-direction: column; gap: 6px; }
+.g3-option {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--text); text-align: left;
+  transition: border-color var(--kor-dur-hover) var(--kor-ease), background-color var(--kor-dur-hover) var(--kor-ease);
+}
+/* Claude Code onay kutusu deseni: numaralı, sıkı, turuncu seçim. */
+.g3-option .g3-num { flex-shrink: 0; min-width: 16px; margin-top: 2px; font: var(--kor-text-12) var(--font-mono); color: var(--subtle); }
+.g3-option.selected .g3-num { color: var(--accent); }
+.g3-option:hover:not(:disabled) { border-color: var(--accent); }
+.g3-option.selected { border-color: var(--accent); background: var(--accent-soft); }
+.g3-option:disabled { opacity: 0.6; }
+.g3-option-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.g3-option-label { font-size: var(--kor-text-14); }
+.g3-option-desc { font-size: var(--kor-text-12); color: var(--subtle); }
+.g3-check {
+  display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 16px; height: 16px; margin-top: 2px;
+  border: 1.5px solid var(--subtle); border-radius: 4px; color: #fff;
+}
+.g3-option.selected .g3-check { border-color: var(--accent); background: var(--accent); }
+.g3-other { display: flex; gap: 8px; }
+
+/* Plan onayı */
+.g3-plan-body { max-height: 440px; overflow-y: auto; padding: 2px 4px 2px 0; font-family: var(--font-serif); }
+.g3-plan-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.g3-segmented { display: inline-flex; gap: 2px; margin: 0; padding: 3px; border: 0; border-radius: 8px; background: var(--hover); }
+.g3-segmented label { position: relative; padding: 3px 10px; border-radius: 6px; color: var(--muted); font-size: var(--kor-text-13); cursor: pointer; }
+.g3-segmented label.active { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / 0.1); }
+.g3-segmented input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.g3-segmented label:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+.g3-revise { display: flex; flex-direction: column; gap: 8px; }
+
+/* Görev listesi */
+.g3-todos { gap: 0; padding: 10px 14px; }
+.g3-todos-head { width: 100%; padding: 0; border: 0; background: transparent; text-align: left; }
+.g3-todos-head > span:nth-of-type(1) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-soft); }
+.g3-todo-count { margin-left: auto; font: var(--kor-text-12) var(--font-mono); color: var(--subtle); font-variant-numeric: tabular-nums; }
+.g3-todo-list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 10px 0 2px; list-style: none; }
+.g3-todo { display: flex; align-items: flex-start; gap: 8px; color: var(--text-soft); font-size: var(--kor-text-14); }
+.g3-todo-icon { flex-shrink: 0; margin-top: 2px; color: var(--subtle); }
+.g3-todo-icon.done { color: var(--add-text); }
+.g3-todo-icon.active { color: var(--accent); }
+.g3-todo-icon.pending circle { stroke-dasharray: 3 3; }
+.g3-todo.completed .g3-todo-text { color: var(--subtle); text-decoration: line-through; }
+.g3-todo.in_progress .g3-todo-text { color: var(--text); font-weight: 600; }
+
+/* ---------- Kod blokları ---------- */
+.g3-code-lang { display: inline-flex; align-items: center; gap: 6px; }
+.g3-code-tools { display: flex; align-items: center; gap: 2px; }
+.code-copy.g3-on { color: var(--kor-ink-cream); background: rgb(255 255 255 / 0.1); }
+.code-copy:disabled { opacity: 0.4; cursor: default; }
+.g3-code code { display: block; counter-reset: g3-line; }
+.g3-line { display: block; }
+.g3-numbered .g3-line { position: relative; padding-left: 3.4em; }
+.g3-numbered .g3-line::before {
+  counter-increment: g3-line; content: counter(g3-line);
+  position: absolute; left: 0; width: 2.6em; text-align: right; color: rgb(255 255 255 / 0.32); user-select: none;
+}
+.g3-wrap pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.g3-code-status { margin: 0; padding: 6px 14px; border-top: 1px solid rgb(255 255 255 / 0.06); font: var(--kor-text-12) var(--font-sans); color: #a3a098; }
+.g3-run { padding: 8px 14px 10px; border-top: 1px solid rgb(255 255 255 / 0.08); }
+.g3-run-head { margin: 0 0 6px; font: var(--kor-text-12) var(--font-sans); color: #a3a098; }
+.g3-run-output {
+  margin: 0; padding: 8px 10px; max-height: 280px; overflow: auto; border-radius: 6px; background: rgb(0 0 0 / 0.25);
+  color: var(--code-text); font: var(--kor-text-12)/1.55 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+/* Uzun çıktılar */
+.g3-more { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 4px 0 4px 30px; font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g3-run .g3-more { margin-left: 0; color: #a3a098; }
+
+/* ---------- Mermaid ---------- */
+.g3-mermaid { background: var(--surface); }
+.g3-mermaid .code-head { background: var(--hover); color: var(--muted); }
+.g3-mermaid .code-copy { color: var(--muted); }
+.g3-mermaid .code-copy:hover, .g3-mermaid .code-copy.g3-on { background: var(--hover); color: var(--text); }
+/* contain: paint diyagramın içeriğini (ör. position: fixed) kutusunun dışına taşımaz.
+   max-height: büyük diyagram kaydırılır (konum haritası #27 bu taşmada görünür). */
+.g3-mermaid-host { padding: 14px; max-height: 560px; overflow: auto; contain: paint; }
+/* Büyük diyagram: sürükleyerek pan + görünür kaydırma çubuğu (koyu tema) */
+.g3-mermaid-host.g3-pan { cursor: grab; user-select: none; }
+.g3-mermaid-host.g3-pan:active { cursor: grabbing; }
+.g3-mermaid-host::-webkit-scrollbar { width: 10px; height: 10px; }
+.g3-mermaid-host::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+.g3-mermaid-host::-webkit-scrollbar-thumb:hover { background: var(--subtle); background-clip: padding-box; }
+.g3-mermaid-note { margin: 0; padding: 12px 14px; font: var(--kor-text-13) var(--font-sans); color: var(--subtle); }
+.g3-mermaid-source { margin: 0; padding: 12px 14px; overflow-x: auto; background: var(--code-bg); color: var(--code-text); font: var(--kor-text-12)/1.55 var(--font-mono); }
+.g3-mermaid-source .g3-dgm-errline { display: block; background: var(--del-bg); color: var(--del-text); }
+.g3-mermaid-measure { position: fixed; top: 0; left: -10000px; visibility: hidden; pointer-events: none; font: var(--kor-text-14) var(--font-sans); }
+
+/* ---------- Diyagram UX: tema (24), arama (26), konum haritası (27), subgraph (23), sekme (29), ASCII (20) ---------- */
+/* Araç çubuğu araçları (arama + tema + harita + kaynak + kopya) dar pencerede alta sarsın. */
+.g3-mermaid .g3-code-tools, .g3-svg-diagram .g3-code-tools { flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+.g3-dgm-search { display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; border-radius: 6px; background: var(--hover); color: var(--muted); }
+.g3-dgm-search input { width: 96px; border: 0; background: transparent; color: var(--text); font: var(--kor-text-12) var(--font-sans); outline: none; }
+.g3-dgm-count { min-width: 14px; padding: 0 4px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 600 var(--kor-text-12) var(--font-sans); text-align: center; }
+.g3-dgm-theme { height: 24px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: var(--kor-text-12) var(--font-sans); }
+.g3-dgm-groups { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px 0; }
+.g3-dgm-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--surface); color: var(--text-soft); font: var(--kor-text-12) var(--font-sans); cursor: pointer;
+}
+.g3-dgm-chip:hover { background: var(--hover); color: var(--text); }
+.g3-dgm-chip.g3-on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.g3-dgm-stage { position: relative; }
+.g3-dgm-minimap {
+  position: absolute; right: 10px; bottom: 10px; max-height: 150px; overflow: hidden;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--surface); box-shadow: 0 2px 8px rgb(0 0 0 / 0.18); cursor: pointer;
+}
+.g3-dgm-canvas { display: block; padding: 4px; }
+.g3-dgm-viewport { position: absolute; top: 0; left: 0; border: 1.5px solid var(--accent); background: var(--accent-soft); pointer-events: none; }
+
+/* Sekmeli çoklu diyagram kartı */
+.g3-dgm-tabs { margin: 0 0 1em; }
+.g3-dgm-tabbar { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.g3-dgm-tab {
+  padding: 4px 12px; border: 1px solid var(--border); border-radius: 8px 8px 0 0; border-bottom: 0;
+  background: var(--surface); color: var(--muted); font: var(--kor-text-13) var(--font-sans); cursor: pointer;
+}
+.g3-dgm-tab:hover { color: var(--text); background: var(--hover); }
+.g3-dgm-tab.g3-on { color: var(--text); border-color: var(--accent); border-bottom: 2px solid var(--accent); }
+.g3-dgm-tabs .code-block { margin: 0; }
+
+/* PlantUML köprüsü */
+.g3-plantuml-note { margin: 0 0 4px; font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+
+/* ASCII şema (monospace, hizalı) */
+.g3-ascii { background: var(--surface); }
+.g3-ascii .code-head { background: var(--hover); color: var(--muted); }
+.g3-ascii-art {
+  margin: 0; padding: 14px; overflow-x: auto; tab-size: 4; white-space: pre; line-height: 1.25;
+  background: var(--surface); color: var(--text); font: var(--kor-text-13)/1.25 var(--font-mono);
+}
+
+/* ---------- LaTeX ---------- */
+.prose .katex { font-size: 1.05em; }
+.prose .katex-display { margin: 0 0 0.9em; padding: 4px 0; overflow-x: auto; overflow-y: hidden; }
+
+/* ---------- Tablo kopyalama ---------- */
+.g3-table-tools { display: flex; justify-content: flex-end; height: 26px; opacity: 0; transition: opacity var(--kor-dur-hover) var(--kor-ease); }
+.g3-table:hover .g3-table-tools, .g3-table:focus-within .g3-table-tools { opacity: 1; }
+.g3-table-copy { min-width: 26px; height: 26px; }
+
+/* ---------- Dosya yolu bağlantıları ---------- */
+.g3-file-link {
+  display: inline; padding: 0; border: 0; background: none; color: var(--accent); font: inherit;
+  text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; text-align: inherit;
+}
+.g3-file-link:hover { text-decoration-style: solid; }
+.prose .g3-file-link code { color: var(--accent); }
+
+/* ---------- Bağlantı önizleme kartları ---------- */
+.g3-links { display: flex; flex-direction: column; gap: 6px; max-width: 560px; margin: 8px 0 0; padding: 0; list-style: none; }
+.g3-link-card {
+  display: flex; align-items: center; gap: 6px; padding: 2px 8px 2px 2px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font: var(--kor-text-13) var(--font-sans);
+}
+.g3-link-main {
+  display: flex; align-items: flex-start; gap: 8px; flex: 1; min-width: 0; padding: 6px 8px;
+  border: 0; border-radius: 8px; background: transparent; color: var(--text); text-align: left;
+}
+.g3-link-main:hover { background: var(--hover); }
+.g3-link-text { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.g3-link-site { font-size: var(--kor-text-12); font-weight: 600; color: var(--muted); }
+.g3-link-title { color: var(--text); }
+.g3-link-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--kor-text-12) var(--font-mono); color: var(--subtle); }
+.g3-link-desc { display: -webkit-box; overflow: hidden; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: var(--kor-text-12); color: var(--subtle); }
+.g3-link-icon { flex-shrink: 0; margin-top: 2px; color: var(--subtle); }
+.g3-link-load { flex-shrink: 0; color: var(--subtle); }
+.g3-link-note { flex-shrink: 0; font-size: var(--kor-text-12); color: var(--subtle); white-space: nowrap; }
+
+/* ---------- Çıktı stili seçici ---------- */
+.g3-style-trigger.active { color: var(--accent); }
+.g3-style-name { font: var(--kor-text-13) var(--font-sans); }
+.g3-style-menu { width: 300px; max-height: none; }

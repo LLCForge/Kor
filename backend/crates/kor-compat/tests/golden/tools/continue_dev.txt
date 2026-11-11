@@ -1,0 +1,4 @@
+rule continue/project repo/.continue/rules/always.md [always] Continue always rule.
+rule continue/project repo/.continue/rules/requested.md [on-request "When touching auth"] Auth rule.
+rule continue/project repo/.continue/rules/globbed.md [globs **/*.go] Go rule.
+mcp postgres continue/project repo/.continue/mcpServers/postgres.yaml

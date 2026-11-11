@@ -1,0 +1,14 @@
+# §17.2 "proje tanıma + kural birleştirme": AGENTS.md, CLAUDE.md and Cursor rules are read and merged.
+name: project-rules
+title: "Proje tanıma ve kural birleştirme"
+project:
+  trust: true
+  files:
+    AGENTS.md: "# Kurallar\n\n- Testleri her zaman çalıştır.\n"
+    CLAUDE.md: "# Claude\n\n- Türkçe yanıt ver.\n"
+    .cursor/rules/style.mdc: "---\ndescription: stil\nglobs: \"*.rs\"\n---\nrustfmt kullan.\n"
+    src/main.rs: "fn main() {}\n"
+steps:
+  - command: "kor compat status"
+expect:
+  output: ["AGENTS.md", "CLAUDE.md", "style.mdc"]

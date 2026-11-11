@@ -1,0 +1,1 @@
+{"instructions": ["docs/rules.md", "docs/*.md"], "mcp": {"jira": {"type": "remote"}}}

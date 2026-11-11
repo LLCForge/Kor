@@ -1,0 +1,14 @@
+{
+  "ID": "6B6F7201000040008000000000000001",
+  "ActionKeyword": "kor",
+  "IsGlobal": false,
+  "Name": "Kor",
+  "Author": "Kor",
+  "Version": "1.0.0",
+  "Language": "csharp",
+  "Website": "https://github.com/LLCForge/Kor",
+  "ExecuteFileName": "Community.PowerToys.Run.Plugin.Kor.dll",
+  "IcoPathDark": "Images\kor.dark.png",
+  "IcoPathLight": "Images\kor.light.png",
+  "DynamicLoading": false
+}

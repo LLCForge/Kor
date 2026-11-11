@@ -1,0 +1,9 @@
+[tool.poetry]
+name = "svc"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.31"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7"

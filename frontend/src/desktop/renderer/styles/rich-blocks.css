@@ -1,0 +1,195 @@
+/* [g8] Etkileşimli zengin blokların (tablo, hesap makinesi, sekme, JSON, palet, quiz ...) ortak stilleri.
+   Renkler tema değişkenlerinden gelir; arka plan değişince metin rengi de birlikte ayarlanır. */
+
+.g8-block {
+  margin: 0 0 1em;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  overflow: hidden;
+}
+.g8-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--hover);
+  border-bottom: 1px solid var(--border);
+  font: var(--kor-text-13) var(--font-sans);
+  color: var(--muted);
+}
+.g8-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.g8-tools { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.g8-tools .action-btn { font: var(--kor-text-12) var(--font-sans); padding: 3px 7px; }
+.g8-body { padding: 10px; }
+.g8-raw { padding: 10px; }
+.g8-raw pre { margin: 0; overflow-x: auto; font: var(--kor-text-12)/1.5 var(--font-mono); color: var(--text-soft); }
+.g8-note { margin: 0 0 6px; color: var(--warn); font: var(--kor-text-12) var(--font-sans); }
+
+.g8-input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--kor-text-13) var(--font-sans);
+}
+.g8-input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* --- Tablo (#96-100) --- */
+.g8-table-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+.g8-table-bar .g8-input { flex: 1; min-width: 140px; }
+.g8-pagesize { display: inline-flex; align-items: center; gap: 4px; font: var(--kor-text-12) var(--font-sans); color: var(--muted); }
+.g8-pagesize select { padding: 3px 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.g8-table-scroll { overflow: auto; border: 1px solid var(--border); border-radius: 8px; }
+.g8-table-scroll.g8-virtual { max-height: 420px; }
+.g8-table-scroll table { border-collapse: collapse; width: 100%; font: var(--kor-text-13) var(--font-sans); }
+.g8-table-scroll th, .g8-table-scroll td { border-bottom: 1px solid var(--border); padding: 0 10px; text-align: left; height: 33px; white-space: nowrap; }
+.g8-table-scroll thead th { position: sticky; top: 0; background: var(--bubble); z-index: 1; padding: 0; }
+.g8-th-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+  width: 100%; height: 33px; padding: 0 10px;
+  border: 0; background: transparent; color: var(--text); font: 600 var(--kor-text-13) var(--font-sans); cursor: pointer;
+}
+.g8-th-btn:hover:not(:disabled) { background: var(--hover); }
+.g8-th-btn:disabled { cursor: default; }
+.g8-th-idle { opacity: 0.35; }
+.g8-cell-input { width: 100%; padding: 2px 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); font: var(--kor-text-13) var(--font-sans); }
+.g8-pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; font: var(--kor-text-12) var(--font-sans); color: var(--muted); }
+
+/* --- Hesap makinesi / form (#101-103) --- */
+.g8-formula { display: block; margin-bottom: 10px; padding: 6px 8px; border-radius: 6px; background: var(--bubble); font: var(--kor-text-13) var(--font-mono); color: var(--text-soft); overflow-x: auto; }
+.g8-fields { display: flex; flex-direction: column; gap: 8px; }
+.g8-field { display: flex; align-items: center; gap: 10px; }
+.g8-field-label { flex: 0 0 38%; font: var(--kor-text-13) var(--font-sans); color: var(--text-soft); }
+.g8-field-input { flex: 1; display: flex; align-items: center; gap: 8px; }
+.g8-field-input input[type='range'] { flex: 1; accent-color: var(--accent); }
+.g8-field-out { min-width: 3ch; text-align: right; font: var(--kor-text-13) var(--font-mono); color: var(--muted); }
+.g8-result { margin-top: 12px; padding: 8px 10px; border-radius: 8px; background: var(--accent-soft); color: var(--text); font-size: var(--kor-text-14); }
+.g8-result strong { font-size: var(--kor-text-16); }
+.g8-result-error { background: var(--del-bg); color: var(--del-text); font-size: var(--kor-text-13); }
+.g8-submit { margin-top: 4px; align-self: flex-start; }
+.g8-summary { margin-top: 12px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.g8-summary-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: var(--hover); font: var(--kor-text-12) var(--font-sans); color: var(--muted); }
+.g8-summary pre { margin: 0; padding: 10px; font: var(--kor-text-13)/1.5 var(--font-mono); color: var(--text); white-space: pre-wrap; }
+
+/* --- Sekme / akordeon / sihirbaz (#104-105) --- */
+.g8-tablist { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+.g8-tab { padding: 6px 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font: var(--kor-text-13) var(--font-sans); cursor: pointer; }
+.g8-tab:hover { color: var(--text); }
+.g8-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.g8-tabpanel, .g8-acc-body, .g8-wizard-body { white-space: pre-wrap; font: var(--kor-text-14)/1.6 var(--font-sans); color: var(--text-soft); }
+.g8-acc-item { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; }
+.g8-acc-item summary { padding: 8px 10px; cursor: pointer; font-weight: 600; color: var(--text); }
+.g8-acc-body { padding: 0 10px 10px; }
+.g8-wizard-prog { display: flex; gap: 6px; margin-bottom: 8px; }
+.g8-wizard-dot { width: 24px; height: 4px; border-radius: 2px; background: var(--border); }
+.g8-wizard-dot.done { background: var(--accent-soft); }
+.g8-wizard-dot.active { background: var(--accent); }
+.g8-wizard-count { margin: 0 0 6px; font: var(--kor-text-12) var(--font-sans); color: var(--muted); }
+.g8-wizard-title { margin: 0 0 6px; font-size: var(--kor-text-14); color: var(--text); }
+.g8-wizard-nav { display: flex; gap: 8px; margin-top: 12px; }
+
+/* --- Yapılacaklar (#106) --- */
+.g8-todo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.g8-todo-item { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; cursor: pointer; font: var(--kor-text-14) var(--font-sans); color: var(--text); }
+.g8-todo-item:hover { background: var(--hover); }
+.g8-todo-item input { position: absolute; opacity: 0; width: 0; height: 0; }
+.g8-todo-item svg { color: var(--subtle); }
+.g8-todo-item.done svg { color: var(--accent); }
+.g8-todo-item.done span { text-decoration: line-through; color: var(--muted); }
+
+/* --- Galeri / zaman tüneli (#107-108) --- */
+.g8-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.g8-card { position: relative; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--bg); }
+.g8-badge { display: inline-block; margin-bottom: 4px; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font: 600 var(--kor-text-12) var(--font-sans); }
+.g8-card-title { margin: 0 0 4px; font-size: var(--kor-text-14); color: var(--text); }
+.g8-card-text { margin: 0; font: var(--kor-text-13)/1.5 var(--font-sans); color: var(--text-soft); }
+.g8-card-meta { margin: 6px 0 0; font: var(--kor-text-12) var(--font-sans); color: var(--subtle); }
+.g8-tl-list { list-style: none; margin: 0; padding: 0; }
+.g8-tl-item { position: relative; padding: 0 0 14px 22px; border-left: 2px solid var(--border); margin-left: 5px; }
+.g8-tl-item:last-child { border-left-color: transparent; padding-bottom: 0; }
+.g8-tl-dot { position: absolute; left: -7px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); }
+.g8-tl-date { font: var(--kor-text-12) var(--font-mono); color: var(--muted); }
+.g8-tl-title { margin: 2px 0; font-size: var(--kor-text-14); color: var(--text); }
+.g8-tl-text { margin: 0; font: var(--kor-text-13)/1.5 var(--font-sans); color: var(--text-soft); }
+
+/* --- Karşılaştırma (#109) --- */
+.g8-compare table { border-collapse: collapse; width: 100%; font: var(--kor-text-13) var(--font-sans); }
+.g8-compare th, .g8-compare td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; color: var(--text); }
+.g8-compare thead th { background: var(--bubble); }
+.g8-compare tbody th { background: var(--hover); font-weight: 600; }
+
+/* --- Oyun alanı / JSON / diff (#110-113) --- */
+.g8-code-input { width: 100%; margin-bottom: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--code-bg); color: var(--code-text); font: var(--kor-text-12)/1.5 var(--font-mono); resize: vertical; }
+.g8-json-tree { font: var(--kor-text-13)/1.7 var(--font-mono); overflow-x: auto; }
+.g8-json-branch { margin-left: 10px; }
+.g8-json-branch > summary { cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.g8-json-children { margin-left: 14px; border-left: 1px dotted var(--border); padding-left: 8px; }
+.g8-json-leaf { display: flex; align-items: center; gap: 6px; margin-left: 24px; }
+.g8-json-key { color: var(--accent); }
+.g8-json-preview { color: var(--subtle); }
+.g8-json-val.g8-json-string { color: var(--add-text); }
+.g8-json-val.g8-json-number { color: var(--accent); }
+.g8-json-val.g8-json-boolean { color: var(--warn); }
+.g8-json-val.g8-json-null { color: var(--subtle); font-style: italic; }
+.g8-json-copy { border: 0; background: transparent; color: var(--subtle); cursor: pointer; padding: 1px 4px; opacity: 0; }
+.g8-json-branch > summary:hover .g8-json-copy, .g8-json-leaf:hover .g8-json-copy, .g8-json-copy:focus-visible { opacity: 1; }
+.g8-schema { margin: 0; padding: 10px; background: var(--bubble); border-radius: 8px; font: var(--kor-text-13)/1.6 var(--font-mono); color: var(--text); overflow-x: auto; }
+
+/* --- Palet / ikon (#114-115) --- */
+.g8-swatches { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.g8-swatch, .g8-icon-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); cursor: pointer; font: var(--kor-text-12) var(--font-sans); }
+.g8-swatch:hover, .g8-icon-cell:hover { border-color: var(--accent); }
+.g8-swatch-chip { width: 100%; height: 36px; border-radius: 6px; border: 1px solid var(--border); }
+.g8-swatch-hex { font: var(--kor-text-12) var(--font-mono); color: var(--text-soft); }
+.g8-swatch-name { color: var(--subtle); }
+.g8-icon-grid { grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); }
+.g8-icon-char { font-size: var(--kor-text-28); line-height: 1.2; }
+.g8-icon-name { color: var(--subtle); text-align: center; }
+
+/* --- Quiz (#116) --- */
+.g8-quiz-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.g8-quiz-text { margin: 0 0 6px; font-weight: 600; color: var(--text); }
+.g8-quiz-opts { display: flex; flex-direction: column; gap: 4px; }
+.g8-quiz-opt { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font: var(--kor-text-13) var(--font-sans); color: var(--text-soft); cursor: pointer; }
+.g8-quiz-opt.picked { border-color: var(--accent); }
+.g8-quiz-opt.correct { background: var(--add-bg); color: var(--add-text); border-color: var(--add-text); }
+.g8-quiz-opt.wrong { background: var(--del-bg); color: var(--del-text); border-color: var(--del-text); }
+.g8-quiz-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+
+/* --- Progress (#117) --- */
+.g8-bar { position: relative; height: 22px; border-radius: 999px; background: var(--bubble); overflow: hidden; }
+.g8-bar-fill { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 999px; transition: width var(--kor-dur-panel) var(--kor-ease); }
+.g8-bar-label { position: relative; display: block; text-align: center; line-height: 22px; font: 600 var(--kor-text-12) var(--font-sans); color: var(--text); mix-blend-mode: difference; }
+.g8-ring { width: 110px; height: 110px; display: block; margin: 0 auto; }
+.g8-ring-track { fill: none; stroke: var(--bubble); stroke-width: 8; }
+.g8-ring-fill { fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset var(--kor-dur-panel) var(--kor-ease); }
+.g8-ring-text { fill: var(--text); font: 600 var(--kor-text-14) var(--font-sans); }
+.g8-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.g8-step { display: flex; align-items: center; gap: 8px; font: var(--kor-text-13) var(--font-sans); color: var(--muted); }
+.g8-step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--bubble); color: var(--muted); font: 600 var(--kor-text-12) var(--font-sans); }
+.g8-step.done .g8-step-num { background: var(--accent-soft); color: var(--accent); }
+.g8-step.active { color: var(--text); font-weight: 600; }
+.g8-step.active .g8-step-num { background: var(--accent); color: #fff; }
+
+/* --- Sözlük (#118) --- */
+.g8-glossary-text { margin: 0 0 10px; font: var(--kor-text-14)/1.6 var(--font-sans); color: var(--text-soft); white-space: pre-wrap; }
+.g8-term-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.g8-term { position: relative; padding: 2px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font: var(--kor-text-13) var(--font-sans); cursor: help; }
+.g8-term-pop {
+  position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5;
+  min-width: 160px; max-width: 260px; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text);
+  font: var(--kor-text-12)/1.5 var(--font-sans); box-shadow: 0 6px 20px rgb(0 0 0 / 0.18);
+  opacity: 0; visibility: hidden; transform: translateY(4px); transition: opacity var(--kor-dur-hover) var(--kor-ease), transform var(--kor-dur-hover) var(--kor-ease);
+}
+.g8-term:hover .g8-term-pop, .g8-term:focus-visible .g8-term-pop { opacity: 1; visibility: visible; transform: translateY(0); }
+
+@media (max-width: 640px) {
+  .g8-field { flex-direction: column; align-items: stretch; gap: 4px; }
+  .g8-field-label { flex-basis: auto; }
+}

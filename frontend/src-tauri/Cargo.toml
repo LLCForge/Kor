@@ -1,0 +1,79 @@
+[package]
+name = "kor-desktop"
+version = "0.8.0"
+edition = "2024"
+description = "Kor masaüstü uygulaması — Tauri webview + Rust arka uç"
+license = "Apache-2.0 OR MIT"
+
+[lib]
+name = "kor_desktop_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "kor-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# tray-icon: tepsi simgesi; macos-private-api: saydam PiP penceresi (ADR 0051).
+tauri = { version = "2", features = ["protocol-asset", "unstable", "tray-icon", "macos-private-api"] }
+# Görev çubuğu bindirme rozeti için pencere tutamacı (ADR 0051); tauri'nin bağladığı sürüm.
+raw-window-handle = "0.6"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+# İmzalı masaüstü güncellemesi (ADR 0032); yalnızca Rust tarafından çağrılır, arayüze izin açılmaz.
+tauri-plugin-updater = "2"
+# OS entegrasyonu (ADR 0052): kor:// bağlantıları, tek örnek (ikinci açılış çalışan pencereye iletilir),
+# global kısayol. Yalnızca Rust'tan; arayüze izin açılmaz.
+tauri-plugin-deep-link = "2"
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+tauri-plugin-global-shortcut = "2"
+serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+dirs = "7"
+regex = "1"
+async-trait = "0.1"
+tokio = { version = "1", features = ["sync", "macros", "process", "time", "io-util", "net"] }
+futures = "0.3"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+toml_edit = "0.25"
+base64 = "0.22"
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+rusqlite = { version = "0.41", features = ["bundled"] }
+# §32.2 (ADR 0062): genel ayırıcı.
+mimalloc = { version = "0.1", default-features = false }
+# Kor arka ucu (backend/ çalışma alanı)
+kor-agent = { path = "../../backend/crates/kor-agent" }
+kor-config = { path = "../../backend/crates/kor-config" }
+kor-core = { path = "../../backend/crates/kor-core" }
+kor-graph = { path = "../../backend/crates/kor-graph" }
+kor-memory = { path = "../../backend/crates/kor-memory" }
+kor-providers = { path = "../../backend/crates/kor-providers" }
+kor-runtime = { path = "../../backend/crates/kor-runtime" }
+kor-i18n = { path = "../../backend/crates/kor-i18n" }
+kor-secrets = { path = "../../backend/crates/kor-secrets" }
+kor-sandbox = { path = "../../backend/crates/kor-sandbox" }
+kor-compat = { path = "../../backend/crates/kor-compat" }
+kor-components = { path = "../../backend/crates/kor-components" }
+kor-proxy = { path = "../../backend/crates/kor-proxy" }
+kor-tools = { path = "../../backend/crates/kor-tools" }
+# §19 desktop control tiers / indicator, system profile and health (ADR 0059).
+kor-computer = { path = "../../backend/crates/kor-computer", features = ["live"] }
+kor-health = { path = "../../backend/crates/kor-health" }
+kor-platform = { path = "../../backend/crates/kor-platform", features = ["toast"] }
+# `seo.*` (ADR 0055) ve `site.*` (ADR 0054): kor-web modülü.
+kor-web = { path = "../../backend/crates/kor-web" }
+
+[dev-dependencies]
+tempfile = "3"
+
+# §32.2 (ADR 0062): tam LTO, tek kod üretim birimi, panikte abort (hiçbir kod geri sarmaya dayanmıyor;
+# testler dev profiliyle derlenir ve geri sarar).
+[profile.release]
+codegen-units = 1
+lto = "fat"
+opt-level = "s"
+panic = "abort"
+strip = true

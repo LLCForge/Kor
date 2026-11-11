@@ -1,0 +1,8 @@
+model = "gpt-5"
+approval_policy = "on-request"
+
+[model_providers.myproxy]
+name = "My proxy"
+base_url = "https://llm.example.com/v1"
+env_key = "MYPROXY_API_KEY"
+wire_api = "chat"

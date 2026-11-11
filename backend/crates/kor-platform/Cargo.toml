@@ -1,0 +1,95 @@
+[package]
+name = "kor-platform"
+description = "Operating-system differences behind one API for the Kor coding agent: directories, processes"
+version = "0.1.3"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+dirs.workspace = true
+fslock.workspace = true
+tokio = { workspace = true, features = ["process", "rt"] }
+# os_integration (ADR 0052): record file, Windows Terminal fragment, portal outcomes.
+serde.workspace = true
+serde_json.workspace = true
+# brand: the embedded repo-root branding.toml (ADR 0064).
+toml.workspace = true
+# OS notifications with click callbacks for the desktop app (ADR 0051); the same crate
+# tauri-plugin-notification uses. Off for the CLI.
+notify-rust = { version = "4.18", optional = true }
+
+[features]
+toast = ["dep:notify-rust"]
+
+# AppContainer sandbox (ADR 0008). Already in the lock file through tokio, mio and dirs.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_Security_Isolation",
+    "Win32_System_Com",
+    "Win32_System_JobObjects",
+    "Win32_System_Registry",
+    "Win32_System_Threading",
+    # cli_path: user PATH + WM_SETTINGCHANGE (ADR 0032)
+    "Win32_UI_WindowsAndMessaging",
+    # foreground: SHQueryUserNotificationState (ADR 0051)
+    "Win32_UI_Shell",
+    # desktop_probe: GetLastInputInfo / keyboard layout, tick count, battery (ADR 0059)
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_System_SystemInformation",
+    "Win32_System_Power",
+    # procmem: GetProcessMemoryInfo (ADR 0062)
+    "Win32_System_ProcessStatus",
+    "Win32_System_Diagnostics_ToolHelp",
+] }
+# jumplist: ICustomDestinationList / IShellLinkW COM interfaces (ADR 0052); same version as the lock.
+windows = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Storage_EnhancedStorage",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_Common",
+    "Win32_UI_Shell_PropertiesSystem",
+    # taskbar: ITaskbarList3 overlay icon (ADR 0051)
+    "Win32_Graphics_Gdi",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+# jumplist: the Dock menu (ADR 0052); the versions tao already links.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = ["NSString", "NSURL", "NSThread"] }
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSMenu", "NSMenuItem", "NSResponder", "NSWorkspace"] }
+# os_integration::mac: Core Spotlight completion handlers (ADR 0052); the version tao links.
+block2 = "0.6"
+# procmem: getrusage peak RSS (ADR 0062); already in the lock.
+libc = "0.2"
+
+# os_integration::portals: Wayland / Flatpak portals over D-Bus (ADR 0052); zbus is already in
+# the lock through tauri / keyring.
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = { version = "5", default-features = false, features = ["tokio"] }
+futures-util = "0.3"
+
+[dev-dependencies]
+tempfile.workspace = true
+
+# Same as [workspace.lints] except `unsafe_code`: `deny` (not `forbid`) so that the one Win32 FFI
+# module, `src/appcontainer/win.rs`, can allow it (ADR 0008). Keep the rest in sync.
+[lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+must_use_candidate = "allow"

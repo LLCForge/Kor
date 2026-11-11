@@ -1,0 +1,4 @@
+---
+globs: ["**/*.test.ts"]
+---
+Use vitest.

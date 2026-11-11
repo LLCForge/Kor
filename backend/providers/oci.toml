@@ -1,0 +1,20 @@
+# Source: https://docs.oracle.com/en-us/iaas/Content/generative-ai/oci-openai.htm
+# OpenAI-compatible (Responses API):
+#   https://inference.generativeai.<region>.oci.oraclecloud.com/openai/v1
+# Auth: OCI Generative AI API key as Bearer. OCI SDK request signing is not implemented yet.
+id = "oci"
+name = "OCI Generative AI"
+category = "cloud"
+adapter = "openai"
+base_url = "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/openai/v1"
+base_url_env = "OCI_GENAI_BASE_URL"
+auth = { kind = "bearer", env = "OCI_GENAI_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.oracle.com/en-us/iaas/Content/generative-ai/oci-openai.htm"
+
+[privacy]
+tier = "no_train"
+retention = "Per OCI terms (verify)."
+jurisdiction = "per region"

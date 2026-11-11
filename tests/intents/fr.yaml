@@ -1,0 +1,59 @@
+# French intent fixtures: free text -> expected kor command (null = normal agent).
+- { text: "combien j'ai dépensé ce mois-ci", expect: "kor cost" }
+- { text: "montre moi mes coûts s'il te plaît", expect: "kor cost" }
+- { text: "quelles sont mes dépenses en modèles", expect: "kor cost" }
+- { text: "corrige la dernière erreur stp", expect: "kor fix" }
+- { text: "répare ma dernière commande qui a échoué", expect: "kor fix" }
+- { text: "la commande que je viens de lancer a planté, corrige la", expect: "kor fix" }
+- { text: "pourquoi ma dernière commande a échoué", expect: "kor why" }
+- { text: "explique moi la dernière erreur", expect: "kor why" }
+- { text: "écris le message de commit pour moi", expect: "kor commit" }
+- { text: "commite mes changements", expect: "kor commit" }
+- { text: "ouvre le graphe du projet", expect: "kor graph" }
+- { text: "montre le graphe du code", expect: "kor graph" }
+- { text: "quel est l'état du graphe", expect: "kor graph status" }
+- { text: "mets à jour le graphe du projet", expect: "kor graph update" }
+- { text: "où sont les points chauds du code", expect: "kor graph hotspots" }
+- { text: "teste le sandbox stp", expect: "kor sandbox test" }
+- { text: "le bac à sable est actif ?", expect: "kor sandbox status" }
+- { text: "diagnostique mon environnement", expect: "kor doctor" }
+- { text: "vérifie mon installation de kor", expect: "kor doctor" }
+- { text: "lance le doctor s'il te plaît", expect: "kor doctor" }
+- { text: "mets kor à jour", expect: "kor update" }
+- { text: "installe la dernière version de kor", expect: "kor update" }
+- { text: "est-ce qu'il y a une nouvelle version", expect: "kor update check" }
+- { text: "annule toutes les modifications de la session", expect: "kor undo" }
+- { text: "défais les changements faits par l'agent", expect: "kor undo" }
+- { text: "fais une revue de mon code", expect: "kor review" }
+- { text: "relis mes changements stp", expect: "kor review" }
+- { text: "lance un audit de sécurité du projet", expect: "kor audit" }
+- { text: "scanne le projet pour les vulnérabilités", expect: "kor audit" }
+- { text: "vérifie mes dépendances", expect: "kor deps check" }
+- { text: "est-ce que mes dépendances sont vulnérables", expect: "kor deps check" }
+- { text: "liste toutes les dépendances", expect: "kor deps list" }
+- { text: "explique le fichier src/main.rs", expect: "kor explain", params: { file: "src/main.rs" } }
+- { text: "raconte l'historique du fichier lib/auth.ts", expect: "kor explain", params: { file: "lib/auth.ts" } }
+- { text: "quelle est la note de qualité du projet", expect: "kor quality" }
+- { text: "combien de dette technique avons nous", expect: "kor debt" }
+- { text: "mes statistiques de développeur cette semaine", expect: "kor stats" }
+- { text: "trouve le code mort", expect: "kor dead-code" }
+- { text: "liste les outils disponibles", expect: "kor tool list" }
+- { text: "quels outils j'ai", expect: "kor tool list" }
+- { text: "affiche la liste de mes sessions", expect: "kor sessions" }
+- { text: "reprends la session précédente", expect: "kor resume" }
+- { text: "liste mes plugins installés", expect: "kor plugin list" }
+- { text: "affiche le journal d'audit", expect: "kor audit list" }
+- { text: "ouvre une pull request pour cette branche", expect: "kor pr create" }
+- { text: "déploie les services modifiés en staging", expect: "kor deploy" }
+- { text: "génère le changelog depuis le dernier tag", expect: "kor changelog" }
+- { text: "génère une image d'un chat au coucher du soleil", expect: "kor media image" }
+- { text: "quel est mon quota restant", expect: "kor quota" }
+- { text: "liste les modèles que je peux utiliser", expect: "kor models" }
+- { text: "démarre le démon", expect: "kor daemon start" }
+- { text: "le démon tourne ?", expect: "kor daemon status" }
+- { text: "liste les secrets du coffre", expect: "kor vault list" }
+- { text: "importe mon .env dans le coffre", expect: "kor vault import" }
+- { text: "cherche dans le code où on envoie les emails", expect: "kor find" }
+- { text: "rappelle ce qu'on a fait pour le rate limiting", expect: "kor recall" }
+- { text: "qu'est-ce que ce changement va affecter", expect: "kor impact" }
+- { text: "visualise l'architecture du projet", expect: "kor visualize" }

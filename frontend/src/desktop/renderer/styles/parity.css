@@ -1,0 +1,11 @@
+/* Genel komut çalıştırıcı (Tüm komutlar → panelsiz köprü yöntemi, ADR 0031) */
+.parity-runner { display: flex; flex-direction: column; gap: 10px; width: min(640px, 92vw); }
+.parity-runner-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; color: var(--muted); font-size: 12px; }
+.parity-runner-meta code { font-family: var(--font-mono); color: var(--text-soft); }
+.parity-runner-args { min-height: 72px; font-family: var(--font-mono); }
+.parity-runner-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.parity-runner-out {
+  margin: 0; max-height: 40vh; overflow: auto; padding: 12px; border-radius: 10px;
+  background: var(--code-bg); color: var(--code-text); font: 12px/1.5 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.parity-runner-out:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

@@ -1,0 +1,16 @@
+# Source: https://docs.bigmodel.cn/cn/guide/develop/opencode.md
+id = "zhipu"
+name = "Zhipu AI (BigModel, China)"
+category = "standard"
+adapter = "openai_compat"
+base_url = "https://open.bigmodel.cn/api/paas/v4"
+auth = { kind = "bearer", env = "ZHIPU_API_KEY" }
+models_endpoint = "/models"
+tool_calling = true
+verified = false
+docs = "https://docs.bigmodel.cn/cn/guide/develop/opencode.md"
+# GLM Coding Plan on this host: https://open.bigmodel.cn/api/coding/paas/v4 (user override via base_url).
+[privacy]
+tier = "standard"
+retention = "Retention per provider privacy policy (verify)."
+jurisdiction = "CN"

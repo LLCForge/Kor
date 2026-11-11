@@ -1,0 +1,13 @@
+# §17.2 "graf çıkarma": the live project graph is built from the sources.
+name: graph-extract
+title: "Proje grafiği çıkarma"
+project:
+  files:
+    src/lib.rs: "pub fn parse(input: &str) -> usize { count(input) }\n\nfn count(s: &str) -> usize { s.len() }\n"
+    src/main.rs: "fn main() { let _ = demo::parse(\"a\"); }\n"
+    Cargo.toml: "[package]\nname = \"demo\"\nversion = \"0.1.0\"\nedition = \"2021\"\n"
+steps:
+  - command: "kor graph update"
+  - command: "kor graph status"
+expect:
+  output: ["lib.rs"]

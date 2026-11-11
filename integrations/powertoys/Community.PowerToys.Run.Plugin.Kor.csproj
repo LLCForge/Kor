@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- PowerToys Run plugin for Kor (Master Build Prompt §27.10, ADR 0052). Built in CI
+       (release.yml, desktop job on Windows) and shipped in the desktop bundle under
+       integrations/powertoys; `kor os-integration install powertoys-run` copies it to
+       %LOCALAPPDATA%\Microsoft\PowerToys\PowerToys Run\Plugins\Kor. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <Platforms>x64;ARM64</Platforms>
+    <PlatformTarget>$(Platform)</PlatformTarget>
+    <AssemblyName>Community.PowerToys.Run.Plugin.Kor</AssemblyName>
+    <RootNamespace>Community.PowerToys.Run.Plugin.Kor</RootNamespace>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Wox.Plugin and friends at the PowerToys version; not copied to the output (PowerToys
+         provides them at run time). -->
+    <PackageReference Include="Community.PowerToys.Run.Plugin.Dependencies" Version="0.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="plugin.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Images\*.png" CopyToOutputDirectory="PreserveNewest" LinkBase="Images" />
+  </ItemGroup>
+</Project>

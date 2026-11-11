@@ -1,0 +1,384 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - name: Versions are consistent (ADR 0012)
+        run: python3 ../scripts/version.py check
+      - name: Desktop release helpers (ADR 0032)
+        run: python3 ../scripts/desktop_release.py selftest
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      # §32.2 (ADR 0062): blocking I/O on async/render threads, unbounded channels, uncached regexes.
+      # A ratchet: a file may not gain findings over kor-lint.baseline.json.
+      - name: kor-lint
+        run: cargo run --locked -p kor-lint -- --baseline kor-lint.baseline.json crates apps ../frontend/src-tauri/src
+      - run: cargo doc --workspace --no-deps
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest, windows-11-arm]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - run: cargo test --workspace --locked
+      # Faz 0 kabulü: sürüm ve doctor her platformda hatasız. Başsız Linux'ta anahtar zinciri uyarıdır, hata değil.
+      - run: cargo run --locked -p kor-cli -- --version
+      - run: cargo run --locked -p kor-cli -- doctor --lang en
+
+  musl:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: cargo build --locked --release -p kor-cli --target x86_64-unknown-linux-musl
+      - run: ./target/x86_64-unknown-linux-musl/release/kor --version
+
+  cross-build:
+    name: build (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, target: x86_64-apple-darwin }
+          - { os: macos-latest, target: aarch64-apple-darwin }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - run: cargo build --locked --release --target ${{ matrix.target }}
+
+  desktop:
+    name: desktop (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - working-directory: frontend
+        run: npm ci
+      - working-directory: frontend
+        run: npm run typecheck
+      - working-directory: frontend
+        # parity.test.ts + kor-cmd.test.ts (ADR 0031) are in renderer/; panel tests live one level down.
+        run: node --test src/desktop/renderer/*.test.ts src/desktop/renderer/i18n/*.test.ts src/desktop/renderer/panels/*/*.test.ts src/desktop/renderer/review/*.test.ts
+      - working-directory: frontend
+        # ADR 0053: theme.json single source + no hand-copied hex, raw hex/px only in legacy files,
+        # WebView lockdown policy, kor-ui components.
+        run: node --test scripts/*.test.ts src/desktop/renderer/kor-ui/*.test.ts
+      - working-directory: frontend
+        # ADR 0061: ipc.gen.ts is generated from kor-core/schema/ipc.json (the Rust side: src-tauri
+        # tests/ipc_schema.rs in `cargo test` below); a stale file fails here, a drifting renderer in
+        # scripts/ipc-gen.test.ts above, every asset referenced in scripts/assets-check.test.ts.
+        run: node scripts/ipc-gen.ts --check
+      - working-directory: frontend
+        run: npm run build:ui
+      - working-directory: frontend
+        # ADR 0058: browser extension (transport, pairing, tab groups, domain policy, manifests, panel events, i18n).
+        run: node --test src/extension/extension.test.ts
+      - working-directory: frontend/src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+      - working-directory: frontend/src-tauri
+        run: cargo test
+
+  # ADR 0058 §18.4: the built extension in a real Chromium (Chrome for Testing honours --load-extension),
+  # driven through the bridge with the existing CDP code: pairing, task tab group, tools, refusals.
+  extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - working-directory: frontend
+        run: npm ci && npm run build:extension
+      - name: Chrome for Testing
+        run: |
+          npx --yes @puppeteer/browsers@2.10.5 install chrome@stable --path "$RUNNER_TEMP/cft" > "$RUNNER_TEMP/cft.txt"
+          echo "KOR_BROWSER=$(awk '{print $2}' "$RUNNER_TEMP/cft.txt" | tail -n1)" >> "$GITHUB_ENV"
+      - working-directory: backend
+        run: cargo test --locked -p kor-tools --lib -- --ignored real_extension
+
+  msrv:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.88
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - run: cargo check --workspace --locked
+
+  # Repo hygiene on every PR: self-tests of the release helpers and of scripts/install.sh
+  # (checksum and signature verification).
+  repo-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tooling self-tests (desktop release, install.sh)
+        run: |
+          python3 scripts/desktop_release.py selftest
+          sh scripts/install-test.sh
+
+  supply-chain:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: backend/Cargo.toml
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: backend
+
+  # §32.1/§32.3 (ADR 0062): every PR measures the performance budgets on a release build. A budget over
+  # its target, or any measurement more than 5% slower than the runner baseline in bench/history.json
+  # (none in a fresh checkout: budgets only), fails the job.
+  perf:
+    name: perf (${{ matrix.worker }})
+    strategy:
+      fail-fast: false
+      matrix:
+        worker: [standard, weak]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            backend
+            frontend/src-tauri
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf xvfb
+      - working-directory: backend
+        run: cargo build --locked --release -p kor-cli
+      - working-directory: frontend
+        run: npm ci && npm run build:ui && npx tauri build --no-bundle
+      - name: kor bench --ui --cli --memory
+        working-directory: .
+        run: |
+          weak=()
+          wrap=()
+          # Weak worker (§32.3): 2 cores, 4 GB, budgets relaxed by the weak factor.
+          if [ "${{ matrix.worker }}" = weak ]; then
+            weak=(--weak)
+            wrap=(sudo systemd-run --scope --quiet -p AllowedCPUs=0-1 -p MemoryMax=4G --uid="$(id -u)" --gid="$(id -g)" --setenv=HOME="$HOME" --setenv=PATH="$PATH")
+          fi
+          "${wrap[@]}" xvfb-run -a backend/target/release/kor bench --ui --cli --memory "${weak[@]}"             --desktop frontend/src-tauri/target/release/kor-desktop --check
+
+  # §16.4 / §17.2 E2E matrix (ADR 0061): IPC schema, CLI snapshots (insta), PTY-driven REPL and TUI
+  # (ConPTY on Windows), TUI test backend over real core events, every scenario of tests/e2e/scenarios
+  # on CLI and TUI with the mock provider, `kor doctor --ipc-trace`.
+  e2e-cli:
+    name: e2e cli+tui (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      INSTA_UPDATE: "no"
+      CI: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - run: git config --global user.name "Kor CI" && git config --global user.email ci@kor.invalid
+      - name: IPC schema and validator
+        run: cargo test --locked -p kor-core ipc
+      - name: Rust wire shapes against the schema
+        run: cargo test --locked -p kor-agent --test ipc_schema
+      - name: Scenario model, mock provider, checker
+        run: cargo test --locked -p kor-runtime --lib e2e
+      - name: CLI snapshots (banner, spinner truecolor/256/NO_COLOR, verb cycle) and TUI panels from core events
+        run: cargo test --locked -p kor-cli --bins
+      - name: PTY REPL / TUI, scenarios on CLI and TUI, --json snapshots
+        run: cargo test --locked -p kor-cli --test e2e -- --test-threads=1
+      - name: kor doctor --ipc-trace
+        shell: bash
+        run: KOR_IPC_TRACE="$RUNNER_TEMP/ipc-trace.ndjson" cargo run --locked -p kor-cli -- --lang en doctor
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-cli-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/ipc-trace.ndjson
+            backend/apps/kor-cli/src/snapshots/*.snap.new
+            backend/apps/kor-cli/tests/snapshots/*.snap.new
+          if-no-files-found: ignore
+
+  # KorThinking states / reduced motion / dark-light, from assets/ in Playwright's Chromium on three OS.
+  # Baselines live in frontend/e2e/__screenshots__/brand/<platform>; a platform without one gets it
+  # written (artifact) on its first run.
+  e2e-brand:
+    name: e2e brand visuals (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test -c e2e/playwright.config.ts --project brand --update-snapshots=missing
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-brand-${{ matrix.os }}
+          path: |
+            frontend/e2e/__screenshots__
+            frontend/test-results
+          if-no-files-found: ignore
+
+  # The desktop surface: every scenario against the real app and core (same checker as CLI/TUI), every
+  # panel's screenshot. Windows: Playwright over WebView2 CDP; Linux: tauri-driver (WebDriver) under
+  # Xvfb. macOS has no WebDriver for WKWebView (tauri-driver does not support it).
+  e2e-desktop:
+    name: e2e desktop (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            backend
+            frontend/src-tauri
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: git config --global user.name "Kor CI" && git config --global user.email ci@kor.invalid
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf webkit2gtk-driver xvfb
+      - if: runner.os == 'Linux'
+        run: cargo install tauri-driver --locked
+      - working-directory: backend
+        run: cargo build --locked -p kor-cli && cargo build --locked -p kor-runtime --example mock_provider
+      - working-directory: frontend
+        run: npm ci && npm run build:ui
+      - working-directory: frontend/src-tauri
+        run: cargo build
+      - if: runner.os == 'Windows'
+        working-directory: frontend
+        run: npx playwright test -c e2e/playwright.config.ts --project desktop --update-snapshots=missing
+      - if: runner.os == 'Linux'
+        working-directory: frontend
+        env:
+          KOR_E2E_DRIVER: webdriver
+        run: |
+          tauri-driver --port 4444 &
+          xvfb-run -a npx playwright test -c e2e/playwright.config.ts --project desktop
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-desktop-${{ matrix.os }}
+          path: |
+            frontend/test-results
+            frontend/e2e/__screenshots__
+          if-no-files-found: ignore

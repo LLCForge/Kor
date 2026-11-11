@@ -1,0 +1,23 @@
+[[package]]
+name = "certifi"
+version = "2023.7.22"
+description = "x"
+optional = false
+
+[[package]]
+name = "pytest"
+version = "7.4.3"
+description = "x"
+optional = false
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+description = "x"
+optional = false
+
+[package.dependencies]
+certifi = ">=2017.4.17"
+
+[metadata]
+lock-version = "2.0"

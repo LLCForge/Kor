@@ -1,0 +1,68 @@
+[package]
+name = "kor-cli"
+description = "Kor command-line interface"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "kor"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+base64.workspace = true
+clap.workspace = true
+# `kor completions <shell>` (§26.1, ADR 0050).
+clap_complete = "4.6"
+# Inline images in kitty / sixel terminals (§28.11, ADR 0050).
+image.workspace = true
+crossterm.workspace = true
+dirs.workspace = true
+futures.workspace = true
+kor-agent.workspace = true
+kor-compat.workspace = true
+kor-components.workspace = true
+kor-config.workspace = true
+# `kor computer|system|clean|layout` (§19, §27.7, ADR 0059).
+kor-computer = { workspace = true, features = ["live"] }
+kor-health.workspace = true
+kor-core.workspace = true
+kor-graph.workspace = true
+kor-i18n.workspace = true
+kor-memory.workspace = true
+kor-platform.workspace = true
+kor-providers.workspace = true
+kor-proxy.workspace = true
+kor-sandbox.workspace = true
+kor-secrets.workspace = true
+kor-tools.workspace = true
+# `kor seo` (ADR 0055) and `kor host|wp|…` (ADR 0054).
+kor-web.workspace = true
+kor-runtime.workspace = true
+ratatui.workspace = true
+reqwest.workspace = true
+rpassword.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+toml.workspace = true
+# `kor deploy status|risk-check` (local time).
+chrono.workspace = true
+# §32.2 (ADR 0062): the global allocator (`#[global_allocator]` in main.rs).
+mimalloc = { version = "0.1", default-features = false }
+# `kor mcp run|serve` speak MCP on stdin/stdout.
+tokio = { workspace = true, features = ["io-std"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+# §16.4 E2E matrix (ADR 0061): CLI snapshots and PTY-driven REPL/TUI (ConPTY on Windows).
+insta = { version = "1", features = ["json", "redactions"] }
+expectrl = "0.7"
+
+[lints]
+workspace = true

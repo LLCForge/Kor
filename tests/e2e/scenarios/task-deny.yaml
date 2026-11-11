@@ -1,0 +1,27 @@
+# Diff preview → the user rejects → nothing is written; the agent is told and answers.
+name: task-deny
+title: "Diff önizleme → ret → dosya yazılmaz"
+project:
+  files:
+    README.md: "# Demo\n"
+mock:
+  - text: "plan.md yazacağım."
+    tool:
+      name: Write
+      input: { file_path: plan.md, content: "plan\n" }
+    usage: { prompt: 900, completion: 20 }
+  - text: "Anlaşıldı, dosyaya dokunmadım."
+    usage: { prompt: 950, completion: 9 }
+steps:
+  - prompt: "plan.md oluştur"
+  - approve: "no"
+expect:
+  events:
+    - status
+    - { type: text, text: "plan.md yazacağım." }
+    - { type: confirm, name: Write, files: [plan.md] }
+    - toolResult
+    - { type: text, text: "Anlaşıldı, dosyaya dokunmadım." }
+  files:
+    plan.md: ~
+  usage_requests: 2

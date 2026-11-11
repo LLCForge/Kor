@@ -1,0 +1,29 @@
+// Desktop E2E, visual regression and UI audit (spec §16.4, §17.3; ADR 0061).
+// `npx playwright test -c e2e/playwright.config.ts [--project brand|desktop|audit]`
+// - brand: KorThinking states, reduced motion, dark/light — bundled from assets/ into Playwright's own
+//   Chromium, so it runs on all three OS (`npx playwright install chromium`).
+// - desktop: the real app (Windows: WebView2 over CDP) — scenarios, every panel's screenshot.
+// - audit: the §17.3 sweep that writes UI_AUDIT.md (run on demand).
+import { defineConfig } from '@playwright/test'
+
+export default defineConfig({
+  testDir: '.',
+  timeout: 10 * 60_000,
+  workers: 1,
+  fullyParallel: false,
+  reporter: [['list'], ['html', { open: 'never', outputFolder: '../test-results/e2e-report' }]],
+  outputDir: '../test-results/e2e-output',
+  // Baselines per OS and project: fonts and WebView rendering differ between platforms.
+  snapshotPathTemplate: '{testDir}/__screenshots__/{projectName}/{platform}/{arg}{ext}',
+  expect: {
+    // §17.3: pixel difference threshold 0.1 %.
+    toHaveScreenshot: { maxDiffPixelRatio: 0.001, animations: 'disabled', caret: 'hide' },
+  },
+  projects: [
+    // KOR_E2E_CHANNEL=msedge uses the installed Edge instead of a downloaded Chromium.
+    { name: 'brand', testMatch: /brand\.e2e\.ts$/, use: { channel: process.env.KOR_E2E_CHANNEL } },
+    // responsive.e2e.ts: no horizontal overflow at 800×600 and 1920×1080 (same WebView2 attach).
+    { name: 'desktop', testMatch: /(desktop|responsive)\.e2e\.ts$/ },
+    { name: 'audit', testMatch: /ui-audit\.e2e\.ts$/ },
+  ],
+})

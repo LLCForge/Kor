@@ -1,0 +1,4 @@
+// `graph.*` köprüsünün tipleri (Rust: src-tauri/src/ns/graph.rs, şekiller kor-graph serde çıktısı). Yalnızca tip.
+// Types are GENERATED from backend/crates/kor-core/schema/ipc.json (spec §16.3, ADR 0061); edit the schema, not this file.
+import type { NodeKind, EdgeKindName, EdgeKind, Confidence, GraphStatus, StatusView, Community, SnapshotNode, SnapshotEdge, Snapshot, NodeRef, GraphNode, Link, Explanation, PathStep, QueryHit, Hotspot, Impact, GraphDiff, ExportFormat__graph as ExportFormat, ExportReport, UpdateStats, GraphUpdatedEvent, GraphTouchedEvent, GraphApi } from './ipc.gen.ts'
+export type { NodeKind, EdgeKindName, EdgeKind, Confidence, GraphStatus, StatusView, Community, SnapshotNode, SnapshotEdge, Snapshot, NodeRef, GraphNode, Link, Explanation, PathStep, QueryHit, Hotspot, Impact, GraphDiff, ExportFormat, ExportReport, UpdateStats, GraphUpdatedEvent, GraphTouchedEvent, GraphApi }

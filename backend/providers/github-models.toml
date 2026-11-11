@@ -1,0 +1,16 @@
+# Source: https://docs.github.com/en/rest/models/inference - GitHub Models was retired on
+# 2026-07-30 (API, catalog and BYOK). Kept as a card that points to microsoft-foundry.
+id = "github-models"
+name = "GitHub Models (retired)"
+category = "cloud"
+adapter = "openai_compat"
+base_url = "https://models.github.ai/inference"
+auth = { kind = "bearer", env = "GITHUB_TOKEN" }
+verified = false
+docs = "https://docs.github.com/en/rest/models/inference"
+tags = ["retired"]
+
+[privacy]
+tier = "unknown"
+retention = "Service retired."
+jurisdiction = "US"

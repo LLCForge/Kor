@@ -1,0 +1,4 @@
+# app
+requests==2.31.0
+PyMuPDF==1.23.0
+flask>=2

@@ -1,0 +1,194 @@
+{
+ "errors": [
+  {
+   "match": "error establishing a database connection",
+   "text": {
+    "tr": "WordPress veritabanına bağlanamıyor: wp-config.php içindeki veritabanı adı/kullanıcı/parola yanlış ya da MySQL durmuş.",
+    "en": "WordPress cannot reach its database: wrong name/user/password in wp-config.php, or MySQL is down.",
+    "fr": "WordPress n’atteint pas sa base : identifiants erronés dans wp-config.php ou MySQL arrêté."
+   }
+  },
+  {
+   "match": "500 internal server error",
+   "text": {
+    "tr": "Sunucu tarafı hata: sitenin error_log dosyasına ve .htaccess’e bakın; çoğu zaman bozuk eklenti ya da PHP sürüm uyumsuzluğudur.",
+    "en": "Server-side error: check the site’s error_log and .htaccess; usually a broken plugin or a PHP version mismatch.",
+    "fr": "Erreur côté serveur : voir error_log et .htaccess ; souvent une extension cassée ou une version PHP incompatible."
+   }
+  },
+  {
+   "match": "403 forbidden",
+   "text": {
+    "tr": "Erişim reddedildi: dosya izinleri (755/644), .htaccess kuralı ya da ModSecurity engeli olabilir.",
+    "en": "Access denied: file permissions (755/644), an .htaccess rule or ModSecurity.",
+    "fr": "Accès refusé : permissions (755/644), règle .htaccess ou ModSecurity."
+   }
+  },
+  {
+   "match": "too many redirects",
+   "text": {
+    "tr": "Yönlendirme döngüsü: çoğunlukla Cloudflare SSL modu Flexible iken sunucu da HTTPS’e yönlendiriyordur; modu Full (strict) yapın.",
+    "en": "Redirect loop: usually Cloudflare SSL Flexible while the server also redirects to HTTPS; use Full (strict).",
+    "fr": "Boucle de redirection : souvent Cloudflare SSL Flexible alors que le serveur redirige vers HTTPS ; utilisez Full (strict)."
+   }
+  },
+  {
+   "match": "error 521",
+   "text": {
+    "tr": "Cloudflare: kaynak sunucu bağlantıyı reddediyor (web sunucusu kapalı ya da Cloudflare IP’leri engellenmiş).",
+    "en": "Cloudflare: the origin refuses connections (web server down or Cloudflare IPs blocked).",
+    "fr": "Cloudflare : l’origine refuse la connexion (serveur arrêté ou IP Cloudflare bloquées)."
+   }
+  },
+  {
+   "match": "error 522",
+   "text": {
+    "tr": "Cloudflare: kaynak sunucuya bağlantı zaman aşımına uğradı (sunucu yükü, güvenlik duvarı).",
+    "en": "Cloudflare: the connection to the origin timed out (load, firewall).",
+    "fr": "Cloudflare : délai de connexion à l’origine dépassé (charge, pare-feu)."
+   }
+  },
+  {
+   "match": "error 525",
+   "text": {
+    "tr": "Cloudflare: kaynak sunucuyla SSL el sıkışması başarısız; sunucuda geçerli sertifika yok.",
+    "en": "Cloudflare: the SSL handshake with the origin failed; no valid certificate on the server.",
+    "fr": "Cloudflare : échec de la poignée de main SSL avec l’origine."
+   }
+  },
+  {
+   "match": "error 526",
+   "text": {
+    "tr": "Cloudflare: kaynak sunucunun sertifikası geçersiz (Full (strict) modunda); sunucuya geçerli sertifika kurun.",
+    "en": "Cloudflare: the origin certificate is invalid (Full (strict)); install a valid one.",
+    "fr": "Cloudflare : certificat d’origine invalide (Full (strict))."
+   }
+  },
+  {
+   "match": "allowed memory size of",
+   "text": {
+    "tr": "PHP bellek sınırı aşıldı: memory_limit değerini yükseltin (ör. 256M) ya da ağır eklentiyi bulun.",
+    "en": "PHP memory limit reached: raise memory_limit (e.g. 256M) or find the heavy plugin.",
+    "fr": "Limite mémoire PHP atteinte : augmentez memory_limit (ex. 256M)."
+   }
+  },
+  {
+   "match": "maximum execution time",
+   "text": {
+    "tr": "PHP süre sınırı aşıldı: max_execution_time değerini yükseltin ya da uzun işi cron’a taşıyın.",
+    "en": "PHP time limit reached: raise max_execution_time or move the long job to cron.",
+    "fr": "Durée d’exécution PHP dépassée : augmentez max_execution_time."
+   }
+  },
+  {
+   "match": "upload_max_filesize",
+   "text": {
+    "tr": "Yükleme boyutu sınırı: upload_max_filesize ve post_max_size değerlerini birlikte yükseltin.",
+    "en": "Upload size limit: raise upload_max_filesize and post_max_size together.",
+    "fr": "Limite d’envoi : augmentez upload_max_filesize et post_max_size."
+   }
+  },
+  {
+   "match": "dns_probe_finished_nxdomain",
+   "text": {
+    "tr": "Alan adı çözümlenmiyor: ad sunucuları ya da DNS kaydı yanlış veya alan adının süresi dolmuş.",
+    "en": "The domain does not resolve: wrong nameservers or records, or the domain expired.",
+    "fr": "Le domaine ne se résout pas : serveurs de noms ou enregistrements erronés, ou domaine expiré."
+   }
+  },
+  {
+   "match": "disk quota exceeded",
+   "text": {
+    "tr": "Disk kotası dolu: kor host clean ile temizlik adaylarını listeleyin.",
+    "en": "Disk quota full: list clean-up candidates with kor host clean.",
+    "fr": "Quota disque plein : listez les fichiers à nettoyer avec kor host clean."
+   }
+  }
+ ],
+ "settings": [
+  {
+   "match": "display_errors",
+   "risky": [
+    "display_errors on",
+    "display_errors = on",
+    "display_errors\ton",
+    "display_errors 1"
+   ],
+   "text": {
+    "tr": "display_errors açık: hata mesajları ziyaretçiye dosya yollarını gösterir; canlı sitede kapatın.",
+    "en": "display_errors is on: visitors see file paths in errors; turn it off in production.",
+    "fr": "display_errors activé : les visiteurs voient les chemins ; désactivez-le en production."
+   }
+  },
+  {
+   "match": "allow_url_include",
+   "risky": [
+    "allow_url_include on",
+    "allow_url_include = on",
+    "allow_url_include\ton"
+   ],
+   "text": {
+    "tr": "allow_url_include açık: uzaktan dosya dahil etme saldırılarına kapı açar; kapatın.",
+    "en": "allow_url_include is on: it opens remote file inclusion; turn it off.",
+    "fr": "allow_url_include activé : risque d’inclusion distante ; désactivez-le."
+   }
+  },
+  {
+   "match": "flexible",
+   "risky": [
+    "flexible"
+   ],
+   "text": {
+    "tr": "SSL modu Flexible: Cloudflare ile sunucu arası trafik şifresiz; sunucuya sertifika kurup Full (strict) seçin.",
+    "en": "SSL mode Flexible: traffic between Cloudflare and the server is unencrypted; install a certificate and use Full (strict).",
+    "fr": "SSL Flexible : trafic non chiffré entre Cloudflare et le serveur ; utilisez Full (strict)."
+   }
+  },
+  {
+   "match": "php 7.",
+   "risky": [
+    "php 7."
+   ],
+   "text": {
+    "tr": "PHP 7.x artık güvenlik güncellemesi almıyor; desteklenen bir 8.x sürümüne geçin (kor host php).",
+    "en": "PHP 7.x no longer gets security fixes; move to a supported 8.x (kor host php).",
+    "fr": "PHP 7.x n’a plus de correctifs ; passez à une 8.x supportée (kor host php)."
+   }
+  },
+  {
+   "match": "ea-php7",
+   "risky": [
+    "ea-php7"
+   ],
+   "text": {
+    "tr": "PHP 7.x artık güvenlik güncellemesi almıyor; desteklenen bir 8.x sürümüne geçin (kor host php).",
+    "en": "PHP 7.x no longer gets security fixes; move to a supported 8.x (kor host php).",
+    "fr": "PHP 7.x n’a plus de correctifs ; passez à une 8.x supportée (kor host php)."
+   }
+  },
+  {
+   "match": "ftp",
+   "risky": [
+    "ftp account",
+    "ftp hesab"
+   ],
+   "text": {
+    "tr": "Düz FTP parolayı şifresiz taşır; mümkünse SFTP ya da FTPS kullanın.",
+    "en": "Plain FTP sends passwords unencrypted; use SFTP or FTPS.",
+    "fr": "Le FTP simple transmet les mots de passe en clair ; utilisez SFTP/FTPS."
+   }
+  },
+  {
+   "match": "indexes",
+   "risky": [
+    "options +indexes",
+    "directory listing"
+   ],
+   "text": {
+    "tr": "Dizin listeleme açık: dosyalar herkese listelenir; Options -Indexes kullanın.",
+    "en": "Directory listing is on: files are listed to everyone; use Options -Indexes.",
+    "fr": "Listage des répertoires activé ; utilisez Options -Indexes."
+   }
+  }
+ ]
+}
