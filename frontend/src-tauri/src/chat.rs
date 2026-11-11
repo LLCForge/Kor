@@ -123,6 +123,13 @@ impl Chats {
         lock(&self.queues).remove(id);
     }
 
+    /// "Skip permissions" was chosen: every approval still waiting is answered "allow".
+    pub fn allow_all_pending(&self) {
+        for (_, p) in lock(&self.pending).drain() {
+            let _ = p.reply.send(PermissionReply::Allow.into());
+        }
+    }
+
     /// Turu iptal eder; bekleyen onaylar reddedilmiş sayılır (aksi halde ajan sonsuza dek bekler).
     pub fn abort(&self, id: &str) {
         if let Some(r) = lock(&self.running).get(id) {
@@ -223,6 +230,11 @@ impl Approver for DesktopApprover {
 
     /// Onay kartı dosya listesi (önce/sonra) ve yıkıcılık nedeniyle açılır; yanıt dosya başına gelir.
     async fn review(&self, req: &PermissionRequest) -> Review {
+        // The mode is applied when a turn starts; a switch to "skip permissions" during the turn
+        // takes effect here, from the next question on.
+        if self.app.state::<AppState>().mode() == Some(PermissionMode::BypassPermissions) {
+            return PermissionReply::Allow.into();
+        }
         let chats = &self.app.state::<AppState>().chats;
         let (tx, rx) = oneshot::channel();
         lock(&chats.pending).insert(
@@ -567,7 +579,11 @@ fn apply_choices(
         .permission_mode
         .as_deref()
         .and_then(|m| crate::bridge::from_ui_mode(m).ok());
-    if let Some(mut mode) = own_mode.or_else(|| state.mode()) {
+    // "Skip permissions" chosen in the selector wins over a mode stored for this session earlier:
+    // the user asked never to be asked.
+    let global = state.mode();
+    let chosen = if global == Some(PermissionMode::BypassPermissions) { global } else { own_mode.or(global) };
+    if let Some(mut mode) = chosen {
         if mode == PermissionMode::Auto && !agent.ctx.sandbox.is_enforcing() {
             return Err(l.t("mode-auto-needs-sandbox"));
         }

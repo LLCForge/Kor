@@ -34,6 +34,8 @@ export type AgentEventBody =
   /** parentId: olay bir alt ajanın aracına aitse, o alt ajanı başlatan agent çağrısının kimliği */
   | { type: 'tool'; id: string; name: string; summary: string; parentId?: string }
   | { type: 'toolResult'; id: string; result: string }
+  /** Çalışan aracın canlı satırı: önce `$ komut`, sonra çıktı (Bash kartı) */
+  | { type: 'toolProgress'; id: string; line: string }
   /** preview: dosya araçlarında onaydan önce hesaplanan değişiklik; onay kartı gerçek diff'i gösterir */
   | { type: 'confirm'; id: string; name: string; summary: string; warning?: string; preview?: { path: string; before: string | null; after: string } }
   /** before: oturumdaki ilk hal (diff paneli), previous: bu düzenlemeden hemen önceki hal (+/- sayımı) */

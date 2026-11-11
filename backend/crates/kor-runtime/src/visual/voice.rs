@@ -10,6 +10,7 @@
 //! wave recorder (`winmm.dll`, through Windows `PowerShell`), macOS `AVAudioRecorder` (through
 //! `osascript -l JavaScript`), Linux `arecord` (alsa-utils).
 
+use kor_platform::NoWindow as _;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -110,6 +111,7 @@ async fn run(
     cancel: &CancellationToken,
 ) -> Result<String, String> {
     let mut cmd = tokio::process::Command::new(program);
+    cmd.no_window();
     cmd.args(args)
         .envs(env.iter().map(|(k, v)| (k, v)))
         .stdin(std::process::Stdio::null())

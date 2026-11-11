@@ -10,6 +10,7 @@
 //! - terminals are not offered (the sub-agent's own commands run in its own process; Kor cannot
 //!   sandbox them, so it does not lend it a terminal).
 
+use kor_platform::NoWindow as _;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
@@ -189,6 +190,7 @@ impl AcpClient {
             return Err(format!("ACP agent {name} has no command"));
         }
         let mut cmd = tokio::process::Command::new(&spec.command);
+        cmd.no_window();
         cmd.args(&spec.args)
             .envs(&spec.env)
             .current_dir(root)

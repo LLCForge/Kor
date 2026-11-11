@@ -678,11 +678,11 @@ Geliştirme işleri:
 
 **Ajan, diller ve hafıza**
 - [ ] 40'tan fazla dil için tree-sitter (şu an 12); grafta doküman/PDF kavram katmanı
-- [ ] Sıcak hafıza katmanı ve RAM'de HNSW; Claude Code / Cursor geçmişinin ve diğer araçların MCP tanımlarının içe aktarılması
+- [ ] Sıcak hafıza katmanı ve RAM'de HNSW; içe aktarılan sohbetlerden "burada ne yapıldı" hafıza özeti; Roo, Codex, Gemini, Continue ve OpenCode MCP tanımları
 - [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
 - [ ] Sandbox'ta alan adı bazlı ağ kuralları, gizlilik modunda proje adı maskeleme, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)
-- [ ] Bilgisayar kontrolü için ekran görüntülü geri alma; kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular
+- [ ] Kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular
 
 **Sağlayıcılar ve maliyet**
 - [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI imzalı kimlik
@@ -695,8 +695,8 @@ Geliştirme işleri:
 - [ ] Forge: CI durumundan düzeltme, issue → görev, sürüm notları, Bitbucket Server
 
 **Arayüz**
-- [ ] Kalan yan panel görünümlerinin dağıtılması; 800 px altı ve 1920 px üstü responsive denetimi
-- [ ] Chrome yan panelinde galeri medyası; tam ekran TUI diff'inde dosya bazında "düzenle" (satır modunda var)
+- [ ] Kalan yan panel görünümlerinin sol çubuğa ve ayarlara dağıtılması
+- [ ] Chrome yan panelinde galeri medyası
 
 **Test, sürüm ve kod sağlığı**
 - [ ] Her sürümle `PERFORMANCE.md`, benchmark geçmişi ve E2E raporu; %80 eşikli kapsam; gerçek sağlayıcıyla gece smoke testi

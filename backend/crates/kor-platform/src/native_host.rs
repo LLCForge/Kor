@@ -5,6 +5,7 @@
 //! Chrome starts the host with the extension origin as its argument, so the manifest points at a
 //! small launcher next to it that runs `kor chrome-native-host` without passing that on.
 
+use crate::NoWindow as _;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -86,7 +87,7 @@ fn own_dir(scope: Scope) -> io::Result<PathBuf> {
 }
 
 fn reg(args: &[&str]) -> io::Result<()> {
-    let ok = Command::new("reg").args(args).stdout(Stdio::null()).stderr(Stdio::null()).status()?.success();
+    let ok = Command::new("reg").no_window().args(args).stdout(Stdio::null()).stderr(Stdio::null()).status()?.success();
     if ok { Ok(()) } else { Err(io::Error::other(format!("reg {} failed", args.first().unwrap_or(&"")))) }
 }
 

@@ -52,6 +52,26 @@ function EditDiffs({ edits }: { edits: readonly FileEdit[] }) {
   )
 }
 
+/** Çalışan komutun satırları; en alta kaydırılmış kalır. İlk satır `$ komut` ise ayrı vurgulanır. */
+function LiveOutput({ lines, running }: { lines: readonly string[]; running: boolean }) {
+  const [first, ...rest] = lines
+  const command = first?.startsWith('$ ') ? first : null
+  const body = command ? rest : lines
+  return (
+    <div className="tool-live" aria-live={running ? 'polite' : 'off'}>
+      {command && <pre className="tool-live-cmd">{command}</pre>}
+      {body.length > 0 && (
+        <pre
+          className="tool-live-out"
+          ref={(el) => { if (el && running) el.scrollTop = el.scrollHeight }}
+        >
+          {body.join('\n')}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 // Tamamlanan araç: geçmiş zaman fiili ("Okundu dosya.ts"); çalışan araç: ACTIVE_VERBS ("Okunuyor").
 const TOOL_LABELS: Record<string, string> = {
   read_file: 'Okundu',
@@ -83,12 +103,14 @@ type ToolItem = Extract<ChatItem, { kind: 'tool' }>
 
 /** §23.4: her satırın başında aracın türü (ikon); durum renkle ve etiketle verilir. Çalışan araç dönmez:
  *  ekranda tek spinner kuralı (§23.1, §23.5) — canlı durum zaten etkinlik grubunun kıvılcımında. */
-export function toolIcon(name: string): LucideIcon {
+export function toolIcon(raw: string): LucideIcon {
+  // Kor araçları `Bash`, `Read`, `WebFetch` adıyla gelir; eski adlar `read_file` biçimindeydi.
+  const name = raw.toLowerCase()
   if (/^(read|view|notebook_read|bash_output)/.test(name)) return FileText
-  if (/^(write|edit|multi_edit|apply_patch|notebook_edit)/.test(name)) return FilePen
+  if (/^(write|edit|multi_?edit|apply_patch|notebook_?edit|editsymbol)/.test(name)) return FilePen
   if (/^(bash|powershell|run_python|monitor_shell|kill_shell)/.test(name)) return SquareTerminal
   if (/^(grep|glob|list_files|tool_search)/.test(name)) return Search
-  if (/^(web_|browser)/.test(name)) return Globe
+  if (/^(web|browser)/.test(name)) return Globe
   if (name === 'agent') return Bot
   if (name === 'todo_write') return ListTodo
   return Wrench
@@ -120,13 +142,13 @@ export function ToolCard({ item, onApprove }: ToolCardProps) {
         type="button"
         className="tool-row"
         onClick={() => setOpen((o) => !o)}
-        disabled={!hasResult}
-        aria-expanded={hasResult ? open : undefined}
+        disabled={!hasResult && !item.live?.length}
+        aria-expanded={hasResult || item.live?.length ? open : undefined}
       >
         <StatusIcon item={item} />
         <span className="tool-label">{label}</span>
         {FILE_TOOLS.has(item.name) && <LangBadge path={item.summary.replace(/\s*\([^)]*\)$/, '')} />}
-        <span className={`tool-summary${item.name === 'bash' ? ' mono' : ''}`} title={item.summary}>
+        <span className={`tool-summary${/^(bash|powershell)$/i.test(item.name) ? ' mono' : ''}`} title={item.summary}>
           {item.summary}
         </span>
         {meta && <span className="tool-meta">{meta}</span>}
@@ -137,7 +159,7 @@ export function ToolCard({ item, onApprove }: ToolCardProps) {
             <span className="stat-del">−{item.removed}</span>
           </span>
         )}
-        {hasResult && <ChevronRight size={14} className={`tool-chevron${open ? ' open' : ''}`} aria-hidden="true" />}
+        {(hasResult || Boolean(item.live?.length)) && <ChevronRight size={14} className={`tool-chevron${open ? ' open' : ''}`} aria-hidden="true" />}
       </button>
 
       {/* §28.3 kural uyumu: diff'ten önce, kaynak dosya:satır ile */}
@@ -195,6 +217,9 @@ export function ToolCard({ item, onApprove }: ToolCardProps) {
       )}
 
       {/* Düzenleme: o adımın gerçek diff'i (cdesktop/Claude Code); diğerleri: büyük çıktılar sayfa sayfa açılır */}
+      {/* Komut araçları: üstte `$ komut`, altında çalışırken canlı çıktı, bitince tam sonuç (Claude Code gibi) */}
+      {open && item.result === null && item.live && item.live.length > 0 && <LiveOutput lines={item.live} running />}
+      {open && item.result !== null && item.live?.[0]?.startsWith('$ ') && <pre className="tool-live-cmd">{item.live[0]}</pre>}
       {open && item.result !== null && (item.edits && item.edits.length > 0 ? <EditDiffs edits={item.edits} /> : <LongOutput text={item.result} />)}
     </div>
   )

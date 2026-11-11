@@ -9,6 +9,7 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
+kor-platform.workspace = true
 globset.workspace = true
 ignore.workspace = true
 serde.workspace = true

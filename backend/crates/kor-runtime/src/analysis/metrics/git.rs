@@ -2,6 +2,7 @@
 //! change per file. One `git` process per question; output is parsed with record separators so
 //! subjects and paths with spaces survive. Nothing is written to the repository.
 
+use kor_platform::NoWindow as _;
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::Command;
@@ -13,7 +14,7 @@ use serde::Serialize;
 /// # Errors
 /// git missing or a non-zero exit.
 pub fn git(root: &Path, args: &[&str]) -> Result<String, String> {
-    let out = Command::new("git")
+    let out = Command::new("git").no_window()
         .args(["-c", "core.quotepath=off"])
         .args(args)
         .current_dir(root)

@@ -2,6 +2,7 @@
 //! sessions, responses routed by id. Console messages, dialogs and network requests are collected
 //! per session.
 
+use kor_platform::NoWindow as _;
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -325,6 +326,7 @@ impl Cdp {
         // The headless shell is always headless and does not know `--headless=new`.
         let headless = (!visible && !is_headless_shell(&exe)).then_some("--headless=new");
         let mut cmd = tokio::process::Command::new(&exe);
+        cmd.no_window();
         let args = match extension {
             Some(ext) => launch_args_with_extension(&profile, headless, ext),
             None => launch_args(&profile, headless, proxy, rule),

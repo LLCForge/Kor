@@ -7,6 +7,7 @@
 //! transitive dependent) and [`Workspace::narrowed_commands`] limits build/test commands to them.
 //! Everything is local and LLM-free; the only process started is `git` in [`changed_files`].
 
+use kor_platform::NoWindow as _;
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Component, Path, PathBuf};
 
@@ -386,7 +387,7 @@ pub fn changed_files(root: &Path, base: Option<&str>) -> Result<Vec<PathBuf>, St
 }
 
 fn git(root: &Path, args: &[&str]) -> Result<Vec<String>, String> {
-    let o = std::process::Command::new("git")
+    let o = std::process::Command::new("git").no_window()
         .args(args)
         .current_dir(root)
         .output()

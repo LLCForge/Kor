@@ -3209,6 +3209,7 @@ version = "0.4.1"
 dependencies = [
  "globset",
  "ignore",
+ "kor-platform",
  "notify",
  "petgraph",
  "regex",
@@ -3281,6 +3282,7 @@ dependencies = [
  "dirs",
  "globset",
  "kor-components",
+ "kor-platform",
  "kor-tools",
  "regex",
  "rusqlite",

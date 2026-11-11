@@ -158,6 +158,29 @@ pub fn on_path(program: &str) -> bool {
     })
 }
 
+/// Git for Windows' `bash.exe` (`<git>\bin\bash.exe`, found from `git` on `PATH` or the usual
+/// install folders). Never `System32\bash.exe`, which is the WSL launcher. `None` off Windows.
+pub fn git_bash() -> Option<PathBuf> {
+    if crate::os() != Os::Windows {
+        return None;
+    }
+    let path = std::env::var_os("PATH").unwrap_or_default();
+    let from_path = std::env::split_paths(&path)
+        .filter(|d| d.join("git.exe").is_file())
+        // `<git>\cmd`, `<git>\bin` or `<git>\mingw64\bin`.
+        .filter_map(|d| d.ancestors().take(3).map(|a| a.join("bin").join("bash.exe")).find(|b| b.is_file()));
+    let usual = ["ProgramFiles", "ProgramW6432", "LOCALAPPDATA"]
+        .into_iter()
+        .filter_map(std::env::var_os)
+        .flat_map(|base| {
+            let base = PathBuf::from(base);
+            [base.join("Git").join("bin").join("bash.exe"), base.join("Programs").join("Git").join("bin").join("bash.exe")]
+        });
+    from_path
+        .chain(usual)
+        .find(|b| b.is_file() && !b.to_string_lossy().to_ascii_lowercase().contains("system32"))
+}
+
 /// The desktop bundle's resource directory for a `kor` that came with the desktop app (next to
 /// the executable on Windows, `Contents/Resources` on macOS, `lib/Kor` for Linux packages):
 /// the first candidate holding `integrations/`.
@@ -735,6 +758,17 @@ pub fn uninstall(env: &mut Env, id: &str) -> Result<(Status, Option<&'static str
 mod tests {
     use super::*;
     use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn git_bash_is_never_the_wsl_launcher() {
+        match git_bash() {
+            Some(b) => {
+                assert!(b.ends_with("bash.exe") && b.is_file(), "{}", b.display());
+                assert!(!b.to_string_lossy().to_ascii_lowercase().contains("system32"));
+            }
+            None => assert!(crate::os() != Os::Windows || !on_path("git"), "git is installed but its bash was not found"),
+        }
+    }
 
     #[derive(Default, Clone)]
     struct Fake {

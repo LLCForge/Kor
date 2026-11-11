@@ -1,6 +1,7 @@
 //! LSP hover and definition over stdio, Content-Length framing (`vscode-jsonrpc`).
 //! Server records match `lspServers`: `command`, `args`, `extensionToLanguage`.
 
+use kor_platform::NoWindow as _;
 use std::path::Path;
 use std::process::Stdio;
 use std::time::Duration;
@@ -86,7 +87,7 @@ async fn read_frame(out: &mut tokio::process::ChildStdout) -> Result<Value, Stri
 }
 
 async fn hover(command: &str, args: &[String], file: &str) -> Result<String, String> {
-    let mut child = Command::new(command)
+    let mut child = Command::new(command).no_window()
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

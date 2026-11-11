@@ -14,10 +14,11 @@
 //!   `sessions.color(id, color|null)`, `sessions.rename(id, title|null)`,
 //!   `sessions.suggest(id, apply?)`, `sessions.export(dir?)`, `sessions.import(file)`
 
+use kor_platform::NoWindow as _;
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager as _};
 
 use crate::api::{Res, opt_s, root, s};
 use crate::state::AppState;
@@ -102,6 +103,7 @@ async fn doctor_fix(app: &AppHandle) -> Res {
     let exe = crate::kor_cli::find();
     let output = match exe {
         Some(cli) => tokio::process::Command::new(cli)
+            .no_window()
             .args(["doctor", "--fix", "--yes"])
             .output()
             .await
@@ -261,6 +263,26 @@ fn sessions(name: &str, args: &[Value], m: &str, app: &AppHandle) -> Res {
             let id = tree::import_markdown(&sd, &md, Path::new(s(args, 0, m)?)).map_err(err)?;
             let _ = app.emit("kor:sessionsChanged", Value::Null);
             Ok(json!({ "id": id }))
+        }
+        // `kor sessions import-from claude-code|cursor [--all]`: başka araçların sohbetleri, salt okunur.
+        "importFrom" => {
+            use kor_runtime::session_import as si;
+            let all = args.get(1).and_then(Value::as_bool).unwrap_or(false);
+            let chats = match s(args, 0, m)? {
+                "claude-code" => {
+                    let home = dirs::home_dir().ok_or("Ev klasörü bulunamadı")?;
+                    let root = app.state::<crate::state::AppState>().root().ok_or("Önce bir klasör aç")?;
+                    si::claude_code(&home, &root, all)
+                }
+                "cursor" => {
+                    let db = dirs::config_dir().map(|c| si::cursor_db(&c)).filter(|p| p.is_file()).ok_or("Cursor sohbet veritabanı bulunamadı")?;
+                    si::cursor(&db)?
+                }
+                other => return Err(format!("Bilinmeyen kaynak: {other} (claude-code ya da cursor)")),
+            };
+            let n = si::save_new(&sd, &chats).map_err(|e| e.to_string())?;
+            let _ = app.emit("kor:sessionsChanged", Value::Null);
+            Ok(json!({ "imported": n, "found": chats.len() }))
         }
         other => Err(format!("`sessions.{other}` yok")),
     }

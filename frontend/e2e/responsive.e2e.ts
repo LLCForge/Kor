@@ -1,15 +1,64 @@
 // Responsive guard: the built renderer in the real desktop app (WebView2 over CDP) at the window minimum
-// (800×600) and at 1920×1080 must not scroll or overflow horizontally — the main layout, the open settings
-// dialog and the command palette. Runs with the `desktop` project (Windows CI); `--project desktop`.
+// (800×600), at 1920×1080 and on large screens (2560×1440, 3840×2160) must not scroll or overflow
+// horizontally — the main layout, the open settings dialog, the command palette and every side-panel
+// view (the side panel itself is narrower than 800 px, so this covers the narrow layouts too).
+// Runs with the `desktop` project (Windows CI); `--project desktop`.
 import { test, expect, chromium, type Browser, type Page } from '@playwright/test'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { until } from './driver.ts'
-import { CDP_PORT, SCENARIOS, closeDesktop, launchDesktop, serve } from './harness.ts'
+import { CDP_PORT, REPO, SCENARIOS, closeDesktop, launchDesktop, serve } from './harness.ts'
 
 const SIZES = [
   { width: 800, height: 600 },
   { width: 1920, height: 1080 },
+  { width: 2560, height: 1440 },
+  { width: 3840, height: 2160 },
 ] as const
+
+/** Side-panel view ids, read from each panel's `index.ts(x)` (`id: 'graph'`). */
+function panelIds(): string[] {
+  const dir = join(REPO, 'frontend', 'src', 'desktop', 'renderer', 'panels')
+  const ids = new Set<string>()
+  for (const d of readdirSync(dir, { withFileTypes: true }).filter((e) => e.isDirectory())) {
+    for (const f of ['index.ts', 'index.tsx']) {
+      try {
+        const m = /^\s*id: '([a-z-]+)',/m.exec(readFileSync(join(dir, d.name, f), 'utf8'))
+        if (m) ids.add(m[1]!)
+      } catch { /* no such file */ }
+    }
+  }
+  return [...ids]
+}
+
+/** Runs in the page: elements inside the open side panel that reach past its edges. */
+function panelOverflow(): string[] {
+  const panel = document.querySelector<HTMLElement>('.side-panel')
+  if (!panel) return ['no side panel']
+  const box = panel.getBoundingClientRect()
+  const out: string[] = []
+  for (const el of Array.from(panel.querySelectorAll<HTMLElement>('*'))) {
+    const r = el.getBoundingClientRect()
+    if (r.width === 0 || r.height === 0) continue
+    // The resize handle straddles the panel's edge on purpose.
+    if (el.closest('[class*="resizer"]')) continue
+    // Content inside a scroller is meant to be scrolled to.
+    let p = el.parentElement
+    let scrolled = false
+    while (p && p !== panel) {
+      const s = getComputedStyle(p).overflowX
+      if (s === 'auto' || s === 'scroll' || s === 'hidden') { scrolled = true; break }
+      p = p.parentElement
+    }
+    if (scrolled) continue
+    if (r.right > box.right + 1 || r.left < box.left - 1) {
+      const cls = (el.getAttribute('class') ?? el.tagName).split(/\s+/)[0]
+      out.push(`${cls} [${Math.round(r.left)}, ${Math.round(r.right)}] outside [${Math.round(box.left)}, ${Math.round(box.right)}]`)
+    }
+    if (out.length > 5) break
+  }
+  return out
+}
 
 /** Runs in the page: layout containers whose content is wider than they are, and the document scroll. */
 function overflow(): string[] {
@@ -21,13 +70,23 @@ function overflow(): string[] {
     const r = el.getBoundingClientRect()
     if (r.width === 0 || r.height === 0) continue
     const cls = (el.getAttribute('class') ?? el.tagName).split(/\s+/)[0]
-    if (el.scrollWidth > el.clientWidth + 1) out.push(`${cls} content ${el.scrollWidth} > ${el.clientWidth}`)
+    if (el.scrollWidth > el.clientWidth + 1) {
+      // Name the widest child so the report says what overflows.
+      let widest = ''
+      let w = 0
+      for (const c of Array.from(el.querySelectorAll<HTMLElement>('*'))) {
+        const cw = c.getBoundingClientRect().right - el.getBoundingClientRect().left
+        if (cw > w) { w = cw; widest = (c.getAttribute('class') ?? c.tagName).split(' ')[0] ?? '' }
+      }
+      out.push(`${cls} content ${el.scrollWidth} > ${el.clientWidth} (${widest})`)
+    }
     if (r.right > vw + 1 || r.left < -1) out.push(`${cls} outside the window [${Math.round(r.left)}, ${Math.round(r.right)}]`)
   }
   return out
 }
 
-test('no horizontal overflow at 800×600 and 1920×1080', async () => {
+test('no horizontal overflow from 800×600 to 3840×2160, side panels included', async () => {
+  test.setTimeout(20 * 60_000)
   test.skip(process.platform !== 'win32' || process.env.KOR_E2E_DRIVER === 'webdriver', 'attaches to WebView2 (Windows)')
   const served = await serve(join(SCENARIOS, 'task-approve-write.yaml'))
   const app = launchDesktop(served)
@@ -56,6 +115,13 @@ test('no horizontal overflow at 800×600 and 1920×1080', async () => {
       await p.waitForTimeout(600)
       problems.push(...(await p.evaluate(overflow)).map((x) => `${size.width}×${size.height} settings: ${x}`))
       await p.keyboard.press('Escape')
+      for (const id of panelIds()) {
+        await p.evaluate((v: string) => window.dispatchEvent(new CustomEvent('kor:panel-open', { detail: v })), id)
+        await p.waitForTimeout(350)
+        problems.push(...(await p.evaluate(overflow)).map((x) => `${size.width}×${size.height} ${id}: ${x}`))
+        problems.push(...(await p.evaluate(panelOverflow)).map((x) => `${size.width}×${size.height} ${id}: ${x}`))
+      }
+      await p.screenshot({ path: join(REPO, 'docs', 'ui-audit', `responsive-${size.width}.png`) })
     }
     expect(problems).toEqual([])
   } finally {

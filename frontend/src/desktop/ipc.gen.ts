@@ -125,7 +125,7 @@ export interface LiveSession {
 }
 
 /** Her olay hangi sohbete ait olduğunu taşır: birden fazla sohbet aynı anda çalışabilir. */
-export type AgentEventBody = { type: 'turnStart' } | { type: 'text'; delta: string } | { type: 'tool'; id: string; name: string; summary: string; parentId?: string } | { type: 'toolResult'; id: string; result: string } | ({
+export type AgentEventBody = { type: 'turnStart' } | { type: 'text'; delta: string } | { type: 'tool'; id: string; name: string; summary: string; parentId?: string } | { type: 'toolResult'; id: string; result: string } | { type: 'toolProgress'; id: string; line: string } | ({
   type: 'confirm'
   id: string
   name: string

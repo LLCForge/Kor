@@ -30,6 +30,7 @@
 //! The agent emits Claude events; [`kor_events`] maps each to the Kor events it covers, so
 //! both formats see the same moments. A Kor hook's JSON stdout is also fed back to the model.
 
+use kor_platform::NoWindow as _;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -596,6 +597,7 @@ impl HookRunner {
         let mut args = self.shell.prefix.clone();
         args.push(h.command.clone());
         let mut cmd = tokio::process::Command::new(&self.shell.program);
+        cmd.no_window();
         cmd.args(args)
             .current_dir(&self.root)
             .env("CLAUDE_PROJECT_DIR", &self.root)

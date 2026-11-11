@@ -1,5 +1,6 @@
 //! `git worktree add` / `remove`. The session cwd follows the worktree.
 
+use kor_platform::NoWindow as _;
 use std::process::Command;
 
 use async_trait::async_trait;
@@ -9,7 +10,7 @@ use serde_json::{Value, json};
 use crate::{Tool, ToolCtx, ToolKind, ToolOutput, lock};
 
 fn git(ctx: &ToolCtx, args: &[&str]) -> Result<String, String> {
-    let out = Command::new("git")
+    let out = Command::new("git").no_window()
         .args(args)
         .current_dir(&ctx.root)
         .output()

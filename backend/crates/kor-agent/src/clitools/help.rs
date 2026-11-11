@@ -4,6 +4,7 @@
 //! network off; only programs found on `PATH` can be described. A model summary is optional
 //! ([`model_summary`]).
 
+use kor_platform::NoWindow as _;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -213,6 +214,7 @@ async fn run_help(path: &Path, args: &[&str], ctx: &kor_tools::ToolCtx) -> Optio
     let mut policy = ctx.sandbox_policy();
     policy.network = false;
     let mut cmd = tokio::process::Command::new(path);
+    cmd.no_window();
     cmd.args(args)
         .current_dir(&ctx.root)
         .env("PAGER", "cat")

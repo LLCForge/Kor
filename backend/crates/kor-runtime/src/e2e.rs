@@ -7,6 +7,7 @@
 //! ([`kor_core::ipc_trace::normalize`]), the files and the cost ledger with the expectation, so the
 //! three surfaces are compared with one implementation.
 
+use kor_platform::NoWindow as _;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -604,7 +605,7 @@ pub fn isolated_env_with(
 }
 
 fn git(dir: &Path, args: &[&str]) -> std::io::Result<()> {
-    let st = std::process::Command::new("git")
+    let st = std::process::Command::new("git").no_window()
         .args(args)
         .current_dir(dir)
         .stdin(std::process::Stdio::null())

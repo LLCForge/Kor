@@ -2,6 +2,7 @@
 //! reports (`.kor/perf/<id>/`), graph mapping, before/after comparison and the optimization
 //! prompt.
 
+use kor_platform::NoWindow as _;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -813,6 +814,7 @@ pub async fn execute(plan: Plan) -> Result<Report, String> {
             let log = std::fs::File::create(dir.join("server.log")).map_err(|e| e.to_string())?;
             let log2 = log.try_clone().map_err(|e| e.to_string())?;
             let mut c = std::process::Command::new(resolve_program(first));
+            c.no_window();
             c.args(&words[1..]).current_dir(&plan.root).stdin(std::process::Stdio::null()).stdout(log).stderr(log2);
             if plan.profiler == Profiler::Node {
                 std::fs::write(&stop_js, NODE_STOP_JS).map_err(|e| e.to_string())?;

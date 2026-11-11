@@ -2,6 +2,7 @@
 //! merged with gitleaks / semgrep JSON when they are on PATH. Deterministic and offline (semgrep
 //! registry rules are only fetched outside privacy/offline mode).
 
+use kor_platform::NoWindow as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
@@ -96,7 +97,7 @@ fn external(root: &Path, report: &mut Report, l: &Localizer) {
         Some(bin) => {
             let out =
                 std::env::temp_dir().join(format!("kor-gitleaks-{}.json", std::process::id()));
-            let res = run(Command::new(bin)
+            let res = run(Command::new(bin).no_window()
                 .args([
                     "detect",
                     "--no-git",
@@ -142,7 +143,7 @@ fn external(root: &Path, report: &mut Report, l: &Localizer) {
         return;
     };
     let res = output(
-        Command::new(bin)
+        Command::new(bin).no_window()
             .args(["scan", "--json", "--quiet", "--metrics", "off", "--config"])
             .arg(&config)
             .arg(root),

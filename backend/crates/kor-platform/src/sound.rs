@@ -4,6 +4,8 @@
 
 use std::path::PathBuf;
 
+use crate::NoWindow as _;
+
 /// The bundled sounds: `soft`, `double`, `bell`, `chime`.
 pub fn bytes(name: &str) -> Option<&'static [u8]> {
     match name {
@@ -32,6 +34,7 @@ fn players(path: &std::path::Path) -> Vec<std::process::Command> {
     match crate::os() {
         crate::Os::Windows => {
             let mut c = std::process::Command::new("powershell");
+            c.no_window();
             // The path is ours (cache folder); single quotes are doubled for PowerShell.
             let script = format!("(New-Object Media.SoundPlayer '{}').PlaySync()", p.replace('\'', "''"));
             c.args(["-NoProfile", "-NonInteractive", "-Command", &script]);
@@ -57,7 +60,6 @@ fn players(path: &std::path::Path) -> Vec<std::process::Command> {
 pub fn play(name: &str) {
     let Some(path) = file(name) else { return };
     std::thread::spawn(move || {
-        use crate::NoWindow as _;
         for mut c in players(&path) {
             let started = c
                 .no_window()

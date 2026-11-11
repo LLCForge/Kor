@@ -727,6 +727,7 @@ impl Agent {
                 name: name.clone(),
                 message: None,
             });
+            send_command_line(events, &id, &name, &*tool, &input);
             jobs.push((id, name, tool, input));
         }
         let ctx = &self.ctx;
@@ -905,7 +906,7 @@ impl Agent {
                         if review.reply == PermissionReply::AllowAlways
                             && req.destructive.is_none()
                         {
-                            self.permissions.allow_exact(&*tool, &input);
+                            self.permissions.set_tool_level(tool.name(), Some("allow"));
                         }
                         true
                     }
@@ -950,6 +951,7 @@ impl Agent {
             name: name.to_owned(),
             message: None,
         });
+        send_command_line(events, id, name, &*tool, &input);
         let target = tool.target(&input);
         let touched = tool.touches(&input);
         // `kor undo` for shell commands: list the project now, record what changed afterwards.
@@ -1021,6 +1023,26 @@ impl Agent {
             is_error: out.is_error,
         });
         out
+    }
+}
+
+/// A command tool's live view starts with the command itself (`$ git status`), then its output
+/// lines follow as they arrive (Claude Code's expanded Bash card).
+fn send_command_line(
+    events: &UnboundedSender<AgentEvent>,
+    id: &str,
+    name: &str,
+    tool: &dyn kor_tools::Tool,
+    input: &serde_json::Value,
+) {
+    if tool.kind() == kor_tools::ToolKind::Execute
+        && let Some(cmd) = tool.target(input).filter(|c| !c.trim().is_empty())
+    {
+        let _ = events.send(AgentEvent::ToolProgress {
+            id: id.to_owned(),
+            name: name.to_owned(),
+            message: Some(format!("$ {cmd}")),
+        });
     }
 }
 

@@ -73,7 +73,7 @@ pub enum Reverse {
 }
 
 pub fn reverse_of(action: &str, input: &Value) -> Reverse {
-    let undo = if cfg!(target_os = "macos") { "cmd+z" } else { "ctrl+z" };
+    let undo = if kor_platform::os() == kor_platform::Os::Mac { "cmd+z" } else { "ctrl+z" };
     match action {
         // A newline usually submitted something (a form, a chat): erasing would not undo that.
         "type" => match input["text"].as_str() {
@@ -415,7 +415,7 @@ mod undo_tests {
     #[test]
     fn reverses_typing_keys_and_drags_and_keeps_order() {
         assert_eq!(reverse_of("type", &json!({"text": "héllo"})), Reverse::Backspace(5));
-        let undo = if cfg!(target_os = "macos") { "cmd+z" } else { "ctrl+z" };
+        let undo = if kor_platform::os() == kor_platform::Os::Mac { "cmd+z" } else { "ctrl+z" };
         assert_eq!(reverse_of("type", &json!({"text": "a\nb"})), Reverse::Shortcut(undo));
         assert_eq!(reverse_of("key", &json!({"text": "ctrl+x"})), Reverse::Shortcut(undo));
         assert_eq!(reverse_of("left_click", &json!({})), Reverse::ByHand);

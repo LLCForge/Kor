@@ -155,7 +155,7 @@ button:disabled { cursor: default; }
 .rail.collapsed { width: 48px; }
 .rail-top { display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 8px; flex-shrink: 0; }
 .brand { font-size: var(--kor-text-16); white-space: nowrap; transition: opacity var(--kor-dur-menu) var(--kor-ease); }
-.rail.collapsed .brand { opacity: 0; }
+.rail.collapsed .brand { opacity: 0; max-width: 0; overflow: hidden; }
 .brand-logo { flex-shrink: 0; }
 
 /* Marka rozeti: sürüm durumu (Beta / sürüme az kaldı). */
@@ -182,7 +182,7 @@ button:disabled { cursor: default; }
 .rail-btn:hover:not(:disabled) { background: var(--hover); color: var(--text); }
 .rail-btn:disabled { opacity: 0.45; }
 .rail-btn-label { overflow: hidden; text-overflow: ellipsis; transition: opacity var(--kor-dur-menu) var(--kor-ease); }
-.rail.collapsed .rail-btn-label { opacity: 0; }
+.rail.collapsed .rail-btn-label { opacity: 0; max-width: 0; }
 .rail-heading { margin: 12px 16px 4px; font: 500 var(--kor-text-12) var(--font-sans); color: var(--subtle); }
 
 /* Dosya ağacı */

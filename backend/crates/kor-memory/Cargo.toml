@@ -9,6 +9,7 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
+kor-platform.workspace = true
 # Local CPU embeddings (ADR 0023): pure Rust, no system libraries.
 candle-core = "0.11"
 candle-nn = "0.11"

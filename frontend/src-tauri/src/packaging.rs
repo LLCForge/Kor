@@ -7,6 +7,7 @@
 //!    her zaman kullanıcı onayıyla (yeniden başlat) olur. Anahtarsız derlemeler ve `.deb`/`.rpm` yalnızca bildirir.
 //! 2. CLI: paketle gelen `kor` yalnızca kullanıcı onayıyla PATH'e eklenir / kaldırılır (`kor_platform::cli_path`).
 
+use kor_platform::NoWindow as _;
 use std::sync::Mutex;
 use std::time::Duration;
 
@@ -381,7 +382,7 @@ pub fn cli_install() -> Res {
         .map(|c| cli_json(Some(c)))
         .map_err(|e| format!("kor PATH'e eklenemedi: {e}"))?;
     // §26.1: aynı onayla bulunan kabuklara tamamlamalar da kurulur (ADR 0050); başarısızlık PATH'i bozmaz.
-    let _ = std::process::Command::new(&src).args(["completions", "--install", "--yes"]).output();
+    let _ = std::process::Command::new(&src).no_window().args(["completions", "--install", "--yes"]).output();
     Ok(out)
 }
 

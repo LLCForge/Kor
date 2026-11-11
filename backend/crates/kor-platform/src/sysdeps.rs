@@ -10,7 +10,7 @@ use std::process::{Command, Stdio};
 
 use serde::Serialize;
 
-use crate::Os;
+use crate::{NoWindow as _, Os};
 
 /// Something only the operating system can install or grant.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
@@ -298,8 +298,8 @@ fn preferred(os: Os, os_release: &str) -> Vec<Manager> {
 
 fn is_root() -> bool {
     match crate::os() {
-        Os::Windows => Command::new("net").arg("session").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok_and(|s| s.success()),
-        _ => Command::new("id").arg("-u").output().is_ok_and(|o| o.stdout.trim_ascii() == b"0"),
+        Os::Windows => Command::new("net").no_window().arg("session").stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok_and(|s| s.success()),
+        _ => Command::new("id").no_window().arg("-u").output().is_ok_and(|o| o.stdout.trim_ascii() == b"0"),
     }
 }
 
@@ -342,7 +342,7 @@ pub fn plan(p: Prereq, host: &Host, prefer: Option<Manager>) -> Result<Plan, NoP
 /// (only the OS knows; it asks on first use).
 pub fn installed(p: Prereq) -> Option<bool> {
     let ok = |program: &str, args: &[&str]| {
-        Command::new(program).args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok_and(|s| s.success())
+        Command::new(program).no_window().args(args).stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).status().is_ok_and(|s| s.success())
     };
     match p {
         Prereq::Docker => Some(ok("docker", &["--version"])),
@@ -379,6 +379,10 @@ pub fn status(host: &Host) -> Vec<Status> {
 pub fn command(plan: &Plan, gui: bool) -> Command {
     let argv = plan.argv(gui);
     let mut c = Command::new(&argv[0]);
+    // The desktop pipes the output; no console window (the UAC prompt is not affected).
+    if gui {
+        c.no_window();
+    }
     c.args(&argv[1..]);
     c
 }

@@ -73,7 +73,7 @@ impl Tool for PowerShellTool {
         let ms = input["timeout"].as_u64().unwrap_or(super::shell::DEFAULT_TIMEOUT_MS).clamp(1, super::shell::MAX_TIMEOUT_MS);
         let out = match kor_sandbox::spawn(ctx.sandbox, &policy, &cmd) {
             Ok(child) => tokio::select! {
-                r = child.wait_with_output() => r,
+                r = child.wait_with_output_streaming(&crate::live_line) => r,
                 () = tokio::time::sleep(std::time::Duration::from_millis(ms)) => {
                     return ToolOutput::err(format!("command timed out after {ms}ms and was killed"));
                 }

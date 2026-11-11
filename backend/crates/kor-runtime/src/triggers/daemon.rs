@@ -3,6 +3,7 @@
 //! pushes (hook inbox), cron schedules, routines, webhooks and log lines into queued jobs run one
 //! at a time by [`super::runner`].
 
+use kor_platform::NoWindow as _;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
@@ -564,7 +565,7 @@ fn project_repos(root: &Path) -> Vec<String> {
         &["remote", "get-url", "--all", "origin"][..],
         &["remote", "get-url", "--push", "--all", "origin"][..],
     ] {
-        if let Ok(o) = std::process::Command::new("git")
+        if let Ok(o) = std::process::Command::new("git").no_window()
             .args(args)
             .current_dir(root)
             .output()
@@ -1156,7 +1157,7 @@ pub fn options(
 /// # Errors
 /// When it cannot be started or does not come up within 10 s.
 pub fn spawn_background(exe: &Path, extra: &[String]) -> Result<State, String> {
-    use kor_platform::{Detach as _, NoWindow as _};
+    use kor_platform::Detach as _;
     let dir = super::dir().ok_or("no Kor data folder")?;
     if let Some(s) = state(&dir) {
         return Ok(s);

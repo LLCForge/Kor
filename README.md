@@ -675,11 +675,11 @@ trials and 5 decisions. The development tasks:
 
 **Agent, languages and memory**
 - [ ] tree-sitter for 40+ languages (12 today); a docs/PDF concept layer in the graph
-- [ ] Hot memory tier and in-RAM HNSW index; import Claude Code / Cursor history and other tools' MCP definitions
+- [ ] Hot memory tier and in-RAM HNSW index; a "what was done here" memory summary from imported chats; MCP definitions of Roo, Codex, Gemini, Continue and OpenCode
 - [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
 - [ ] fish-style inline shell suggestions from a small local model
 - [ ] Domain-level sandbox network rules, project-name masking in privacy mode, a hard CPU cap on Linux/macOS (today: `nice` priority)
-- [ ] Screenshot-backed undo for computer-use actions; virtual desktops in saved layouts; Windows remote servers
+- [ ] Virtual desktops in saved layouts; Windows remote servers
 
 **Providers and cost**
 - [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI signed auth
@@ -692,8 +692,8 @@ trials and 5 decisions. The development tasks:
 - [ ] Forge: fix from CI status, issue → task, release notes, Bitbucket Server
 
 **UI**
-- [ ] Spread the remaining side-panel views; responsive checks below 800 px and above 1920 px
-- [ ] Gallery media in the Chrome side panel; per-file "edit" in the full-screen TUI diff (the line mode has it)
+- [ ] Spread the remaining side-panel views over the left rail and settings
+- [ ] Gallery media in the Chrome side panel
 
 **Testing, release and code health**
 - [ ] `PERFORMANCE.md`, benchmark history and E2E report per release; coverage with an 80 % gate; nightly live smoke test

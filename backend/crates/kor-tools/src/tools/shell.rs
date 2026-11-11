@@ -48,23 +48,17 @@ impl Shell {
     }
 
     pub fn detect() -> Self {
-        let ps = ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"]
-            .map(String::from)
-            .to_vec();
         if cfg!(windows) {
-            if on_path("pwsh") {
-                Self {
-                    name: "PowerShell 7 (pwsh)",
-                    program: "pwsh".into(),
-                    prefix: ps,
-                }
-            } else {
-                Self {
-                    name: "Windows PowerShell",
-                    program: "powershell".into(),
-                    prefix: ps,
-                }
+            // Git Bash first: models write bash (grep, sed, head), and it starts about 4× faster
+            // than PowerShell (≈120 ms against 360–470 ms). PowerShell has its own tool.
+            if let Some(bash) = kor_platform::os_integration::git_bash() {
+                return Self {
+                    name: "bash (Git for Windows)",
+                    program: bash.to_string_lossy().into_owned(),
+                    prefix: vec!["-c".into()],
+                };
             }
+            Self::powershell()
         } else if on_path("bash") {
             Self {
                 name: "bash",
@@ -78,6 +72,33 @@ impl Shell {
                 prefix: vec!["-c".into()],
             }
         }
+    }
+
+    /// PowerShell 7 when installed, else Windows PowerShell.
+    pub fn powershell() -> Self {
+        let ps = ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command"]
+            .map(String::from)
+            .to_vec();
+        {
+            if on_path("pwsh") {
+                Self {
+                    name: "PowerShell 7 (pwsh)",
+                    program: "pwsh".into(),
+                    prefix: ps,
+                }
+            } else {
+                Self {
+                    name: "Windows PowerShell",
+                    program: "powershell".into(),
+                    prefix: ps,
+                }
+            }
+        }
+    }
+
+    /// Git Bash (MSYS) cannot start inside an `AppContainer` (DLL init fails).
+    fn is_git_bash(&self) -> bool {
+        self.name.starts_with("bash (Git")
     }
 }
 
@@ -146,7 +167,8 @@ impl Tool for Bash {
             name: self.name().into(),
             description: format!(
                 "Run a command with {} in the project root and return stdout, stderr and the exit code. \
-                 Use it for builds, tests and git. `timeout` is milliseconds (default {DEFAULT_TIMEOUT_MS}, max {MAX_TIMEOUT_MS}, overridable with BASH_DEFAULT_TIMEOUT_MS and BASH_MAX_TIMEOUT_MS). \
+                 Use it for builds, tests and git. To read, find or search files use Read, Glob and Grep \
+                 instead: they answer at once, need no approval and use no shell. `timeout` is milliseconds (default {DEFAULT_TIMEOUT_MS}, max {MAX_TIMEOUT_MS}, overridable with BASH_DEFAULT_TIMEOUT_MS and BASH_MAX_TIMEOUT_MS). \
                  `description` is a short active-voice summary. No interactive input is available.",
                 self.shell.name
             ),
@@ -197,6 +219,8 @@ impl Tool for Bash {
         // A Docker sandbox runs a Linux image: its `sh`, whatever the host shell is.
         let shell = if ctx.sandbox == SandboxKind::Docker {
             &Shell::container()
+        } else if ctx.sandbox == SandboxKind::AppContainer && self.shell.is_git_bash() {
+            &Shell::powershell()
         } else {
             &self.shell
         };
@@ -250,7 +274,7 @@ impl Tool for Bash {
             return start_background(child, ctx);
         }
         let out = tokio::select! {
-            r = child.wait_with_output() => r,
+            r = child.wait_with_output_streaming(&crate::live_line) => r,
             () = tokio::time::sleep(Duration::from_millis(ms)) => {
                 return ToolOutput::err(format!("command timed out after {ms}ms and was killed"));
             }
@@ -349,6 +373,11 @@ fn start_background(child: kor_sandbox::Child, ctx: &ToolCtx) -> ToolOutput {
 mod tests {
     use super::*;
 
+    /// Windows without Git Bash runs PowerShell; tests write commands for the shell in use.
+    fn powershell() -> bool {
+        Shell::detect().prefix.len() > 1
+    }
+
     fn bash() -> Bash {
         Bash::new(Shell::detect())
     }
@@ -363,7 +392,7 @@ mod tests {
         assert!(!ok.is_error, "{}", ok.content);
         assert!(ok.content.contains("hello") && ok.content.contains("[exit code: 0]"));
 
-        let ls = if cfg!(windows) {
+        let ls = if powershell() {
             "Get-ChildItem -Name"
         } else {
             "ls"
@@ -384,10 +413,10 @@ mod tests {
         );
 
         // A variable every session has; scrubbing it must hide it from the child.
-        let var = if cfg!(windows) { "USERNAME" } else { "HOME" };
+        let var = if kor_platform::os() == kor_platform::Os::Windows { "USERNAME" } else { "HOME" };
         assert!(std::env::var_os(var).is_some());
         ctx.scrub_env = vec![var.into()];
-        let probe = if cfg!(windows) {
+        let probe = if powershell() {
             format!("echo \"v=[$env:{var}]\"")
         } else {
             format!("echo \"v=[${var}]\"")
@@ -400,7 +429,7 @@ mod tests {
     async fn timeout_and_cancel_kill_the_command() {
         let dir = tempfile::tempdir().unwrap();
         let ctx = ToolCtx::new(dir.path()).unwrap();
-        let sleep = if cfg!(windows) {
+        let sleep = if powershell() {
             "Start-Sleep -Seconds 20"
         } else {
             "sleep 20"
@@ -446,7 +475,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let mut ctx = ToolCtx::new(dir.path()).unwrap();
         ctx.background_tasks = true;
-        let cmd = if cfg!(windows) {
+        let cmd = if powershell() {
             "Write-Output hi"
         } else {
             "echo hi"

@@ -755,6 +755,26 @@
           ]
         },
         {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "toolProgress"
+            },
+            "id": {
+              "type": "string"
+            },
+            "line": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id",
+            "line"
+          ],
+          "description": "One live line of a running tool: the command (`$ …`) first, then its output as it arrives"
+        },
+        {
           "allOf": [
             {
               "type": "object",

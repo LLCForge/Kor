@@ -214,7 +214,11 @@ async fn dispatch(
         }
         // shortcut: varsayılan mod da yalnızca bu oturum için tutulur; kor-config'e yazma ayarlar fazında gelecek.
         "setPermissionMode" | "setDefaultPermissionMode" => {
-            state.set_mode(from_ui_mode(arg(0)?)?);
+            let mode = from_ui_mode(arg(0)?)?;
+            state.set_mode(mode);
+            if mode == PermissionMode::BypassPermissions {
+                state.chats.allow_all_pending();
+            }
             Ok(Value::Null)
         }
         "setUiLanguage" => set_ui_language(arg(0)?),

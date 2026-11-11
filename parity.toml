@@ -1353,6 +1353,12 @@ tui = "/sessions import"
 desktop = "sessions.import"
 
 [[feature]]
+name = "kor sessions import-from"
+cli = "kor sessions import-from"
+tui = "/sessions import-from"
+desktop = "sessions.importFrom"
+
+[[feature]]
 name = "kor sessions fork"
 cli = "kor sessions fork"
 tui = "/sessions fork"

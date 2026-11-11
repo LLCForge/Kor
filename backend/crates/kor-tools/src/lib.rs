@@ -631,13 +631,27 @@ tokio::task_local! {
 /// Run `fut` (one tool call) with `sink` receiving its [`report_progress`] lines. The agent wraps
 /// each call so its existing `ToolProgress` event carries them; parallel calls get their own sink.
 pub async fn with_progress<F: std::future::Future>(sink: ProgressSink, fut: F) -> F::Output {
-    PROGRESS.scope(sink, fut).await
+    PROGRESS.scope(sink, PROGRESS_LINES.scope(std::sync::atomic::AtomicUsize::new(0), fut)).await
 }
 
 /// Report a progress line for the tool call running in this task; a no-op outside one (CLI and
 /// desktop callers of the same helpers print or emit their own progress).
 pub fn report_progress(line: impl Into<String>) {
     let _ = PROGRESS.try_with(|s| s(line.into()));
+}
+
+/// One line of a running command's output for the live view (`ToolProgress`). A command that
+/// prints a flood (a full build log) only shows its first lines live; the result keeps them all.
+pub(crate) fn live_line(line: &str) {
+    const MAX_LIVE_LINES: usize = 2_000;
+    let seen = PROGRESS_LINES.try_with(|n| n.fetch_add(1, std::sync::atomic::Ordering::Relaxed)).unwrap_or(0);
+    if seen < MAX_LIVE_LINES {
+        report_progress(line);
+    }
+}
+
+tokio::task_local! {
+    static PROGRESS_LINES: std::sync::atomic::AtomicUsize;
 }
 
 /// Parse tool input into `T`, turning schema violations into an error result.

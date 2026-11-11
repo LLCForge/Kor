@@ -41,6 +41,8 @@ export interface ToolItem {
   /** §23.4 tek satır: ikon · fiil · hedef · süre (epoch ms; kayıttan açılan araçlarda yok) */
   startedAt?: number
   endedAt?: number
+  /** Çalışan komutun canlı görünümü: önce `$ komut`, ardından çıktı satırları (Claude Code Bash kartı) */
+  live?: string[]
 }
 
 export type ChatItem =
@@ -228,6 +230,17 @@ function applyEvent(state: ChatState, event: AgentEventBody, at: number): ChatSt
           ...(review.destructive ? { destructive: review.destructive } : {}),
           ...(review.rules?.length ? { rules: review.rules } : {}),
         })),
+      }
+    }
+    case 'toolProgress': {
+      // Çok uzun çıktıda yalnızca son satırlar canlı tutulur; tam çıktı sonuçta gelir.
+      const MAX_LIVE = 400
+      return {
+        ...state,
+        items: updateTool(state.items, event.id, (t) => {
+          const live = [...(t.live ?? []), event.line]
+          return { live: live.length > MAX_LIVE ? [live[0]!, ...live.slice(-(MAX_LIVE - 1))] : live }
+        }),
       }
     }
     case 'toolResult':

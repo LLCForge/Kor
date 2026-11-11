@@ -322,7 +322,7 @@ pub fn render(f: &Failure) -> String {
 /// # Errors
 /// When the program cannot be started.
 pub fn capture(program: &str, args: &[String]) -> std::io::Result<(i32, Vec<String>)> {
-    capture_command(Command::new(program).args(args))
+    capture_command(Command::new(program).no_window().args(args))
 }
 
 /// [`capture`] for a prepared command (directory, window flags); stdout/stderr are piped here.

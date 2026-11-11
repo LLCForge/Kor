@@ -8,6 +8,7 @@
 //! stdin/stdout); its stderr is shown as log lines. A line on stdout that is not JSON breaks the
 //! protocol, so it is logged as a problem with an explanation.
 
+use kor_platform::NoWindow as _;
 use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -272,6 +273,7 @@ impl Session {
     /// The process cannot start or the handshake fails.
     pub async fn start(target: &Target, sink: Sink) -> Result<Self, String> {
         let mut cmd = tokio::process::Command::new(&target.command);
+        cmd.no_window();
         cmd.args(&target.args)
             .current_dir(&target.cwd)
             .stdin(std::process::Stdio::piped())

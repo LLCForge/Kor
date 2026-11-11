@@ -606,7 +606,7 @@ img, svg { -webkit-user-drag: none; }
   width: calc(var(--kor-space-7) * 5); max-height: 70vh; overflow-y: auto;
 }
 .kor-rail-flyout .rail-btn { width: 100%; justify-content: flex-start; }
-.rail.collapsed .kor-rail-flyout .rail-btn-label { opacity: 1; }
+.rail.collapsed .kor-rail-flyout .rail-btn-label { opacity: 1; max-width: none; }
 
 /* ---------- Bağlamsal girişler: ölçerlerdeki "Ayrıntılar", composer ek menüsü ---------- */
 .kor-meter-details { display: inline-flex; align-items: center; gap: var(--kor-space-1); margin-inline-start: auto; }

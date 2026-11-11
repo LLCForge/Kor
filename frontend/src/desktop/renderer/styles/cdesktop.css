@@ -346,6 +346,11 @@
   min-width: 20px; height: 18px; padding: 0 4px; border-radius: 3px;
   font: 700 var(--kor-text-12)/1 var(--font-sans); letter-spacing: 0.02em; text-transform: none;
 }
+/* Komut kartı açılınca: `$ komut` satırı, altında canlı (çalışırken) ya da tam çıktı (Claude Code gibi). */
+.tool-live { border-top: 1px solid var(--border); background: var(--code-bg); }
+.tool-live-cmd { margin: 0; padding: 8px 12px; background: var(--code-bg); color: var(--code-text); font: var(--kor-text-12)/1.5 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; border-top: 1px solid var(--border); }
+.tool-live .tool-live-cmd { border-top: 0; }
+.tool-live-out { margin: 0; padding: 4px 12px 10px; max-height: 320px; overflow: auto; color: var(--code-text); font: var(--kor-text-12)/1.5 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 /* Kart açılınca o çağrının düzenlemeleri: dosya başlığı + gerçek diff, kaydırılabilir. */
 .tool-diffs { border-top: 1px solid var(--border); }
 .tool-diff + .tool-diff { border-top: 1px solid var(--border); }

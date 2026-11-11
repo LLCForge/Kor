@@ -12,6 +12,7 @@
 //! sandbox and the runtime makes every `Bash` call ask first. Under the Docker sandbox backend the
 //! image is the environment and no wrapper is applied.
 
+use kor_platform::NoWindow as _;
 use std::fmt::Write as _;
 use std::path::Path;
 use std::sync::OnceLock;
@@ -581,6 +582,7 @@ impl Session {
         };
         let (program, args) = self.command(shell, &ctx.root, &line);
         let mut cmd = tokio::process::Command::new(program);
+        cmd.no_window();
         cmd.args(args).current_dir(&ctx.root);
         for v in &ctx.scrub_env {
             cmd.env_remove(v);

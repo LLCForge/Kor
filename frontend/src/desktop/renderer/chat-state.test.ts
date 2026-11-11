@@ -57,3 +57,19 @@ test('yanıt akarken gelen düşünme parçası yanıtı bölmez', () => {
   const kinds = items.map((i) => i.kind).filter((k) => k === 'thinking' || k === 'assistant')
   assert.deepEqual(kinds, ['thinking', 'assistant'], 'düşünme yanıtın önünde tek blok')
 })
+
+test('çalışan komutun canlı satırları karta eklenir: önce komut, sonra çıktı', () => {
+  let store: ChatStore = {}
+  for (const event of [
+    { type: 'turnStart' },
+    { type: 'tool', id: 'b1', name: 'Bash', summary: 'parity test dosyasını bul' },
+    { type: 'toolProgress', id: 'b1', line: '$ grep -rn parity backend' },
+    { type: 'toolProgress', id: 'b1', line: 'backend/parity.rs:1' },
+  ] as const) {
+    store = storeReducer(store, { sessionId: 's', action: { type: 'event', event, at: 1 } })
+  }
+  const tool = store['s']!.items.find((i) => i.kind === 'tool')
+  assert.ok(tool && tool.kind === 'tool')
+  assert.deepEqual(tool.live, ['$ grep -rn parity backend', 'backend/parity.rs:1'])
+  assert.equal(tool.result, null)
+})

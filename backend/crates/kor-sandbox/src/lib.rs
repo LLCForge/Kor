@@ -15,6 +15,7 @@
 mod denial;
 mod docker;
 
+use kor_platform::NoWindow as _;
 use std::ffi::{OsStr, OsString};
 use std::fmt::Write as _;
 use std::io;
@@ -303,7 +304,51 @@ enum Inner {
     Docker(tokio::process::Child, docker::Guard),
 }
 
+/// Read `r` to the end, keeping every byte and passing each finished line to `on_line`.
+async fn pump(r: Option<impl tokio::io::AsyncRead + Unpin>, on_line: &(dyn Fn(&str) + Sync)) -> io::Result<Vec<u8>> {
+    use tokio::io::AsyncReadExt as _;
+    let mut all = Vec::new();
+    let Some(mut r) = r else { return Ok(all) };
+    let mut buf = [0u8; 8192];
+    let mut start = 0;
+    loop {
+        let n = r.read(&mut buf).await?;
+        if n == 0 {
+            break;
+        }
+        all.extend_from_slice(&buf[..n]);
+        while let Some(i) = all[start..].iter().position(|&b| b == b'\n') {
+            on_line(String::from_utf8_lossy(&all[start..start + i]).trim_end_matches('\r'));
+            start += i + 1;
+        }
+    }
+    if start < all.len() {
+        on_line(String::from_utf8_lossy(&all[start..]).trim_end_matches('\r'));
+    }
+    Ok(all)
+}
+
+async fn stream_process(mut c: tokio::process::Child, on_line: &(dyn Fn(&str) + Sync)) -> io::Result<Output> {
+    let (out, err) = (c.stdout.take(), c.stderr.take());
+    let (stdout, stderr, status) = tokio::try_join!(pump(out, on_line), pump(err, on_line), c.wait())?;
+    Ok(Output { status, stdout, stderr })
+}
+
 impl Child {
+    /// Like [`Child::wait_with_output`], and each output line (stdout or stderr) goes to
+    /// `on_line` as it arrives, for a live view. An `AppContainer` child reports at the end.
+    pub async fn wait_with_output_streaming(self, on_line: &(dyn Fn(&str) + Sync)) -> io::Result<Output> {
+        match self.0 {
+            Inner::Process(c) => stream_process(c, on_line).await,
+            Inner::Container(c) => c.wait_with_output().await,
+            Inner::Docker(c, mut guard) => {
+                let out = stream_process(c, on_line).await;
+                guard.finished();
+                out
+            }
+        }
+    }
+
     /// Wait for exit and collect stdout/stderr. Dropping the future kills the command.
     pub async fn wait_with_output(self) -> io::Result<Output> {
         match self.0 {
@@ -356,6 +401,7 @@ pub fn spawn(
     }
     let (program, args) = wrap(kind, policy, cmd.get_program(), &args).map_err(io::Error::other)?;
     let mut c = tokio::process::Command::new(program);
+    c.no_window();
     c.args(args)
         .current_dir(cwd)
         .stdin(Stdio::null())
@@ -481,6 +527,7 @@ async fn run_probe(
     let t = target.to_string_lossy();
     let mut cmd = if kind == SandboxKind::AppContainer {
         let mut c = tokio::process::Command::new("powershell");
+        c.no_window();
         let write = format!(
             // UTF-8 output: Windows PowerShell 5.1 otherwise prints errors in the OEM code page.
             "[Console]::OutputEncoding = [Text.Encoding]::UTF8; [IO.File]::WriteAllText('{}', 'kor')",

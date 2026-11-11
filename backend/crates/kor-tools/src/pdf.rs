@@ -1,6 +1,7 @@
 //! PDF page rendering for `Read`: page ranges, the system `pdftoppm` when present, otherwise the
 //! `PDFium` library from Kor's own components (downloaded once, verified; ADR 0007).
 
+use kor_platform::NoWindow as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
@@ -58,7 +59,7 @@ pub fn pdftoppm_args(pdf: &Path, prefix: &Path, range: Option<(u32, u32)>) -> Ve
 }
 
 pub fn pdftoppm_on_path() -> bool {
-    Command::new("pdftoppm")
+    Command::new("pdftoppm").no_window()
         .arg("-v")
         .output()
         .is_ok_and(|o| o.status.success() || !o.stderr.is_empty())
@@ -119,7 +120,7 @@ pub async fn render(pdf: &Path, out: &Path, range: Option<(u32, u32)>) -> Result
     std::fs::create_dir_all(out).map_err(|e| e.to_string())?;
     if pdftoppm_on_path() {
         let args = pdftoppm_args(pdf, &out.join("page"), range);
-        let o = tokio::process::Command::new("pdftoppm")
+        let o = tokio::process::Command::new("pdftoppm").no_window()
             .args(&args)
             .output()
             .await

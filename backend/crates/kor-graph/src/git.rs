@@ -1,5 +1,6 @@
 //! Git layer: co-change and churn from bounded history, and file contents at a revision (for `diff`).
 
+use kor_platform::NoWindow as _;
 use crate::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,6 +25,7 @@ pub struct GitStats {
 
 fn git(root: &Path) -> Command {
     let mut c = Command::new("git");
+    c.no_window();
     c.current_dir(root)
         .args(["-c", "core.quotepath=off"])
         .stdin(Stdio::null())

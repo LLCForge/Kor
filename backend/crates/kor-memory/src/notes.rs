@@ -2,6 +2,7 @@
 //! repository's root commit, so it travels with the repo once the user pushes that ref.
 //! Local git only; syncing the ref with a remote is the user's own `git push`/`git fetch`.
 
+use kor_platform::NoWindow as _;
 use std::path::Path;
 use std::process::Command;
 
@@ -10,7 +11,7 @@ use crate::project::{Doc, ProjectMemory, parse_decisions};
 pub const REF: &str = "kor";
 
 fn git(repo: &Path, args: &[&str]) -> Result<String, String> {
-    let out = Command::new("git")
+    let out = Command::new("git").no_window()
         .arg("-C")
         .arg(repo)
         .args(args)

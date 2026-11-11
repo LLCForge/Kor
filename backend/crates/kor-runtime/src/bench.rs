@@ -10,6 +10,7 @@
 //! category routed to its `[routing]` model; the report gives the cost and pass-rate deltas
 //! against the Faz 2 acceptance check (at least 40% cheaper, at most 5 points fewer passes).
 
+use kor_platform::NoWindow as _;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
@@ -499,6 +500,7 @@ async fn shell(
         kor_tools::Shell::detect()
     };
     let mut c = tokio::process::Command::new(&sh.program);
+    c.no_window();
     c.args(&sh.prefix).arg(cmd).current_dir(dir);
     // Model-written code runs in the test: provider keys stay out of its environment.
     for k in scrub {
