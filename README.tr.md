@@ -685,7 +685,7 @@ Geliştirme işleri:
 
 **Ajan, diller ve hafıza**
 - [ ] 40'tan fazla dil için tree-sitter (şu an 12); grafta doküman/PDF kavram katmanı
-- [ ] Sıcak hafıza katmanı ve RAM'de HNSW; içe aktarılan sohbetlerden "burada ne yapıldı" hafıza özeti; Roo, Codex, Gemini, Continue ve OpenCode MCP tanımları
+- [ ] Sıcak hafıza katmanı ve RAM'de HNSW; içe aktarılan sohbetlerden "burada ne yapıldı" hafıza özeti
 - [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
 - [ ] Sandbox'ta alan adı bazlı ağ kuralları, gizlilik modunda proje adı maskeleme, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)
@@ -694,11 +694,11 @@ Geliştirme işleri:
 **Sağlayıcılar ve maliyet**
 - [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI imzalı kimlik
 - [ ] Codestral FIM, Cohere embed/rerank; katalogda liderlik tablosu skorları (HF, LMArena, LiveBench)
-- [ ] Prompt cache, alt ajan ve tek seferlik komut harcamalarının deftere yazılması; `kor quota`'da proxy kotası; Prometheus ucu
+- [ ] `kor quota`'da proxy kotası; Prometheus ucu
 
 **Web, medya ve entegrasyonlar**
 - [ ] Türk ödeme, kargo, pazaryeri ve alan adı firmaları bağdaştırıcıları; backlink araçları; toplu kelime fırsatları
-- [ ] Doğrudan medya sağlayıcıları (OpenAI Images, Imagen/Veo, Stability, Runway, Luma) ve yerel ComfyUI; `kor ask --image`
+- [ ] Doğrudan medya sağlayıcıları (OpenAI Images, Imagen/Veo, Stability, Runway, Luma) ve yerel ComfyUI
 - [ ] Forge: CI durumundan düzeltme, issue → görev, sürüm notları, Bitbucket Server
 
 **Arayüz**

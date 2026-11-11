@@ -197,6 +197,37 @@ pub async fn paste_prompt(l: &Localizer, question: &str) -> Option<String> {
     }
 }
 
+/// `kor ask --image …`: the question with each image's text and description appended, as
+/// `/paste` does in the REPL. `clipboard` reads the clipboard's image.
+///
+/// # Errors
+/// An unreadable image, an empty clipboard, or the reader failing.
+pub async fn ask_prompt(
+    l: &Localizer,
+    images: &[String],
+    question: &str,
+) -> anyhow::Result<String> {
+    if images.is_empty() {
+        return Ok(question.to_owned());
+    }
+    let mut pics = Vec::new();
+    for src in images {
+        let pic = if src.eq_ignore_ascii_case("clipboard") {
+            visual::clipboard_image()
+                .map_err(anyhow::Error::msg)?
+                .ok_or_else(|| anyhow::anyhow!(l.t("paste-no-image")))?
+        } else {
+            Picture::read(std::path::Path::new(src)).map_err(anyhow::Error::msg)?
+        };
+        pics.push(pic);
+    }
+    eprintln!("{}", l.t("paste-reading"));
+    let text = visual::image_context(&pics, &SystemOcr, &CancellationToken::new())
+        .await
+        .map_err(anyhow::Error::msg)?;
+    Ok(format!("{question}{text}"))
+}
+
 fn read_answer() -> String {
     let mut line = String::new();
     let _ = std::io::stdin().read_line(&mut line);

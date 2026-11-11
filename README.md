@@ -682,7 +682,7 @@ trials and 5 decisions. The development tasks:
 
 **Agent, languages and memory**
 - [ ] tree-sitter for 40+ languages (12 today); a docs/PDF concept layer in the graph
-- [ ] Hot memory tier and in-RAM HNSW index; a "what was done here" memory summary from imported chats; MCP definitions of Roo, Codex, Gemini, Continue and OpenCode
+- [ ] Hot memory tier and in-RAM HNSW index; a "what was done here" memory summary from imported chats
 - [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
 - [ ] fish-style inline shell suggestions from a small local model
 - [ ] Domain-level sandbox network rules, project-name masking in privacy mode, a hard CPU cap on Linux/macOS (today: `nice` priority)
@@ -691,11 +691,11 @@ trials and 5 decisions. The development tasks:
 **Providers and cost**
 - [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI signed auth
 - [ ] Codestral FIM, Cohere embed/rerank; leaderboard scores (HF, LMArena, LiveBench) in the catalogue
-- [ ] Prompt-cache tokens, sub-agent and one-shot spend in the ledger; proxy quota in `kor quota`; Prometheus endpoint
+- [ ] Proxy quota in `kor quota`; Prometheus endpoint
 
 **Web, media and integrations**
 - [ ] Turkish payment, cargo, marketplace and registrar adapters; backlink tools; bulk keyword opportunities
-- [ ] Direct media providers (OpenAI Images, Imagen/Veo, Stability, Runway, Luma) and local ComfyUI; `kor ask --image`
+- [ ] Direct media providers (OpenAI Images, Imagen/Veo, Stability, Runway, Luma) and local ComfyUI
 - [ ] Forge: fix from CI status, issue → task, release notes, Bitbucket Server
 
 **UI**

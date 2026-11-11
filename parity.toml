@@ -1377,6 +1377,12 @@ tui = "/sessions export"
 desktop = "sessions.export"
 
 [[feature]]
+name = "kor ask"
+cli = "kor ask"
+tui = "/paste"
+desktop = "send"
+
+[[feature]]
 name = "kor sessions import"
 cli = "kor sessions import"
 tui = "/sessions import"

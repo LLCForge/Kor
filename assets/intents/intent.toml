@@ -2021,6 +2021,15 @@ params = [{ name = "dir", kind = "path", required = true }]
 eta_s = 3
 
 [[intent]]
+command = "kor ask"
+run = "confirm"
+tr = ["bu ekran görüntüsüne bak", "panodaki görseli açıkla", "bu resimde ne yanlış"]
+en = ["look at this screenshot", "explain the image on the clipboard", "what is wrong in this picture"]
+fr = ["regarde cette capture d'écran", "explique l'image du presse-papiers"]
+params = [{ name = "question", kind = "text", required = true }]
+eta_s = 8
+
+[[intent]]
 command = "kor sessions import"
 run = "confirm"
 tr = ["markdown dosyasından oturum içe aktar", "dışa aktarılmış sohbeti geri yükle", "oturumu markdowndan içeri al"]

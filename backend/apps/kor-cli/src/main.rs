@@ -129,6 +129,16 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Cmd {
+    /// One question, answered once (`kor ask --image shot.png "what is wrong here?"`, §20.3).
+    Ask {
+        /// An image file, or `clipboard` for the image on the clipboard (repeatable).
+        #[arg(long)]
+        image: Vec<String>,
+        #[arg(short, long)]
+        model: Option<String>,
+        #[arg(required = true, num_args = 1..)]
+        question: Vec<String>,
+    },
     Resume {
         id: Option<String>,
         #[arg(short, long)]
@@ -678,6 +688,12 @@ fn localized_command(l: &Localizer) -> clap::Command {
         .mut_arg("model", |a| a.help(l.t("arg-model-top")))
         .mut_arg("mode", |a| a.help(l.t("arg-mode")))
         .mut_arg("prompt", |a| a.help(l.t("arg-prompt-top")))
+        .mut_subcommand("ask", |c| {
+            c.about(l.t("cmd-ask"))
+                .mut_arg("image", |a| a.help(l.t("arg-ask-image")))
+                .mut_arg("model", |a| a.help(l.t("arg-model-top")))
+                .mut_arg("question", |a| a.help(l.t("arg-ask-question")))
+        })
         .mut_subcommand("resume", |c| {
             c.about(l.t("cmd-resume"))
                 .mut_arg("id", |a| a.help(l.t("arg-session-id")))
@@ -1160,6 +1176,30 @@ fn real_main() -> ExitCode {
             },
         ),
         Some(Cmd::Tui { model, mode }) => repl::run_tui(&ctx, model, mode),
+        Some(Cmd::Ask {
+            image,
+            model,
+            question,
+        }) => {
+            match crate::providers::runtime().and_then(|rt| {
+                rt.block_on(screenshot_cmd::ask_prompt(
+                    &ctx.l,
+                    &image,
+                    &question.join(" "),
+                ))
+            }) {
+                Ok(prompt) => repl::run(
+                    &ctx,
+                    &repl::RunArgs {
+                        prompt: Some(prompt),
+                        print: true,
+                        model,
+                        ..repl::RunArgs::default()
+                    },
+                ),
+                Err(e) => Err(e),
+            }
+        }
         Some(cmd) => run_cmd(&ctx, cmd),
     };
 
@@ -1182,7 +1222,7 @@ fn real_main() -> ExitCode {
 #[allow(clippy::too_many_lines)] // one dispatch arm per command; splitting it would only scatter the table
 fn run_cmd(ctx: &Ctx, cmd: Cmd) -> anyhow::Result<bool> {
     match cmd {
-        Cmd::Resume { .. } | Cmd::Tui { .. } => Ok(false),
+        Cmd::Resume { .. } | Cmd::Tui { .. } | Cmd::Ask { .. } => Ok(false),
         Cmd::Sessions(a) => sessions_cmd::run(ctx, &a),
         Cmd::Completions(a) => completions_cmd::run(ctx, localized_command(&ctx.l), &a),
         Cmd::Plan { command } => plan_cmd::run(ctx, command.as_ref()),
@@ -1364,6 +1404,7 @@ pub(crate) fn run_slash(ctx: &Ctx, line: &str) -> Option<bool> {
     if matches!(
         cmd,
         Cmd::Resume { .. }
+            | Cmd::Ask { .. }
             | Cmd::Run { .. }
             | Cmd::Tui { .. }
             | Cmd::ChromeNativeHost
