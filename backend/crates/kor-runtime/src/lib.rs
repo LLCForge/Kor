@@ -77,6 +77,7 @@ pub mod prefs;
 pub mod privacycard;
 pub mod secure;
 pub mod session_tree;
+pub mod session_import;
 pub mod shell;
 pub mod task;
 pub mod triggers;

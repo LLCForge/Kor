@@ -1149,6 +1149,8 @@ struct Ask {
     summary: String,
     files: Vec<String>,
     destructive: Option<String>,
+    /// The proposed content of each file in `files` (a reviewed write), for `e<n>` on the full screen.
+    texts: Vec<String>,
     /// A question or the compaction preview instead of a permission (ADR 0050).
     kind: AskKind,
     reply: tokio::sync::oneshot::Sender<kor_agent::Review>,
@@ -1214,6 +1216,7 @@ impl Approver for ChanApprover {
             summary: q.question.clone(),
             files: Vec::new(),
             destructive: None,
+            texts: Vec::new(),
             kind: AskKind::Choice { options: q.options.clone(), default: q.default },
             reply,
         };
@@ -1238,6 +1241,7 @@ impl Approver for ChanApprover {
             summary: format!("{} · ≈{tokens}", items.len()),
             files: labels,
             destructive: None,
+            texts: Vec::new(),
             kind: AskKind::Compact { indices },
             reply,
         };
@@ -1265,6 +1269,7 @@ impl Approver for ChanApprover {
                 summary: req.summary.clone(),
                 files: req.files.iter().map(|f| f.path.clone()).collect(),
                 destructive: req.destructive.clone(),
+                texts: req.files.iter().map(|f| f.after.clone().unwrap_or_default()).collect(),
                 kind: AskKind::Permission,
                 reply,
             })
@@ -1336,6 +1341,8 @@ enum Step {
     Decision(PermissionReply),
     Quit,
     Interrupt,
+    /// Open file `n` of a reviewed write in `$EDITOR`.
+    Edit(usize),
 }
 
 async fn tui_apply(out: Out, src: &Sources, ctx: &Ctx, screen: &mut tui::Screen) -> Step {
@@ -1352,6 +1359,7 @@ async fn tui_apply(out: Out, src: &Sources, ctx: &Ctx, screen: &mut tui::Screen)
         Out::Keep(c) => tui::keep(screen, l, &c),
         Out::Revert(c) => tui::revert(screen, l, &c),
         Out::Graph => tui::graph::fill(screen, l, src.graph.as_deref()),
+        Out::EditFile(i) => return Step::Edit(i),
     }
     Step::None
 }
@@ -1424,6 +1432,8 @@ async fn tui_turn(
                         Ev::AskPlan(ask.summary)
                     } else {
                         screen.perm_rejected = vec![false; ask.files.len()];
+                        screen.perm_edited = vec![None; ask.files.len()];
+                        screen.perm_texts = ask.texts;
                         screen.perm_files = ask.files;
                         screen.perm_danger =
                             ask.destructive.map(|k| tui::review::destructive(l, &k));
@@ -1471,11 +1481,11 @@ async fn tui_turn(
                                     .collect();
                                 answer_review(d, &[(KEEP_KEY, keep.join(","))])
                             }
-                            AskKind::Permission => tui::review::from_marks(
-                                d,
-                                &screen.perm_files,
-                                &screen.perm_rejected,
-                            ),
+                            AskKind::Permission => {
+                                let mut r = tui::review::from_marks(d, &screen.perm_files, &screen.perm_rejected);
+                                tui::review::apply_edits(&mut r, &screen.perm_files, &screen.perm_rejected, &screen.perm_edited);
+                                r
+                            }
                         };
                         screen.perm_choices.clear();
                         screen.perm_compact = false;
@@ -1494,6 +1504,31 @@ async fn tui_turn(
                     cancel.cancel();
                 }
                 Step::None => {}
+                Step::Edit(i) => {
+                    // Wait out the key reader (it polls 40 ms at a time) so it does not take the
+                    // editor's keys, leave the full screen, edit, come back.
+                    let _ = (&mut reader).await;
+                    let t = tui_config(ctx);
+                    leave_screen(&t);
+                    let path = screen.perm_files.get(i).cloned().unwrap_or_default();
+                    let text = screen.perm_texts.get(i).cloned().unwrap_or_default();
+                    let edited = tokio::task::spawn_blocking(move || tui::review::edit_in_editor(&path, &text)).await;
+                    enter_screen(&t)?;
+                    terminal.clear()?;
+                    match edited {
+                        Ok(Ok(content)) => {
+                            if let Some(slot) = screen.perm_edited.get_mut(i) {
+                                *slot = Some(content);
+                            }
+                            if let Some(off) = screen.perm_rejected.get_mut(i) {
+                                *off = false;
+                            }
+                        }
+                        Ok(Err(e)) => screen.notice(l.t_args("error-generic", &args!("error" => e))),
+                        Err(e) => screen.notice(l.t_args("error-generic", &args!("error" => e.to_string()))),
+                    }
+                    reader = tokio::task::spawn_blocking(read_event);
+                }
                 Step::Submit(line) => {
                     if let Some(v) = line.strip_prefix("/verbosity ").and_then(tui::term::parse_verbosity) {
                         tui::term::set_verbosity(v);
@@ -1512,7 +1547,7 @@ async fn tui_turn(
             match tui_apply(out, &src, ctx, screen).await {
                 Step::Submit(line) => queued = Some(line),
                 Step::Quit => quit = true,
-                Step::Decision(_) | Step::Interrupt | Step::None => {}
+                Step::Decision(_) | Step::Interrupt | Step::None | Step::Edit(_) => {}
             }
         }
     }
@@ -1635,7 +1670,7 @@ async fn tui_main(s: &mut Session, ctx: &Ctx, style: &Style, busy: &Busy) -> any
             match tui_apply(out, &sources(s), ctx, &mut screen).await {
                 Step::Submit(line) => line,
                 Step::Quit | Step::Interrupt => break,
-                Step::Decision(_) | Step::None => continue,
+                Step::Decision(_) | Step::None | Step::Edit(_) => continue,
             }
         };
         if let Some((said, offered, prefill, then)) = offer.take() {

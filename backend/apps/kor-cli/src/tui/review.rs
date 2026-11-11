@@ -34,6 +34,15 @@ pub fn from_marks(reply: PermissionReply, files: &[String], rejected: &[bool]) -
     r
 }
 
+/// Files edited on the full screen are written as edited (unless they were toggled off).
+pub fn apply_edits(r: &mut Review, files: &[String], rejected: &[bool], edited: &[Option<String>]) {
+    for ((path, off), text) in files.iter().zip(rejected).zip(edited) {
+        if let (false, Some(t)) = (*off, text) {
+            r.files.insert(path.clone(), FileDecision::Edit(t.clone()));
+        }
+    }
+}
+
 /// ` · 1 a.rs ✓ · 2 b.rs ✗` for the full screen's prompt line.
 pub fn marks(files: &[String], rejected: &[bool]) -> String {
     let mut out = String::new();
@@ -94,6 +103,10 @@ mod tests {
         let r = from_marks(PermissionReply::Allow, &files, &rejected);
         assert_eq!(r.reply, PermissionReply::Allow);
         assert_eq!(r.files.len(), 1);
+        assert_eq!(r.files.get("b.rs"), Some(&FileDecision::Reject));
+        let mut r = from_marks(PermissionReply::Allow, &files, &rejected);
+        apply_edits(&mut r, &files, &rejected, &[Some("new".into()), Some("x".into())]);
+        assert_eq!(r.files.get("a.rs"), Some(&FileDecision::Edit("new".into())));
         assert_eq!(r.files.get("b.rs"), Some(&FileDecision::Reject));
     }
 

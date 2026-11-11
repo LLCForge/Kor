@@ -180,6 +180,9 @@ pub fn discover(
     let mut found = BTreeMap::new();
     let mut disabled = HashSet::new();
     if let Some(home) = src.home {
+        for (label, servers) in crate::mcp_config::other_tools_for(home) {
+            parse_servers(Some(&Value::Object(servers)), label, env, &mut found, &mut disabled);
+        }
         let p = home.join(".claude.json");
         if let Some(v) = read_json(&p) {
             let origin = p.display().to_string();

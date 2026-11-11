@@ -553,6 +553,7 @@ pub fn computer_tools() -> Vec<Arc<dyn Tool>> {
         Arc::new(tools::computer::KeyPress),
         Arc::new(tools::computer::Scroll),
         Arc::new(tools::computer::LeftClickDrag),
+        Arc::new(tools::computer::UndoLastAction),
     ];
     v.extend(tools::desktop::tools());
     v

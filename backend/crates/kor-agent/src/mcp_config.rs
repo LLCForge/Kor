@@ -119,6 +119,43 @@ fn same_path(a: &str, b: &Path) -> bool {
     norm(a) == norm(b.strip_prefix(r"\\?\").unwrap_or(&b))
 }
 
+/// MCP servers other tools define for the user: Cursor, Windsurf, Claude Desktop, VS Code. Read
+/// only, never written; they load first, so Claude Code, Kor and the project shadow them. VS Code
+/// entries that prompt for `${input:…}` values are left out (only VS Code can answer them).
+/// `app_config` is the OS config folder (`%APPDATA%`, `~/Library/Application Support`, `~/.config`).
+pub fn other_tools(home: &Path, app_config: Option<&Path>) -> Vec<(&'static str, Map<String, Value>)> {
+    let mut files: Vec<(&'static str, PathBuf, &str)> = vec![
+        ("Cursor", home.join(".cursor").join("mcp.json"), "mcpServers"),
+        ("Windsurf", home.join(".codeium").join("windsurf").join("mcp_config.json"), "mcpServers"),
+    ];
+    if let Some(c) = app_config {
+        files.push(("Claude Desktop", c.join("Claude").join("claude_desktop_config.json"), "mcpServers"));
+        files.push(("VS Code", c.join("Code").join("User").join("mcp.json"), "servers"));
+    }
+    files
+        .into_iter()
+        .filter_map(|(label, path, key)| {
+            let file = read_object(&path).ok()?;
+            let servers: Map<String, Value> = file
+                .get(key)?
+                .as_object()?
+                .iter()
+                .filter(|(id, raw)| valid_id(id, 64) && !raw.to_string().contains("${input:"))
+                .map(|(id, raw)| (id.clone(), raw.clone()))
+                .collect();
+            (!servers.is_empty()).then_some((label, servers))
+        })
+        .collect()
+}
+
+/// [`other_tools`] for the real user only: a test or sandbox with its own `home` sees none.
+pub fn other_tools_for(home: &Path) -> Vec<(&'static str, Map<String, Value>)> {
+    if dirs::home_dir().as_deref() != Some(home) {
+        return Vec::new();
+    }
+    other_tools(home, dirs::config_dir().as_deref())
+}
+
 /// Every configured server in the order the agent loads them (later ones shadow earlier ones).
 ///
 /// # Errors
@@ -142,6 +179,11 @@ pub fn entries(loc: &Locations) -> Result<Vec<Entry>, String> {
             );
         }
     };
+    if let Some(home) = &loc.home {
+        for (label, servers) in other_tools_for(home) {
+            put(&servers, Some(label), &mut out);
+        }
+    }
     if let Some(home) = &loc.home
         && let Ok(v) = read_object(&home.join(".claude.json"))
     {
@@ -452,6 +494,26 @@ pub fn set_enabled(loc: &Locations, id: &str, enabled: bool) -> Result<(), Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn reads_other_tools_servers_without_prompts() {
+        let dir = tempfile::tempdir().unwrap();
+        let (home, cfg) = (dir.path().join("h"), dir.path().join("c"));
+        let w = |p: PathBuf, t: &str| {
+            std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+            std::fs::write(p, t).unwrap();
+        };
+        w(home.join(".cursor/mcp.json"), r#"{"mcpServers":{"gh":{"command":"gh-mcp"}}}"#);
+        w(
+            cfg.join("Code/User/mcp.json"),
+            r#"{"servers":{"db":{"type":"stdio","command":"db-mcp"},"ask":{"command":"x","env":{"K":"${input:key}"}}}}"#,
+        );
+        w(cfg.join("Claude/claude_desktop_config.json"), "not json");
+        let got = other_tools(&home, Some(&cfg));
+        let names: Vec<(&str, Vec<&String>)> = got.iter().map(|(l, s)| (*l, s.keys().collect())).collect();
+        assert_eq!(names, [("Cursor", vec![&"gh".to_owned()]), ("VS Code", vec![&"db".to_owned()])]);
+        assert!(other_tools_for(&home).is_empty(), "a test home never sees the real user's tools");
+    }
 
     fn loc(dir: &Path) -> Locations {
         let home = dir.join("home");

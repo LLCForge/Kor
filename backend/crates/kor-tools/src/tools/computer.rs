@@ -34,7 +34,56 @@ pub const COMPUTER_TOOLS: &[&str] = &[
     "key",
     "scroll",
     "left_click_drag",
+    "undo_last_action",
 ];
+
+/// One desktop action and the screen as it was just before it (screenshot-backed undo).
+#[derive(Debug, Clone)]
+pub struct Step {
+    pub action: String,
+    pub input: Value,
+    /// JPEG, base64, as the model sees screenshots.
+    pub before: String,
+}
+
+/// The last actions, newest last (each holds one scaled screenshot, so the list stays short).
+const MAX_STEPS: usize = 20;
+static STEPS: std::sync::Mutex<Vec<Step>> = std::sync::Mutex::new(Vec::new());
+
+pub(crate) fn push_step(step: Step) {
+    let mut s = STEPS.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    if s.len() >= MAX_STEPS {
+        s.remove(0);
+    }
+    s.push(step);
+}
+
+pub(crate) fn pop_step() -> Option<Step> {
+    STEPS.lock().unwrap_or_else(std::sync::PoisonError::into_inner).pop()
+}
+
+/// How an action is reversed: typed text is erased with Backspace, a key combination or a drag
+/// with the app's own undo shortcut. Clicks, pointer moves and scrolls have no general reverse;
+/// the screenshot from before is what the model restores by hand.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Reverse {
+    Backspace(usize),
+    Shortcut(&'static str),
+    ByHand,
+}
+
+pub fn reverse_of(action: &str, input: &Value) -> Reverse {
+    let undo = if cfg!(target_os = "macos") { "cmd+z" } else { "ctrl+z" };
+    match action {
+        // A newline usually submitted something (a form, a chat): erasing would not undo that.
+        "type" => match input["text"].as_str() {
+            Some(t) if !t.contains('\n') => Reverse::Backspace(t.chars().count()),
+            _ => Reverse::Shortcut(undo),
+        },
+        "key" | "left_click_drag" => Reverse::Shortcut(undo),
+        _ => Reverse::ByHand,
+    }
+}
 
 pub fn is_computer_tool(name: &str) -> bool {
     COMPUTER_TOOLS.contains(&name) || super::desktop::DESKTOP_COMPUTER_TOOLS.contains(&name)
@@ -45,6 +94,7 @@ pub fn is_computer_tool(name: &str) -> bool {
 pub fn action_of(tool: &str, input: &Value) -> (Action, bool) {
     match tool {
         "screenshot" => (Action::Observe, false),
+        "undo_last_action" => (Action::Type, false),
         "left_click" | "double_click" | "mouse_move" | "scroll" => (Action::Click, false),
         "right_click" | "left_click_drag" => (Action::Pointer, false),
         "key" => (
@@ -163,9 +213,42 @@ fn act(action: &str, input: &Value) -> ToolOutput {
             live::scroll(n, vertical)?;
             Ok(ToolOutput::ok(format!("scrolled {dir} {amount}")))
         }
+        "undo_last_action" => {
+            let step = pop_step().ok_or("nothing to undo: no desktop action was recorded in this session")?;
+            let done = match reverse_of(&step.action, &step.input) {
+                Reverse::Backspace(n) => {
+                    for _ in 0..n.min(2_000) {
+                        live::combo(&parse_combo("backspace")?)?;
+                    }
+                    format!("erased the {n} typed characters with Backspace")
+                }
+                Reverse::Shortcut(k) => {
+                    live::combo(&parse_combo(k)?)?;
+                    format!("pressed {k} (the app's undo)")
+                }
+                Reverse::ByHand => "this action has no automatic reverse; nothing was pressed".to_owned(),
+            };
+            let mut out = ToolOutput::ok(format!(
+                "Undo of `{}`: {done}. The attached image is the screen just before that action; take a \
+                 screenshot and compare. If they differ, restore it by hand (click, scroll back) or tell the user.",
+                step.action
+            ));
+            out.image = Some(kor_core::ImageSource::Base64 { media_type: "image/jpeg".into(), data: step.before });
+            Ok(out)
+        }
         other => Err(format!("unknown desktop action `{other}`")),
     })();
     r.unwrap_or_else(ToolOutput::err)
+}
+
+#[cfg(feature = "computer")]
+fn before_shot() -> Option<String> {
+    kor_computer::live::screenshot().ok().map(|s| s.jpeg_base64)
+}
+
+#[cfg(not(feature = "computer"))]
+fn before_shot() -> Option<String> {
+    None
 }
 
 #[cfg(not(feature = "computer"))]
@@ -236,7 +319,14 @@ macro_rules! computer_tool {
                         Ok(t) => t,
                         Err(e) => return ToolOutput::err(e),
                     };
+                    // The screen before any action that changes something, for `undo_last_action`.
+                    let before = (kind != Action::Observe && action != "undo_last_action")
+                        .then(before_shot)
+                        .flatten();
                     let out = act(action, &input);
+                    if let (Some(before), false) = (before, out.is_error) {
+                        push_step(Step { action: action.to_owned(), input: input.clone(), before });
+                    }
                     ticket.finish(!out.is_error);
                     out
                 })
@@ -310,6 +400,36 @@ computer_tool!(
     &["direction"],
     "Scroll up/down/left/right by `amount` notches, optionally at [x, y]."
 );
+computer_tool!(
+    UndoLastAction,
+    "undo_last_action",
+    ToolKind::Execute,
+    &[],
+    "Undo the last desktop action: typed text is erased, a key or drag gets the app's undo shortcut; returns the screenshot from just before it so you can check and restore the rest by hand."
+);
+
+#[cfg(test)]
+mod undo_tests {
+    use super::*;
+
+    #[test]
+    fn reverses_typing_keys_and_drags_and_keeps_order() {
+        assert_eq!(reverse_of("type", &json!({"text": "héllo"})), Reverse::Backspace(5));
+        let undo = if cfg!(target_os = "macos") { "cmd+z" } else { "ctrl+z" };
+        assert_eq!(reverse_of("type", &json!({"text": "a\nb"})), Reverse::Shortcut(undo));
+        assert_eq!(reverse_of("key", &json!({"text": "ctrl+x"})), Reverse::Shortcut(undo));
+        assert_eq!(reverse_of("left_click", &json!({})), Reverse::ByHand);
+        for i in 0..(MAX_STEPS + 2) {
+            push_step(Step { action: format!("a{i}"), input: json!({}), before: String::new() });
+        }
+        assert_eq!(pop_step().map(|s| s.action), Some(format!("a{}", MAX_STEPS + 1)));
+        let mut n = 1;
+        while pop_step().is_some() {
+            n += 1;
+        }
+        assert_eq!(n, MAX_STEPS, "only the last steps are kept");
+    }
+}
 
 #[cfg(test)]
 mod tests {

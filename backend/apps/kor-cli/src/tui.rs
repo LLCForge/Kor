@@ -90,6 +90,12 @@ pub struct Screen {
     /// Files of the open request (§12.3) and which the user toggled off by number.
     pub perm_files: Vec<String>,
     pub perm_rejected: Vec<bool>,
+    /// Content typed in `$EDITOR` for file n of a reviewed write (`e` then the number).
+    pub perm_edited: Vec<Option<String>>,
+    /// The proposed content of each reviewed file (what the editor opens with).
+    pub perm_texts: Vec<String>,
+    /// `e` was pressed: the next digit opens that file in the editor.
+    pub perm_edit_next: bool,
     /// "Destructive: …" of the open request; the prompt turns red.
     pub perm_danger: Option<String>,
     /// §28.13 options of an open question (`AskUserQuestion`), the selected one and "always".
@@ -150,6 +156,9 @@ impl Screen {
             perm: None,
             perm_files: Vec::new(),
             perm_rejected: Vec::new(),
+            perm_edited: Vec::new(),
+            perm_texts: Vec::new(),
+            perm_edit_next: false,
             perm_danger: None,
             perm_choices: Vec::new(),
             perm_choice: 0,
@@ -282,6 +291,8 @@ pub enum Out {
     Revert(Change),
     /// Re-read the graph panel (selection or search changed).
     Graph,
+    /// Open file n (0-based) of a reviewed write in `$EDITOR`.
+    EditFile(usize),
 }
 
 #[allow(clippy::too_many_lines)]
@@ -318,6 +329,21 @@ pub fn reduce(screen: &mut Screen, l: &Localizer, ev: Ev) -> Out {
     if let Some(prompt) = screen.perm.clone()
         && let Ev::Char(ch) = ev
     {
+        if screen.perm_edit_next {
+            screen.perm_edit_next = false;
+            if let Some(i) = ch.to_digit(10).and_then(|d| (d as usize).checked_sub(1))
+                && i < screen.perm_texts.len()
+            {
+                return Out::EditFile(i);
+            }
+        }
+        if ch == 'e' && !screen.plan_dialog && !screen.perm_texts.is_empty() {
+            if screen.perm_texts.len() == 1 {
+                return Out::EditFile(0);
+            }
+            screen.perm_edit_next = true;
+            return Out::None;
+        }
         if let Some(i) = ch.to_digit(10).and_then(|d| (d as usize).checked_sub(1))
             && !screen.plan_dialog
             && let Some(off) = screen.perm_rejected.get_mut(i)
@@ -458,6 +484,8 @@ pub fn reduce(screen: &mut Screen, l: &Localizer, ev: Ev) -> Out {
             screen.perm = Some(text);
             screen.perm_files.clear();
             screen.perm_rejected.clear();
+            screen.perm_texts.clear();
+            screen.perm_edited.clear();
             screen.perm_danger = None;
             screen.plan_dialog = true;
             Out::None
@@ -891,6 +919,21 @@ mod tests {
         );
         let r = review::from_marks(PermissionReply::Allow, &screen.perm_files, &screen.perm_rejected);
         assert_eq!(r.files.get("b.rs"), Some(&kor_agent::FileDecision::Reject));
+    }
+
+    #[test]
+    fn e_then_a_number_opens_that_file_in_the_editor() {
+        let l = en();
+        let mut screen = Screen::new("default", "m");
+        screen.perm_files = vec!["a.rs".into(), "b.rs".into()];
+        screen.perm_rejected = vec![false, false];
+        screen.perm_texts = vec!["a".into(), "b".into()];
+        reduce(&mut screen, &l, Ev::Ask("apply_patch".into()));
+        assert_eq!(reduce(&mut screen, &l, Ev::Char('e')), Out::None);
+        assert_eq!(reduce(&mut screen, &l, Ev::Char('2')), Out::EditFile(1));
+        assert_eq!(screen.perm_rejected, [false, false], "the digit after e does not toggle");
+        assert_eq!(reduce(&mut screen, &l, Ev::Char('2')), Out::None);
+        assert_eq!(screen.perm_rejected, [false, true]);
     }
 
     #[test]

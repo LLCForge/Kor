@@ -38,6 +38,12 @@ pub struct FilterArgs {
     pub json: bool,
 }
 
+#[derive(Debug, Clone, Copy, clap::ValueEnum)]
+pub enum HistoryTool {
+    ClaudeCode,
+    Cursor,
+}
+
 #[derive(Debug, Args)]
 pub struct SessionsArgs {
     #[command(flatten)]
@@ -98,6 +104,14 @@ pub enum SessionsCmd {
     Export { dir: std::path::PathBuf },
     /// Read a Markdown export back as a session.
     Import { file: std::path::PathBuf },
+    /// Import chats from Claude Code (this project, or every project with --all) or Cursor.
+    ImportFrom {
+        #[arg(value_enum)]
+        tool: HistoryTool,
+        /// Claude Code: every project, not only the current folder.
+        #[arg(long)]
+        all: bool,
+    },
     /// Conversation branches (§27.3): fork, tree, compare, merge, unfork.
     #[command(flatten)]
     Fork(fork::ForkCmd),
@@ -125,6 +139,7 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
         .mut_subcommand("suggest", |s| id(s.about(l.t("cmd-sessions-suggest"))).mut_arg("apply", |a| a.help(l.t("arg-sessions-apply"))))
         .mut_subcommand("export", |s| s.about(l.t("cmd-sessions-export")))
         .mut_subcommand("import", |s| s.about(l.t("cmd-sessions-import")))
+        .mut_subcommand("import-from", |s| s.about(l.t("cmd-sessions-import-from")).mut_arg("all", |a| a.help(l.t("arg-sessions-import-all"))))
 }
 
 fn dirs() -> anyhow::Result<(std::path::PathBuf, std::path::PathBuf)> {
@@ -255,6 +270,25 @@ pub fn run(ctx: &Ctx, args: &SessionsArgs) -> anyhow::Result<bool> {
             println!("{}", l.t_args("sessions-imported", &args!("id" => id)));
             true
         }),
+        SessionsCmd::ImportFrom { tool, all } => {
+            use kor_runtime::session_import as si;
+            let chats = match tool {
+                HistoryTool::ClaudeCode => {
+                    let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("no home directory"))?;
+                    let root = std::env::current_dir()?;
+                    Ok(si::claude_code(&home, &root, *all))
+                }
+                HistoryTool::Cursor => {
+                    let db = dirs::config_dir().map(|c| si::cursor_db(&c)).filter(|p| p.is_file());
+                    db.ok_or_else(|| "Cursor".to_owned()).and_then(|db| si::cursor(&db))
+                }
+            };
+            let chats = chats.map_err(|e| anyhow::anyhow!(l.t_args("sessions-error", &args!("error" => e))))?;
+            si::save_new(&sd, &chats).map_err(tree::TreeError::from).map(|n| {
+                println!("{}", l.t_args("sessions-imported-from", &args!("count" => n, "found" => chats.len())));
+                true
+            })
+        }
     };
     result.map_err(|e| anyhow::anyhow!(l.t_args("sessions-error", &args!("error" => e.to_string()))))
 }
