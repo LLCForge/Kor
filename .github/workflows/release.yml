@@ -550,7 +550,7 @@ jobs:
     if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && needs.desktop.result == 'success' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    runs-on: "ubuntu-22.04"
+    runs-on: "ubuntu-24.04"  # minisign is packaged from 24.04 on
     outputs:
       val: ${{ steps.host.outputs.manifest }}
     steps:
