@@ -380,7 +380,7 @@ Every tagged version (`v0.8.0` and later) builds these on GitHub Actions and att
 | --- | --- | --- |
 | Windows | `Kor_<version>_x64-setup.exe` (recommended), `.msi` | Branded setup wizard in Turkish, English or French; installs for your user only, so **no administrator rights**; Start menu entry and a "Launch Kor" checkbox at the end. WebView2 is installed silently if missing. |
 | macOS | `Kor_<version>_universal.dmg` | Drag Kor to Applications. Apple Silicon and Intel in one file. |
-| Linux | `.deb`, `.rpm`, `.AppImage` | `.AppImage` runs without installing; make it executable first. |
+| Linux | `.deb`, `.rpm`, `.AppImage` | Needs glibc 2.39+ (Ubuntu 24.04, Debian 13, Fedora 40 or newer). `.AppImage` runs without installing; make it executable first. |
 | CLI only | `kor-<target>.tar.xz` / `.zip` and [`scripts/install.sh`](scripts/install.sh) | Checks SHA-256 and the minisign signature, installs into `~/.local/bin` without sudo. |
 
 **No account, no sign-up.** Kor opens straight away on first launch. It asks for nothing: connect a provider when you

@@ -23,6 +23,12 @@ github-attestations = true
 # minisign-signed raw binaries for `kor update` (see .github/workflows/release.yml at the repo root).
 allow-dirty = ["ci"]
 
+# Linux builds run on Ubuntu 24.04: libspa (screen capture) needs PipeWire 1.0 headers, 22.04 ships 0.3.
+# The binaries then need glibc 2.39+ (Ubuntu 24.04, Debian 13, Fedora 40 or newer).
+[dist.github-custom-runners]
+x86_64-unknown-linux-gnu = "ubuntu-24.04"
+aarch64-unknown-linux-gnu = "ubuntu-24.04-arm"
+
 # System libraries the Linux build links (screen capture: Wayland, GBM/DRM, PipeWire via bindgen; D-Bus).
 [dist.dependencies.apt]
 pkg-config = "*"

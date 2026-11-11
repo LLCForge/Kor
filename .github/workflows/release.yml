@@ -287,7 +287,7 @@ jobs:
             cli-targets: aarch64-apple-darwin x86_64-apple-darwin
             bundles: app,dmg
           - name: linux-x64
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             cli-targets: x86_64-unknown-linux-gnu
             bundles: deb,rpm,appimage

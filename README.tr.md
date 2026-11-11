@@ -381,7 +381,7 @@ Her etiketli sürüm (`v0.8.0` ve sonrası) GitHub Actions'ta bunları derler ve
 | --- | --- | --- |
 | Windows | `Kor_<sürüm>_x64-setup.exe` (önerilen), `.msi` | Türkçe, İngilizce ya da Fransızca, Kor logolu kurulum sihirbazı; yalnızca senin kullanıcın için kurar, bu yüzden **yönetici izni istemez**; Başlat menüsü kaydı ve sonda "Kor'u başlat" kutusu. WebView2 yoksa sessizce kurulur. |
 | macOS | `Kor_<sürüm>_universal.dmg` | Kor'u Uygulamalar'a sürükle. Apple Silicon ve Intel tek dosyada. |
-| Linux | `.deb`, `.rpm`, `.AppImage` | `.AppImage` kurmadan çalışır; önce çalıştırılabilir yap. |
+| Linux | `.deb`, `.rpm`, `.AppImage` | glibc 2.39+ gerekir (Ubuntu 24.04, Debian 13, Fedora 40 ya da daha yeni). `.AppImage` kurmadan çalışır; önce çalıştırılabilir yap. |
 | Yalnızca CLI | `kor-<hedef>.tar.xz` / `.zip` ve [`scripts/install.sh`](scripts/install.sh) | SHA-256'yı ve minisign imzasını denetler, sudo istemeden `~/.local/bin` altına kurar. |
 
 **Hesap yok, kayıt yok.** Kor ilk açılışta doğrudan açılır, hiçbir şey sormaz. Hazır olduğunda bir sağlayıcı bağla
