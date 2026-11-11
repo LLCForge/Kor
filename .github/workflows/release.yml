@@ -346,6 +346,8 @@ jobs:
           if [ "$RUNNER_OS" = macOS ]; then
             lipo -create -output src-tauri/binaries/kor-universal-apple-darwin \
               ../backend/target/aarch64-apple-darwin/release/kor ../backend/target/x86_64-apple-darwin/release/kor
+            # A universal build compiles each arch separately; each build script looks for its own triple.
+            for t in aarch64-apple-darwin x86_64-apple-darwin; do cp "../backend/target/$t/release/kor" "src-tauri/binaries/kor-$t"; done
           else
             cp "../backend/target/${{ matrix.target }}/release/kor$ext" "src-tauri/binaries/kor-${{ matrix.target }}$ext"
           fi
