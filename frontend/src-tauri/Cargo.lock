@@ -3691,7 +3691,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kor-agent"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3782,7 +3782,7 @@ dependencies = [
 
 [[package]]
 name = "kor-core"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "reqwest",
  "serde",
@@ -3793,7 +3793,7 @@ dependencies = [
 
 [[package]]
 name = "kor-desktop"
-version = "0.8.6"
+version = "0.8.7"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3871,7 +3871,7 @@ dependencies = [
 
 [[package]]
 name = "kor-health"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "dirs 7.0.0",
  "kor-computer",
@@ -3916,7 +3916,7 @@ dependencies = [
 
 [[package]]
 name = "kor-platform"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "block2",
  "dirs 7.0.0",
@@ -3938,7 +3938,7 @@ dependencies = [
 
 [[package]]
 name = "kor-providers"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3957,7 +3957,7 @@ dependencies = [
 
 [[package]]
 name = "kor-proxy"
-version = "0.0.5"
+version = "0.0.6"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3986,7 +3986,7 @@ dependencies = [
 
 [[package]]
 name = "kor-runtime"
-version = "0.6.4"
+version = "0.6.5"
 dependencies = [
  "arboard",
  "async-trait",
@@ -4072,7 +4072,7 @@ dependencies = [
 
 [[package]]
 name = "kor-tools"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -4101,7 +4101,7 @@ dependencies = [
 
 [[package]]
 name = "kor-web"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "async-trait",
  "base64 0.22.1",

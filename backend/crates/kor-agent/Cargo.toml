@@ -1,7 +1,7 @@
 [package]
 name = "kor-agent"
 description = "Agent loop, permissions and sessions for the Kor coding agent"
-version = "0.6.4"
+version = "0.6.5"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
