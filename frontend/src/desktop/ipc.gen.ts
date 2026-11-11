@@ -4396,6 +4396,7 @@ export type RoutingConfig = {
   shadow: string
   shadow_threshold: number
   shadow_min_samples: number
+  repair: string
 }
 
 export interface ContextLast {

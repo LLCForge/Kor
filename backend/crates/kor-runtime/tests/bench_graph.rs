@@ -156,6 +156,7 @@ async fn graph_arms_compare_tokens_cost_and_passes() {
             context: kor_agent::context::Budget::default(),
             cost: None,
             shadow: None,
+            repair: None,
         })
     };
     let jobs = bench::graph_jobs(&spec, &["m/x".to_owned()], true, true);

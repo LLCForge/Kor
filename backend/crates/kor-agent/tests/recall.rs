@@ -139,6 +139,7 @@ async fn finished_task_is_recalled_by_the_next_one() {
         },
         cost: None,
         shadow: None,
+        repair: None,
     };
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
 

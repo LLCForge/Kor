@@ -670,6 +670,21 @@ fn shadow_runner(l: &Localizer, config: &kor_config::Config, notes: &mut Vec<Str
     }
 }
 
+/// `[routing] repair`: the cheap model for repairing malformed tool calls, under the same
+/// provider and privacy checks as the main model; `None` when off or unusable (a note says why).
+fn repair_model(l: &Localizer, config: &kor_config::Config, notes: &mut Vec<String>) -> Option<(Arc<dyn Provider>, String)> {
+    let m = config.routing.repair.trim();
+    if m.is_empty() {
+        return None;
+    }
+    let built = build_provider(l, m, notes).and_then(|(p, model, _)| {
+        check_provider_allowed(l, p.manifest())?;
+        check_privacy_card(l, p.manifest(), model.model())?;
+        Ok((p, model.model().to_owned()))
+    });
+    built.map_err(|e| notes.push(format!("repair: {e}"))).ok()
+}
+
 /// Provider and model id for one request outside a session (`kor fix`, `kor commit`): `model`,
 /// else `agent.model`. Privacy mode (config or `--privacy-mode`) refuses non-local providers.
 pub fn oneshot_provider(
@@ -1525,6 +1540,7 @@ pub fn prepare(
         },
         cost: Some(cost.clone()),
         shadow: shadow_runner(l, &config, notes),
+        repair: repair_model(l, &config, notes),
     };
     Ok(Prepared {
         agent,

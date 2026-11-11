@@ -214,6 +214,7 @@ fn agent(
         },
         cost: Some(cost),
         shadow: None,
+        repair: None,
     }
 }
 

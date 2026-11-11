@@ -22282,6 +22282,9 @@
             },
             "shadow_min_samples": {
               "type": "integer"
+            },
+            "repair": {
+              "type": "string"
             }
           },
           "required": [
@@ -22291,7 +22294,8 @@
             "consensus",
             "shadow",
             "shadow_threshold",
-            "shadow_min_samples"
+            "shadow_min_samples",
+            "repair"
           ]
         }
       ]

@@ -138,6 +138,7 @@ async fn session(mode: PermissionMode) -> (tempfile::TempDir, Vec<Value>, String
         context: kor_agent::context::Budget::default(),
         cost: None,
         shadow: None,
+        repair: None,
     };
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     a.send(

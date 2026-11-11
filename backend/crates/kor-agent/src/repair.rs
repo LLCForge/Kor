@@ -253,8 +253,12 @@ impl crate::Agent {
         specs: &[ToolSpec],
         cancel: &CancellationToken,
     ) -> Option<String> {
+        let (provider, model) = match &self.repair {
+            Some((p, m)) => (p.clone(), m.clone()),
+            None => (self.provider.clone(), self.model.clone()),
+        };
         let req = ChatRequest {
-            model: self.model.clone(),
+            model,
             system: Some(repair_prompt(name, specs)),
             messages: vec![Message::text(
                 Role::User,
@@ -269,7 +273,7 @@ impl crate::Agent {
             temperature: None,
             reasoning: None,
         };
-        let mut stream = self.provider.complete(req, cancel.clone()).await.ok()?;
+        let mut stream = provider.complete(req, cancel.clone()).await.ok()?;
         let mut text = String::new();
         while let Some(ev) = stream.next().await {
             match ev.ok()? {

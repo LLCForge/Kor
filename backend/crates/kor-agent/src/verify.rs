@@ -118,6 +118,35 @@ fn s(p: &Path) -> String {
     kor_tools::display_path(p)
 }
 
+/// Test files that by naming convention cover `file` (`a.test.ts`, `a_test.go`, `test_a.py`,
+/// `tests/a.rs` in the nearest crate…). Only files that exist; the file itself is never listed.
+/// shortcut: name conventions only, no import graph; use kor-graph edges if this misses too much.
+pub fn related_tests(root: &Path, file: &Path) -> Vec<PathBuf> {
+    let (Some(dir), Some(stem), Some(ext)) = (
+        file.parent(),
+        file.file_stem().and_then(|s| s.to_str()),
+        file.extension().and_then(|e| e.to_str()),
+    ) else {
+        return Vec::new();
+    };
+    let mut cands = vec![
+        dir.join(format!("{stem}.test.{ext}")),
+        dir.join(format!("{stem}.spec.{ext}")),
+        dir.join(format!("{stem}_test.{ext}")),
+        dir.join(format!("test_{stem}.{ext}")),
+        dir.join("__tests__").join(format!("{stem}.test.{ext}")),
+        dir.join("tests").join(format!("test_{stem}.{ext}")),
+    ];
+    if ext == "rs"
+        && let Some(krate) = nearest(root, file, "Cargo.toml")
+    {
+        cands.push(krate.join("tests").join(format!("{stem}.rs")));
+    }
+    let mut out: Vec<PathBuf> = cands.into_iter().filter(|p| p != file && p.is_file()).collect();
+    out.dedup();
+    out
+}
+
 /// Checkers for the changed `files` (absolute, already confined to the project). Files
 /// outside `root`, deleted files and files without a known checker are skipped. Files that
 /// share a command are checked once.
@@ -395,10 +424,27 @@ impl crate::Agent {
         if !self.verify.enabled || touched.is_empty() {
             return;
         }
-        let files: Vec<PathBuf> = touched
+        let mut files: Vec<PathBuf> = touched
             .iter()
             .filter_map(|t| self.ctx.resolve(t).ok())
             .collect();
+        // Tree-sitter first: a file that no longer parses is reported at once (line and column),
+        // without waiting for the compiler, and counts as a failed round like a compiler error.
+        files.retain(|f| {
+            let lang = f.extension().and_then(|e| e.to_str()).and_then(kor_graph::lang::Lang::from_ext);
+            let Some((line, col)) = lang.and_then(|l| std::fs::read_to_string(f).ok().and_then(|s| kor_graph::symbols::first_error(l, &s))) else {
+                return true;
+            };
+            let n = self.verify.failures.entry(f.clone()).or_insert(0);
+            *n += 1;
+            let _ = write!(
+                out.content,
+                "\n\n[verify] syntax error in {} at line {line}, column {col} (tree-sitter, round {n}/{MAX_ROUNDS}). \
+                 The change is saved; fix it before continuing.",
+                rel(&self.ctx.root, f)
+            );
+            false
+        });
         for check in plan(&self.ctx.root, &files) {
             let cmd = check.command_line();
             let shown: Vec<String> = check.files.iter().map(|f| rel(&self.ctx.root, f)).collect();
@@ -429,6 +475,19 @@ impl crate::Agent {
             match run(&check, self.verify.timeout, &self.ctx.scrub_env, Some(&self.ctx)).await {
                 Outcome::Pass => {
                     let _ = write!(out.content, "\n\n[verify] `{}`: no errors in {shown}.", check.program);
+                    let tests: Vec<String> = check
+                        .files
+                        .iter()
+                        .flat_map(|f| related_tests(&self.ctx.root, f))
+                        .map(|t| rel(&self.ctx.root, &t))
+                        .collect();
+                    if !tests.is_empty() {
+                        let _ = write!(
+                            out.content,
+                            " Related tests: {}. Run them before you finish.",
+                            tests.join(", ")
+                        );
+                    }
                 }
                 Outcome::Fail(errors) => {
                     let mut round = 0;
@@ -489,6 +548,21 @@ impl crate::Agent {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn finds_related_tests_by_name() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().canonicalize().unwrap();
+        for p in ["web/cart.ts", "web/cart.test.ts", "py/tax.py", "py/tests/test_tax.py", "k/Cargo.toml", "k/src/fee.rs", "k/tests/fee.rs"] {
+            std::fs::create_dir_all(root.join(p).parent().unwrap()).unwrap();
+            std::fs::write(root.join(p), "").unwrap();
+        }
+        let names = |f: &str| -> Vec<String> { related_tests(&root, &root.join(f)).iter().map(|p| rel(&root, p)).collect() };
+        assert_eq!(names("web/cart.ts"), ["web/cart.test.ts"]);
+        assert_eq!(names("py/tax.py"), ["py/tests/test_tax.py"]);
+        assert_eq!(names("k/src/fee.rs"), ["k/tests/fee.rs"]);
+        assert!(names("web/cart.test.ts").is_empty());
+    }
 
     #[test]
     #[allow(clippy::many_single_char_names)]

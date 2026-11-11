@@ -229,6 +229,8 @@ pub struct Agent {
     pub cost: Option<Arc<dyn crate::cost::CostControl>>,
     /// Shadow mode (§5.1): a cheap model answers each finished task in the background.
     pub shadow: Option<Arc<dyn crate::shadow::Shadow>>,
+    /// Cheap model that repairs malformed tool calls (`[routing] repair`); `None` = the main model.
+    pub repair: Option<(Arc<dyn Provider>, String)>,
 }
 
 impl std::fmt::Debug for Agent {

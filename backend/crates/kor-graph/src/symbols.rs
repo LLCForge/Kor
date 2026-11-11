@@ -113,6 +113,34 @@ pub fn find(lang: Lang, src: &str, name: &str) -> Vec<Symbol> {
         .collect()
 }
 
+/// The first syntax error in `src` as (1-based line, 1-based column); `None` when it parses.
+pub fn first_error(lang: Lang, src: &str) -> Option<(usize, usize)> {
+    let mut p = Parser::new();
+    p.set_language(&lang.language()).ok()?;
+    let tree = p.parse(src, None)?;
+    if !tree.root_node().has_error() {
+        return None;
+    }
+    let mut found = None;
+    walk_err(tree.root_node(), &mut found);
+    found.or(Some((1, 1)))
+}
+
+fn walk_err(n: Node<'_>, found: &mut Option<(usize, usize)>) {
+    if found.is_some() || !n.has_error() {
+        return;
+    }
+    if n.is_error() || n.is_missing() {
+        let p = n.start_position();
+        *found = Some((p.row + 1, p.column + 1));
+        return;
+    }
+    let mut c = n.walk();
+    for child in n.children(&mut c) {
+        walk_err(child, found);
+    }
+}
+
 /// `true` when `src` parses without syntax errors.
 pub fn parses(lang: Lang, src: &str) -> bool {
     let mut p = Parser::new();
@@ -144,5 +172,7 @@ mod tests {
         assert_eq!(find(Lang::C, c, "add").len(), 1);
         assert!(parses(Lang::Rust, src));
         assert!(!parses(Lang::Rust, "fn x( {"));
+        assert!(first_error(Lang::Rust, "fn ok() {}\nfn bad( {\n").is_some_and(|(l, _)| l == 2));
+        assert_eq!(first_error(Lang::Python, "def f():\n    return 1\n"), None);
     }
 }

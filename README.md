@@ -676,8 +676,7 @@ trials and 5 decisions. The development tasks:
 **Agent, languages and memory**
 - [ ] tree-sitter for 40+ languages (12 today); a docs/PDF concept layer in the graph
 - [ ] Hot memory tier and in-RAM HNSW index; import Claude Code / Cursor history and other tools' MCP definitions
-- [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar); a separate cheap repair model
-- [ ] Tree-sitter pre-parse and "related tests" in the verified-edit loop
+- [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
 - [ ] fish-style inline shell suggestions from a small local model
 - [ ] Domain-level sandbox network rules, CPU limits on Linux/macOS, project-name masking in privacy mode
 - [ ] Screenshot-backed undo for computer-use actions; virtual desktops in saved layouts; Windows remote servers

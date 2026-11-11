@@ -138,6 +138,7 @@ fn agent(
         context: kor_agent::context::Budget::default(),
         cost: None,
         shadow: None,
+        repair: None,
     };
     (a, provider)
 }
@@ -538,6 +539,7 @@ async fn agent_tool_returns_the_subagent_text() {
         context: kor_agent::context::Budget::default(),
         cost: None,
         shadow: None,
+        repair: None,
     };
     let approver = Answers(Mutex::new(VecDeque::new()), Mutex::new(Vec::new()));
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();

@@ -148,6 +148,7 @@ impl runner::AgentFactory for Factory {
                 context: kor_agent::context::Budget::default(),
                 cost: None,
                 shadow: None,
+                repair: None,
             },
             cost: None,
             transcript: None,

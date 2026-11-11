@@ -113,6 +113,7 @@ fn agent(root: &Path, model: &str) -> Result<Agent, String> {
         context: kor_agent::context::Budget::default(),
         cost: None,
         shadow: None,
+        repair: None,
     })
 }
 

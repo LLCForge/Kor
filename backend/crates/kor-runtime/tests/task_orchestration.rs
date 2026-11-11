@@ -177,6 +177,7 @@ impl Spawner for TestSpawner {
             context: kor_agent::context::Budget::default(),
             cost: Some(cost.clone()),
             shadow: None,
+            repair: None,
         };
         Ok(Spawned {
             agent,

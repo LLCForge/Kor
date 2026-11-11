@@ -679,8 +679,7 @@ Geliştirme işleri:
 **Ajan, diller ve hafıza**
 - [ ] 40'tan fazla dil için tree-sitter (şu an 12); grafta doküman/PDF kavram katmanı
 - [ ] Sıcak hafıza katmanı ve RAM'de HNSW; Claude Code / Cursor geçmişinin ve diğer araçların MCP tanımlarının içe aktarılması
-- [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar); ayrı ucuz onarım modeli
-- [ ] Doğrulamalı düzenleme döngüsünde tree-sitter ön ayrıştırma ve "ilgili testler" adımı
+- [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
 - [ ] Sandbox'ta alan adı bazlı ağ kuralları, Linux/macOS'ta CPU sınırı, gizlilik modunda proje adı maskeleme
 - [ ] Bilgisayar kontrolü için ekran görüntülü geri alma; kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular

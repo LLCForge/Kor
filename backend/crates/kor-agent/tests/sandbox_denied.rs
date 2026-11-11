@@ -150,6 +150,7 @@ async fn write_outside_the_project_is_blocked_and_audited() {
         context: kor_agent::context::Budget::default(),
         cost: None,
         shadow: None,
+        repair: None,
     };
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
     agent

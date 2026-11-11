@@ -113,6 +113,7 @@ fn agent(root: &Path, p: &Arc<Scripted>, cost: Arc<Control>) -> Agent {
         context: kor_agent::context::Budget::default(),
         cost: Some(cost),
         shadow: None,
+        repair: None,
     }
 }
 

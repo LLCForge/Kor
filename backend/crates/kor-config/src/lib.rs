@@ -1008,6 +1008,8 @@ pub struct Routing {
     pub shadow_threshold: u8,
     /// Tasks compared before any suggestion.
     pub shadow_min_samples: u32,
+    /// A cheap model that repairs malformed tool calls ("" = the session's own model).
+    pub repair: String,
 }
 
 /// Spending limits (§5.1). A limit of 0 is no limit. Day and month follow local time.

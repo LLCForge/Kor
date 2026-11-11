@@ -209,6 +209,7 @@ impl Tool for AgentTool {
             context: crate::context::Budget::default(),
             cost: None,
             shadow: None,
+            repair: None,
         };
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         let result = child.send(prompt, &tx, &DenyAll, ctx.cancel.clone()).await;
