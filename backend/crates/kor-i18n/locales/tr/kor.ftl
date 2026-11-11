@@ -1854,6 +1854,7 @@ presence-budget-body = { $scope ->
 presence-update-title = Kor { $version } hazır
 presence-update-body = Başlık çubuğundan, tepsiden ya da Ayarlar → Hakkında'dan güncelleyin.
 tray-tooltip-idle = Kor
+tray-tooltip-quota = { $provider }: kotanın %{ $percent } kadarı kullanıldı
 tray-tooltip-working = Kor — { $n } görev çalışıyor
 tray-tooltip-waiting = Kor — { $n } onay bekliyor
 tray-open = Kor'u aç

@@ -181,13 +181,25 @@ pub fn enforcement(kind: SandboxKind) -> Enforcement {
             memory: false,
             cpu: false,
         },
-        // RLIMIT_DATA per process (no cgroups without root); CPU only through timeouts.
+        // RLIMIT_DATA per process (no cgroups without root); CPU share only as `nice` priority.
         SandboxKind::Bubblewrap => all(Filter::None, true, false),
         // macOS ignores address-space rlimits; the profile can filter ports.
         SandboxKind::Seatbelt => all(Filter::Ports, false, false),
         // Job object for the whole tree; capabilities are all or nothing.
         SandboxKind::AppContainer | SandboxKind::Docker => all(Filter::None, true, true),
     }
+}
+
+/// `nice -n N` for a CPU share below 100% on Linux/macOS: without root there are no cgroups, so
+/// the share becomes a lower scheduling priority (the smaller the share, the nicer), not a hard cap.
+fn nice(cpu_percent: u8) -> Vec<OsString> {
+    let n = match cpu_percent {
+        0 | 100.. => return Vec::new(),
+        1..=25 => "19",
+        26..=50 => "10",
+        _ => "5",
+    };
+    ["nice", "-n", n].map(OsString::from).to_vec()
 }
 
 /// Program and arguments that run `program args` under `kind` with `policy` (kinds that work by
@@ -240,11 +252,13 @@ pub fn wrap(
                     .map(OsString::from),
                 );
             }
+            a.extend(nice(policy.options.cpu_percent));
             a.extend(tail);
             Ok(("bwrap".into(), a))
         }
         SandboxKind::Seatbelt => {
             let mut a = vec![OsString::from("-p"), seatbelt_profile(policy)?.into()];
+            a.extend(nice(policy.options.cpu_percent));
             a.extend(tail);
             Ok((SANDBOX_EXEC.into(), a))
         }
@@ -549,10 +563,11 @@ mod tests {
             a.iter()
                 .any(|s| s == "ulimit -d 8388608 2>/dev/null; exec \"$@\"")
         );
-        assert_eq!(&a[a.len() - 4..], ["kor-sandbox", "sh", "-c", "ls"]);
+        assert_eq!(&a[a.len() - 7..], ["kor-sandbox", "nice", "-n", "5", "sh", "-c", "ls"]);
 
         let mut open = policy(true);
         open.options.memory_mb = 0;
+        open.options.cpu_percent = 0;
         let (_, a) = wrap(SandboxKind::Bubblewrap, &open, "sh".as_ref(), &[]).unwrap();
         let a = strs(&a);
         assert!(!a.contains(&"--unshare-net".into()));
@@ -602,6 +617,14 @@ mod tests {
         for bad in ["github.com", "a:0", "a:70000", ":443", "a b:1", "a\":1"] {
             assert!(!valid_allow(bad), "{bad}");
         }
+    }
+
+    #[test]
+    fn cpu_share_becomes_nice_priority() {
+        assert!(nice(0).is_empty() && nice(100).is_empty());
+        assert_eq!(nice(20), ["nice", "-n", "19"].map(OsString::from));
+        assert_eq!(nice(50)[2], "10");
+        assert_eq!(nice(90)[2], "5");
     }
 
     #[test]

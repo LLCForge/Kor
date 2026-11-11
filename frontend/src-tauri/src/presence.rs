@@ -1051,6 +1051,26 @@ fn short(s: &str, n: usize) -> String {
     kor_platform::toast::clip(s.lines().next().unwrap_or_default(), n)
 }
 
+/// One tooltip line per provider with the most used key's share, from the rate-limit headers
+/// this process has seen (nothing until the first request).
+fn quota_lines(l: &Localizer) -> Vec<String> {
+    let mut worst: std::collections::BTreeMap<String, f64> = std::collections::BTreeMap::new();
+    for k in kor_providers::quota::snapshot() {
+        if let Some(s) = k.used_share() {
+            let e = worst.entry(k.provider.clone()).or_insert(0.0);
+            *e = e.max(s);
+        }
+    }
+    worst
+        .into_iter()
+        .map(|(provider, s)| {
+            #[allow(clippy::cast_possible_truncation)] // a 0–100 percentage
+            let percent = (s * 100.0).round().clamp(0.0, 100.0) as i64;
+            l.t_args("tray-tooltip-quota", &args!("provider" => provider, "percent" => percent))
+        })
+        .collect()
+}
+
 fn update_tray(app: &AppHandle) {
     let Some(tray) = app.tray_by_id(TRAY) else {
         return;
@@ -1068,6 +1088,7 @@ fn update_tray(app: &AppHandle) {
     } else {
         l.t("tray-tooltip-idle")
     };
+    let tip = [tip].into_iter().chain(quota_lines(&l)).collect::<Vec<_>>().join("\n");
     let _ = tray.set_tooltip(Some(&tip));
     set_tray_icon(&tray, tray_icon(app, false));
     if let Ok(menu) = tray_menu(app) {

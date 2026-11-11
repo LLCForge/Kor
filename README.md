@@ -678,7 +678,7 @@ trials and 5 decisions. The development tasks:
 - [ ] Hot memory tier and in-RAM HNSW index; import Claude Code / Cursor history and other tools' MCP definitions
 - [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
 - [ ] fish-style inline shell suggestions from a small local model
-- [ ] Domain-level sandbox network rules, CPU limits on Linux/macOS, project-name masking in privacy mode
+- [ ] Domain-level sandbox network rules, project-name masking in privacy mode, a hard CPU cap on Linux/macOS (today: `nice` priority)
 - [ ] Screenshot-backed undo for computer-use actions; virtual desktops in saved layouts; Windows remote servers
 
 **Providers and cost**
@@ -693,7 +693,7 @@ trials and 5 decisions. The development tasks:
 
 **UI**
 - [ ] Spread the remaining side-panel views; responsive checks below 800 px and above 1920 px
-- [ ] Gallery media in the Chrome side panel; quota in the tray icon; per-file "edit" in the TUI diff
+- [ ] Gallery media in the Chrome side panel; per-file "edit" in the full-screen TUI diff (the line mode has it)
 
 **Testing, release and code health**
 - [ ] `PERFORMANCE.md`, benchmark history and E2E report per release; coverage with an 80 % gate; nightly live smoke test

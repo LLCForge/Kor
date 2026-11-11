@@ -681,7 +681,7 @@ Geliştirme işleri:
 - [ ] Sıcak hafıza katmanı ve RAM'de HNSW; Claude Code / Cursor geçmişinin ve diğer araçların MCP tanımlarının içe aktarılması
 - [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
-- [ ] Sandbox'ta alan adı bazlı ağ kuralları, Linux/macOS'ta CPU sınırı, gizlilik modunda proje adı maskeleme
+- [ ] Sandbox'ta alan adı bazlı ağ kuralları, gizlilik modunda proje adı maskeleme, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)
 - [ ] Bilgisayar kontrolü için ekran görüntülü geri alma; kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular
 
 **Sağlayıcılar ve maliyet**
@@ -696,7 +696,7 @@ Geliştirme işleri:
 
 **Arayüz**
 - [ ] Kalan yan panel görünümlerinin dağıtılması; 800 px altı ve 1920 px üstü responsive denetimi
-- [ ] Chrome yan panelinde galeri medyası; tepsi simgesinde kota; TUI diff'inde dosya bazında "düzenle"
+- [ ] Chrome yan panelinde galeri medyası; tam ekran TUI diff'inde dosya bazında "düzenle" (satır modunda var)
 
 **Test, sürüm ve kod sağlığı**
 - [ ] Her sürümle `PERFORMANCE.md`, benchmark geçmişi ve E2E raporu; %80 eşikli kapsam; gerçek sağlayıcıyla gece smoke testi

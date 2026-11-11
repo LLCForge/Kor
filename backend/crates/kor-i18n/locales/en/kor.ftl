@@ -1859,6 +1859,7 @@ presence-budget-body = { $scope ->
 presence-update-title = Kor { $version } is available
 presence-update-body = Update from the title bar, the tray or Settings → About.
 tray-tooltip-idle = Kor
+tray-tooltip-quota = { $provider }: { $percent }% of the quota used
 tray-tooltip-working = Kor — { $n } running
 tray-tooltip-waiting = Kor — { $n } waiting for approval
 tray-open = Open Kor
