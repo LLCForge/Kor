@@ -3691,7 +3691,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kor-agent"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3782,7 +3782,7 @@ dependencies = [
 
 [[package]]
 name = "kor-core"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "reqwest",
  "serde",
@@ -3793,7 +3793,7 @@ dependencies = [
 
 [[package]]
 name = "kor-desktop"
-version = "0.8.3"
+version = "0.8.4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3840,7 +3840,7 @@ dependencies = [
 
 [[package]]
 name = "kor-graph"
-version = "0.4.1"
+version = "0.4.2"
 dependencies = [
  "globset",
  "ignore",
@@ -3886,7 +3886,7 @@ dependencies = [
 
 [[package]]
 name = "kor-i18n"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "fluent-bundle",
  "serde",
@@ -3896,7 +3896,7 @@ dependencies = [
 
 [[package]]
 name = "kor-memory"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "candle-core",
  "candle-nn",
@@ -3916,7 +3916,7 @@ dependencies = [
 
 [[package]]
 name = "kor-platform"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
  "block2",
  "dirs 7.0.0",
@@ -3986,7 +3986,7 @@ dependencies = [
 
 [[package]]
 name = "kor-runtime"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "arboard",
  "async-trait",
@@ -4047,7 +4047,7 @@ dependencies = [
 
 [[package]]
 name = "kor-sandbox"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "kor-platform",
  "tokio",
@@ -4072,7 +4072,7 @@ dependencies = [
 
 [[package]]
 name = "kor-tools"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-trait",
  "base64 0.22.1",

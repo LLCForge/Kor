@@ -1,6 +1,6 @@
 [package]
 name = "kor-desktop"
-version = "0.8.3"
+version = "0.8.4"
 edition = "2024"
 description = "Kor masaüstü uygulaması — Tauri webview + Rust arka uç"
 license = "Apache-2.0 OR MIT"

@@ -1,7 +1,7 @@
 [package]
 name = "kor-i18n"
 description = "Localization (tr, en, fr) for the Kor coding agent"
-version = "0.1.7"
+version = "0.1.8"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
