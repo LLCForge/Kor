@@ -619,7 +619,20 @@ jobs:
             exit 0
           fi
           sudo apt-get update && sudo apt-get install -y minisign
-          printf '%s\n' "$MINISIGN_SECRET_KEY" > "$RUNNER_TEMP/kor.key"
+          # A key pasted on Windows carries \r; a key pasted without its first line lacks the
+          # "untrusted comment:" header minisign requires. Normalise both.
+          key=$(printf '%s\n' "$MINISIGN_SECRET_KEY" | tr -d '\r' | sed '/^[[:space:]]*$/d')
+          case "$key" in "untrusted comment:"*) ;; *) key=$(printf 'untrusted comment: minisign secret key\n%s' "$key") ;; esac
+          printf '%s\n' "$key" > "$RUNNER_TEMP/kor.key"
+          unset key
+          # A key minisign still cannot read must not stop the release: binaries go out unsigned.
+          probe="$RUNNER_TEMP/probe.txt"; echo probe > "$probe"
+          if ! minisign -S -s "$RUNNER_TEMP/kor.key" -m "$probe" -x "$probe.minisig" < /dev/null > /dev/null 2>&1; then
+            echo "::warning::MINISIGN_SECRET_KEY could not be loaded (unencrypted key from 'minisign -G -W' expected); kor update binaries are not signed"
+            rm -f "$RUNNER_TEMP/kor.key" "$probe" "$probe.minisig"
+            exit 0
+          fi
+          rm -f "$probe" "$probe.minisig"
           mkdir -p "$RUNNER_TEMP/x"
           for a in artifacts/kor-cli-*.tar.xz artifacts/kor-cli-*.zip; do
             [ -f "$a" ] || continue
