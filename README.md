@@ -355,7 +355,7 @@ Prerequisites:
 | Tool | Version | Notes |
 | --- | --- | --- |
 | Rust | stable, 1.88 or newer | Pinned by `backend/rust-toolchain.toml`; installed through `rustup`. |
-| Node.js | 22 | For the desktop renderer. |
+| Node.js | 24 (23.6 or newer) | For the desktop renderer and build scripts. |
 | Python | 3.11 or newer | Release and repository helpers. |
 | just | any recent | `cargo install just`, `winget install Casey.Just`, `brew install just` or `apt install just`. |
 | Tauri 2 platform prerequisites | — | WebView2 on Windows, WebKitGTK on Linux, Xcode Command Line Tools on macOS. |

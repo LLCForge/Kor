@@ -356,7 +356,7 @@ sunucusu yol haritasında).
 | Araç | Sürüm | Not |
 | --- | --- | --- |
 | Rust | stable, 1.88 ya da üstü | `backend/rust-toolchain.toml` ile sabitlenir; `rustup` ile kurulur. |
-| Node.js | 22 | Masaüstü arayüzü için. |
+| Node.js | 24 (23.6 veya üstü) | Masaüstü arayüzü ve derleme betikleri için. |
 | Python | 3.11 ya da üstü | Sürüm ve depo yardımcıları. |
 | just | güncel bir sürüm | `cargo install just`, `winget install Casey.Just`, `brew install just` ya da `apt install just`. |
 | Tauri 2 platform önkoşulları | — | Windows'ta WebView2, Linux'ta WebKitGTK, macOS'ta Xcode Command Line Tools. |
