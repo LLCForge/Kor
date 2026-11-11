@@ -185,6 +185,9 @@ jobs:
           pattern: artifacts-*
           path: backend/target/distrib/
           merge-multiple: true
+      # BoringSSL (kor-proxy's TLS client) assembles with NASM on Windows; runners do not ship it.
+      - if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
       - name: Install dependencies
         run: |
           ${{ matrix.packages_install }}
@@ -311,8 +314,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
+      # BoringSSL (kor-proxy's TLS client) assembles with NASM on Windows; runners do not ship it.
+      - if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf file
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev patchelf file pkg-config libwayland-dev libgbm-dev libdrm-dev libpipewire-0.3-dev libspa-0.2-dev libclang-dev clang libdbus-1-dev libegl-dev
       - run: npm ci
       # §27.10 PowerToys Run plugin (ADR 0052): shipped as bundle resource `integrations/powertoys`
       # (tauri.release.conf.json); `kor os-integration install powertoys-run` copies it. Other OSes

@@ -10,7 +10,9 @@ ci = "github"
 # The installers to generate for each app
 installers = ["shell", "powershell"]
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "aarch64-pc-windows-msvc", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
+# musl and Windows ARM64 are left out for now: screen capture links PipeWire/Wayland dynamically
+# (no static musl build) and BoringSSL (kor-proxy) has no tested Windows ARM64 build here.
+targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
@@ -20,3 +22,16 @@ github-attestations = true
 # The generated workflow is adapted: the Cargo workspace lives in backend/ and releases also carry
 # minisign-signed raw binaries for `kor update` (see .github/workflows/release.yml at the repo root).
 allow-dirty = ["ci"]
+
+# System libraries the Linux build links (screen capture: Wayland, GBM/DRM, PipeWire via bindgen; D-Bus).
+[dist.dependencies.apt]
+pkg-config = "*"
+libwayland-dev = "*"
+libgbm-dev = "*"
+libdrm-dev = "*"
+libpipewire-0.3-dev = "*"
+libspa-0.2-dev = "*"
+libclang-dev = "*"
+clang = "*"
+libdbus-1-dev = "*"
+libegl-dev = "*"

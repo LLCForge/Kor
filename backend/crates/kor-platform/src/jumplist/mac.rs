@@ -49,7 +49,9 @@ fn install(mtm: MainThreadMarker) -> io::Result<()> {
     let delegate = app
         .delegate()
         .ok_or_else(|| io::Error::other("no app delegate"))?;
-    let class: &AnyClass = AnyObject::class(&delegate);
+    // `Retained<ProtocolObject<dyn NSApplicationDelegate>>` → the object behind it.
+    let object: &AnyObject = AsRef::<AnyObject>::as_ref(&*delegate);
+    let class: &AnyClass = object.class();
     let class = std::ptr::from_ref(class).cast_mut();
     INSTALL.call_once(|| {
         // SAFETY: the function pointers match the declared type encodings
