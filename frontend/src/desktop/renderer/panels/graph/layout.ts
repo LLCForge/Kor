@@ -19,9 +19,9 @@ export interface Sim {
   alpha: number
 }
 
-export const LINK_DISTANCE = 34
-export const CHARGE = 60
-export const CUTOFF = 90
+export const LINK_DISTANCE = 48
+export const CHARGE = 150
+export const CUTOFF = 150
 const VELOCITY_DECAY = 0.4
 const ALPHA_DECAY = 0.0228
 export const ALPHA_MIN = 0.001
@@ -257,4 +257,21 @@ export function nearest(sim: Sim, wx: number, wy: number, maxDist: number, visib
     }
   }
   return best
+}
+
+/** Convex hull of the points (Andrew's monotone chain), counter-clockwise; fewer than 3 points come back as they are. */
+export function convexHull(points: ReadonlyArray<readonly [number, number]>): Array<[number, number]> {
+  const p = [...points].map(([x, y]) => [x, y] as [number, number]).sort((a, b) => a[0] - b[0] || a[1] - b[1])
+  if (p.length < 3) return p
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+  const half = (list: Array<[number, number]>) => {
+    const out: Array<[number, number]> = []
+    for (const q of list) {
+      while (out.length >= 2 && cross(out[out.length - 2]!, out[out.length - 1]!, q) <= 0) out.pop()
+      out.push(q)
+    }
+    out.pop()
+    return out
+  }
+  return [...half(p), ...half([...p].reverse())]
 }

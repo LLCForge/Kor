@@ -670,21 +670,22 @@ impl Session {
     /// (warn), `Ok(None)` runs it as is. Call after [`Session::set_checked`].
     ///
     /// # Errors
-    /// The refusal message when `on_mismatch = "stop"` and something does not match.
+    /// The refusal message when `on_mismatch = "stop"` and a pinned version does not match.
     pub fn gate(&self) -> Result<Option<String>, String> {
         let Some(p) = self.problems() else {
             return Ok(None);
         };
-        match self.on_mismatch {
-            OnMismatch::Stop => Err(format!(
+        let mismatch = self.checked().unwrap_or_default().iter().any(Version::bad);
+        if mismatch && self.on_mismatch == OnMismatch::Stop {
+            return Err(format!(
                 "Kor did not run this command.\n{p}Install the expected versions, or set [env] on_mismatch = \"warn\". \
                  Do not work around this check; tell the user what is missing."
-            )),
-            OnMismatch::Warn if !self.warned.swap(true, Ordering::Relaxed) => Ok(Some(format!(
-                "[env] warning (on_mismatch = \"warn\"):\n{p}"
-            ))),
-            OnMismatch::Warn => Ok(None),
+            ));
         }
+        // A missing environment program (devcontainer CLI, nix...) is not a version mismatch:
+        // commands run on this computer instead, and the model is told once.
+        let note = if mismatch { "[env] warning (on_mismatch = \"warn\"):" } else { "[env] note: commands run on this computer." };
+        Ok((!self.warned.swap(true, Ordering::Relaxed)).then(|| format!("{note}\n{p}")))
     }
 }
 
@@ -924,7 +925,8 @@ mod tests {
         assert!(!s.wrap);
         assert_eq!(s.command(&shell(), root, "ls").0, "bash");
 
-        // Missing tool: stop refuses with expected versions and an install hint.
+        // Missing tool: even under stop the command runs on this computer, with a one-time note
+        // (expected versions and an install hint); only a real version mismatch refuses.
         let s = Session::new(
             det(Some(Kind::Nix { flake: true })),
             OnMismatch::Stop,
@@ -933,13 +935,15 @@ mod tests {
         )
         .unwrap();
         assert!(s.tool_missing && !s.wrap);
-        let e = s.gate().unwrap_err();
+        let e = s.gate().unwrap().unwrap();
         assert!(
             e.contains("`nix` is not installed")
                 && e.contains("node: 20 (.nvmrc)")
-                && e.contains("nixos.org"),
+                && e.contains("nixos.org")
+                && e.contains("run on this computer"),
             "{e}"
         );
+        assert_eq!(s.gate(), Ok(None), "said once");
 
         // Mismatch: stop refuses, warn warns once.
         for (mode, refused) in [(OnMismatch::Stop, true), (OnMismatch::Warn, false)] {

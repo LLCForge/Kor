@@ -461,8 +461,10 @@ pub fn send(app: &AppHandle, a: SendArgs) -> Result<(), String> {
             Ok(()) => {}
             Err(message) => emit(&app, &id, json!({ "type": "error", "message": message })),
         }
-        emit(&app, &id, json!({ "type": "done" }));
+        // Not running any more *before* `done`: the renderer answers `done` with `g2QueueFlush`
+        // ("send now", queued messages), which does nothing while the session still counts as running.
         lock(&app.state::<AppState>().chats.running).remove(&id);
+        emit(&app, &id, json!({ "type": "done" }));
         let _ = app.emit("kor:sessionsChanged", ());
     });
     Ok(())
@@ -596,6 +598,15 @@ async fn run_turn(app: &AppHandle, a: SendArgs) -> Result<(), String> {
     let chat = chat_for(app, &id).await?;
     let mut chat = chat.lock().await;
     let root = chat.agent.ctx.root.clone();
+    // A new chat is listed in the sidebar now, not only after its first turn ends: its file is
+    // written with the first message (the full transcript replaces it when the turn ends).
+    if let Some(p) = chat.path.clone().filter(|p| !p.exists()) {
+        let mut first = chat.agent.messages.clone();
+        first.push(kor_core::Message::text(kor_core::Role::User, a.text.clone()));
+        if kor_agent::session::save(&p, &first).is_ok() {
+            let _ = app.emit("kor:sessionsChanged", ());
+        }
+    }
     crate::presence::turn_started(app, &id, &root, &a.text);
     let loaded = crate::bridge::load_config(&root)?;
     let l = Localizer::new(loaded.config.ui.language.resolve());

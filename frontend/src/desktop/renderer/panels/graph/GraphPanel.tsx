@@ -9,10 +9,11 @@ import { errorMessage } from '../../api.ts'
 import { useMotionStill } from '../../motion.ts'
 import type { KorPanelProps } from '../registry.ts'
 import { graphApi } from './bridge.ts'
+import { GraphSidebar, type GraphTheme } from './GraphSidebar.tsx'
 import { GraphCanvas, type Layers } from './GraphCanvas.tsx'
 import { DiffTool, ExportTool, ImpactResult } from './GraphTools.tsx'
 import { FindTool } from './FindTool.tsx'
-import { ALL_KINDS, KIND_LABEL, ago, indexById, nodesForFiles, pathSegments, visibleMask } from './model.ts'
+import { ago, ALL_KINDS, communitySlots, indexById, KIND_LABEL, nodesForFiles, pathSegments, visibleMask } from './model.ts'
 import { NodeCard } from './NodeCard.tsx'
 import { changedFiles, onChangedFiles } from './session-changes.ts'
 import { uiLocale } from '../../ui-locale.ts'
@@ -38,7 +39,7 @@ export function GraphPanel({ sessionId }: KorPanelProps) {
   const { mutate } = useSWRConfig()
   const reducedMotion = useReducedMotion()
   const now = useMinuteClock()
-  const [limit, setLimit] = useState<number>(DETAIL_LEVELS[0])
+  const [limit, setLimit] = useState<number>(DETAIL_LEVELS[1])
   const [community, setCommunity] = useState<number | null>(null)
   const [kinds, setKinds] = useState<ReadonlySet<NodeKind>>(() => new Set(ALL_KINDS))
   const [showTouched, setShowTouched] = useState(true)
@@ -58,6 +59,8 @@ export function GraphPanel({ sessionId }: KorPanelProps) {
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [touchedNow, setTouchedNow] = useState<ReadonlyMap<string, number>>(new Map())
   const [touchedLive, setTouchedLive] = useState<ReadonlySet<string>>(new Set())
+  const [hiddenCommunities, setHiddenCommunities] = useState<ReadonlySet<number>>(new Set())
+  const [graphTheme, setGraphTheme] = useState<GraphTheme>('system')
 
   const status = useSWR('graph:status', () => graphApi.status(), { revalidateOnFocus: false })
   const refreshStatus = status.mutate
@@ -98,7 +101,14 @@ export function GraphPanel({ sessionId }: KorPanelProps) {
 
   const snap = snapshot.data
   const index = useMemo(() => (snap ? indexById(snap) : new Map<string, number>()), [snap])
-  const mask = useMemo(() => (snap ? visibleMask(snap.nodes, { kinds, community: null }) : new Uint8Array()), [snap, kinds])
+  const mask = useMemo(() => {
+    if (!snap) return new Uint8Array()
+    const m = visibleMask(snap.nodes, { kinds, community: null })
+    if (hiddenCommunities.size > 0) snap.nodes.forEach((n, i) => { if (hiddenCommunities.has(n.community)) m[i] = 0 })
+    return m
+  }, [snap, kinds, hiddenCommunities])
+  const slots = useMemo(() => (snap ? communitySlots(snap.nodes, snap.communities) : new Int32Array()), [snap])
+  const visibleEdges = useMemo(() => (snap ? snap.edges.reduce((k, [a, b]) => k + (mask[a] && mask[b] ? 1 : 0), 0) : 0), [snap, mask])
 
   const layers = useMemo<Layers>(() => {
     const nodes = snap?.nodes ?? []
@@ -350,6 +360,7 @@ export function GraphPanel({ sessionId }: KorPanelProps) {
         </div>
       )}
 
+      <div className="kg-view">
       <div className="kg-stage">
         {snapshot.error ? (
           <p className="error-text pad" role="alert">{errorMessage(snapshot.error)}</p>
@@ -372,6 +383,8 @@ export function GraphPanel({ sessionId }: KorPanelProps) {
             onSelect={(i) => select(i === null ? null : (snap.nodes[i]?.id ?? null))}
             reducedMotion={reducedMotion}
             fitSeq={fitSeq}
+            slots={slots}
+            theme={graphTheme}
           />
         ) : (
           <ul className="kg-list" aria-label="Graf düğümleri (dereceye göre)">
@@ -390,6 +403,24 @@ export function GraphPanel({ sessionId }: KorPanelProps) {
             ))}
           </ul>
         )}
+      </div>
+      {snap && snap.nodes.length > 0 && (
+        <GraphSidebar
+          snapshot={snap}
+          slots={slots}
+          hidden={hiddenCommunities}
+          onHidden={setHiddenCommunities}
+          selected={selectedIndex}
+          onSelect={(i) => {
+            select(snap.nodes[i]?.id ?? null)
+            setFitSeq((s) => s + 1)
+          }}
+          theme={graphTheme}
+          onTheme={setGraphTheme}
+          visibleNodes={visibleCount}
+          visibleEdges={visibleEdges}
+        />
+      )}
       </div>
       {snap && (
         <p className="muted kg-count">

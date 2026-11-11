@@ -338,7 +338,7 @@ quickly; where we are not sure, the cell says "varies". Corrections are welcome.
 | Desktop app + CLI at parity | Yes, CLI, TUI and desktop, tested | Varies | Varies | CLI only | Varies (IDE extensions and a CLI) |
 | Providers | 46 manifests, including 8 local runtimes | Varies | Anthropic, Bedrock, Vertex and similar | Many, via LiteLLM | Many |
 | Per-file approval before writing | Yes | Yes | Yes | No (edits applied and committed to git; `/undo`) | Varies |
-| OS sandbox for commands | Yes, on by default (AppContainer, bubblewrap, Seatbelt, Docker) | Varies | Yes (opt-in) | No | Varies |
+| OS sandbox for commands | Yes, opt-in (AppContainer, bubblewrap, Seatbelt, Docker) | Varies | Yes (opt-in) | No | Varies |
 
 Kor's strengths are privacy controls, uncensored and local models and surface parity. The others are more mature,
 have far larger user bases, and some have editor integrations Kor does not have yet (an LSP server is on the
@@ -551,7 +551,7 @@ on_limit = "ask"               # ask, pause, downgrade
 - **Secrets vault.** `kor vault add | list | import`: keys in the OS keychain or an encrypted file vault, handed to
   the agent only as environment variables. Every request body sent to a model passes one masking point that
   replaces known keys, vault values and URL passwords.
-- **Sandbox per OS.** On by default, network off by default:
+- **Sandbox per OS.** Off by default; turn it on in Settings or with `kor config set sandbox.mode on`. When on, the network is off by default:
 
   | Backend | Files | Network | Limits |
   | --- | --- | --- | --- |

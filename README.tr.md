@@ -339,7 +339,7 @@ Her projenin bu metnin yazıldığı tarihteki herkese açık belgelerine dayana
 | Masaüstü + CLI eşitliği | Evet; CLI, TUI ve masaüstü, testli | Değişken | Değişken | Yalnızca CLI | Değişken (IDE eklentileri ve bir CLI) |
 | Sağlayıcılar | 46 manifesto, 8'i yerel çalıştırıcı | Değişken | Anthropic, Bedrock, Vertex ve benzerleri | Çok sayıda, LiteLLM ile | Çok sayıda |
 | Yazmadan önce dosya dosya onay | Evet | Evet | Evet | Hayır (düzenlemeler uygulanır ve git'e işlenir; `/undo`) | Değişken |
-| Komutlar için OS sandbox'ı | Evet, varsayılan açık (AppContainer, bubblewrap, Seatbelt, Docker) | Değişken | Evet (isteğe bağlı) | Hayır | Değişken |
+| Komutlar için OS sandbox'ı | Evet, isteğe bağlı (AppContainer, bubblewrap, Seatbelt, Docker) | Değişken | Evet (isteğe bağlı) | Hayır | Değişken |
 
 Kor'un güçlü yanları gizlilik denetimleri, sansürsüz ve yerel modeller ve yüzeyler arası eşitlik. Diğerleri daha
 olgun, kullanıcı tabanları çok daha geniş ve bazılarında Kor'un henüz sahip olmadığı editör entegrasyonları var (LSP
@@ -553,7 +553,7 @@ on_limit = "ask"               # ask, pause, downgrade
 - **Sır kasası.** `kor vault add | list | import`: anahtarlar işletim sisteminin anahtarlığında ya da şifreli dosya
   kasasında durur, ajana yalnızca ortam değişkeni olarak verilir. Modele giden her istek gövdesi, bilinen anahtarları,
   kasa değerlerini ve URL parolalarını maskeleyen tek bir noktadan geçer.
-- **İşletim sistemine göre sandbox.** Varsayılan açık, ağ varsayılan kapalı:
+- **İşletim sistemine göre sandbox.** Varsayılan kapalı; Ayarlar'dan ya da `kor config set sandbox.mode on` ile açılır. Açıkken ağ varsayılan olarak kapalıdır:
 
   | Arka uç | Dosyalar | Ağ | Sınırlar |
   | --- | --- | --- | --- |

@@ -2,8 +2,8 @@
 // bu tuval yalnızca görsel bir özettir (role="img") ama +/−/0/ok tuşlarıyla yakınlaştırılıp kaydırılabilir.
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import type { Snapshot } from '../../../ipc-graph.ts'
-import { ALPHA_MIN, adoptPositions, createSim, fitView, nearest, reheat, settle, tick, toScreen, toWorld, zoomAt, type Sim, type View } from './layout.ts'
-import { labelled, radius } from './model.ts'
+import { ALPHA_MIN, adoptPositions, convexHull, createSim, fitView, nearest, reheat, settle, tick, toScreen, toWorld, zoomAt, type Sim, type View } from './layout.ts'
+import { GRAPH_COLORS, labelled, radius } from './model.ts'
 
 export interface Layers {
   /** dizin → olay zamanı (ms): ajan şu an burada */
@@ -22,6 +22,10 @@ interface GraphCanvasProps {
   path: ReadonlyArray<[number, number]>
   onSelect: (index: number | null) => void
   reducedMotion: boolean
+  /** Palette slot per node (`communitySlots`): node, edge and hull colour of its community. */
+  slots: Int32Array
+  /** Canvas colours: `system` follows the app theme. */
+  theme: 'light' | 'dark' | 'system'
   /** Değişince görünüm (varsa) seçili düğüme, yoksa tüm grafa sığdırılır */
   fitSeq: number
 }
@@ -38,6 +42,10 @@ interface Palette {
   add: string
   bg: string
   font: string
+  /** Community colours (`--kor-graph-0` …). */
+  graph: string[]
+  labelBg: string
+  labelText: string
 }
 
 function readPalette(el: Element): Palette {
@@ -51,12 +59,15 @@ function readPalette(el: Element): Palette {
     accent: v('--accent'),
     warn: v('--warn'),
     add: v('--add-text'),
-    bg: v('--bg'),
+    bg: v('--kg-bg') || v('--bg'),
     font: `${v('--kor-text-12') || 'small'} ${v('--font-sans') || 'sans-serif'}`,
+    graph: Array.from({ length: GRAPH_COLORS }, (_, i) => v(`--kor-graph-${i}`) || v('--muted')),
+    labelBg: v('--kg-label-bg') || v('--text'),
+    labelText: v('--kg-label-text') || v('--bg'),
   }
 }
 
-export function GraphCanvas({ snapshot, mask, layers, selected, pathFrom, path, onSelect, reducedMotion, fitSeq }: GraphCanvasProps) {
+export function GraphCanvas({ snapshot, mask, layers, selected, pathFrom, path, onSelect, reducedMotion, fitSeq, slots, theme }: GraphCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
   const view = useRef<View>({ tx: 0, ty: 0, k: 1 })
@@ -86,8 +97,8 @@ export function GraphCanvas({ snapshot, mask, layers, selected, pathFrom, path, 
   const label = useMemo(() => ({ few: labelled(snapshot.nodes, mask, 25), many: labelled(snapshot.nodes, mask, 160) }), [snapshot, mask])
 
   // Çizim durumu ref'te: rAF döngüsü her karede en güncelini okur.
-  const state = useRef({ mask, layers, selected, pathFrom, path, label })
-  state.current = { mask, layers, selected, pathFrom, path, label }
+  const state = useRef({ mask, layers, selected, pathFrom, path, label, slots })
+  state.current = { mask, layers, selected, pathFrom, path, label, slots }
 
   const draw = () => {
     const canvas = canvasRef.current
@@ -97,23 +108,51 @@ export function GraphCanvas({ snapshot, mask, layers, selected, pathFrom, path, 
     const dpr = window.devicePixelRatio || 1
     const { w, h } = { w: canvas.width / dpr, h: canvas.height / dpr }
     const v = view.current
-    const { mask, layers, selected, pathFrom, path, label } = state.current
+    const { mask, layers, selected, pathFrom, path, label, slots } = state.current
     const now = performance.now()
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, w, h)
+    ctx.fillStyle = p.bg
+    ctx.fillRect(0, 0, w, h)
     ctx.setTransform(v.k * dpr, 0, 0, v.k * dpr, v.tx * dpr, v.ty * dpr)
 
-    // Kenarlar: tek yol, soluk
-    ctx.lineWidth = 1 / v.k
-    ctx.strokeStyle = p.border
-    ctx.globalAlpha = 0.9
-    ctx.beginPath()
-    for (const [a, b] of snapshot.edges) {
-      if (!mask[a] || !mask[b]) continue
-      ctx.moveTo(sim.x[a]!, sim.y[a]!)
-      ctx.lineTo(sim.x[b]!, sim.y[b]!)
+    // Topluluk zarfları: her topluluğun düğümlerini saran yarı saydam alan.
+    const members = new Map<number, { slot: number; pts: Array<[number, number]> }>()
+    for (let i = 0; i < sim.n; i++) {
+      if (!mask[i]) continue
+      const c = snapshot.nodes[i]!.community
+      let m = members.get(c)
+      if (!m) members.set(c, (m = { slot: slots[i] ?? 0, pts: [] }))
+      m.pts.push([sim.x[i]!, sim.y[i]!])
     }
-    ctx.stroke()
+    ctx.lineWidth = 1 / v.k
+    for (const { slot, pts } of members.values()) {
+      if (pts.length < 3) continue
+      const hull = convexHull(pts)
+      const color = p.graph[slot] ?? p.muted
+      ctx.beginPath()
+      hull.forEach(([x, y], k) => (k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)))
+      ctx.closePath()
+      ctx.fillStyle = color
+      ctx.globalAlpha = 0.06
+      ctx.fill()
+      ctx.strokeStyle = color
+      ctx.globalAlpha = 0.18
+      ctx.stroke()
+    }
+
+    // Kenarlar: kaynak düğümün topluluk renginde, ince ve yarı saydam (renk başına tek yol).
+    ctx.lineWidth = 0.7 / v.k
+    ctx.globalAlpha = 0.35
+    for (let slot = 0; slot < p.graph.length; slot++) {
+      ctx.strokeStyle = p.graph[slot]!
+      ctx.beginPath()
+      for (const [a, b] of snapshot.edges) {
+        if (!mask[a] || !mask[b] || slots[a] !== slot) continue
+        ctx.moveTo(sim.x[a]!, sim.y[a]!)
+        ctx.lineTo(sim.x[b]!, sim.y[b]!)
+      }
+      ctx.stroke()
+    }
     ctx.globalAlpha = 1
     // Seçili düğümün kenarları
     if (selected !== null) {
@@ -149,11 +188,12 @@ export function GraphCanvas({ snapshot, mask, layers, selected, pathFrom, path, 
       const y = sim.y[i]!
       const touchedAt = layers.touchedNow.get(i)
       const live = touchedAt !== undefined && now - touchedAt < FLASH_MS
-      ctx.fillStyle = live ? p.accent : layers.changed.has(i) ? p.add : p.muted
+      ctx.fillStyle = live ? p.accent : (p.graph[slots[i] ?? 0] ?? p.muted)
       ctx.beginPath()
       if (n.kind === 'module' || n.kind === 'package') ctx.rect(x - r, y - r, r * 2, r * 2)
       else ctx.arc(x, y, r, 0, Math.PI * 2)
       ctx.fill()
+      if (layers.changed.has(i) && !live) ring(ctx, x, y, r + 1.5 / v.k, p.add, 1.5 / v.k)
       if (layers.hotspots.has(i)) ring(ctx, x, y, r + 2.5 / v.k, p.warn, 2 / v.k)
       if (layers.touchedSession.has(i) && !live) ring(ctx, x, y, r + 1.5 / v.k, p.accent, 1 / v.k)
       if (live) {
@@ -184,10 +224,21 @@ export function GraphCanvas({ snapshot, mask, layers, selected, pathFrom, path, 
       const [sx, sy] = toScreen(v, sim.x[i]!, sim.y[i]!)
       if (sx < -200 || sy < -20 || sx > w + 20 || sy > h + 20) continue
       const tx = sx + radius(n) * v.k + 5
+      if (i === selected || i === hovered.current) {
+        // Üzerine gelinen / seçilen: açık zeminli etiket kutusu.
+        const tw = ctx.measureText(n.name).width
+        ctx.fillStyle = p.labelBg
+        ctx.beginPath()
+        ctx.roundRect(tx - 4, sy - 10, tw + 8, 20, 3)
+        ctx.fill()
+        ctx.fillStyle = p.labelText
+        ctx.fillText(n.name, tx, sy)
+        continue
+      }
       ctx.lineWidth = 3
       ctx.strokeStyle = p.bg
       ctx.strokeText(n.name, tx, sy)
-      ctx.fillStyle = i === selected || i === hovered.current ? p.text : p.soft
+      ctx.fillStyle = p.soft
       ctx.fillText(n.name, tx, sy)
     }
     return flashing
@@ -246,6 +297,11 @@ export function GraphCanvas({ snapshot, mask, layers, selected, pathFrom, path, 
     ro.observe(canvas)
     return () => ro.disconnect()
   }, [])
+
+  useEffect(() => {
+    palette.current = null
+    kick()
+  }, [theme, slots])
 
   // Yeni veri ya da boyut: görünümü sığdır ve çiz.
   useEffect(() => {
@@ -365,6 +421,7 @@ export function GraphCanvas({ snapshot, mask, layers, selected, pathFrom, path, 
     <canvas
       ref={canvasRef}
       className="kg-canvas"
+      data-kg-theme={theme}
       role="img"
       tabIndex={0}
       aria-label={`Proje grafı: ${visibleCount} düğüm görünüyor. Yakınlaştırmak için artı ve eksi, kaydırmak için ok tuşları, sığdırmak için sıfır. Düğüm seçmek için liste görünümünü kullan.`}

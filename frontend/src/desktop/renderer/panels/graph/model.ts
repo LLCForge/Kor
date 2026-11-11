@@ -127,3 +127,24 @@ export function labelled(nodes: readonly SnapshotNode[], mask: Uint8Array, count
 export function radius(n: Pick<SnapshotNode, 'degree' | 'kind'>): number {
   return Math.min(14, 3 + Math.sqrt(n.degree) * 1.2) + (n.kind === 'package' ? 3 : 0)
 }
+
+/** Number of categorical community colours (`--kor-graph-0` … in the theme). */
+export const GRAPH_COLORS = 10
+
+/** Palette slot per node: communities by size (the biggest gets the first colour), the rest cycle. */
+export function communitySlots(nodes: readonly Pick<SnapshotNode, 'community'>[], communities: readonly { id: number; size: number }[]): Int32Array {
+  const order = new Map([...communities].sort((a, b) => b.size - a.size || a.id - b.id).map((c, i) => [c.id, i % GRAPH_COLORS]))
+  return Int32Array.from(nodes, (n) => order.get(n.community) ?? n.community % GRAPH_COLORS)
+}
+
+/** Nodes whose name contains `q` (case-insensitive), best (highest degree) first. */
+export function findNodes(nodes: readonly Pick<SnapshotNode, 'name' | 'degree'>[], q: string, limit: number): number[] {
+  const needle = q.trim().toLocaleLowerCase()
+  if (!needle) return []
+  return nodes
+    .map((n, i) => ({ i, hit: n.name.toLocaleLowerCase().includes(needle), d: n.degree }))
+    .filter((r) => r.hit)
+    .sort((a, b) => b.d - a.d)
+    .slice(0, limit)
+    .map((r) => r.i)
+}

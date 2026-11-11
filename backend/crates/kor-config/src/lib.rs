@@ -556,6 +556,9 @@ pub struct DevEnv {
     pub on_mismatch: OnMismatch,
     /// Service of `docker-compose.dev.yml` commands run in; empty = the first one in the file.
     pub service: String,
+    /// Run commands inside the project's container (devcontainer, docker compose). Off by
+    /// default: the container is often not running, and its commands bypass the OS sandbox.
+    pub containers: bool,
 }
 
 impl Default for DevEnv {
@@ -564,6 +567,7 @@ impl Default for DevEnv {
             enabled: true,
             on_mismatch: OnMismatch::Stop,
             service: String::new(),
+            containers: false,
         }
     }
 }
@@ -946,7 +950,9 @@ pub struct Sandbox {
 impl Default for Sandbox {
     fn default() -> Self {
         Self {
-            mode: SandboxMode::On,
+            // Off by default since 11 Nov 2026 (user decision): turn it on in Settings or with
+            // `kor config set sandbox.mode on`.
+            mode: SandboxMode::Off,
             backend: SandboxBackend::Auto,
             network: Vec::new(),
             memory_mb: 8 * 1024,
@@ -1932,7 +1938,7 @@ mod tests {
         assert!(text.contains(r#"network = ["*", "registry.npmjs.org:443"]"#), "{text}");
 
         // `kor config set sandbox ask`: a top-level key after tables exist.
-        assert_eq!(Config::default().sandbox.mode, SandboxMode::On);
+        assert_eq!(Config::default().sandbox.mode, SandboxMode::Off);
         set_scalar(&f, "sandbox", "ask").unwrap();
         let paths = Paths {
             system: None,

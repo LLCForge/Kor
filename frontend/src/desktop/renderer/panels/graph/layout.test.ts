@@ -1,9 +1,9 @@
 // node --test src/desktop/renderer/panels/graph/layout.test.ts
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { ALPHA_MIN, LINK_DISTANCE, adoptPositions, createSim, fitView, nearest, settle, tick, toScreen, toWorld, zoomAt } from './layout.ts'
+import { ALPHA_MIN, LINK_DISTANCE, adoptPositions, convexHull, createSim, fitView, nearest, settle, tick, toScreen, toWorld, zoomAt } from './layout.ts'
 import type { SnapshotNode } from '../../../ipc-graph.ts'
-import { nodesForFiles, pathSegments, referenceFor, topCoChange, visibleMask, ago } from './model.ts'
+import { communitySlots, findNodes, nodesForFiles, pathSegments, referenceFor, topCoChange, visibleMask, ago } from './model.ts'
 
 const dist = (s: ReturnType<typeof createSim>, a: number, b: number) => Math.hypot(s.x[a]! - s.x[b]!, s.y[a]! - s.y[b]!)
 
@@ -119,4 +119,19 @@ test('model: filtre, dosya vurgusu, yol ve başvuru metni', () => {
   assert.equal(topCoChange({ co_changes: [] }), null)
   assert.equal(ago(100, 103_000), '3 sn önce')
   assert.equal(ago(null, 0), 'hiç')
+})
+
+test('topluluk zarfı: iç noktalar dışarıda kalır, köşeler kalır', () => {
+  const hull = convexHull([[0, 0], [4, 0], [4, 4], [0, 4], [2, 2], [1, 3]])
+  assert.equal(hull.length, 4)
+  for (const c of [[0, 0], [4, 0], [4, 4], [0, 4]]) assert.ok(hull.some(([x, y]) => x === c[0] && y === c[1]), String(c))
+  assert.deepEqual(convexHull([[1, 1], [0, 0]]), [[0, 0], [1, 1]])
+})
+
+test('topluluk renkleri büyüklüğe göre, arama dereceye göre sıralı', () => {
+  const nodes = [{ community: 7, name: 'parseConfig', degree: 2 }, { community: 3, name: 'Config', degree: 9 }, { community: 3, name: 'x', degree: 1 }]
+  const slots = communitySlots(nodes, [{ id: 7, size: 1 }, { id: 3, size: 2 }])
+  assert.deepEqual([...slots], [1, 0, 0])
+  assert.deepEqual(findNodes(nodes, 'CONFIG', 5), [1, 0])
+  assert.deepEqual(findNodes(nodes, '  ', 5), [])
 })

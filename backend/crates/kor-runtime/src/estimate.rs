@@ -185,12 +185,18 @@ fn is_local(model: &str) -> bool {
     p == "local" || p.starts_with("local-") || p == "ollama"
 }
 
+/// A run that measured a real task: at least one model turn and more than a second. Turns that
+/// ended at once (no key, refused, stopped) would drag estimates down to "≈ 1 s".
+fn real(r: &Run) -> bool {
+    r.ok && r.turns > 0 && r.secs > 1
+}
+
 /// Median actual/estimate duration ratio of the last runs that carry both, clamped to 0.25–4.
 fn correction(runs: &[Run]) -> f64 {
     let mut ratios: Vec<u64> = runs
         .iter()
         .rev()
-        .filter(|r| r.est_secs > 0 && r.secs > 0)
+        .filter(|r| real(r) && r.est_secs > 0)
         .take(CORRECTION_RUNS)
         .map(|r| r.secs * 1000 / r.est_secs)
         .collect();
@@ -210,7 +216,7 @@ pub fn estimate(task: &str, model: &str, context: u64, prices: &Prices, runs: &[
     let local = is_local(model);
     let mut similar: Vec<(&Run, f64)> = runs
         .iter()
-        .filter(|r| r.ok && r.category == cat)
+        .filter(|r| real(r) && r.category == cat)
         .map(|r| (r, jaccard(&w, &r.words)))
         .collect();
     similar.sort_by(|a, b| b.1.total_cmp(&a.1).then(b.0.at.cmp(&a.0.at)));
@@ -253,8 +259,11 @@ pub fn estimate(task: &str, model: &str, context: u64, prices: &Prices, runs: &[
         let c = (prompt as f64 * i + completion as f64 * o) / 1_000_000.0;
         c * if method == Method::Prior { corr } else { 1.0 }
     });
+    // Never less than one model turn of this model.
+    #[allow(clippy::cast_precision_loss)]
+    let one_turn = ttft_ms / 1000.0 + OUTPUT_PER_TURN as f64 / tps;
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // positive, clamped seconds
-    let secs = (raw_secs * corr).round().clamp(1.0, 86_400.0) as u64;
+    let secs = (raw_secs * corr).max(one_turn).round().clamp(1.0, 86_400.0) as u64;
     Estimate {
         secs,
         usd: if local { Some(0.0) } else { usd },
@@ -479,6 +488,20 @@ mod tests {
                 .usd
                 .is_none()
         );
+    }
+
+    #[test]
+    fn runs_that_ended_at_once_do_not_shrink_the_estimate() {
+        let mut quick = vec![run("fix typo in docs page", 1, 0, 40), run("fix typo in the config", 0, 0, 40), run("fix the typo here", 1, 0, 40)];
+        for r in &mut quick {
+            r.turns = 0;
+        }
+        let e = estimate("fix a typo in the config", "x/m1", 1_000, &prices(), &quick);
+        assert_eq!(e.method, Method::Prior, "instant runs are not history");
+        assert_eq!(e.secs, 40);
+        // Even real history never goes below one turn (1 s first token + 600/100 s output).
+        let fast: Vec<Run> = ["fix typo in docs page", "fix typo in the config", "fix the typo here"].iter().map(|t| run(t, 2, 0, 0)).collect();
+        assert_eq!(estimate("fix a typo in the config", "x/m1", 1_000, &prices(), &fast).secs, 7);
     }
 
     #[test]

@@ -107,7 +107,9 @@ export function App() {
   const { data: models, error: modelsError } = useSWR(appState?.hasApiKey ? 'models' : null, () => api.listModels(), {
     revalidateOnFocus: false,
   })
-  const { data: sessions, error: sessionsError, mutate: refreshSessions } = useSWR(appState?.hasApiKey ? 'sessions' : null, () => api.listSessions())
+  // Listed with or without a provider key (the first run asks for nothing).
+  const { data: sessions, error: sessionsError, mutate: refreshSessions } = useSWR(appState ? 'sessions' : null, () => api.listSessions())
+  useEffect(() => api.onSessionsChanged(() => void refreshSessions()), [refreshSessions])
   const { mutate } = useSWRConfig()
 
   // Her sohbetin durumu kimliğine göre tutulur: arka planda çalışan sohbetler de olayları almaya devam eder.

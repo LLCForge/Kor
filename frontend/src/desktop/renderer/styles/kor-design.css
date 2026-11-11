@@ -295,7 +295,8 @@ img, svg { -webkit-user-drag: none; }
   box-shadow: var(--kor-ring);
 }
 /* Durum tek yerde: gönderdikten sonra alt kenarda ince ember ilerleme çizgisi (+ KorStatus fiili). */
-.composer.kor-running { position: relative; overflow: hidden; }
+/* No overflow: hidden here: it clipped popovers that open upward from the composer (usage meter). */
+.composer.kor-running { position: relative; }
 .composer.kor-running::after {
   content: '';
   position: absolute;

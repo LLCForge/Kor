@@ -31,6 +31,8 @@ export interface Theme {
   border: { color: string; alpha: number }
   status: Record<'success' | 'warning' | 'error' | 'info', string>
   gradient: string[]
+  /** Categorical colours for graph communities (project graph, graphify-style view). */
+  graph: string[]
   frames: Record<string, string[]>
   ansi256: Record<string, number>
   fonts: Record<'heading' | 'ui' | 'mono', string>
@@ -54,6 +56,7 @@ export function validateTheme(t: Theme): string[] {
     ...Object.entries(t.ink).map(([k, v]): [string, string] => [`ink.${k}`, v]),
     ...Object.entries(t.status).map(([k, v]): [string, string] => [`status.${k}`, v]),
     ...t.gradient.map((v, i): [string, string] => [`gradient[${i}]`, v]),
+    ...t.graph.map((v, i): [string, string] => [`graph[${i}]`, v]),
     ['border.color', t.border.color],
   ]
   for (const [k, v] of hexes) if (!HEX.test(v)) errors.push(`${k}: "${v}" #RRGGBB değil`)
@@ -85,6 +88,7 @@ export function renderCss(t: Theme): string {
   v.push(`--kor-border: ${rgba(t.border.color, t.border.alpha)};`)
   for (const [k, x] of Object.entries(t.status)) v.push(`--kor-${k}: ${x};`)
   t.gradient.forEach((x, i) => v.push(`--kor-gradient-${i}: ${x};`))
+  t.graph.forEach((x, i) => v.push(`--kor-graph-${i}: ${x};`))
   v.push(`--kor-ember-soft: ${rgba(t.ember.mid, t.focusRing.alpha)};`)
   v.push(`--kor-ring: 0 0 0 ${t.focusRing.width}px ${rgba(t.ember.mid, t.focusRing.alpha)};`)
   for (const [k, x] of Object.entries(t.fonts)) v.push(`--kor-font-${k}: '${x}', ${FALLBACK[k as keyof typeof FALLBACK]};`)

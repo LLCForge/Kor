@@ -1276,3 +1276,54 @@ async fn schema_invalid_input_is_rejected_without_side_effects() {
     assert_eq!(a.stats.tool_calls_failed, 2);
     assert_eq!(a.stats.tool_calls_repaired, 1);
 }
+
+/// A tool that never finishes and never looks at the cancel token (a hung command).
+struct Hang;
+
+#[async_trait]
+impl kor_tools::Tool for Hang {
+    fn name(&self) -> &'static str {
+        "Hang"
+    }
+    fn rule_name(&self) -> &'static str {
+        "Hang"
+    }
+    fn kind(&self) -> kor_tools::ToolKind {
+        kor_tools::ToolKind::Read
+    }
+    fn spec(&self) -> kor_core::ToolSpec {
+        kor_core::ToolSpec { name: "Hang".into(), description: "hangs".into(), input_schema: json!({"type": "object"}) }
+    }
+    fn target(&self, _input: &serde_json::Value) -> Option<String> {
+        None
+    }
+    async fn call(&self, _input: serde_json::Value, _ctx: &ToolCtx) -> kor_tools::ToolOutput {
+        std::future::pending().await
+    }
+}
+
+#[tokio::test]
+async fn stop_interrupts_a_tool_that_never_returns() {
+    let dir = tempfile::tempdir().unwrap();
+    let (mut a, _) = agent(dir.path(), PermissionMode::BypassPermissions, vec![tool_call("h", "Hang", &json!({}))]);
+    a.tools.push(Arc::new(Hang));
+    let approver = Answers(Mutex::new(VecDeque::new()), Mutex::new(Vec::new()));
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+    let cancel = CancellationToken::new();
+    let stop = cancel.clone();
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        stop.cancel();
+    });
+    let r = tokio::time::timeout(std::time::Duration::from_secs(10), a.send("go".into(), &tx, &approver, cancel)).await;
+    assert_eq!(r.expect("Stop must not wait for the tool").unwrap(), StopReason::Cancelled);
+    assert!(results(&a)[0].0.contains("cancelled"));
+    // The tool card is closed for the front end.
+    drop(tx);
+    let mut ended = false;
+    while let Some(e) = rx.recv().await {
+        ended |= matches!(e, AgentEvent::ToolEnd { ref id, is_error: true, .. } if id == "h");
+    }
+    assert!(ended);
+}
+

@@ -17,6 +17,15 @@ pub fn on_mismatch(cfg: &kor_config::DevEnv) -> OnMismatch {
     }
 }
 
+/// The project's environment as Kor uses it: container kinds only with `[env] containers = true`.
+fn detect(cfg: &kor_config::DevEnv, root: &Path) -> devenv::Detected {
+    let mut det = devenv::detect(root, &cfg.service);
+    if !cfg.containers && det.kind.as_ref().is_some_and(Kind::container) {
+        det.kind = None;
+    }
+    det
+}
+
 /// Container environments cannot be confined by a host sandbox: their commands ask instead.
 pub fn asks(env: &Session, sandbox: SandboxKind) -> bool {
     env.wrap && sandbox.is_enforcing() && env.detected.kind.as_ref().is_some_and(Kind::container)
@@ -33,7 +42,7 @@ pub fn session(
     if !cfg.enabled {
         return (None, Vec::new());
     }
-    let det = devenv::detect(root, &cfg.service);
+    let det = detect(cfg, root);
     let mut notes = Vec::new();
     if det.dockerfile_dev {
         notes.push(l.t("env-dockerfile-only"));
@@ -98,7 +107,7 @@ pub async fn status(config: &kor_config::Config, root: &Path) -> Status {
         crate::sandbox::setup(&l, &config.sandbox, crate::offline_mode())
     };
     let cfg = &config.env;
-    let det = devenv::detect(root, &cfg.service);
+    let det = detect(cfg, root);
     let mut st = Status {
         enabled: cfg.enabled,
         on_mismatch: on_mismatch(cfg),
@@ -185,7 +194,11 @@ mod tests {
 
         std::fs::create_dir_all(root.join(".devcontainer")).unwrap();
         std::fs::write(root.join(".devcontainer/devcontainer.json"), "{}").unwrap();
-        let (env, notes) = session(&l, &cfg, root, SandboxKind::Docker);
+        // Containers are opt-in: by default the devcontainer is not used and nothing is said.
+        let (env, notes) = session(&l, &cfg, root, SandboxKind::None);
+        assert!(env.unwrap().detected.kind.is_none() && notes.is_empty(), "{notes:?}");
+        let containers = kor_config::DevEnv { containers: true, ..cfg.clone() };
+        let (env, notes) = session(&l, &containers, root, SandboxKind::Docker);
         assert!(!env.unwrap().wrap);
         assert!(notes[0].contains("devcontainer"), "{notes:?}");
 

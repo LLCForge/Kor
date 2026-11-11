@@ -39,7 +39,7 @@ impl Tool for PowerShellTool {
             description:
                 "Run a Windows PowerShell command. Disabled when PowerShell is not available."
                     .into(),
-            input_schema: json!({"type":"object","properties":{"command":{"type":"string"}},"required":["command"],"additionalProperties":false}),
+            input_schema: json!({"type":"object","properties":{"command":{"type":"string"},"timeout":{"type":"integer","description":"Timeout in milliseconds (default 120000, max 600000)"}},"required":["command"],"additionalProperties":false}),
         }
     }
     fn target(&self, input: &Value) -> Option<String> {
@@ -69,9 +69,16 @@ impl Tool for PowerShellTool {
             cmd.env_remove(v);
         }
         let policy = ctx.sandbox_policy();
-        // Same confinement as `Bash` (`ctx.sandbox`).
+        // Same confinement, timeout and stop as `Bash`; dropping the future kills the command.
+        let ms = input["timeout"].as_u64().unwrap_or(super::shell::DEFAULT_TIMEOUT_MS).clamp(1, super::shell::MAX_TIMEOUT_MS);
         let out = match kor_sandbox::spawn(ctx.sandbox, &policy, &cmd) {
-            Ok(child) => child.wait_with_output().await,
+            Ok(child) => tokio::select! {
+                r = child.wait_with_output() => r,
+                () = tokio::time::sleep(std::time::Duration::from_millis(ms)) => {
+                    return ToolOutput::err(format!("command timed out after {ms}ms and was killed"));
+                }
+                () = ctx.cancel.cancelled() => return ToolOutput::err("command cancelled by the user"),
+            },
             Err(e) => Err(e),
         };
         match out {
@@ -93,6 +100,18 @@ impl Tool for PowerShellTool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[tokio::test]
+    async fn timeout_and_stop_kill_the_command() {
+        let dir = tempfile::tempdir().unwrap();
+        let ctx = ToolCtx::new(dir.path()).unwrap();
+        let t = PowerShellTool.call(json!({"command": "Start-Sleep -Seconds 20", "timeout": 1000}), &ctx).await;
+        assert!(t.is_error && t.content.contains("timed out"), "{}", t.content);
+        ctx.cancel.cancel();
+        let c = PowerShellTool.call(json!({"command": "Start-Sleep -Seconds 20"}), &ctx).await;
+        assert!(c.is_error && c.content.contains("cancelled"), "{}", c.content);
+    }
 
     #[test]
     fn validator_rejects_invoke_expression() {

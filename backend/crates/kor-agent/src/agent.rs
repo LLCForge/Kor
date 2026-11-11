@@ -635,7 +635,17 @@ impl Agent {
                     let mut out = if cancel.is_cancelled() {
                         ToolOutput::err("not run: cancelled by the user")
                     } else {
-                        self.run_tool(&id, &name, input, events, approver).await
+                        // Stop interrupts any tool at once; dropping it kills the processes it
+                        // started (`kill_on_drop`), even a tool that does not watch the token.
+                        let run = self.run_tool(&id, &name, input, events, approver);
+                        tokio::select! {
+                            out = run => out,
+                            () = cancel.cancelled() => {
+                                let out = ToolOutput::err("stopped: cancelled by the user");
+                                let _ = events.send(AgentEvent::ToolEnd { id: id.clone(), name: name.clone(), output: out.content.clone(), is_error: true });
+                                out
+                            }
+                        }
                     };
                     if let Some(source) = out.image.take() {
                         images.push(ContentPart::Image { source });

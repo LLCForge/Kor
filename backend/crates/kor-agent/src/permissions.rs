@@ -311,7 +311,10 @@ impl Permissions {
         let dangerous = kind == ToolKind::Execute
             && self.mode != PermissionMode::BypassPermissions
             && tool.target(input).is_some_and(|c| is_dangerous(&c));
-        if any(&self.ask, false) || dangerous {
+        // `bypassPermissions` skips `ask` rules too (deny rules above still apply): the user chose
+        // never to be asked.
+        let asked = self.mode != PermissionMode::BypassPermissions && any(&self.ask, false);
+        if asked || dangerous {
             return if self.mode == PermissionMode::DontAsk {
                 Decision::Deny
             } else {
@@ -517,6 +520,9 @@ mod tests {
         );
         let p = perms(PermissionMode::BypassPermissions, &[], &[], &["Bash"]);
         assert_eq!(p.decide(&*bash, &json!({"command": "ls"})), Decision::Deny);
+        // An ask rule does not stop bypass mode.
+        let p = perms(PermissionMode::BypassPermissions, &[], &["Bash"], &[]);
+        assert_eq!(p.decide(&*bash, &json!({"command": "ls"})), Decision::Allow);
         let p = perms(PermissionMode::DontAsk, &["Bash(cargo test *)"], &[], &[]);
         assert_eq!(
             p.decide(&*bash, &json!({"command": "cargo test"})),

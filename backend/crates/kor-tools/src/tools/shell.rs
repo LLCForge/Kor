@@ -13,8 +13,8 @@ use tokio_util::sync::CancellationToken;
 
 use crate::{Tool, ToolCtx, ToolKind, ToolOutput, lock, parse, truncate};
 
-const DEFAULT_TIMEOUT_MS: u64 = 120_000;
-const MAX_TIMEOUT_MS: u64 = 600_000;
+pub(super) const DEFAULT_TIMEOUT_MS: u64 = 120_000;
+pub(super) const MAX_TIMEOUT_MS: u64 = 600_000;
 const MAX_OUTPUT: usize = 30_000;
 
 /// The shell commands run in.
