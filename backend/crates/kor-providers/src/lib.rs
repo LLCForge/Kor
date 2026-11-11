@@ -58,6 +58,9 @@ pub struct ModelInfo {
     pub display_name: Option<String>,
     pub context_window: Option<u64>,
     pub max_output: Option<u64>,
+    /// Size of the weights on disk, when a local server reports it (Ollama): for the VRAM check.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

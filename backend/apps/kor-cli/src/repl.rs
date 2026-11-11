@@ -1226,6 +1226,10 @@ fn start(ctx: &Ctx, a: &RunArgs, force_tui: bool) -> anyhow::Result<bool> {
         install_ctrl_c(busy.clone());
         // §32.2: warm the provider connection while MCP servers attach and the user types.
         s.agent.provider.preconnect();
+        // §19.3: a local model larger than the GPU's memory.
+        if let Some(n) = kor_runtime::vram::check(l, &*s.agent.provider, &s.agent.model).await {
+            eprintln!("{}", style.dim(&n));
+        }
 
         let mcp = kor_runtime::attach_mcp(l, &mut s.agent, &s.compat).await;
         for n in &mcp.notes {

@@ -2184,6 +2184,7 @@ sessions-suggest-end = Proposition pour { $id } : « { $title } » { $tags } —
 sessions-exported = { $count } sessions écrites dans { $dir }
 sessions-imported = Importée sous { $id }
 sessions-imported-from = { $count } nouvelles conversations importées ({ $found } trouvées)
+vram-short = { $model } fait environ { $size } Go, plus que les { $vram } Go de mémoire du GPU : il tournera en partie sur le CPU et répondra lentement. Un modèle plus petit ou plus quantifié tient.
 cmd-sessions-import-from = Importer les conversations de Claude Code ou Cursor (lecture seule)
 arg-sessions-import-all = Claude Code : tous les projets, pas seulement ce dossier
 sessions-error = Arbre des sessions : { $error }

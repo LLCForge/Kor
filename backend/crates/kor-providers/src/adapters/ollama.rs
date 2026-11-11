@@ -213,6 +213,7 @@ impl Provider for Ollama {
                     display_name: None,
                     context_window: None,
                     max_output: None,
+                    size_bytes: m["size"].as_u64(),
                 })
             })
             .collect())

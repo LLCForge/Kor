@@ -85,6 +85,7 @@ pub mod triggers;
 pub mod update;
 pub mod usage;
 pub mod visual;
+pub mod vram;
 pub mod watch;
 
 /// Which transcript to continue.

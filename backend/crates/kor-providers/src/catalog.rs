@@ -89,6 +89,7 @@ mod tests {
             display_name: None,
             context_window: Some(8),
             max_output: None,
+            size_bytes: None,
         };
         c.put("p", vec![m], 1000);
         c.save(&path).unwrap();

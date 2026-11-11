@@ -60,6 +60,7 @@ pub(crate) fn static_models(m: &crate::ProviderManifest) -> Vec<crate::ModelInfo
             display_name: None,
             context_window: m.max_context_default,
             max_output: None,
+            size_bytes: None,
         })
         .collect()
 }

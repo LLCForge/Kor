@@ -323,6 +323,7 @@ impl Provider for Anthropic {
                     display_name: m["display_name"].as_str().map(str::to_owned),
                     context_window: None,
                     max_output: None,
+                    size_bytes: None,
                 })
             })
             .collect())

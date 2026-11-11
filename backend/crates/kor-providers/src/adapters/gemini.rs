@@ -265,6 +265,7 @@ impl Provider for Gemini {
                     display_name: m["displayName"].as_str().map(str::to_owned),
                     context_window: m["inputTokenLimit"].as_u64(),
                     max_output: m["outputTokenLimit"].as_u64(),
+                    size_bytes: None,
                 })
             })
             .collect())

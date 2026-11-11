@@ -195,6 +195,7 @@ impl Provider for Cohere {
                     display_name: None,
                     context_window: m["context_length"].as_u64(),
                     max_output: None,
+                    size_bytes: None,
                 })
             })
             .collect())

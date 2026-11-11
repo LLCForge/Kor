@@ -240,6 +240,7 @@ pub(crate) fn models(v: &Value) -> Vec<ModelInfo> {
                             .and_then(Value::as_u64)
                     }),
                 max_output: None,
+                size_bytes: None,
             })
         })
         .collect()

@@ -634,6 +634,12 @@ async fn run_turn(app: &AppHandle, a: SendArgs) -> Result<(), String> {
     apply_choices(app, &id, &mut chat.agent, &l)?;
     kor_runtime::refresh_memory(&mut chat.agent);
     apply_desktop_prefs(&mut chat.agent, &id);
+    // §19.3: on the first turn with a local model, say so when it does not fit the GPU.
+    if chat.agent.messages.is_empty()
+        && let Some(n) = kor_runtime::vram::check(&l, &*chat.agent.provider, &chat.agent.model).await
+    {
+        emit(app, &id, json!({ "type": "notice", "text": n }));
+    }
 
     let cancel = lock(&app.state::<AppState>().chats.running)
         .get(&id)

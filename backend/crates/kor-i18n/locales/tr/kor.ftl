@@ -2178,6 +2178,7 @@ sessions-suggest-end = { $id } için öneri: "{ $title }" { $tags } — `kor ses
 sessions-exported = { $count } oturum { $dir } altına yazıldı
 sessions-imported = { $id } olarak içe aktarıldı
 sessions-imported-from = { $count } yeni sohbet içe aktarıldı ({ $found } bulundu)
+vram-short = { $model } yaklaşık { $size } GB; GPU'nun { $vram } GB belleğinden büyük: kısmen CPU'da çalışacak ve yavaş yanıt verecek. Daha küçük ya da daha çok sıkıştırılmış bir model sığar.
 cmd-sessions-import-from = Claude Code ya da Cursor sohbetlerini içe aktar (salt okunur)
 arg-sessions-import-all = Claude Code: yalnızca bu klasörü değil, tüm projeleri al
 sessions-error = Oturum ağacı: { $error }

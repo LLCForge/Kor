@@ -2183,6 +2183,7 @@ sessions-suggest-end = Suggested for { $id }: "{ $title }" { $tags } — `kor se
 sessions-exported = Wrote { $count } sessions to { $dir }
 sessions-imported = Imported as { $id }
 sessions-imported-from = { $count } new chats imported ({ $found } found)
+vram-short = { $model } is about { $size } GB, more than the GPU's { $vram } GB of memory: it will run partly on the CPU and answer slowly. A smaller or more quantised model fits.
 cmd-sessions-import-from = Import chats from Claude Code or Cursor (read only)
 arg-sessions-import-all = Claude Code: every project, not only this folder
 sessions-error = Session tree: { $error }
