@@ -3,7 +3,7 @@ resolver = "3"
 members = ["crates/*", "apps/*", "crates/kor-platform/shellext"]
 
 [workspace.package]
-version = "0.8.2"
+version = "0.8.3"
 edition = "2024"
 rust-version = "1.88"
 license = "Apache-2.0 OR MIT"
@@ -14,9 +14,9 @@ authors = ["Kor contributors"]
 kor-core = { path = "crates/kor-core", version = "0.2.2" }
 kor-config = { path = "crates/kor-config", version = "0.6.2" }
 kor-secrets = { path = "crates/kor-secrets", version = "0.2.1" }
-kor-i18n = { path = "crates/kor-i18n", version = "0.1.6" }
+kor-i18n = { path = "crates/kor-i18n", version = "0.1.7" }
 kor-providers = { path = "crates/kor-providers", version = "0.2.2" }
-kor-sandbox = { path = "crates/kor-sandbox", version = "0.2.0" }
+kor-sandbox = { path = "crates/kor-sandbox", version = "0.2.1" }
 kor-tools = { path = "crates/kor-tools", version = "0.2.2" }
 kor-agent = { path = "crates/kor-agent", version = "0.6.2" }
 kor-compat = { path = "crates/kor-compat", version = "0.2.1" }
