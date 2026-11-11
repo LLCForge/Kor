@@ -28,6 +28,8 @@ allow-dirty = ["ci"]
 [dist.github-custom-runners]
 x86_64-unknown-linux-gnu = "ubuntu-24.04"
 aarch64-unknown-linux-gnu = "ubuntu-24.04-arm"
+# Apple Silicon runners sat in GitHub's queue for hours; the Intel runner cross-compiles arm64.
+aarch64-apple-darwin = "macos-15-intel"
 
 # System libraries the Linux build links (screen capture: Wayland, GBM/DRM, PipeWire via bindgen; D-Bus).
 [dist.dependencies.apt]
