@@ -1,7 +1,7 @@
 [package]
 name = "kor-config"
 description = "Layered configuration with provenance for the Kor coding agent"
-version = "0.6.2"
+version = "0.6.3"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

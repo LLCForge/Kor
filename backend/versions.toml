@@ -1,23 +1,23 @@
 # Managed by scripts/version.py (ADR 0012). Do not edit by hand.
 # `hash` is each crate's content at its last release; a mismatch means unreleased changes.
-product = "0.8.5"
+product = "0.8.6"
 
 [components]
-kor-agent = { version = "0.6.3", hash = "1c5df8e4068e7f6f" }
-kor-compat = { version = "0.2.1", hash = "879179baf662d5f2" }
-kor-components = { version = "0.1.1", hash = "9a57151cf86f084a" }
-kor-computer = { version = "0.0.2", hash = "bcb9a171e7d34a98" }
-kor-config = { version = "0.6.2", hash = "921a7deaa421f98f" }
-kor-core = { version = "0.2.4", hash = "d064d69979b38674" }
-kor-graph = { version = "0.4.3", hash = "323da34e75773918" }
-kor-health = { version = "0.0.1", hash = "0570ac1282d00f42" }
+kor-agent = { version = "0.6.4", hash = "afaf63ba622f46ec" }
+kor-compat = { version = "0.2.2", hash = "8bf8a48baacab8e1" }
+kor-components = { version = "0.1.2", hash = "9bb7bc4bd066b4ff" }
+kor-computer = { version = "0.0.3", hash = "c488741161e512ba" }
+kor-config = { version = "0.6.3", hash = "555acd9e481200f2" }
+kor-core = { version = "0.2.5", hash = "a7c27d1cb35e05c2" }
+kor-graph = { version = "0.4.4", hash = "e0e06d80e2cfb1e3" }
+kor-health = { version = "0.0.2", hash = "71665e0d38b55ba5" }
 kor-i18n = { version = "0.1.9", hash = "2df2b848b1aefbe5" }
-kor-memory = { version = "0.2.1", hash = "0e3738542d9fab46" }
-kor-platform = { version = "0.1.5", hash = "ddd72e7c5a7bb1e3" }
-kor-providers = { version = "0.2.2", hash = "a2f76f51725b4caf" }
-kor-proxy = { version = "0.0.4", hash = "534d1e4742dc173e" }
-kor-runtime = { version = "0.6.3", hash = "167aaf1630ce5b2e" }
-kor-sandbox = { version = "0.2.3", hash = "f805d178e234d7e8" }
-kor-secrets = { version = "0.2.1", hash = "47262e99865f882a" }
-kor-tools = { version = "0.2.3", hash = "53f26e03996c0b2c" }
-kor-web = { version = "0.0.1", hash = "7af46f07aa82b01f" }
+kor-memory = { version = "0.2.2", hash = "5ebc8127fd821b56" }
+kor-platform = { version = "0.1.6", hash = "5935f5f348b4d8ff" }
+kor-providers = { version = "0.2.3", hash = "f1749be515b2a45f" }
+kor-proxy = { version = "0.0.5", hash = "a02ff2be43e39b40" }
+kor-runtime = { version = "0.6.4", hash = "95171c126961dab3" }
+kor-sandbox = { version = "0.2.4", hash = "9d399b9b9556a7b0" }
+kor-secrets = { version = "0.2.2", hash = "02816a16c3a5abc8" }
+kor-tools = { version = "0.2.4", hash = "7cdb37f2796b2872" }
+kor-web = { version = "0.0.2", hash = "2d869d4b17d2db91" }

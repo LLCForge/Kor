@@ -3050,7 +3050,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kor-agent"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3086,7 +3086,7 @@ dependencies = [
 
 [[package]]
 name = "kor-cli"
-version = "0.8.5"
+version = "0.8.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -3132,7 +3132,7 @@ dependencies = [
 
 [[package]]
 name = "kor-compat"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "kor-core",
  "serde",
@@ -3143,7 +3143,7 @@ dependencies = [
 
 [[package]]
 name = "kor-components"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "flate2",
  "futures",
@@ -3164,7 +3164,7 @@ dependencies = [
 
 [[package]]
 name = "kor-computer"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "base64 0.22.1",
  "enigo",
@@ -3180,7 +3180,7 @@ dependencies = [
 
 [[package]]
 name = "kor-config"
-version = "0.6.2"
+version = "0.6.3"
 dependencies = [
  "dirs",
  "kor-core",
@@ -3194,7 +3194,7 @@ dependencies = [
 
 [[package]]
 name = "kor-core"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "reqwest",
  "serde",
@@ -3205,7 +3205,7 @@ dependencies = [
 
 [[package]]
 name = "kor-graph"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "globset",
  "ignore",
@@ -3237,7 +3237,7 @@ dependencies = [
 
 [[package]]
 name = "kor-health"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "dirs",
  "kor-computer",
@@ -3263,7 +3263,7 @@ dependencies = [
 
 [[package]]
 name = "kor-lint"
-version = "0.8.5"
+version = "0.8.6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3273,7 +3273,7 @@ dependencies = [
 
 [[package]]
 name = "kor-memory"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "candle-core",
  "candle-nn",
@@ -3294,7 +3294,7 @@ dependencies = [
 
 [[package]]
 name = "kor-platform"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "block2",
  "dirs",
@@ -3317,7 +3317,7 @@ dependencies = [
 
 [[package]]
 name = "kor-providers"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3341,7 +3341,7 @@ dependencies = [
 
 [[package]]
 name = "kor-proxy"
-version = "0.0.4"
+version = "0.0.5"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3372,7 +3372,7 @@ dependencies = [
 
 [[package]]
 name = "kor-runtime"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "arboard",
  "async-trait",
@@ -3435,7 +3435,7 @@ dependencies = [
 
 [[package]]
 name = "kor-sandbox"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "kor-platform",
  "tempfile",
@@ -3444,7 +3444,7 @@ dependencies = [
 
 [[package]]
 name = "kor-secrets"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "argon2",
  "base64 0.22.1",
@@ -3474,7 +3474,7 @@ dependencies = [
 
 [[package]]
 name = "kor-tools"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3505,7 +3505,7 @@ dependencies = [
 
 [[package]]
 name = "kor-web"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
