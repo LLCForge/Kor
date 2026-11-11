@@ -3754,7 +3754,7 @@ dependencies = [
 
 [[package]]
 name = "kor-computer"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "base64 0.22.1",
  "enigo",
@@ -3782,7 +3782,7 @@ dependencies = [
 
 [[package]]
 name = "kor-core"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "reqwest",
  "serde",
@@ -3793,7 +3793,7 @@ dependencies = [
 
 [[package]]
 name = "kor-desktop"
-version = "0.8.4"
+version = "0.8.5"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3840,7 +3840,7 @@ dependencies = [
 
 [[package]]
 name = "kor-graph"
-version = "0.4.2"
+version = "0.4.3"
 dependencies = [
  "globset",
  "ignore",
@@ -3886,7 +3886,7 @@ dependencies = [
 
 [[package]]
 name = "kor-i18n"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "fluent-bundle",
  "serde",
@@ -3916,7 +3916,7 @@ dependencies = [
 
 [[package]]
 name = "kor-platform"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "block2",
  "dirs 7.0.0",
@@ -3957,7 +3957,7 @@ dependencies = [
 
 [[package]]
 name = "kor-proxy"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -4047,7 +4047,7 @@ dependencies = [
 
 [[package]]
 name = "kor-sandbox"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "kor-platform",
  "tokio",

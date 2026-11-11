@@ -1,7 +1,7 @@
 [package]
 name = "kor-computer"
 description = "Desktop control policy for the Kor coding agent: per-app tiers, human-first stop, indicator, audit, screen and input, window layouts (spec §19.1, §27.7)"
-version = "0.0.1"
+version = "0.0.2"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
