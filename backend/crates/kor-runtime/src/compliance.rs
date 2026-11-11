@@ -257,6 +257,8 @@ pub async fn judge(
             role: Some("rules:judge".into()),
             media: false,
             estimated: false,
+            cache_read: 0,
+            cache_write: 0,
         };
         let _ = crate::usage::append(&ledger, &e);
     }

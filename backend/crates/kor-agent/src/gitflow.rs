@@ -349,26 +349,29 @@ pub async fn ask(
         .complete(req, CancellationToken::new())
         .await
         .map_err(|e| FlowError::Model(e.message))?;
-    let (text, thinking) = collect_answer(stream)
+    let (text, thinking, usage) = collect_answer(stream)
         .await
         .map_err(|e| FlowError::Model(e.message))?;
+    crate::cost::report_usage(&format!("{}/{model}", provider.id()), &usage, "oneshot");
     reply_or_reasoning(text, thinking)
 }
 
-/// The visible text and the reasoning of a reply.
+/// The visible text, the reasoning and the token usage of a reply.
 async fn collect_answer(
     mut stream: kor_providers::EventStream,
-) -> Result<(String, String), kor_core::ProviderError> {
+) -> Result<(String, String, kor_core::Usage), kor_core::ProviderError> {
     use futures::StreamExt as _;
     let (mut text, mut thinking) = (String::new(), String::new());
+    let mut usage = kor_core::Usage::default();
     while let Some(ev) = stream.next().await {
         match ev? {
             kor_core::StreamEvent::TextDelta { text: t } => text.push_str(&t),
             kor_core::StreamEvent::ThinkingDelta { text: t } => thinking.push_str(&t),
+            kor_core::StreamEvent::Usage { usage: u } => usage += u,
             _ => {}
         }
     }
-    Ok((text, thinking))
+    Ok((text, thinking, usage))
 }
 
 /// Reasoning models sometimes put the whole answer in their reasoning and send no text; that

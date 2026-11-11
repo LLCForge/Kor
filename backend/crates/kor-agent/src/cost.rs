@@ -97,6 +97,26 @@ pub struct Preflight {
     pub price: Option<(f64, f64)>,
 }
 
+/// Where one-shot model calls (`kor commit`, `kor review`, PR descriptions…) report their tokens:
+/// `(provider/model, usage, role)`. Set once by the runtime; until then nothing is recorded.
+pub type UsageSink = fn(&str, &Usage, &str);
+
+static USAGE_SINK: std::sync::OnceLock<UsageSink> = std::sync::OnceLock::new();
+
+/// Register the ledger writer for one-shot calls. The first call wins.
+pub fn set_usage_sink(f: UsageSink) {
+    let _ = USAGE_SINK.set(f);
+}
+
+/// Record a one-shot call's tokens (§5.2: every model call is in the ledger).
+pub fn report_usage(model_ref: &str, usage: &Usage, role: &str) {
+    if let Some(f) = USAGE_SINK.get()
+        && (usage.input > 0 || usage.output > 0)
+    {
+        f(model_ref, usage, role);
+    }
+}
+
 pub trait CostControl: Send + Sync {
     /// Estimate of the task routed last; `None` when estimates are not available.
     fn preflight(&self) -> Option<Preflight> {
@@ -122,4 +142,38 @@ pub trait CostControl: Send + Sync {
     fn downgrade(&self) -> Option<Route>;
     /// The user agreed to continue over the limit (`on_limit = "ask"`); stop asking this session.
     fn allow_over(&self);
+}
+
+#[cfg(test)]
+mod usage_sink_tests {
+    use super::*;
+
+    static SEEN: std::sync::Mutex<Vec<(String, u64, String)>> = std::sync::Mutex::new(Vec::new());
+
+    fn sink(model: &str, u: &Usage, role: &str) {
+        SEEN.lock()
+            .unwrap()
+            .push((model.to_owned(), u.input, role.to_owned()));
+    }
+
+    #[test]
+    fn one_shot_calls_reach_the_registered_ledger() {
+        set_usage_sink(sink);
+        report_usage(
+            "venice/m",
+            &Usage {
+                input: 12,
+                output: 3,
+                ..Usage::default()
+            },
+            "oneshot",
+        );
+        report_usage("venice/m", &Usage::default(), "oneshot");
+        let seen = SEEN.lock().unwrap().clone();
+        assert_eq!(
+            seen,
+            [("venice/m".to_owned(), 12, "oneshot".to_owned())],
+            "empty calls are skipped"
+        );
+    }
 }

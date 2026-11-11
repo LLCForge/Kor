@@ -227,6 +227,8 @@ mod tests {
             role: None,
             media: false,
             estimated: false,
+            cache_read: 0,
+            cache_write: 0,
         };
         let rows = last_day(
             &[e(5, "openrouter/a/b"), e(6, "openrouter/c"), e(1, "groq/x")],

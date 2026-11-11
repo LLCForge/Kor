@@ -751,6 +751,7 @@ pub fn oneshot_provider(
         })
         .ok_or_else(|| l.t("no-model"))?;
     apply_network_policy(l, &loaded.config);
+    kor_agent::cost::set_usage_sink(usage::record_oneshot);
     let (provider, model, _) = build_provider(l, &model, &mut Vec::new())?;
     check_provider_allowed(l, provider.manifest())?;
     check_privacy_card(l, provider.manifest(), model.model())?;
@@ -1036,6 +1037,8 @@ pub fn prepare(
     opts: &Options,
     notes: &mut Vec<String>,
 ) -> Result<Prepared, String> {
+    // One-shot model calls made during the session (summaries, commit messages) go to the ledger.
+    kor_agent::cost::set_usage_sink(usage::record_oneshot);
     // `agent.status` verbs follow the user's language (§16.2).
     kor_agent::status::set_lang(l.lang().code());
     // §19.3: every real surface stops writes on a critically full disk.
@@ -1512,6 +1515,7 @@ pub fn prepare(
             },
         );
     }
+    let cost = cost_control(l, &config, &provider, model.model(), privacy, notes);
     let child_tools = tools.clone();
     tools.push(Arc::new(kor_agent::AgentTool {
         provider: provider.clone(),
@@ -1520,6 +1524,7 @@ pub fn prepare(
         permissions: permissions.clone(),
         agents: kor_agent::builtin::with_builtins(compat.agents.clone()),
         explore_plan: true,
+        cost: Some(cost.clone()),
     }));
 
     if !compat_warnings.is_empty() {
@@ -1558,7 +1563,6 @@ pub fn prepare(
         &mut redactor,
         notes,
     );
-    let cost = cost_control(l, &config, &provider, model.model(), privacy, notes);
     // §31.3: knowledge base recall/learning; a missing or locked database just leaves it off.
     let recall = kor_agent::recall::Recall::open(
         kor_home().as_deref(),
@@ -1763,6 +1767,7 @@ pub async fn attach_mcp(l: &Localizer, agent: &mut Agent, compat: &Compat) -> Mc
             permissions: agent.permissions.clone(),
             agents: kor_agent::builtin::with_builtins(compat.agents.clone()),
             explore_plan: true,
+            cost: agent.cost.clone(),
         });
     }
     out

@@ -206,11 +206,19 @@ impl Mapper for MessagesMapper {
         let ev = match str_at(&v, "/type").unwrap_or_default() {
             "message_start" => {
                 let u = &v["message"]["usage"];
+                // Anthropic counts cached prompt tokens apart from `input_tokens`; Kor's `input`
+                // is the whole prompt (as the other APIs report it), with the cached part inside.
+                let (cache_read, cache_write) = (
+                    u64_at(u, "/cache_read_input_tokens"),
+                    u64_at(u, "/cache_creation_input_tokens"),
+                );
                 self.usage = Usage {
-                    input: u64_at(u, "/input_tokens"),
+                    input: u64_at(u, "/input_tokens")
+                        .saturating_add(cache_read)
+                        .saturating_add(cache_write),
                     output: u64_at(u, "/output_tokens"),
-                    cache_read: u64_at(u, "/cache_read_input_tokens"),
-                    cache_write: u64_at(u, "/cache_creation_input_tokens"),
+                    cache_read,
+                    cache_write,
                     reasoning: 0,
                 };
                 return Ok(Vec::new());

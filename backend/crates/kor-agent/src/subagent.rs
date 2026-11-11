@@ -62,6 +62,9 @@ pub struct AgentTool {
     pub permissions: Permissions,
     pub agents: Vec<AgentDef>,
     pub explore_plan: bool,
+    /// The parent session's cost control: a sub-agent's calls go into the same ledger and count
+    /// against the same budget (§5.2).
+    pub cost: Option<Arc<dyn crate::cost::CostControl>>,
 }
 
 impl std::fmt::Debug for AgentTool {
@@ -209,7 +212,7 @@ impl Tool for AgentTool {
             verify: crate::verify::Verify::default(),
             stats: crate::repair::ToolStats::default(),
             context: crate::context::Budget::default(),
-            cost: None,
+            cost: self.cost.clone(),
             shadow: None,
             repair: None,
         };

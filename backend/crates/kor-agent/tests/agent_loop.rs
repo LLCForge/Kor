@@ -514,6 +514,7 @@ async fn agent_tool_returns_the_subagent_text() {
         permissions: Permissions::new(PermissionMode::Plan, &[], &[], &[]).unwrap(),
         agents: Vec::new(),
         explore_plan: true,
+        cost: None,
     }));
     let mut a = Agent {
         provider,

@@ -65,7 +65,7 @@ fn request() -> ChatRequest {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 struct Outcome {
     text: String,
     tools: Vec<(String, String, Value)>,
@@ -248,7 +248,11 @@ async fn anthropic_round_trip() {
             .unwrap(),
     )
     .await;
-    assert_standard(&o, "toolu_1");
+    // Anthropic's 12 uncached + 3 cached: Kor's `input` is the whole prompt, as with the other APIs.
+    let mut whole = o.clone();
+    whole.usage.input -= 3;
+    assert_standard(&whole, "toolu_1");
+    assert_eq!(o.usage.input, 15);
     assert_eq!(o.usage.cache_read, 3);
 
     let b = body_of(&server).await;

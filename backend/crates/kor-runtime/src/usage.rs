@@ -38,6 +38,17 @@ pub struct Entry {
     /// `cost_usd` was estimated from list prices (shown with "≈").
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub estimated: bool,
+    /// Part of `prompt` read from the provider's prompt cache (billed at a discount).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub cache_read: u64,
+    /// Part of `prompt` written to the prompt cache (Anthropic bills it above the input price).
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub cache_write: u64,
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)] // serde's skip_serializing_if signature
+fn is_zero(n: &u64) -> bool {
+    *n == 0
 }
 
 pub fn file() -> Option<PathBuf> {
@@ -81,8 +92,32 @@ pub fn record_call(
             role: None,
             media: false,
             estimated: false,
+            cache_read: 0,
+            cache_write: 0,
         },
     )
+}
+
+/// The ledger writer for one-shot calls (`kor_agent::cost::set_usage_sink`): tokens with their
+/// cache split, priced later from the catalogue like every other entry.
+pub fn record_oneshot(model: &str, u: &kor_core::Usage, role: &str) {
+    let Some(path) = file() else { return };
+    let _ = append(
+        &path,
+        &Entry {
+            at: now_ms(),
+            model: model.to_owned(),
+            prompt: u.input,
+            completion: u.output,
+            cost_usd: None,
+            path: None,
+            role: Some(role.to_owned()),
+            media: false,
+            estimated: false,
+            cache_read: u.cache_read,
+            cache_write: u.cache_write,
+        },
+    );
 }
 
 /// Append one entry as given. Zero-token entries without a cost are skipped.

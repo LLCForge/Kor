@@ -289,9 +289,37 @@ pub fn entry_cost(e: &Entry, prices: &Prices) -> Option<(f64, bool)> {
         return Some((c, e.estimated));
     }
     let (i, o) = prices.get(&e.model)?;
+    let (read, write) = cache_rates(&e.model);
+    let cached = e.cache_read.saturating_add(e.cache_write).min(e.prompt);
     #[allow(clippy::cast_precision_loss)] // token counts far below 2^52
-    let usd = (e.prompt as f64 * i + e.completion as f64 * o) / 1_000_000.0;
+    let usd = ((e.prompt - cached) as f64 * i
+        + e.cache_read.min(e.prompt) as f64 * i * read
+        + e.cache_write.min(e.prompt - e.cache_read.min(e.prompt)) as f64 * i * write
+        + e.completion as f64 * o)
+        / 1_000_000.0;
     Some((usd, !is_local_ref(&e.model)))
+}
+
+/// Prompt-cache price as a share of the input price: (read, write). Published by each
+/// provider; unknown providers get no discount (1.0) rather than a guessed one.
+/// shortcut: fixed per family; move into the catalogue when it carries cache prices.
+fn cache_rates(model_ref: &str) -> (f64, f64) {
+    let m = model_ref.to_ascii_lowercase();
+    if m.contains("claude") || m.starts_with("anthropic/") {
+        (0.1, 1.25)
+    } else if m.contains("deepseek") {
+        (0.1, 1.0)
+    } else if m.contains("gemini") || m.starts_with("google/") {
+        (0.25, 1.0)
+    } else if m.starts_with("openai/")
+        || m.contains("gpt-")
+        || m.contains("/o3")
+        || m.contains("/o4")
+    {
+        (0.5, 1.0)
+    } else {
+        (1.0, 1.0)
+    }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1171,6 +1199,8 @@ impl CostControl for Control {
             role,
             media: false,
             estimated: false,
+            cache_read: u.cache_read,
+            cache_write: u.cache_write,
         };
         if let Some(p) = &self.ledger {
             let _ = usage::append(p, &e);
@@ -1324,6 +1354,38 @@ mod tests {
     }
 
     #[test]
+    fn cached_prompt_tokens_are_billed_at_the_cache_price() {
+        let p = prices();
+        let e = |model: &str, prompt: u64, read: u64, write: u64| Entry {
+            at: 0,
+            model: model.into(),
+            prompt,
+            completion: 0,
+            cost_usd: None,
+            path: None,
+            role: None,
+            media: false,
+            estimated: false,
+            cache_read: read,
+            cache_write: write,
+        };
+        let usd = |x: &Entry| entry_cost(x, &p).unwrap().0;
+        // Claude at $3/M: 1M prompt, 600k read (0.1x), 100k written (1.25x), 300k plain.
+        let claude = usd(&e("anthropic/claude-sonnet", 1_000_000, 600_000, 100_000));
+        assert!(
+            (claude - (0.3 * 3.0 + 0.6 * 0.3 + 0.1 * 3.75)).abs() < 1e-9,
+            "{claude}"
+        );
+        // No cache: the plain input price.
+        assert!((usd(&e("anthropic/claude-sonnet", 1_000_000, 0, 0)) - 3.0).abs() < 1e-9);
+        // An unknown family gets no discount; DeepSeek reads at 0.1x.
+        assert!((usd(&e("meta/llama-3.3-70b", 1_000_000, 1_000_000, 0)) - 0.6).abs() < 1e-9);
+        assert!((usd(&e("deepseek/deepseek-v3", 1_000_000, 1_000_000, 0)) - 0.03).abs() < 1e-9);
+        // Counts larger than the prompt never make the cost negative.
+        assert!(usd(&e("anthropic/claude-sonnet", 10, 50, 50)) >= 0.0);
+    }
+
+    #[test]
     fn prices_match_catalog_ids_and_local_is_free() {
         let p = prices();
         assert_eq!(p.get("anthropic/claude-sonnet"), Some((3.0, 15.0)));
@@ -1340,6 +1402,8 @@ mod tests {
             role: None,
             media: false,
             estimated: false,
+            cache_read: 0,
+            cache_write: 0,
         };
         assert_eq!(entry_cost(&e, &p), Some((4.5, true)));
         let exact = Entry {
@@ -1494,6 +1558,8 @@ mod tests {
             role: None,
             media: false,
             estimated: false,
+            cache_read: 0,
+            cache_write: 0,
         };
         let entries = [e(Some("a/1"), 0.5), e(Some("a/2"), 0.25), e(None, 1.0)];
         let rows = rows_by(&entries, &p, now, 30, |e| {
@@ -1520,6 +1586,8 @@ mod tests {
             role: None,
             media: false,
             estimated: false,
+            cache_read: 0,
+            cache_write: 0,
         };
         let entries = vec![
             e("anthropic/claude-sonnet", None),
@@ -1563,6 +1631,8 @@ mod tests {
             role: None,
             media: true,
             estimated: true,
+            cache_read: 0,
+            cache_write: 0,
         };
         let r = report(
             std::slice::from_ref(&media),
