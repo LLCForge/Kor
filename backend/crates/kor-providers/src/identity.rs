@@ -546,13 +546,53 @@ mod tests {
     use super::*;
     use ring::signature::{RSA_PKCS1_2048_8192_SHA256, UnparsedPublicKey};
 
+    /// A throwaway RSA-2048 key made once per test run, as PKCS#8 or PKCS#1 PEM. Generated, not
+    /// checked in: the repository never holds a private key.
     fn fixture(name: &str) -> String {
-        std::fs::read_to_string(
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("tests/fixtures/identity")
-                .join(name),
-        )
-        .unwrap()
+        use aws_lc_rs::encoding::{AsDer, Pkcs8V1Der};
+        use base64::Engine as _;
+        static KEYS: std::sync::OnceLock<(String, String)> = std::sync::OnceLock::new();
+        // PKCS#8 = SEQ { version, AlgorithmIdentifier(rsaEncryption, NULL), OCTET STRING { PKCS#1 } }.
+        const RSA_ALG: [u8; 15] = [
+            0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05,
+            0x00,
+        ];
+        let pem = |label: &str, der: &[u8]| {
+            let b64 = base64::engine::general_purpose::STANDARD.encode(der);
+            let body: Vec<&str> = b64
+                .as_bytes()
+                .chunks(64)
+                .map(|c| std::str::from_utf8(c).unwrap())
+                .collect();
+            format!(
+                "-----BEGIN {label}-----\n{}\n-----END {label}-----\n",
+                body.join("\n")
+            )
+        };
+        let (pkcs8, pkcs1) = KEYS.get_or_init(|| {
+            let key = aws_lc_rs::rsa::KeyPair::generate(aws_lc_rs::rsa::KeySize::Rsa2048).unwrap();
+            let der: Pkcs8V1Der<'static> = key.as_der().unwrap();
+            let der = der.as_ref();
+            let at = der
+                .windows(RSA_ALG.len())
+                .position(|w| w == RSA_ALG)
+                .unwrap()
+                + RSA_ALG.len();
+            assert_eq!(der[at], 0x04, "OCTET STRING after the algorithm");
+            let skip = match der[at + 1] {
+                n if n < 0x80 => 2,
+                n => 2 + usize::from(n & 0x7f),
+            };
+            (
+                pem("PRIVATE KEY", der),
+                pem("RSA PRIVATE KEY", &der[at + skip..]),
+            )
+        });
+        if name.contains("pkcs1") {
+            pkcs1.clone()
+        } else {
+            pkcs8.clone()
+        }
     }
 
     fn verify(pem: &str, data: &[u8], sig: &[u8]) -> bool {

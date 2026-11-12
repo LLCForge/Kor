@@ -3357,6 +3357,7 @@ name = "kor-providers"
 version = "0.2.8"
 dependencies = [
  "async-trait",
+ "aws-lc-rs",
  "base64 0.22.1",
  "chrono",
  "dhat",

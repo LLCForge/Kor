@@ -219,7 +219,20 @@ fn run_cli(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
     if !group.is_empty() {
         cli_session(&e.env, &group, &mut out);
     }
-    e2e::check_with(s, &e.env, "cli", &out, &e.mock.requests())
+    let mut o = e2e::check_with(s, &e.env, "cli", &out, &e.mock.requests());
+    if !o.problems.is_empty() {
+        // What the surface printed, so a failure on a runner can be read without rerunning it.
+        let tail: String = strip_ansi(&out)
+            .chars()
+            .rev()
+            .take(4000)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
+            .collect();
+        o.problems.push(format!("output:\n{tail}"));
+    }
+    o
 }
 
 /// The parity manifest's TUI slash command for a CLI command (`kor undo` → `/undo`).

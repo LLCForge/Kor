@@ -35,6 +35,8 @@ tokio.workspace = true
 wiremock.workspace = true
 # §32.2 (ADR 0062): allocation profile of the streaming hot path, checked in CI (tests/alloc.rs).
 dhat = "0.3"
+# Throwaway RSA keys for the identity tests (already in the tree through rustls).
+aws-lc-rs = { version = "1", default-features = false, features = ["aws-lc-sys"] }
 
 [lints]
 workspace = true
