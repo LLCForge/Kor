@@ -26,6 +26,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - name: Secret present
         id: key

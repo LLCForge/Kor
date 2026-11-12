@@ -140,9 +140,21 @@ fn text(captures: &expectrl::Captures) -> String {
 fn expect_tty(p: &mut Session, pattern: &str, what: &str) -> String {
     let mut out = String::new();
     loop {
-        let c = p
-            .expect(Any(vec![Regex(r"\x1b\[6n"), Regex(pattern)]))
-            .unwrap_or_else(|e| panic!("{what}: {e:?}\n--- output so far ---\n{out}"));
+        let c = match p.expect(Any(vec![Regex(r"\x1b\[6n"), Regex(pattern)])) {
+            Ok(c) => c,
+            Err(e) => {
+                // What the program printed since the last match, so a CI failure shows the screen.
+                p.set_expect_timeout(Some(Duration::from_secs(2)));
+                let rest = p
+                    .expect(Regex(r"(?s).+"))
+                    .map(|c| text(&c))
+                    .unwrap_or_default();
+                panic!(
+                    "{what}: {e:?}\n--- output so far ---\n{}\n--- unmatched ---\n{rest:?}",
+                    strip_ansi(&out)
+                );
+            }
+        };
         out.push_str(&String::from_utf8_lossy(c.before()));
         if c.as_bytes() != b"\x1b[6n" {
             out.push_str(&String::from_utf8_lossy(c.as_bytes()));
@@ -168,7 +180,8 @@ fn cli_session(env: &IsolatedEnv, steps: &[&Step], out: &mut String) {
             if next.is_some_and(|n| n.approve.is_some()) {
                 out.push_str(&expect_tty(
                     &mut p,
-                    r"\[n\] (no|reject all)",
+                    // The renderer may move the cursor over a blank cell instead of printing it.
+                    r"\[n\](\s|\x1b\[[0-9;?]*[A-Za-z])*(no|reject all)",
                     "approval card",
                 ));
             } else {
@@ -275,7 +288,7 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
             p.send("\r").expect("back to the TUI");
         }
         let until = if next_is_approval {
-            Regex(r"\[d\] deny")
+            Regex(r"\[d\](\s|\x1b\[[0-9;?]*[A-Za-z])*deny")
         } else {
             Regex("Idle")
         };

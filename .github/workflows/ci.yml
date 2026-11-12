@@ -25,6 +25,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
         with:
@@ -66,6 +68,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
@@ -90,6 +94,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
         with:
@@ -131,6 +137,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
         with:
@@ -151,6 +159,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
         with:
@@ -201,6 +211,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
@@ -236,6 +248,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
@@ -256,6 +270,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - name: Tooling self-tests (desktop release, install.sh)
         run: |
@@ -271,6 +287,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       # On the runner, not in the actions' containers: rust-toolchain.toml names a toolchain the
       # containers do not have.
@@ -298,6 +316,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
@@ -352,6 +372,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
@@ -400,6 +422,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -433,6 +457,8 @@ jobs:
       # Byte-exact checkout as in the repo (generated files and scanners expect it).
       - if: runner.os == 'Windows'
         run: git config --global core.autocrlf false
+        # Before checkout the job's default working directory does not exist yet.
+        working-directory: .
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2

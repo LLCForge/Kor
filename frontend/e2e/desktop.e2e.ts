@@ -5,7 +5,7 @@
 // Windows: Playwright attaches to WebView2 (CDP). Elsewhere `KOR_E2E_DRIVER=webdriver` drives the app
 // through `tauri-driver` (start it first: `tauri-driver --port 4444`); screenshots are Windows-only.
 import { test, expect, chromium, type Browser, type Page } from '@playwright/test'
-import { readdirSync, readFileSync } from 'node:fs'
+import { chmodSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { cdpDriver, until, webdriverDriver, type Driver } from './driver.ts'
 import { CDP_PORT, SCENARIOS, appReport, check, closeDesktop, desktopBinary, launchDesktop, serve, type Served } from './harness.ts'
@@ -13,11 +13,28 @@ import { costPanelText, openProject, runSteps } from './flow.ts'
 
 const USE_WEBDRIVER = process.env.KOR_E2E_DRIVER === 'webdriver' || process.platform !== 'win32'
 
+/** A script in the scenario's folder that starts the desktop binary with `served.env`. */
+function launcher(served: Served): string {
+  const bin = desktopBinary()
+  if (process.platform === 'win32') {
+    const file = join(served.root, 'kor-desktop.cmd')
+    const vars = Object.entries(served.env).map(([k, v]) => `set "${k}=${v}"`)
+    writeFileSync(file, ['@echo off', ...vars, `"${bin}" %*`, ''].join('\r\n'))
+    return file
+  }
+  const q = (v: string) => `'${v.replaceAll("'", `'\\''`)}'`
+  const vars = Object.entries(served.env).map(([k, v]) => `export ${k}=${q(v)}`)
+  const file = join(served.root, 'kor-desktop.sh')
+  writeFileSync(file, ['#!/bin/sh', ...vars, `exec ${q(bin)} "$@"`, ''].join('\n'))
+  chmodSync(file, 0o755)
+  return file
+}
+
 async function attach(served: Served): Promise<{ d: Driver; page?: Page }> {
   if (USE_WEBDRIVER) {
-    // tauri-driver starts the app itself with this environment.
-    Object.assign(process.env, served.env)
-    return { d: await webdriverDriver(desktopBinary()) }
+    // tauri-driver runs before the tests with its own environment, so the scenario's isolated home
+    // reaches the app through a launcher script that sets it and starts the real binary.
+    return { d: await webdriverDriver(launcher(served)) }
   }
   const app = launchDesktop(served)
   let browser: Browser | undefined
