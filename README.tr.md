@@ -674,7 +674,7 @@ tasarruf hedeflerinin gerçek modellerle ölçümü.
 
 ### Yapılacaklar
 
-Toplam 67 açık madde: **35 geliştirme işi**, bakımcı için 12 hesap/yayın adımı, 16 gerçek ortam denemesi ve 4 karar.
+Toplam 66 açık madde: **34 geliştirme işi**, bakımcı için 12 hesap/yayın adımı, 16 gerçek ortam denemesi ve 4 karar.
 Geliştirme işleri:
 
 **Faz 8 — takım ve platform (8)**
@@ -686,7 +686,6 @@ Geliştirme işleri:
 - [ ] Takım kasası, şablon/hook/kural senkronu; takım sunucusu üzerinden peer rölesi; Faz 8 kabul testleri
 
 **Ajan, diller ve hafıza**
-- [ ] Sıcak hafıza katmanı ve RAM'de HNSW
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
 - [ ] Sandbox'ta alan adı bazlı ağ kuralları, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)
 - [ ] Kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular

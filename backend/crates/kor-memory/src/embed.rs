@@ -224,13 +224,35 @@ fn dot(a: &[i8], b: &[i8]) -> i32 {
     acc.iter().sum::<i32>() + rest
 }
 
-/// Exact top-k cosine search over int8 vectors held in one contiguous buffer.
+/// Rows from which [`VecIndex::top`] first narrows by sign bits: below it the exact scan is fast
+/// enough everywhere (§31.3.1), above it a weak CPU would miss the 30 ms budget.
+pub const PREFILTER_FROM: usize = 100_000;
+
+/// Sign bits of a vector, 64 dimensions per word: the binary sketch whose Hamming distance
+/// tracks the angle between two vectors.
+fn signs(v: &[i8], out: &mut Vec<u64>) {
+    for chunk in v.chunks(64) {
+        let mut w = 0u64;
+        for (j, x) in chunk.iter().enumerate() {
+            if *x > 0 {
+                w |= 1 << j;
+            }
+        }
+        out.push(w);
+    }
+}
+
+/// Top-k cosine search over int8 vectors held in one contiguous buffer: an exact scan, or for
+/// large indexes a Hamming pass over the sign bits that keeps the best candidates for the exact
+/// int8 rescoring (binary pre-filter).
 #[derive(Debug, Default)]
 pub struct VecIndex {
     dims: usize,
     ids: Vec<i64>,
     inv: Vec<f32>,
     data: Vec<i8>,
+    /// `dims.div_ceil(64)` sign words per row.
+    bits: Vec<u64>,
 }
 
 impl VecIndex {
@@ -256,8 +278,10 @@ impl VecIndex {
         self.ids.push(id);
         self.inv.push(inv);
         // -128 is never written by `quantize`; clamping keeps `dot`'s i16 pairs in range.
+        let from = self.data.len();
         self.data
             .extend(q.iter().map(|b| i8::from_le_bytes([*b]).max(-127)));
+        signs(&self.data[from..], &mut self.bits);
     }
 
     pub fn remove(&mut self, id: i64) {
@@ -270,14 +294,111 @@ impl VecIndex {
         if i != last {
             let (d, src) = (self.dims, last * self.dims);
             self.data.copy_within(src..src + d, i * d);
+            let w = self.dims.div_ceil(64);
+            self.bits.copy_within(last * w..(last + 1) * w, i * w);
         }
         self.data.truncate(last * self.dims);
+        self.bits.truncate(last * self.dims.div_ceil(64));
     }
 
     /// The `k` most similar ids to `query` (an unquantized, normalized vector), with their
     /// approximate cosine similarity, best first.
-    #[allow(clippy::many_single_char_names)]
+    /// From [`PREFILTER_FROM`] rows the result is approximate (the best `64·k`, at least 4096,
+    /// candidates by sign bits are rescored exactly).
     pub fn top(&self, query: &[f32], k: usize) -> Vec<(i64, f32)> {
+        if self.len() < PREFILTER_FROM {
+            self.top_exact(query, k)
+        } else {
+            self.top_prefiltered(query, k, (k * 64).max(4096))
+        }
+    }
+
+    /// `candidates` rows nearest by sign-bit Hamming distance, rescored with the int8 dot. The
+    /// distances go to a `u16` array with a histogram per thread; the histogram gives the cutoff
+    /// distance, so no sort or selection over all rows is needed.
+    #[allow(clippy::many_single_char_names)] // same short names as `top_exact`
+    fn top_prefiltered(&self, query: &[f32], k: usize, candidates: usize) -> Vec<(i64, f32)> {
+        if self.is_empty() || query.len() != self.dims || k == 0 {
+            return Vec::new();
+        }
+        let (qinv, q) = to_i8(query);
+        let mut qb = Vec::new();
+        signs(&q, &mut qb);
+        let w = qb.len();
+        let n = self.ids.len();
+        let max = w * 64;
+        let mut dist = vec![0u16; n];
+        let threads = std::thread::available_parallelism()
+            .map_or(1, std::num::NonZero::get)
+            .min(n.div_ceil(65_536))
+            .max(1);
+        let per = n.div_ceil(threads);
+        let hist: Vec<Vec<u32>> = std::thread::scope(|s| {
+            let hs: Vec<_> = dist
+                .chunks_mut(per)
+                .enumerate()
+                .map(|(t, part)| {
+                    let (bits, qb) = (&self.bits, &qb);
+                    s.spawn(move || {
+                        let mut h = vec![0u32; max + 1];
+                        for (j, slot) in part.iter_mut().enumerate() {
+                            let i = t * per + j;
+                            let d: u32 = bits[i * w..(i + 1) * w]
+                                .iter()
+                                .zip(qb)
+                                .map(|(a, b)| (a ^ b).count_ones())
+                                .sum();
+                            // At most 64·w, far below u16::MAX for any embedding size.
+                            let d = u16::try_from(d).unwrap_or(u16::MAX);
+                            *slot = d;
+                            h[usize::from(d).min(max)] += 1;
+                        }
+                        h
+                    })
+                })
+                .collect();
+            hs.into_iter()
+                .map(|h| h.join().unwrap_or_default())
+                .collect()
+        });
+        let want = candidates.clamp(k, n);
+        let (mut cut, mut below) = (0usize, 0usize);
+        for d in 0..=max {
+            let here: usize = hist
+                .iter()
+                .map(|h| h.get(d).copied().unwrap_or(0) as usize)
+                .sum();
+            if below + here >= want {
+                cut = d;
+                break;
+            }
+            below += here;
+            cut = d;
+        }
+        // Everything under the cutoff, then rows at the cutoff until `want` are in.
+        let mut at_cut = want.saturating_sub(below);
+        let mut best = Top::new(k);
+        for (i, d) in dist.iter().enumerate() {
+            let d = usize::from(*d);
+            if d > cut || (d == cut && at_cut == 0) {
+                continue;
+            }
+            if d == cut {
+                at_cut -= 1;
+            }
+            let v = &self.data[i * self.dims..(i + 1) * self.dims];
+            #[allow(clippy::cast_precision_loss)]
+            best.offer(dot(&q, v) as f32 * self.inv[i], i);
+        }
+        best.0
+            .into_iter()
+            .map(|(s, i)| (self.ids[i], s * qinv))
+            .collect()
+    }
+
+    /// Exact scan over every row, split across threads.
+    #[allow(clippy::many_single_char_names)]
+    fn top_exact(&self, query: &[f32], k: usize) -> Vec<(i64, f32)> {
         if self.is_empty() || query.len() != self.dims || k == 0 {
             return Vec::new();
         }
@@ -360,6 +481,51 @@ mod tests {
         assert_eq!(got[0].0, 7);
         assert!((got[0].1 - exact).abs() < 0.02, "{} vs {exact}", got[0].1);
         assert!(split(&[0, 0]).is_none());
+    }
+
+    /// Random unit vectors are the pre-filter's worst case (no clusters); real embeddings recall
+    /// better. Removal keeps the sign bits aligned with the rows.
+    #[test]
+    fn prefilter_recalls_the_exact_top_k() {
+        let mut seed = 0x9E37_79B9_7F4A_7C15u64;
+        let mut next = move || {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            #[allow(clippy::cast_precision_loss)]
+            let x = (seed >> 40) as f32 / (1u64 << 23) as f32;
+            x - 1.0
+        };
+        let dims = 384;
+        let mut ix = VecIndex::default();
+        let mut keep = Vec::new();
+        for id in 0..30_000i64 {
+            let v = unit(&(0..dims).map(|_| next()).collect::<Vec<_>>());
+            if id % 1000 == 0 {
+                keep.push(v.clone());
+            }
+            ix.push(id, &quantize(&v));
+        }
+        ix.remove(5);
+        let (mut hit, mut total) = (0, 0);
+        for base in &keep {
+            // A query near a stored vector, as a real recall is.
+            let q = unit(&base.iter().map(|x| x + 0.03 * next()).collect::<Vec<_>>());
+            let exact = ix.top_exact(&q, 10);
+            let fast = ix.top_prefiltered(&q, 10, 1500);
+            assert_eq!(fast[0].0, exact[0].0, "the near vector comes first");
+            total += exact.len();
+            hit += exact
+                .iter()
+                .filter(|e| fast.iter().any(|f| f.0 == e.0))
+                .count();
+        }
+        assert!(hit * 100 >= total * 85, "recall {hit}/{total}");
+        assert!(
+            ix.top_prefiltered(&keep[0], 10, 1500)
+                .iter()
+                .all(|t| t.0 != 5)
+        );
     }
 
     #[test]

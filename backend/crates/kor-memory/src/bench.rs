@@ -323,7 +323,7 @@ pub fn run(dir: &Path, records: u64, vectors: usize, progress: &dyn Fn(&str)) ->
         }
         rows.push(row(
             "memory.vector",
-            "vector top-50 (int8, exact)",
+            "vector top-50 (int8, sign-bit pre-filter)",
             times,
             30.0,
         ));

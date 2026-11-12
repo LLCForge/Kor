@@ -671,7 +671,7 @@ back-ends for OCR, accessibility and sandbox on real machines, and the router/gr
 
 ### To do
 
-67 open items in total: **35 development tasks**, 12 account/publishing steps for the maintainer, 16 real-world
+66 open items in total: **34 development tasks**, 12 account/publishing steps for the maintainer, 16 real-world
 trials and 4 decisions. The development tasks:
 
 **Faz 8 — team and platform (8)**
@@ -683,7 +683,6 @@ trials and 4 decisions. The development tasks:
 - [ ] Team vault and template/hook/rule sync; peer relay through the team server; Faz 8 acceptance tests
 
 **Agent, languages and memory**
-- [ ] Hot memory tier and in-RAM HNSW index
 - [ ] fish-style inline shell suggestions from a small local model
 - [ ] Domain-level sandbox network rules, a hard CPU cap on Linux/macOS (today: `nice` priority)
 - [ ] Virtual desktops in saved layouts; Windows remote servers
