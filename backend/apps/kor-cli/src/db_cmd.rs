@@ -14,7 +14,11 @@ use crate::Ctx;
 pub enum DbCmd {
     /// Read a connection's schema (read-only) into the project graph.
     Connect {
+        /// A `connections.toml` id, or a URL (`postgres://`, `mysql://`, `mssql://`, `sqlite:`).
         name: String,
+        /// Id to save a URL under (default: from the database name).
+        #[arg(long)]
+        id: Option<String>,
         /// Also read the slowest statements (`pg_stat_statements`, `performance_schema`, `dm_exec_query_stats`).
         #[arg(long)]
         slow: bool,
@@ -55,6 +59,7 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
             s.about(l.t("cmd-db-connect"))
                 .mut_arg("name", |a| a.help(l.t("arg-db-name")))
                 .mut_arg("slow", |a| a.help(l.t("arg-db-slow")))
+                .mut_arg("id", |a| a.help(l.t("arg-db-id")))
         })
         .mut_subcommand("refresh", |s| {
             s.about(l.t("cmd-db-refresh"))
@@ -81,6 +86,7 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
 }
 
 /// `kor db` without a subcommand lists the tables.
+#[allow(clippy::too_many_lines)] // one dispatch arm per subcommand
 pub fn run(ctx: &Ctx, cmd: Option<&DbCmd>) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let root = crate::graph_cmd::root()?;
@@ -112,6 +118,21 @@ pub fn run(ctx: &Ctx, cmd: Option<&DbCmd>) -> anyhow::Result<bool> {
         Some(DbCmd::Indexes) => return Ok(indexes(l, &root)),
         _ => {}
     }
+    let saved;
+    let cmd = match cmd {
+        Some(DbCmd::Connect { name, id, slow }) if is_url(name) => {
+            let Some(name) = save_url(l, name, id.as_deref()) else {
+                return Ok(false);
+            };
+            saved = DbCmd::Connect {
+                name,
+                id: None,
+                slow: *slow,
+            };
+            Some(&saved)
+        }
+        c => c,
+    };
     // Slow queries are opt-in: `connect --slow`; `refresh` re-reads them where they were read.
     let snaps = kor_graph::db::load_snapshots(&root);
     let had_slow = |n: &str| {
@@ -120,7 +141,7 @@ pub fn run(ctx: &Ctx, cmd: Option<&DbCmd>) -> anyhow::Result<bool> {
             .any(|s| s.connection == n && !s.slow_queries.is_empty())
     };
     let names: Vec<(String, bool)> = match cmd {
-        Some(DbCmd::Connect { name, slow }) => vec![(name.clone(), *slow)],
+        Some(DbCmd::Connect { name, slow, .. }) => vec![(name.clone(), *slow)],
         Some(DbCmd::Refresh { name: Some(name) }) => vec![(name.clone(), had_slow(name))],
         Some(DbCmd::Refresh { name: None }) => snaps
             .iter()
@@ -169,6 +190,49 @@ pub fn run(ctx: &Ctx, cmd: Option<&DbCmd>) -> anyhow::Result<bool> {
             ok
         }
     })
+}
+
+fn is_url(s: &str) -> bool {
+    s.contains("://") || s.starts_with("sqlite:")
+}
+
+/// `kor db connect <url>`: save the entry to `connections.toml` and the password to the keychain.
+fn save_url(l: &Localizer, url: &str, id: Option<&str>) -> Option<String> {
+    let fail = |e: String| {
+        eprintln!("{}", l.t_args("db-url-failed", &args!("error" => e)));
+        None
+    };
+    let Some(file) = kor_config::user_dir().map(|d| d.join("connections.toml")) else {
+        return fail("no user configuration directory".into());
+    };
+    let entry = match kor_agent::remote::url::parse(url, id) {
+        Ok(e) => e,
+        Err(e) => return fail(e),
+    };
+    if let Some(pw) = &entry.password {
+        let secret = kor_secrets::SecretString::from(pw.clone());
+        if let Err(e) = kor_secrets::store_key(
+            &format!("db-{}", entry.id),
+            &secret,
+            &kor_secrets::KeychainStore,
+        ) {
+            return fail(format!(
+                "the password could not be stored in the keychain: {e}"
+            ));
+        }
+    }
+    if let Err(e) = kor_agent::remote::url::save(&file, &entry) {
+        return fail(e);
+    }
+    println!(
+        "{}",
+        l.t_args(
+            "db-url-saved",
+            &args!("id" => entry.id.clone(), "path" => file.display().to_string(),
+                   "keychain" => if entry.password.is_some() { "yes" } else { "no" })
+        )
+    );
+    Some(entry.id)
 }
 
 fn connect(
@@ -435,6 +499,9 @@ mod tests {
         ));
         let t = T::try_parse_from(["x", "connect", "main", "--slow"]).unwrap();
         assert!(matches!(t.c, Some(DbCmd::Connect { slow: true, .. })));
+        let t = T::try_parse_from(["x", "connect", "postgres://u@h/db", "--id", "main"]).unwrap();
+        assert!(matches!(t.c, Some(DbCmd::Connect { id: Some(ref i), .. }) if i == "main"));
+        assert!(is_url("sqlite:a.db") && is_url("mysql://h/d") && !is_url("main"));
         assert!(T::try_parse_from(["x", "apply", "main", "m.sql", "--yes"]).is_ok());
         let l = Localizer::new(kor_i18n::Lang::En);
         let c = localize(T::command(), &l);

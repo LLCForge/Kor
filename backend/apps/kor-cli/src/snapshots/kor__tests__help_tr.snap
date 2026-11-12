@@ -7602,14 +7602,17 @@ Arguments:
           connections.toml'daki veritabanı bağlantısının adı
 
 Options:
+      --id <ID>
+          URL'nin kaydedileceği kimlik (varsayılan: veritabanı adından)
+
       --lang <LANG>
           Arayüz dili (tr, en, fr)
 
-      --slow
-          En yavaş sorguları da oku (pg_stat_statements, performance_schema, SQL Server istatistikleri)
-
       --privacy-mode
           Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --slow
+          En yavaş sorguları da oku (pg_stat_statements, performance_schema, SQL Server istatistikleri)
 
       --remote <REMOTE>
           Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği

@@ -7602,14 +7602,17 @@ Arguments:
           Database connection name from connections.toml
 
 Options:
+      --id <ID>
+          Id to save a URL under (default: from the database name)
+
       --lang <LANG>
           Interface language (tr, en, fr)
 
-      --slow
-          Also read the slowest statements (pg_stat_statements, performance_schema, SQL Server statistics)
-
       --privacy-mode
           Privacy mode: local models only, no outbound calls from Kor
+
+      --slow
+          Also read the slowest statements (pg_stat_statements, performance_schema, SQL Server statistics)
 
       --remote <REMOTE>
           Run the agent on this server over SSH: user@host[:port] or a connections.toml id

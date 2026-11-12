@@ -11,6 +11,7 @@
 
 pub mod db;
 pub mod discover;
+pub mod url;
 pub mod wire;
 
 use kor_platform::NoWindow as _;
