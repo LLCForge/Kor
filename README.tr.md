@@ -29,7 +29,7 @@ ekran terminal arayüzüyle birlikte), Windows, macOS ve Linux için hafif bir T
 tarayıcı eklentisi. 46 sağlayıcıdan herhangi biriyle ya da kendi bilgisayarında çalışan bir modelle çalışır,
 telemetri toplamaz ve ağ kablosu çekiliyken bile bir görevi baştan sona yürütebilir.
 
-> **Durum: erken sürüm (`v0.8.0`).** İlk açık derleme; kurulum paketleri Releases sayfasında. Özelliklerin çoğu
+> **Durum: erken sürüm (`v0.8.11`).** Erken aşamada bir yazılım; kurulum paketleri Releases sayfasında. Özelliklerin çoğu
 > otomatik testlerle (sahte sunucular ve örnek projelerle) doğrulandı; gerçek ücretli API'ler ve macOS/Linux
 > donanımı üzerinde denemeler sürüyor. Aşağıda kendi hesaplarını gerektiren ya da gerçek donanımda doğrulanmamış her şey ayrıca
 > belirtildi. Ayrıntı: [Yol haritası ve durum](#yol-haritası-ve-durum).
@@ -658,7 +658,7 @@ flowchart TD
 
 ## Yol haritası ve durum
 
-**Durum.** `v0.8.0` ilk açık derleme: baştan sona çalışıyor ama erken aşamada bir yazılım. Doğrulananlar:
+**Durum.** Güncel sürüm `v0.8.11` (`v0.8.0` ilk açık derlemeydi): baştan sona çalışıyor ama erken aşamada bir yazılım. Doğrulananlar:
 
 - CLI/TUI/masaüstü arasında eşit, testlerle korunan yaklaşık 400 komut.
 - Ağ kesikken tam bir çevrimdışı görev (otomatik test) ve Windows'ta llama.cpp ile küçük bir Qwen modeliyle gerçek
@@ -674,7 +674,7 @@ tasarruf hedeflerinin gerçek modellerle ölçümü.
 
 ### Yapılacaklar
 
-Toplam 98 açık madde: **65 geliştirme işi**, bakımcı için 12 hesap/yayın adımı, 16 gerçek ortam denemesi ve 5 karar.
+Toplam 67 açık madde: **35 geliştirme işi**, bakımcı için 12 hesap/yayın adımı, 16 gerçek ortam denemesi ve 4 karar.
 Geliştirme işleri:
 
 **Faz 8 — takım ve platform (8)**
@@ -686,8 +686,6 @@ Geliştirme işleri:
 - [ ] Takım kasası, şablon/hook/kural senkronu; takım sunucusu üzerinden peer rölesi; Faz 8 kabul testleri
 
 **Ajan, diller ve hafıza**
-- [x] 40'tan fazla dil için tree-sitter (46)
-- [x] Grafta doküman/PDF kavram katmanı: `docs/` altındaki Markdown (ve README) başlıkları ile oradaki PDF'ler, adını verdikleri koda bağlı kavram düğümleri olur
 - [ ] Sıcak hafıza katmanı ve RAM'de HNSW
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
 - [ ] Sandbox'ta alan adı bazlı ağ kuralları, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)

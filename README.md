@@ -29,7 +29,7 @@ Kor is a free, open-source coding agent with one native Rust core and three face
 extension. It works with any of 46 providers or with a model running on your own computer, collects no
 telemetry, and can run a complete task with the network unplugged.
 
-> **Status: early release (`v0.8.0`).** The first public build; installers are on the Releases page. Most features
+> **Status: early release (`v0.8.11`).** Early software; installers are on the Releases page. Most features
 > are covered by automated tests (mock servers and sample projects); real paid APIs and macOS/Linux hardware are
 > still being tried. Anything below that needs your own accounts or has not been verified on real hardware is marked as
 > such. See [Roadmap and status](#roadmap-and-status).
@@ -656,7 +656,7 @@ None of this can run until the first signed release exists.
 
 ## Roadmap and status
 
-**Status.** `v0.8.0` is the first public build: it works end to end, but it is early software. What is verified:
+**Status.** The current release is `v0.8.11` (`v0.8.0` was the first public build): it works end to end, but it is early software. What is verified:
 
 - About 400 commands at CLI/TUI/desktop parity, enforced by tests.
 - A full offline task with the network cut (automated test), and a real offline turn with llama.cpp and a small
@@ -671,8 +671,8 @@ back-ends for OCR, accessibility and sandbox on real machines, and the router/gr
 
 ### To do
 
-98 open items in total: **65 development tasks**, 12 account/publishing steps for the maintainer, 16 real-world
-trials and 5 decisions. The development tasks:
+67 open items in total: **35 development tasks**, 12 account/publishing steps for the maintainer, 16 real-world
+trials and 4 decisions. The development tasks:
 
 **Faz 8 — team and platform (8)**
 - [ ] Kor Server: team mode on your own server (shared rules, graph and memory, task queue, central audit, Postgres, mTLS)
@@ -683,15 +683,12 @@ trials and 5 decisions. The development tasks:
 - [ ] Team vault and template/hook/rule sync; peer relay through the team server; Faz 8 acceptance tests
 
 **Agent, languages and memory**
-- [x] tree-sitter for 40+ languages (46)
-- [x] A docs/PDF concept layer in the graph: headings of Markdown under `docs/` (and the README) and PDFs there become concept nodes linked to the code they name
 - [ ] Hot memory tier and in-RAM HNSW index
 - [ ] fish-style inline shell suggestions from a small local model
 - [ ] Domain-level sandbox network rules, a hard CPU cap on Linux/macOS (today: `nice` priority)
 - [ ] Virtual desktops in saved layouts; Windows remote servers
 
 **Providers and cost**
-- [x] Vertex ADC, Azure Entra ID, OCI signed auth
 - [ ] LMArena and LiveBench scores in the catalogue (neither publishes a data endpoint)
 - [ ] Proxy quota in `kor quota`
 
