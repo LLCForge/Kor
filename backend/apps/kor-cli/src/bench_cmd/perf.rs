@@ -80,7 +80,7 @@ impl Repl {
     fn start(exe: &Path, dir: &Path) -> Option<Self> {
         let t = Instant::now();
         let mut child = Command::new(exe)
-            .args(["--privacy-mode", "--model", "ollama/kor-bench"])
+            .args(["--privacy-mode", "--model", "local/kor-bench"])
             .current_dir(dir)
             .env("KOR_UI", "line")
             .env("NO_COLOR", "1")
@@ -361,7 +361,7 @@ fn token_path() -> anyhow::Result<Option<Stat>> {
 
 /// A TUI screen with a full scrollback (5000 lines kept of a 10k-message thread).
 fn filled_screen(l: &Localizer) -> Screen {
-    let mut s = Screen::new("default", "ollama/kor-bench");
+    let mut s = Screen::new("default", "local/kor-bench");
     for i in 0..10_000 {
         tui::reduce(
             &mut s,
@@ -380,7 +380,7 @@ fn tui_rows(l: &Localizer, r: &mut Results) -> anyhow::Result<()> {
     let first: Vec<Duration> = (0..20)
         .map(|_| -> anyhow::Result<Duration> {
             let t = Instant::now();
-            let s = Screen::new("default", "ollama/kor-bench");
+            let s = Screen::new("default", "local/kor-bench");
             let mut term = Terminal::new(TestBackend::new(120, 40))?;
             term.draw(|f| tui::draw(f, &s, l))?;
             Ok(t.elapsed())
