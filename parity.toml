@@ -1383,6 +1383,12 @@ tui = "/paste"
 desktop = "send"
 
 [[feature]]
+name = "kor fim"
+cli = "kor fim"
+tui = "/fim"
+desktop = "fim.complete"
+
+[[feature]]
 name = "kor sessions import"
 cli = "kor sessions import"
 tui = "/sessions import"
