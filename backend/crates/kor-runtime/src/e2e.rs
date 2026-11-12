@@ -693,7 +693,20 @@ pub fn check_with(
         ));
     }
     for (rel, content) in &scenario.expect.files {
-        let got = std::fs::read_to_string(env.project.join(rel)).ok();
+        // `branch:path` reads the file from a git ref (a task's result branch), else the work tree.
+        let got = if rel.contains(':') {
+            std::process::Command::new("git")
+                .no_window()
+                .args(["show", rel])
+                .current_dir(&env.project)
+                .stdin(std::process::Stdio::null())
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        } else {
+            std::fs::read_to_string(env.project.join(rel)).ok()
+        };
         // Line endings are the platform's business (Windows checkouts, editors).
         let norm = |s: &str| s.replace("\r\n", "\n");
         if got.as_deref().map(norm) != content.as_deref().map(norm) {

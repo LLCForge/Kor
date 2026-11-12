@@ -219,19 +219,35 @@ fn run_cli(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
     if !group.is_empty() {
         cli_session(&e.env, &group, &mut out);
     }
-    let mut o = e2e::check_with(s, &e.env, "cli", &out, &e.mock.requests());
-    if !o.problems.is_empty() {
-        // What the surface printed, so a failure on a runner can be read without rerunning it.
-        let tail: String = strip_ansi(&out)
-            .chars()
-            .rev()
-            .take(4000)
-            .collect::<Vec<_>>()
-            .into_iter()
-            .rev()
-            .collect();
-        o.problems.push(format!("output:\n{tail}"));
+    explain(
+        e2e::check_with(s, &e.env, "cli", &out, &e.mock.requests()),
+        &out,
+        &e.env.trace,
+    )
+}
+
+/// On a failure, what the surface printed and the event types it traced, so a run on a CI
+/// runner can be read without rerunning it.
+fn explain(mut o: e2e::Outcome, out: &str, trace: &Path) -> e2e::Outcome {
+    if o.problems.is_empty() {
+        return o;
     }
+    let tail: String = strip_ansi(out)
+        .chars()
+        .rev()
+        .take(4000)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    let types: Vec<String> = std::fs::read_to_string(trace)
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| serde_json::from_str::<serde_json::Value>(l).ok())
+        .filter_map(|v| v["payload"]["type"].as_str().map(str::to_owned))
+        .collect();
+    o.problems.push(format!("traced: {}", types.join(" ")));
+    o.problems.push(format!("output:\n{tail}"));
     o
 }
 
@@ -317,7 +333,11 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
     }
     p.send("\x1b").expect("Esc quits");
     out.push_str(&text(&p.expect(Eof).expect("TUI exits")));
-    e2e::check_with(s, &e.env, "tui", &strip_ansi(&out), &e.mock.requests())
+    explain(
+        e2e::check_with(s, &e.env, "tui", &strip_ansi(&out), &e.mock.requests()),
+        &out,
+        &e.env.trace,
+    )
 }
 
 /// Removes CSI / OSC escape sequences (the TUI draws with cursor moves between runs of text).

@@ -10,4 +10,5 @@ steps:
   - command: "kor graph update"
   - command: "kor graph status"
 expect:
-  output: ["lib.rs"]
+  # The status names the languages it parsed (CLI "Languages: rust 2", desktop `"rust": 2`).
+  output: ["rust"]

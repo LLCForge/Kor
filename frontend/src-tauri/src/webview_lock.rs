@@ -85,7 +85,20 @@ pub fn create_main_window(app: &AppHandle) -> tauri::Result<()> {
     };
     let opener = app.clone();
     let popup = app.clone();
-    WebviewWindowBuilder::from_config(app, &conf)?
+    let mut builder = WebviewWindowBuilder::from_config(app, &conf)?;
+    // E2E (debug builds only): `KOR_E2E_CDP_PORT` opens WebView2's DevTools port for Playwright.
+    // Any arguments set here replace Tauri's defaults, so those are kept.
+    if let Some(port) = std::env::var("KOR_E2E_CDP_PORT")
+        .ok()
+        .filter(|p| cfg!(debug_assertions) && p.parse::<u16>().is_ok())
+    {
+        let base = conf.additional_browser_args.clone().unwrap_or_else(|| {
+            "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection".to_owned()
+        });
+        builder =
+            builder.additional_browser_args(&format!("{base} --remote-debugging-port={port}"));
+    }
+    builder
         .devtools(devtools_allowed())
         .zoom_hotkeys_enabled(false)
         .on_navigation(move |url| match nav_policy(url) {

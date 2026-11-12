@@ -995,6 +995,18 @@ async fn slash(s: &mut Session, line: &str, ctx: &Ctx) -> anyhow::Result<Slash> 
         _ => {
             // Every `kor <command>` also works here as `/<command>` (parity.toml): same parser, same code.
             if crate::run_slash(ctx, line).is_some() {
+                // `/config set agent.model X` also switches this session, as `/model X` does.
+                let model = arg
+                    .strip_prefix("set agent.model ")
+                    .filter(|_| cmd == "/config")
+                    .map(|m| m.trim().trim_matches(['"', '\'']));
+                if let Some((p, model, key)) = model.and_then(|m| build_provider(ctx, m)) {
+                    s.agent.provider = p;
+                    model.model().clone_into(&mut s.agent.model);
+                    if let Some(k) = key {
+                        s.agent.redactor.register(k);
+                    }
+                }
                 return Ok(Slash::Done);
             }
             let name = cmd.trim_start_matches('/');

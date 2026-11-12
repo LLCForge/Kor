@@ -97,6 +97,9 @@ export function launchDesktop(served: Served, extraEnv: Record<string, string> =
     env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = `--remote-debugging-port=${CDP_PORT}`
     // The app disables DevTools (and with it the debugging port) unless asked; debug builds only.
     env.KOR_DEVTOOLS = '1'
+    // Tauri passes its own WebView2 arguments, which can shadow the variable above: the debug app
+    // adds the port itself from this one.
+    env.KOR_E2E_CDP_PORT = String(CDP_PORT)
   }
   const app = spawn(desktopBinary(), [], { env, stdio: ['ignore', 'ignore', 'pipe'], cwd: served.project })
   // The last of its stderr, for the error when it never becomes reachable (a crash at start).

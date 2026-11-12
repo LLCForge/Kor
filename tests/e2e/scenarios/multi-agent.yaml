@@ -1,5 +1,6 @@
 # §17.2 "multi-agent": the orchestrator plans two parts, each sub-agent writes its file in its own
-# worktree, the reviewer approves both diffs, and the task branch merges into the project.
+# worktree, the reviewer approves both diffs, and both merge into the task branch; the user's branch
+# stays untouched (`ref:path` reads a file from a git ref).
 name: multi-agent
 title: "Çoklu ajan görevi: planla → iki alt ajan → inceleme → birleştir"
 project:
@@ -40,6 +41,8 @@ steps:
     desktop_args: [{ goal: "write alpha and beta", agents: 2, test: "git status" }]
 expect:
   files:
-    alpha.txt: "alpha\n"
-    beta.txt: "beta\n"
+    "kor/task/1/merged:alpha.txt": "alpha\n"
+    "kor/task/1/merged:beta.txt": "beta\n"
+    alpha.txt: ~
+    beta.txt: ~
     README.md: "# Demo\n"

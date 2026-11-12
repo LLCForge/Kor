@@ -1,6 +1,9 @@
 # §17.2 "sağlayıcı değiştirme": the default model changes between two tasks; the provider is asked for
-# the new one.
+# the new one. CLI and TUI only: a desktop chat keeps the model it started with (the default applies to
+# new chats; the chat's own picker switches it). The normalized stream keeps one status and joins the
+# turns' text, so the switch itself is checked by `models`.
 name: provider-switch
+surfaces: [cli, tui]
 title: "Sağlayıcı / model değiştirme"
 project:
   files:
@@ -19,8 +22,6 @@ steps:
 expect:
   events:
     - status
-    - { type: text, text: "Birinci model." }
-    - status
-    - { type: text, text: "İkinci model." }
+    - { type: text, text: "Birinci model.İkinci model." }
   models: ["kor-mock", "kor-mock-large"]
   usage_requests: 2
