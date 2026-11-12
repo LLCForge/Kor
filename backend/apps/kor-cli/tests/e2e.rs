@@ -174,7 +174,8 @@ fn cli_session(env: &IsolatedEnv, steps: &[&Step], out: &mut String) {
     out.push_str(&expect_tty(&mut p, "✶ ", "first prompt"));
     for st in steps {
         if let Some(prompt) = &st.prompt {
-            p.send_line(prompt).expect("send prompt");
+            // `\r` is Enter in raw mode; a Unix PTY passes `\n` through as Ctrl+J.
+            p.send(format!("{prompt}\r")).expect("send prompt");
             // The turn ends at the next prompt, or stops at an approval card first.
             let next = steps.iter().skip_while(|s| !std::ptr::eq(**s, *st)).nth(1);
             if next.is_some_and(|n| n.approve.is_some()) {
@@ -193,11 +194,11 @@ fn cli_session(env: &IsolatedEnv, steps: &[&Step], out: &mut String) {
                 "no" => "n",
                 _ => "y",
             };
-            p.send_line(key).expect("send approval");
+            p.send(format!("{key}\r")).expect("send approval");
             out.push_str(&expect_tty(&mut p, "✶ ", "turn end after approval"));
         }
     }
-    p.send_line("/exit").expect("exit");
+    p.send("/exit\r").expect("exit");
     out.push_str(&text(&p.expect(Eof).expect("REPL exits")));
 }
 
@@ -388,7 +389,7 @@ fn pty_repl_shows_banner_and_quits() {
     // The banner is drawn from assets/banner*.txt; the narrow one below 60 columns.
     let start = text(&p.expect("/exit quits").expect("banner and hint"));
     assert!(start.contains("██") || start.contains("▄"), "{start}");
-    p.send_line("/exit").expect("exit");
+    p.send("/exit\r").expect("exit");
     p.expect(Eof).expect("exits");
 }
 

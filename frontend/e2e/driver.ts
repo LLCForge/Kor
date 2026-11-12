@@ -56,13 +56,20 @@ export function cdpDriver(first: Page, close: () => Promise<void>, find?: () => 
 export async function webdriverDriver(application: string, port = 4444): Promise<Driver> {
   const base = `http://127.0.0.1:${port}`
   const call = async (method: string, path: string, body?: unknown) => {
-    const r = await fetch(`${base}${path}`, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+    // Every call is bounded: a hung driver fails the step instead of the whole 10-minute test.
+    const r = await fetch(`${base}${path}`, {
+      method,
+      headers: { 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000),
+    })
     const j = (await r.json()) as { value: unknown }
     if (!r.ok) throw new Error(`WebDriver ${method} ${path}: ${JSON.stringify(j.value)}`)
     return j.value
   }
   const session = (await call('POST', '/session', { capabilities: { alwaysMatch: { 'tauri:options': { application } } } })) as { sessionId: string }
   const sid = `/session/${session.sessionId}`
+  let closed = false
   const find = async (selector: string) => {
     const v = (await call('POST', `${sid}/element`, { using: 'css selector', value: selector })) as Record<string, string>
     return Object.values(v)[0]!
@@ -99,7 +106,12 @@ export async function webdriverDriver(application: string, port = 4444): Promise
       const actions = [...t].flatMap((value) => [{ type: 'keyDown', value }, { type: 'keyUp', value }])
       await call('POST', `${sid}/actions`, { actions: [{ type: 'key', id: 'kbd', actions }] })
     },
-    close: async () => { await call('DELETE', sid).catch(() => undefined) },
+    // Once only: tauri-driver does not answer a DELETE for a session it already closed.
+    close: async () => {
+      if (closed) return
+      closed = true
+      await call('DELETE', sid).catch(() => undefined)
+    },
   }
   return d
 }
