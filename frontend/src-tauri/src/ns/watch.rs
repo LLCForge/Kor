@@ -26,15 +26,26 @@ static RUNNING: Mutex<BTreeMap<u64, (String, CancellationToken)>> = Mutex::new(B
 static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
 
 fn running() -> std::sync::MutexGuard<'static, BTreeMap<u64, (String, CancellationToken)>> {
-    RUNNING.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    RUNNING
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 fn to_json<T: serde::Serialize>(v: &T) -> Res {
     serde_json::to_value(v).map_err(|e| e.to_string())
 }
 
-pub async fn call(_ns: &str, name: &str, args: &[Value], app: &AppHandle, state: &AppState) -> Option<Res> {
-    if !matches!(name, "start" | "stop" | "list" | "incidents" | "clear" | "fixStart" | "fixFiles" | "fixFinish") {
+pub async fn call(
+    _ns: &str,
+    name: &str,
+    args: &[Value],
+    app: &AppHandle,
+    state: &AppState,
+) -> Option<Res> {
+    if !matches!(
+        name,
+        "start" | "stop" | "list" | "incidents" | "clear" | "fixStart" | "fixFiles" | "fixFinish"
+    ) {
         return None;
     }
     let root = match root(state) {
@@ -45,18 +56,28 @@ pub async fn call(_ns: &str, name: &str, args: &[Value], app: &AppHandle, state:
         "start" => start(args, app, root),
         "stop" => {
             let id = args.first().and_then(Value::as_u64).unwrap_or(0);
-            Ok(json!(running().remove(&id).map(|(_, c)| c.cancel()).is_some()))
+            Ok(json!(
+                running().remove(&id).map(|(_, c)| c.cancel()).is_some()
+            ))
         }
-        "list" => Ok(json!(running().iter().map(|(id, (src, _))| json!({ "id": id, "source": src })).collect::<Vec<_>>())),
+        "list" => Ok(json!(
+            running()
+                .iter()
+                .map(|(id, (src, _))| json!({ "id": id, "source": src }))
+                .collect::<Vec<_>>()
+        )),
         "incidents" => to_json(&watch::incidents(&root)),
         "clear" => watch::clear(&root, opt_s(args, 0)).map(|n| json!(n)),
         "fixStart" => match s(args, 0, "watch.fixStart") {
-            Ok(id) => watch::fix_start(&root, id).map(|(incident, prompt)| json!({ "incident": incident, "prompt": prompt })),
+            Ok(id) => watch::fix_start(&root, id)
+                .map(|(incident, prompt)| json!({ "incident": incident, "prompt": prompt })),
             Err(e) => Err(e),
         },
         "fixFiles" => watch::fix_files(&root).map(|f| json!(f)),
         "fixFinish" => match s(args, 0, "watch.fixFinish") {
-            Ok(id) => watch::fix_finish(&root, id).await.map(|pr| json!({ "url": pr.url, "number": pr.number, "forge": pr.forge })),
+            Ok(id) => watch::fix_finish(&root, id)
+                .await
+                .map(|pr| json!({ "url": pr.url, "number": pr.number, "forge": pr.forge })),
             Err(e) => Err(e),
         },
         _ => Err(format!("`watch.{name}` henüz Kor arka ucunda yok")),

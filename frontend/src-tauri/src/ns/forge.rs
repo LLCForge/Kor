@@ -83,7 +83,10 @@ fn target(args: &[Value]) -> Result<u64, String> {
     forge::pr_number(&t).ok_or_else(|| format!("Pull request numarası ya da adresi değil: {t}"))
 }
 
-fn model(c: &Ctx, m: Option<&str>) -> Option<(std::sync::Arc<dyn kor_providers::Provider>, String)> {
+fn model(
+    c: &Ctx,
+    m: Option<&str>,
+) -> Option<(std::sync::Arc<dyn kor_providers::Provider>, String)> {
     kor_runtime::oneshot_provider(&c.l, &c.loaded, m.filter(|m| !m.trim().is_empty())).ok()
 }
 
@@ -94,7 +97,9 @@ fn detect(state: &AppState) -> Res {
         Err(e) => (None, Some(forge::error_text(&c.l, &e))),
     };
     let branch = forge::current_branch(&c.root).ok();
-    let up = branch.as_deref().is_some_and(|b| forge::has_upstream(&c.root, b));
+    let up = branch
+        .as_deref()
+        .is_some_and(|b| forge::has_upstream(&c.root, b));
     Ok(json!({
         "remote": remote,
         "error": error,
@@ -109,7 +114,14 @@ fn personas(state: &AppState) -> Res {
     let list: Vec<Value> = review::personas(&dir)
         .into_iter()
         .map(|p| {
-            let title = p.prompt.lines().next().unwrap_or_default().trim_start_matches('#').trim().to_owned();
+            let title = p
+                .prompt
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .trim_start_matches('#')
+                .trim()
+                .to_owned();
             json!({ "name": p.name, "source": p.source, "title": title })
         })
         .collect();
@@ -123,15 +135,26 @@ async fn describe(state: &AppState, base: Option<&str>, m: Option<&str>) -> Res 
         .filter(|b| !b.trim().is_empty())
         .map_or_else(|| forge::default_base(&c.root), |b| b.trim().to_owned());
     if head == base {
-        return Err(format!("Hedef dal olan {base} üzerindesiniz. Önce bir özellik dalına geçin."));
+        return Err(format!(
+            "Hedef dal olan {base} üzerindesiniz. Önce bir özellik dalına geçin."
+        ));
     }
     let provider = model(&c, m);
-    let (d, note) = forge::describe(provider.as_ref().map(|(p, m)| (p, m.as_str())), &c.root, &base, &head)
-        .await
-        .map_err(err(&c))?;
+    let (d, note) = forge::describe(
+        provider.as_ref().map(|(p, m)| (p, m.as_str())),
+        &c.root,
+        &base,
+        &head,
+    )
+    .await
+    .map_err(err(&c))?;
     let note = match (provider.is_some(), note) {
-        (_, Some(e)) => Some(format!("Model açıklamayı yazamadı ({e}); commit listesi kullanıldı.")),
-        (false, None) => Some("Model ayarlı değil; açıklama commit listesinden yazıldı.".to_owned()),
+        (_, Some(e)) => Some(format!(
+            "Model açıklamayı yazamadı ({e}); commit listesi kullanıldı."
+        )),
+        (false, None) => {
+            Some("Model ayarlı değil; açıklama commit listesinden yazıldı.".to_owned())
+        }
         (true, None) => None,
     };
     Ok(json!({
@@ -192,13 +215,21 @@ async fn status(state: &AppState) -> Res {
 }
 
 fn persona(root: &Path, name: Option<&str>) -> Result<review::Persona, String> {
-    let name = name.filter(|n| !n.trim().is_empty()).unwrap_or(review::DEFAULT_PERSONA);
+    let name = name
+        .filter(|n| !n.trim().is_empty())
+        .unwrap_or(review::DEFAULT_PERSONA);
     review::persona(root, name).ok_or_else(|| format!("Bilinmeyen persona: {name}"))
 }
 
 async fn run_review(c: &Ctx, p: &review::Persona, diff: &str, m: Option<&str>) -> Value {
     let provider = model(c, m);
-    let report = review::review(&c.l, provider.as_ref().map(|(p, m)| (p, m.as_str())), p, diff).await;
+    let report = review::review(
+        &c.l,
+        provider.as_ref().map(|(p, m)| (p, m.as_str())),
+        p,
+        diff,
+    )
+    .await;
     json!({ "markdown": review::markdown(&c.l, &report), "report": report })
 }
 
@@ -227,7 +258,11 @@ fn report_from(v: &Value) -> Result<Report, String> {
                 .unwrap_or(Severity::Info),
             rule: field(f, "rule").to_owned(),
             message: field(f, "message").chars().take(4000).collect(),
-            source: if field(f, "source") == "check" { "check" } else { "model" },
+            source: if field(f, "source") == "check" {
+                "check"
+            } else {
+                "model"
+            },
         })
         .collect();
     Ok(Report {
@@ -242,7 +277,10 @@ async fn review_post(state: &AppState, args: &[Value]) -> Res {
     let n = target(args)?;
     let report = report_from(args.get(1).unwrap_or(&Value::Null))?;
     let (body, notes) = review::to_notes(&c.l, &report);
-    let r = open(&c)?.post_review(n, &body, &notes).await.map_err(err(&c))?;
+    let r = open(&c)?
+        .post_review(n, &body, &notes)
+        .await
+        .map_err(err(&c))?;
     Ok(json!(r))
 }
 
@@ -253,13 +291,17 @@ async fn respond(state: &AppState, args: &[Value]) -> Res {
     let pr = f.get(n).await.map_err(err(&c))?;
     let branch = forge::current_branch(&c.root).map_err(err(&c))?;
     if branch != pr.head {
-        return Err(format!("Önce pull request'in dalı olan {} dalına geçin.", pr.head));
+        return Err(format!(
+            "Önce pull request'in dalı olan {} dalına geçin.",
+            pr.head
+        ));
     }
     let comments = f.comments(n).await.map_err(err(&c))?;
     if comments.is_empty() {
         return Ok(json!({ "pr": pr, "comments": comments, "replies": [], "edits": [] }));
     }
-    let (p, m) = model(&c, opt_s(args, 1)).ok_or("Model ayarlı değil; yanıt taslağı için bir model seçin.")?;
+    let (p, m) = model(&c, opt_s(args, 1))
+        .ok_or("Model ayarlı değil; yanıt taslağı için bir model seçin.")?;
     let r = forge::respond::draft(&p, &m, &c.root, &pr, &comments)
         .await
         .map_err(err(&c))?;
@@ -289,7 +331,10 @@ async fn respond_apply(state: &AppState, args: &[Value]) -> Res {
     let pr = f.get(n).await.map_err(err(&c))?;
     let branch = forge::current_branch(&c.root).map_err(err(&c))?;
     if branch != pr.head {
-        return Err(format!("Önce pull request'in dalı olan {} dalına geçin.", pr.head));
+        return Err(format!(
+            "Önce pull request'in dalı olan {} dalına geçin.",
+            pr.head
+        ));
     }
     let commit = if files.is_empty() {
         None
@@ -305,7 +350,9 @@ async fn respond_apply(state: &AppState, args: &[Value]) -> Res {
     let mut sent = 0usize;
     let mut errors = Vec::new();
     for (id, body) in &replies {
-        let Some(cm) = comments.iter().find(|x| &x.id == id) else { continue };
+        let Some(cm) = comments.iter().find(|x| &x.id == id) else {
+            continue;
+        };
         match f.reply(n, cm, body).await {
             Ok(()) => sent += 1,
             Err(e) => errors.push(forge::error_text(&c.l, &e)),
@@ -332,7 +379,11 @@ async fn local_review(state: &AppState, opts: Option<&Value>) -> Res {
 }
 
 fn diff_source(o: &Value) -> DiffSource {
-    match o.get("range").and_then(Value::as_str).filter(|r| !r.trim().is_empty()) {
+    match o
+        .get("range")
+        .and_then(Value::as_str)
+        .filter(|r| !r.trim().is_empty())
+    {
         Some(r) => DiffSource::Range(r.trim().to_owned()),
         None if o.get("staged").and_then(Value::as_bool) == Some(true) => DiffSource::Staged,
         None => DiffSource::Working,
@@ -346,9 +397,15 @@ mod tests {
     #[test]
     fn targets_and_sources_are_read() {
         assert_eq!(target(&[json!(12)]).unwrap(), 12);
-        assert_eq!(target(&[json!("https://github.com/o/r/pull/7")]).unwrap(), 7);
+        assert_eq!(
+            target(&[json!("https://github.com/o/r/pull/7")]).unwrap(),
+            7
+        );
         assert!(target(&[]).is_err());
-        assert_eq!(diff_source(&json!({ "range": "a..b" })), DiffSource::Range("a..b".into()));
+        assert_eq!(
+            diff_source(&json!({ "range": "a..b" })),
+            DiffSource::Range("a..b".into())
+        );
         assert_eq!(diff_source(&json!({ "staged": true })), DiffSource::Staged);
         assert_eq!(diff_source(&Value::Null), DiffSource::Working);
     }
@@ -362,7 +419,10 @@ mod tests {
         .unwrap();
         assert_eq!(r.findings.len(), 2);
         assert_eq!(r.findings[0].severity, Severity::High);
-        assert_eq!((r.findings[1].severity, r.findings[1].source), (Severity::Info, "check"));
+        assert_eq!(
+            (r.findings[1].severity, r.findings[1].source),
+            (Severity::Info, "check")
+        );
         assert!(report_from(&json!({})).is_err());
     }
 }

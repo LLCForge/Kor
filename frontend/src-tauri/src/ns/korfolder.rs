@@ -35,7 +35,10 @@ fn layout() -> Result<Layout, String> {
 }
 
 fn lang(state: &AppState) -> kor_i18n::Lang {
-    let root = crate::api::root(state).ok().or_else(dirs::home_dir).unwrap_or_default();
+    let root = crate::api::root(state)
+        .ok()
+        .or_else(dirs::home_dir)
+        .unwrap_or_default();
     crate::bridge::load_config(&root).map_or(kor_i18n::Lang::Tr, |c| c.config.ui.language.resolve())
 }
 
@@ -149,12 +152,16 @@ async fn mount(at: Option<String>) -> Res {
     if lock(&MOUNT).is_some() {
         return Ok(mount_json());
     }
-    let server = dav::serve(l.root.clone()).await.map_err(|e| e.to_string())?;
-    let at = at.filter(|a| !a.trim().is_empty()).unwrap_or_else(|| match kor_platform::os() {
-        kor_platform::Os::Windows => "*".into(),
-        kor_platform::Os::Mac => l.root.with_file_name("KorDrive").display().to_string(),
-        _ => String::new(),
-    });
+    let server = dav::serve(l.root.clone())
+        .await
+        .map_err(|e| e.to_string())?;
+    let at = at
+        .filter(|a| !a.trim().is_empty())
+        .unwrap_or_else(|| match kor_platform::os() {
+            kor_platform::Os::Windows => "*".into(),
+            kor_platform::Os::Mac => l.root.with_file_name("KorDrive").display().to_string(),
+            _ => String::new(),
+        });
     let url = server.url.clone();
     let shown = tauri::async_runtime::spawn_blocking(move || kor_platform::mount::mount(&url, &at))
         .await
@@ -181,7 +188,9 @@ mod tests {
     #[test]
     fn methods_are_routed() {
         let src = include_str!("korfolder.rs");
-        for m in ["status", "enable", "disable", "sync", "open", "mount", "unmount"] {
+        for m in [
+            "status", "enable", "disable", "sync", "open", "mount", "unmount",
+        ] {
             assert!(src.contains(&format!("\"{m}\" =>")), "{m}");
         }
     }

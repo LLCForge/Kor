@@ -67,7 +67,9 @@ fn localizer(state: &AppState) -> Localizer {
 /// The user removed an integration: record `key = false` (`integrations.context_menu`,
 /// `integrations.os.<id>`) so no later first run installs it again, even without the marker file.
 pub(crate) fn remember_off(key: &str) {
-    if let Err(e) = user_config().and_then(|f| kor_config::set_scalar(&f, key, "false").map_err(|e| e.to_string())) {
+    if let Err(e) = user_config()
+        .and_then(|f| kor_config::set_scalar(&f, key, "false").map_err(|e| e.to_string()))
+    {
         eprintln!("Kor: {key} kaydedilemedi: {e}");
     }
 }
@@ -633,7 +635,8 @@ fn privacy_info(state: &AppState) -> Res {
         .map(|l| l.entry);
     let config_dir = kor_config::user_dir().unwrap_or_default();
     // §6.7 denetim kaydı: etkin dosya ve döndürülmüş arşivler (ADR 0036).
-    let audit = kor_runtime::secure::audit_path().unwrap_or_else(|| home.join(kor_agent::audit::FILE));
+    let audit =
+        kor_runtime::secure::audit_path().unwrap_or_else(|| home.join(kor_agent::audit::FILE));
     let audit_files = kor_agent::audit::files(&audit).unwrap_or_default();
     let audit_bytes: u64 = audit_files
         .iter()
@@ -1248,7 +1251,9 @@ pub async fn call(method: &str, args: &[Value], app: &AppHandle, state: &AppStat
                     "message": if notices.is_empty() { Value::Null } else { json!(notices.join("; ")) },
                     "matched": matched,
                 }),
-                Err(e) => json!({ "status": "error", "fetchedAt": Value::Null, "message": e, "matched": 0 }),
+                Err(e) => {
+                    json!({ "status": "error", "fetchedAt": Value::Null, "message": e, "matched": 0 })
+                }
             };
             Ok(json!({ "models": out, "aliases": m.settings.model_aliases, "aa": aa }))
         }

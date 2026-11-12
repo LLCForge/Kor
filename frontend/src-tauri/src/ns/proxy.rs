@@ -56,9 +56,7 @@ fn proxy_settings() -> Result<kor_proxy::config::Settings, String> {
 }
 
 fn auth_dir(st: &kor_proxy::config::Settings) -> PathBuf {
-    st.auth_dir
-        .clone()
-        .unwrap_or_else(oauth::default_auth_dir)
+    st.auth_dir.clone().unwrap_or_else(oauth::default_auth_dir)
 }
 
 async fn reload_running_gateway() {
@@ -191,7 +189,9 @@ async fn routing_set(args: &[Value]) -> Res {
     let strat = kor_proxy::config::Strategy::parse_name(strategy)?;
     let path = kor_proxy::default_config_path().ok_or("Proxy yapılandırma dosyası yolu yok")?;
     if let Some(parent) = path.parent() {
-        tokio::fs::create_dir_all(parent).await.map_err(|e| e.to_string())?;
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| e.to_string())?;
     }
     let st = kor_proxy::config::patch_routing(&path, strat, request_retry)?;
     reload_running_gateway().await;
@@ -235,7 +235,8 @@ async fn start(args: &[Value], state: &AppState) -> Res {
     let ip: IpAddr = if host.eq_ignore_ascii_case("localhost") {
         IpAddr::from([127, 0, 0, 1])
     } else {
-        host.parse().map_err(|_| format!("Geçersiz adres: {host}"))?
+        host.parse()
+            .map_err(|_| format!("Geçersiz adres: {host}"))?
     };
     let no_auth = b(args, 2);
     let key = if no_auth {
@@ -247,7 +248,10 @@ async fn start(args: &[Value], state: &AppState) -> Res {
     let l = kor_i18n::Localizer::new(kor_i18n::Lang::Tr);
     let mut notes = Vec::new();
     let sources = kor_proxy::Sources::user(&l, privacy, &mut notes)?;
-    let access = kor_proxy::Access { key: key.clone(), no_auth };
+    let access = kor_proxy::Access {
+        key: key.clone(),
+        no_auth,
+    };
     let gw = kor_proxy::Gateway::new(st, path, sources, access, &l);
     let warnings = gw.warnings.clone();
     let r = kor_proxy::start(Arc::new(gw), SocketAddr::new(ip, port)).await?;
@@ -296,7 +300,9 @@ async fn config() -> Res {
     let exists = path.as_ref().is_some_and(|p| p.exists());
     let running = RUNNING.lock().await;
     if let Some(r) = running.as_ref().filter(|r| !r.is_finished()) {
-        return Ok(json!({ "path": file, "exists": exists, "running": true, "config": r.gateway.config_json() }));
+        return Ok(
+            json!({ "path": file, "exists": exists, "running": true, "config": r.gateway.config_json() }),
+        );
     }
     let st = match &path {
         Some(p) if exists => kor_proxy::config::load(p)?,

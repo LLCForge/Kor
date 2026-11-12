@@ -54,26 +54,42 @@ async fn consensus(args: &[Value], state: &AppState) -> Res {
     let mut models: Vec<String> = args
         .get(1)
         .and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(Value::as_str).map(str::trim).filter(|m| !m.is_empty()).map(str::to_owned).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|m| !m.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
         .unwrap_or_default();
     if models.is_empty() {
         models.clone_from(&loaded.config.routing.consensus);
     }
     if !(2..=3).contains(&models.len()) {
-        return Err("Consensus için 2–3 model gerekir (Maliyet → Ayarlar → Consensus modelleri).".into());
+        return Err(
+            "Consensus için 2–3 model gerekir (Maliyet → Ayarlar → Consensus modelleri).".into(),
+        );
     }
     let l = kor_i18n::Localizer::new(loaded.config.ui.language.resolve());
     let mut targets = Vec::new();
     for m in &models {
-        targets.push(kor_runtime::oneshot_provider(&l, &loaded, Some(m)).map_err(|e| format!("{m}: {e}"))?);
+        targets.push(
+            kor_runtime::oneshot_provider(&l, &loaded, Some(m)).map_err(|e| format!("{m}: {e}"))?,
+        );
     }
     let c = kor_runtime::consensus::run(&targets, &prompt).await;
     serde_json::to_value(&c).map_err(|e| e.to_string())
 }
 
 fn shadow() -> Value {
-    let log = kor_runtime::kor_home().map(|h| kor_runtime::consensus::read_log(&h.join("shadow.jsonl"))).unwrap_or_default();
-    let mut pairs: Vec<(String, String)> = log.iter().map(|e| (e.main.clone(), e.shadow.clone())).collect();
+    let log = kor_runtime::kor_home()
+        .map(|h| kor_runtime::consensus::read_log(&h.join("shadow.jsonl")))
+        .unwrap_or_default();
+    let mut pairs: Vec<(String, String)> = log
+        .iter()
+        .map(|e| (e.main.clone(), e.shadow.clone()))
+        .collect();
     pairs.sort();
     pairs.dedup();
     Value::Array(

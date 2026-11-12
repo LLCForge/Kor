@@ -16,14 +16,24 @@ use crate::state::AppState;
 /// Köprü ad alanı.
 pub const NS: &str = "osint";
 
-pub async fn call(_ns: &str, name: &str, args: &[Value], app: &AppHandle, _state: &AppState) -> Option<Res> {
+pub async fn call(
+    _ns: &str,
+    name: &str,
+    args: &[Value],
+    app: &AppHandle,
+    _state: &AppState,
+) -> Option<Res> {
     Some(match name {
         "pending" => Ok(crate::osint::pending()),
         "drop" => {
             let paths: Vec<String> = args
                 .first()
                 .and_then(Value::as_array)
-                .map(|a| a.iter().filter_map(|v| v.as_str().map(str::to_owned)).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|v| v.as_str().map(str::to_owned))
+                        .collect()
+                })
                 .unwrap_or_default();
             Ok(crate::osint::dropped(&paths))
         }

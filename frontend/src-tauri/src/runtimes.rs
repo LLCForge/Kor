@@ -7,8 +7,8 @@
 //! PATH değişikliği olmadan) kurulur; diğer araçlar için winget (Windows) isteğe bağlı sistem kurulumudur (§24.3).
 
 use kor_platform::NoWindow as _;
-use std::path::PathBuf;
 use std::io::Read;
+use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::LazyLock;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -219,7 +219,11 @@ pub(crate) async fn component(app: &AppHandle, name: &str, ask: bool) -> Result<
         }
         Err(e) => {
             let line: String = e.chars().take(LINE_MAX).collect();
-            emit(app, name, json!({ "phase": "hata", "percent": null, "line": line }));
+            emit(
+                app,
+                name,
+                json!({ "phase": "hata", "percent": null, "line": line }),
+            );
             Err(e)
         }
     }

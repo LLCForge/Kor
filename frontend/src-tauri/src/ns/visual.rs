@@ -109,9 +109,16 @@ async fn generate(dir: &Path, pic: &Picture, kind: Kind, model: Option<&str>) ->
         let l = kor_i18n::Localizer::new(loaded.config.ui.language.resolve());
         kor_runtime::oneshot_provider(&l, &loaded, model)
     })?;
-    let g = visual::generate(&provider, &model, pic, kind, &SystemOcr, &CancellationToken::new())
-        .await
-        .map_err(|e| format!("Görselden kod üretilemedi: {e}"))?;
+    let g = visual::generate(
+        &provider,
+        &model,
+        pic,
+        kind,
+        &SystemOcr,
+        &CancellationToken::new(),
+    )
+    .await
+    .map_err(|e| format!("Görselden kod üretilemedi: {e}"))?;
     let files: Vec<Value> = visual::proposals(dir, &g.files)
         .into_iter()
         .map(|p| json!({ "path": p.path, "before": p.before, "after": p.after }))
@@ -167,7 +174,11 @@ mod tests {
     #[test]
     fn arguments_are_checked() {
         assert!(picture(&[json!(DATA_URL), json!("a.png")]).is_ok());
-        assert!(picture(&[json!("https://x/a.png")]).unwrap_err().contains("Görsel okunamadı"));
+        assert!(
+            picture(&[json!("https://x/a.png")])
+                .unwrap_err()
+                .contains("Görsel okunamadı")
+        );
         assert!(picture(&[]).is_err());
         let f = files(Some(&json!([{ "path": "src/a.tsx", "content": "x" }]))).unwrap();
         assert_eq!(f[0].path, "src/a.tsx");

@@ -40,7 +40,15 @@ pub async fn call(
 ) -> Option<Res> {
     if !matches!(
         name,
-        "connect" | "refresh" | "tables" | "show" | "indexes" | "migrateNew" | "check" | "trial" | "apply"
+        "connect"
+            | "refresh"
+            | "tables"
+            | "show"
+            | "indexes"
+            | "migrateNew"
+            | "check"
+            | "trial"
+            | "apply"
     ) {
         return None;
     }
@@ -55,7 +63,9 @@ pub async fn call(
     let previous = kor_graph::db::load_snapshots(&root);
     let slow_of = |n: &str| match name {
         "connect" => crate::api::b(args, 1),
-        _ => previous.iter().any(|s| s.connection == n && !s.slow_queries.is_empty()),
+        _ => previous
+            .iter()
+            .any(|s| s.connection == n && !s.slow_queries.is_empty()),
     };
     let names: Vec<String> = match name {
         "connect" => match s(args, 0, "db.connect") {
@@ -75,13 +85,15 @@ pub async fn call(
     let mut done = Vec::new();
     let mut errors = Vec::new();
     for n in &names {
-        let mut snap = kor_agent::remote::db::introspect(file.clone(), n, &root, allow_network).await;
+        let mut snap =
+            kor_agent::remote::db::introspect(file.clone(), n, &root, allow_network).await;
         if slow_of(n)
             && let Ok(sn) = snap.as_mut()
         {
             match kor_agent::remote::db::slow_queries(file.clone(), n, allow_network).await {
                 Ok(q) => sn.slow_queries = q,
-                Err(e) => errors.push(json!({ "name": n, "error": format!("Yavaş sorgular okunamadı: {e}") })),
+                Err(e) => errors
+                    .push(json!({ "name": n, "error": format!("Yavaş sorgular okunamadı: {e}") })),
             }
         }
         match snap.and_then(|snap| {
@@ -132,14 +144,18 @@ async fn extra(name: &str, args: &[Value], root: &Path, allow_network: bool) -> 
                         .map(|t| json!({ "connection": s.connection, "table": t.name, "indexes": t.indexes }))
                 })
                 .collect();
-            Ok(json!({ "tables": tables, "suggestions": kor_runtime::dbops::suggest_indexes(&snaps) }))
+            Ok(
+                json!({ "tables": tables, "suggestions": kor_runtime::dbops::suggest_indexes(&snaps) }),
+            )
         }
         "migrateNew" => s(args, 0, "db.migrateNew").map(|d| {
             let style = kor_runtime::dbops::migration_style(root, d);
             let prompt = kor_runtime::dbops::migration_prompt(&style, d);
             json!({ "style": style, "prompt": prompt })
         }),
-        "check" => sql(0, "db.check").map(|q| json!(kor_agent::remote::db::destructive_statements(&q))),
+        "check" => {
+            sql(0, "db.check").map(|q| json!(kor_agent::remote::db::destructive_statements(&q)))
+        }
         "trial" => match (s(args, 0, "db.trial"), sql(1, "db.trial")) {
             (Ok(n), Ok(q)) => kor_agent::remote::db::trial(file, n, root, &q, allow_network)
                 .await

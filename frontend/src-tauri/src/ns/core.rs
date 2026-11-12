@@ -30,23 +30,26 @@ pub async fn call(
         Err(e) => return Some(Err(e)),
     };
     Some(match name {
-        "privacy" => loaded(&root).map(|l| {
-            json!({ "enabled": l.config.privacy.mode, "offline": l.config.offline.enabled })
-        }),
-        "setPrivacy" => set(&root, "privacy.mode", if b(args, 0) { "true" } else { "false" }),
+        "privacy" => loaded(&root).map(
+            |l| json!({ "enabled": l.config.privacy.mode, "offline": l.config.offline.enabled }),
+        ),
+        "setPrivacy" => set(
+            &root,
+            "privacy.mode",
+            if b(args, 0) { "true" } else { "false" },
+        ),
         "undoList" => Ok(undo_list()),
         "undo" => s(args, 0, m).and_then(undo),
         "compat" => Ok(compat(&root)),
         "configExplain" => config_explain(&root),
         "configSet" => s(args, 0, m).and_then(|k| set(&root, k, s(args, 1, m)?)),
         "marketplaces" => Ok(marketplaces()),
-        "addMarketplace" => {
-            plugins_root().and_then(|r| {
+        "addMarketplace" => plugins_root()
+            .and_then(|r| {
                 kor_agent::plugins::add_marketplace(&r, s(args, 0, m)?, s(args, 1, m)?)
                     .map_err(|e| format!("Pazar eklenemedi: {e}"))
             })
-            .map(|_| marketplaces())
-        }
+            .map(|_| marketplaces()),
         "removeMarketplace" => plugins_root()
             .and_then(|r| {
                 kor_agent::plugins::remove_marketplace(&r, s(args, 0, m)?)
@@ -56,7 +59,8 @@ pub async fn call(
         "pluginDoctor" => s(args, 0, m).and_then(|id| plugin_doctor(&root, id)),
         // `kor update channel <name>`
         "updateChannel" => s(args, 0, m).and_then(|name| {
-            kor_runtime::update::Channel::parse(name).ok_or("Kanal stable, beta ya da nightly olmalı")?;
+            kor_runtime::update::Channel::parse(name)
+                .ok_or("Kanal stable, beta ya da nightly olmalı")?;
             set(&root, "update.channel", name)
         }),
         _ => return None,
@@ -146,7 +150,11 @@ fn undo(session: &str) -> Res {
         .find(|j| j.session == session)
         .ok_or("Geri alınacak bir şey yok")?;
     let r = kor_tools::undo::undo(&j.dir).map_err(|e| e.to_string())?;
-    let list = |v: &[PathBuf]| v.iter().map(|p| p.to_string_lossy().into_owned()).collect::<Vec<_>>();
+    let list = |v: &[PathBuf]| {
+        v.iter()
+            .map(|p| p.to_string_lossy().into_owned())
+            .collect::<Vec<_>>()
+    };
     Ok(json!({
         "restored": list(&r.restored),
         "deleted": list(&r.deleted),
@@ -160,7 +168,9 @@ fn compat(root: &Path) -> Value {
     let c = kor_runtime::load_compat(root);
     let src = |s: &kor_compat::Source| json!({ "eco": s.eco, "scope": s.scope, "path": s.path.to_string_lossy() });
     let rules = |v: &[kor_compat::RuleEntry]| {
-        v.iter().map(|r| json!({ "rule": r.rule, "source": src(&r.source) })).collect::<Vec<_>>()
+        v.iter()
+            .map(|r| json!({ "rule": r.rule, "source": src(&r.source) }))
+            .collect::<Vec<_>>()
     };
     json!({
         "trusted": c.trusted,
@@ -238,5 +248,7 @@ fn ipc_trace(on: Option<bool>) -> Res {
         }
         _ => {}
     }
-    Ok(json!({ "enabled": trace::enabled(), "path": trace::path().map(|p| p.display().to_string()) }))
+    Ok(
+        json!({ "enabled": trace::enabled(), "path": trace::path().map(|p| p.display().to_string()) }),
+    )
 }

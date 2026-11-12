@@ -47,7 +47,9 @@ fn text(v: &Value, key: &str, max: usize) -> Result<Option<String>, String> {
 pub fn request(v: &Value) -> Result<AddRequest, String> {
     let source = text(v, "source", 4096)?.ok_or("Kaynak boş olamaz")?;
     let kind = match text(v, "kind", 20)? {
-        Some(k) => Some(Kind::parse(&k).ok_or("Tür openapi, graphql, database ya da local olmalı")?),
+        Some(k) => {
+            Some(Kind::parse(&k).ok_or("Tür openapi, graphql, database ya da local olmalı")?)
+        }
         None => None,
     };
     let auth = text(v, "auth", 300)?.map(|a| Auth::parse(&a)).transpose()?;
@@ -65,7 +67,13 @@ pub fn request(v: &Value) -> Result<AddRequest, String> {
     })
 }
 
-pub async fn call(_ns: &str, name: &str, args: &[Value], _app: &AppHandle, state: &AppState) -> Option<Res> {
+pub async fn call(
+    _ns: &str,
+    name: &str,
+    args: &[Value],
+    _app: &AppHandle,
+    state: &AppState,
+) -> Option<Res> {
     if !matches!(name, "add" | "test") {
         return None;
     }
@@ -85,7 +93,9 @@ async fn add(root: &Path, v: &Value) -> Res {
     let loc = loc(root)?;
     let added = mcp_gen::generate(&req, root, &kor_exe()).await?;
     mcp_gen::install(&loc, &added, &kor_secrets::KeychainStore)?;
-    Ok(json!({ "id": added.id, "kind": added.kind.key(), "tools": added.tools, "note": added.note }))
+    Ok(
+        json!({ "id": added.id, "kind": added.kind.key(), "tools": added.tools, "note": added.note }),
+    )
 }
 
 async fn test(root: &Path, args: &[Value]) -> Res {
@@ -95,14 +105,23 @@ async fn test(root: &Path, args: &[Value]) -> Res {
         .find(|e| e.id == id)
         .ok_or("Sunucu bulunamadı")?;
     if kor_agent::mcp_config::is_http(&entry.raw) {
-        return Err("HTTP MCP sunucuları henüz bağlanmıyor; yalnızca stdio sunucuları denenebilir".into());
+        return Err(
+            "HTTP MCP sunucuları henüz bağlanmıyor; yalnızca stdio sunucuları denenebilir".into(),
+        );
     }
     let env = |k: &str| std::env::var(k).ok();
     let x = |t: &str| kor_agent::mcp_tools::expand(t, &env);
     let spec = kor_agent::mcp_tools::ServerSpec {
         name: entry.id.clone(),
-        command: x(entry.raw.get("command").and_then(Value::as_str).unwrap_or("")),
-        args: kor_agent::mcp_config::strings(entry.raw.get("args")).iter().map(|a| x(a)).collect(),
+        command: x(entry
+            .raw
+            .get("command")
+            .and_then(Value::as_str)
+            .unwrap_or("")),
+        args: kor_agent::mcp_config::strings(entry.raw.get("args"))
+            .iter()
+            .map(|a| x(a))
+            .collect(),
         env: kor_agent::mcp_config::string_map(entry.raw.get("env"))
             .iter()
             .filter_map(|(k, v)| v.as_str().map(|v| (k.clone(), x(v))))
@@ -119,7 +138,10 @@ mod tests {
     #[test]
     fn requests_are_validated() {
         let r = request(&json!({"source": " sqlite:app.db ", "kind": "database", "allowWrites": true, "auth": "bearer:TOKEN"})).unwrap();
-        assert_eq!((r.source.as_str(), r.kind, r.allow_writes), ("sqlite:app.db", Some(Kind::Database), true));
+        assert_eq!(
+            (r.source.as_str(), r.kind, r.allow_writes),
+            ("sqlite:app.db", Some(Kind::Database), true)
+        );
         for bad in [
             json!({}),
             json!({"source": ""}),

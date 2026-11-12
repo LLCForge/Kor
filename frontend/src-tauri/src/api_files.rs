@@ -164,7 +164,11 @@ const SEARCH_LIMIT: usize = 200_000;
 const INDEX_FRESH: Duration = Duration::from_secs(2);
 
 fn file_list(root: &Path) -> std::sync::Arc<Vec<(String, bool)>> {
-    let lock = || FILE_INDEX.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let lock = || {
+        FILE_INDEX
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    };
     let cached = lock().as_mut().filter(|i| i.root == root).map(|i| {
         let stale = i.at.elapsed() > INDEX_FRESH && !i.refreshing;
         if stale {
@@ -178,14 +182,24 @@ fn file_list(root: &Path) -> std::sync::Arc<Vec<(String, bool)>> {
                 let root = root.to_path_buf();
                 std::thread::spawn(move || {
                     let files = std::sync::Arc::new(walk(&root, SEARCH_LIMIT));
-                    *lock() = Some(FileIndex { root, files, at: Instant::now(), refreshing: false });
+                    *lock() = Some(FileIndex {
+                        root,
+                        files,
+                        at: Instant::now(),
+                        refreshing: false,
+                    });
                 });
             }
             files
         }
         None => {
             let files = std::sync::Arc::new(walk(root, SEARCH_LIMIT));
-            *lock() = Some(FileIndex { root: root.to_path_buf(), files: files.clone(), at: Instant::now(), refreshing: false });
+            *lock() = Some(FileIndex {
+                root: root.to_path_buf(),
+                files: files.clone(),
+                at: Instant::now(),
+                refreshing: false,
+            });
             files
         }
     }
@@ -776,8 +790,8 @@ pub async fn call(method: &str, args: &[Value], app: &AppHandle, state: &AppStat
             let r = root(state)?;
             let q = arg(0)?.to_owned();
             let hits = tauri::async_runtime::spawn_blocking(move || search_files(&r, &q))
-            .await
-            .map_err(|e| e.to_string())?;
+                .await
+                .map_err(|e| e.to_string())?;
             Ok(json!(
                 hits.into_iter()
                     .map(|(_, p, d)| json!({ "path": p, "isDir": d }))
@@ -1098,7 +1112,10 @@ mod tests {
         std::fs::create_dir_all(dir.path().join("src/deep")).unwrap();
         std::fs::write(dir.path().join("src/deep/chat_view.rs"), "").unwrap();
         let hits = search_files(dir.path(), "chatview");
-        assert_eq!(hits.first().map(|h| h.1.as_str()), Some("src/deep/chat_view.rs"));
+        assert_eq!(
+            hits.first().map(|h| h.1.as_str()),
+            Some("src/deep/chat_view.rs")
+        );
         // A new file shows up once the list is refreshed (at most INDEX_FRESH later).
         std::fs::write(dir.path().join("src/zeta.rs"), "").unwrap();
         FILE_INDEX.lock().unwrap().as_mut().unwrap().at -= INDEX_FRESH * 2;

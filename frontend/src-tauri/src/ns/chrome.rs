@@ -18,11 +18,11 @@ use tauri_plugin_opener::OpenerExt;
 use crate::api::Res;
 use crate::state::AppState;
 
-
 /// Yüklü uygulamada kaynak klasöründeki `extension/<chrome|firefox>`, geliştirmede depodaki
 /// `frontend/extension/dist/<chrome|firefox>`.
 fn extension_dir(app: &AppHandle, flavour: &str) -> PathBuf {
-    let dev = PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../extension/dist")).join(flavour);
+    let dev =
+        PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/../extension/dist")).join(flavour);
     app.path()
         .resource_dir()
         .ok()
@@ -48,7 +48,12 @@ fn info(app: &AppHandle) -> Res {
     let bridge = kor_tools::chrome::global();
     let store = kor_secrets::KeychainStore;
     let hosts: BTreeMap<&str, bool> = nm::Env::system()
-        .map(|env| nm::ALL.iter().map(|b| (b.id(), nm::installed(&env, *b))).collect())
+        .map(|env| {
+            nm::ALL
+                .iter()
+                .map(|b| (b.id(), nm::installed(&env, *b)))
+                .collect()
+        })
         .unwrap_or_default();
     let backend = crate::bridge::load_config(&app.state::<AppState>().workspace()?)
         .map(|l| format!("{:?}", l.config.browser.backend).to_lowercase())
@@ -70,7 +75,10 @@ fn info(app: &AppHandle) -> Res {
 }
 
 fn arg<'a>(args: &'a [Value], i: usize, what: &str) -> Result<&'a str, String> {
-    args.get(i).and_then(Value::as_str).filter(|s| !s.is_empty()).ok_or_else(|| format!("{what} eksik"))
+    args.get(i)
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| format!("{what} eksik"))
 }
 
 fn domains(f: impl FnOnce(&mut policy::Domains) -> Result<(), String>) -> Res {
@@ -108,7 +116,13 @@ fn install(app: &AppHandle, args: &[Value]) -> Res {
 }
 
 /// Bilinmeyen yöntemde `None`.
-pub async fn call(_ns: &str, name: &str, args: &[Value], app: &AppHandle, _state: &AppState) -> Option<Res> {
+pub async fn call(
+    _ns: &str,
+    name: &str,
+    args: &[Value],
+    app: &AppHandle,
+    _state: &AppState,
+) -> Option<Res> {
     let store = kor_secrets::KeychainStore;
     Some(match name {
         "info" => info(app),

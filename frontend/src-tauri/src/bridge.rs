@@ -28,13 +28,31 @@ pub async fn kor_call(
     if !trace::enabled() {
         return dispatch(method, args, app, state).await;
     }
-    trace::record(Surface::Desktop, Kind::Call, &method, None, &Value::Array(args.clone()));
+    trace::record(
+        Surface::Desktop,
+        Kind::Call,
+        &method,
+        None,
+        &Value::Array(args.clone()),
+    );
     let started = std::time::Instant::now();
     let name = method.clone();
     let out = dispatch(method, args, app, state).await;
     match &out {
-        Ok(v) => trace::record(Surface::Desktop, Kind::Result, &name, Some(started.elapsed()), v),
-        Err(e) => trace::record(Surface::Desktop, Kind::Error, &name, Some(started.elapsed()), &Value::String(e.clone())),
+        Ok(v) => trace::record(
+            Surface::Desktop,
+            Kind::Result,
+            &name,
+            Some(started.elapsed()),
+            v,
+        ),
+        Err(e) => trace::record(
+            Surface::Desktop,
+            Kind::Error,
+            &name,
+            Some(started.elapsed()),
+            &Value::String(e.clone()),
+        ),
     }
     out
 }
@@ -51,7 +69,11 @@ pub fn trace_events(app: &AppHandle) {
         app.listen_any(name, move |e| {
             if kor_core::ipc_trace::enabled() {
                 let payload = serde_json::from_str(e.payload()).unwrap_or(Value::Null);
-                kor_core::ipc_trace::event(kor_core::ipc_trace::Surface::Desktop, &traced, &payload);
+                kor_core::ipc_trace::event(
+                    kor_core::ipc_trace::Surface::Desktop,
+                    &traced,
+                    &payload,
+                );
             }
         });
     }
@@ -144,7 +166,8 @@ async fn dispatch(
                 .map(|a| {
                     a.iter()
                         .map(|i| {
-                            let field = |k: &str| i.get(k).and_then(Value::as_str).unwrap_or_default();
+                            let field =
+                                |k: &str| i.get(k).and_then(Value::as_str).unwrap_or_default();
                             (field("name").to_owned(), field("dataUrl").to_owned())
                         })
                         .collect()

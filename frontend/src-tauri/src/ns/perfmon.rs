@@ -84,8 +84,14 @@ async fn call(name: &str, args: &[Value], app: &AppHandle, state: &AppState) -> 
             Ok(q) => bench_search(q.to_owned()).await,
             Err(e) => Err(e),
         },
-        "benchDone" => finish(app, json!({ "event": "results", "results": args.first().cloned().unwrap_or(Value::Null) })),
-        "benchError" => finish(app, json!({ "event": "error", "message": args.first().and_then(Value::as_str).unwrap_or("?") })),
+        "benchDone" => finish(
+            app,
+            json!({ "event": "results", "results": args.first().cloned().unwrap_or(Value::Null) }),
+        ),
+        "benchError" => finish(
+            app,
+            json!({ "event": "error", "message": args.first().and_then(Value::as_str).unwrap_or("?") }),
+        ),
         _ => return None,
     })
 }
@@ -110,7 +116,9 @@ fn mb(bytes: u64) -> f64 {
 
 fn stats() -> Value {
     let tree = kor_platform::procmem::tree().unwrap_or_default();
-    let rt = tokio::runtime::Handle::try_current().ok().map(|h| h.metrics());
+    let rt = tokio::runtime::Handle::try_current()
+        .ok()
+        .map(|h| h.metrics());
     json!({
         "rssMb": mb(tree.rss),
         "selfRssMb": kor_platform::procmem::rss().map(mb),
@@ -146,7 +154,10 @@ async fn causes() -> Value {
         return json!([]);
     };
     tauri::async_runtime::spawn_blocking(move || {
-        let list: Vec<budgets::Cause> = budgets::causes(&budgets::read_log(&path)).into_iter().take(10).collect();
+        let list: Vec<budgets::Cause> = budgets::causes(&budgets::read_log(&path))
+            .into_iter()
+            .take(10)
+            .collect();
         serde_json::to_value(list).unwrap_or_else(|_| json!([]))
     })
     .await
@@ -154,7 +165,9 @@ async fn causes() -> Value {
 }
 
 fn send_line(v: &Value) -> Result<(), String> {
-    let mut guard = BENCH.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+    let mut guard = BENCH
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
     if guard.is_none() {
         let port: u16 = std::env::var("KOR_BENCH_PORT")
             .ok()
@@ -164,7 +177,9 @@ fn send_line(v: &Value) -> Result<(), String> {
         *guard = Some(sock);
     }
     let sock = guard.as_mut().ok_or("bağlantı yok")?;
-    writeln!(sock, "{v}").and_then(|()| sock.flush()).map_err(|e| e.to_string())
+    writeln!(sock, "{v}")
+        .and_then(|()| sock.flush())
+        .map_err(|e| e.to_string())
 }
 
 fn ready(app: &AppHandle) -> Res {
@@ -183,7 +198,11 @@ fn finish(app: &AppHandle, line: Value) -> Res {
         return Err("ölçüm modu değil".into());
     }
     let r = send_line(&line);
-    if let Some(dir) = FILES.lock().unwrap_or_else(std::sync::PoisonError::into_inner).take() {
+    if let Some(dir) = FILES
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .take()
+    {
         let _ = std::fs::remove_dir_all(dir);
     }
     app.exit(0);
@@ -202,13 +221,30 @@ async fn idle(seconds: f64) -> Value {
 
 /// `count` dosyalık, gerçekçi derinlikte bir proje ağacı.
 fn make_tree(root: &std::path::Path, count: usize) -> std::io::Result<()> {
-    let dirs = ["src", "src/ui", "src/core", "tests", "docs", "crates/a/src", "crates/b/src", "web/components"];
+    let dirs = [
+        "src",
+        "src/ui",
+        "src/core",
+        "tests",
+        "docs",
+        "crates/a/src",
+        "crates/b/src",
+        "web/components",
+    ];
     for i in 0..count {
-        let dir = root.join(dirs[i % dirs.len()]).join(format!("m{}", i / 500));
+        let dir = root
+            .join(dirs[i % dirs.len()])
+            .join(format!("m{}", i / 500));
         if i % 500 == 0 || !dir.exists() {
             std::fs::create_dir_all(&dir)?;
         }
-        std::fs::write(dir.join(format!("file_{i}_{}.rs", ["chat", "view", "model", "store", "util"][i % 5])), b"")?;
+        std::fs::write(
+            dir.join(format!(
+                "file_{i}_{}.rs",
+                ["chat", "view", "model", "store", "util"][i % 5]
+            )),
+            b"",
+        )?;
     }
     Ok(())
 }
@@ -219,11 +255,14 @@ async fn bench_search(query: String) -> Res {
     }
     tauri::async_runtime::spawn_blocking(move || {
         let root = {
-            let mut g = FILES.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+            let mut g = FILES
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             match g.as_ref() {
                 Some(r) => r.clone(),
                 None => {
-                    let r = std::env::temp_dir().join(format!("kor-bench-files-{}", std::process::id()));
+                    let r = std::env::temp_dir()
+                        .join(format!("kor-bench-files-{}", std::process::id()));
                     make_tree(&r, BENCH_FILES).map_err(|e| e.to_string())?;
                     *g = Some(r.clone());
                     r

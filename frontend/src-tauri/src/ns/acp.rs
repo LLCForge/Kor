@@ -85,7 +85,10 @@ impl ClientUi for DesktopUi {
         {
             lock(&self.text).push_str(t);
         }
-        let _ = self.app.emit("kor:acp/update", json!({ "agent": self.agent, "update": u }));
+        let _ = self.app.emit(
+            "kor:acp/update",
+            json!({ "agent": self.agent, "update": u }),
+        );
     }
 
     async fn permission(&self, tool_call: &Value, options: &[Value]) -> Option<String> {
@@ -97,7 +100,11 @@ impl ClientUi for DesktopUi {
             "kor:acp/permission",
             json!({ "id": id, "agent": self.agent, "toolCall": tool_call, "options": options }),
         );
-        let picked = tokio::time::timeout(Duration::from_secs(300), rx).await.ok().and_then(Result::ok).flatten();
+        let picked = tokio::time::timeout(Duration::from_secs(300), rx)
+            .await
+            .ok()
+            .and_then(Result::ok)
+            .flatten();
         lock(waiting()).remove(&id);
         picked
     }
@@ -125,8 +132,13 @@ async fn run(state: &AppState, args: &[Value], app: &AppHandle) -> Res {
 }
 
 fn answer(args: &[Value]) -> Res {
-    let id = args.first().and_then(Value::as_u64).ok_or("`acp.answer`: kimlik gerekli")?;
-    let tx = lock(waiting()).remove(&id).ok_or("Bu izin isteği artık beklemiyor")?;
+    let id = args
+        .first()
+        .and_then(Value::as_u64)
+        .ok_or("`acp.answer`: kimlik gerekli")?;
+    let tx = lock(waiting())
+        .remove(&id)
+        .ok_or("Bu izin isteği artık beklemiyor")?;
     let _ = tx.send(opt_s(args, 1).map(str::to_owned));
     Ok(json!(true))
 }

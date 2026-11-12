@@ -25,7 +25,9 @@ static PLANS: LazyLock<Mutex<HashMap<String, Plan>>> = LazyLock::new(Mutex::defa
 const MAX_PENDING: usize = 8;
 
 fn plans() -> std::sync::MutexGuard<'static, HashMap<String, Plan>> {
-    PLANS.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+    PLANS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
 pub async fn call(
@@ -56,7 +58,12 @@ pub async fn call(
 fn files(v: Option<&Value>) -> Result<Vec<PathBuf>, String> {
     let list: Vec<PathBuf> = v
         .and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(Value::as_str).map(PathBuf::from).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(PathBuf::from)
+                .collect()
+        })
         .unwrap_or_default();
     if list.is_empty() || list.len() > batch::MAX_FILES {
         return Err(format!("1-{} dosya seçin.", batch::MAX_FILES));
@@ -70,7 +77,9 @@ fn files(v: Option<&Value>) -> Result<Vec<PathBuf>, String> {
 async fn plan(args: &[Value], state: &AppState) -> Res {
     let files = files(args.first())?;
     let instruction = s(args, 1, "batch.plan")?.to_owned();
-    let model = opt_s(args, 2).filter(|m| !m.trim().is_empty()).map(str::to_owned);
+    let model = opt_s(args, 2)
+        .filter(|m| !m.trim().is_empty())
+        .map(str::to_owned);
     let root = crate::api::root(state)
         .ok()
         .or_else(|| files[0].parent().map(PathBuf::from))
@@ -92,10 +101,14 @@ async fn plan(args: &[Value], state: &AppState) -> Res {
 }
 
 async fn apply(id: String) -> Res {
-    let p = plans().remove(&id).ok_or("Plan bulunamadı ya da zaten uygulandı.")?;
-    let out = tauri::async_runtime::spawn_blocking(move || batch::apply(&p, kor_runtime::undo_dir().as_deref()))
-        .await
-        .map_err(|e| e.to_string())?;
+    let p = plans()
+        .remove(&id)
+        .ok_or("Plan bulunamadı ya da zaten uygulandı.")?;
+    let out = tauri::async_runtime::spawn_blocking(move || {
+        batch::apply(&p, kor_runtime::undo_dir().as_deref())
+    })
+    .await
+    .map_err(|e| e.to_string())?;
     Ok(json!({
         "applied": out.done.len(),
         "failed": out.failed.iter().map(|(row, error)| json!({ "row": row, "error": error })).collect::<Vec<_>>(),
@@ -112,7 +125,10 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let f = d.path().join("a.txt");
         std::fs::write(&f, "").unwrap();
-        assert_eq!(super::files(Some(&json!([f.to_string_lossy()]))).unwrap(), vec![f.clone()]);
+        assert_eq!(
+            super::files(Some(&json!([f.to_string_lossy()]))).unwrap(),
+            vec![f.clone()]
+        );
         assert!(super::files(Some(&json!([]))).is_err());
         assert!(super::files(Some(&json!(["göreli.txt"]))).is_err());
         assert!(super::files(Some(&json!([d.path().join("yok").to_string_lossy()]))).is_err());

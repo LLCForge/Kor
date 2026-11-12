@@ -352,8 +352,12 @@ pub async fn call(
             json!(daemon::log_tail(&d, n))
         }),
         // Oturum açılışında başlatma: yalnızca kullanıcının açık isteğiyle (kullanıcı düzeyi, yönetici değil).
-        "daemonInstall" => kor_platform::service::install(&kor_exe()).map(|w| json!(w)).map_err(|e| e.to_string()),
-        "daemonUninstall" => kor_platform::service::uninstall().map(|()| json!(true)).map_err(|e| e.to_string()),
+        "daemonInstall" => kor_platform::service::install(&kor_exe())
+            .map(|w| json!(w))
+            .map_err(|e| e.to_string()),
+        "daemonUninstall" => kor_platform::service::uninstall()
+            .map(|()| json!(true))
+            .map_err(|e| e.to_string()),
         "notifyGet" => notify_get(state).await,
         "notifySet" => match args.first() {
             Some(o) if o.is_object() => notify_set(o),

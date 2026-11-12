@@ -764,7 +764,8 @@ pub fn start_scheduler(app: AppHandle) {
             }
             // §27.15 haftalık bilgi özeti (ADR 0063); `kor daemon` çalışıyorsa onu o yazar.
             if !kor_runtime::triggers::daemon::is_running() {
-                let _ = tokio::task::spawn_blocking(kor_runtime::routines::knowledge_digest_tick).await;
+                let _ =
+                    tokio::task::spawn_blocking(kor_runtime::routines::knowledge_digest_tick).await;
             }
         }
     });
@@ -822,9 +823,8 @@ fn routines(name: &str, args: &[Value], m: &str) -> Option<Res> {
             "list" => Ok(json!(r::list(&path))),
             "add" => r::add(&path, obj(args, 0, m)?, now_ms()),
             "remove" => r::remove(&path, need_id(args, 0, m)?).map(|ok| json!(ok)),
-            "setEnabled" => {
-                r::set_enabled(&path, need_id(args, 0, m)?, b(args, 1), now_ms()).map(|ok| json!(ok))
-            }
+            "setEnabled" => r::set_enabled(&path, need_id(args, 0, m)?, b(args, 1), now_ms())
+                .map(|ok| json!(ok)),
             _ => Err(String::new()),
         }
     };
@@ -1603,7 +1603,10 @@ mod tests {
         assert_eq!(due[0]["id"], "a");
         assert_eq!(list[0]["nextRun"], 2000 + 5 * 60_000);
         assert_eq!(list[0]["lastRun"], 2000);
-        assert!(kor_runtime::routines::mark_due(&mut list, 2000).is_empty(), "not twice");
+        assert!(
+            kor_runtime::routines::mark_due(&mut list, 2000).is_empty(),
+            "not twice"
+        );
     }
 
     use super::*;
@@ -1740,7 +1743,11 @@ mod tests {
     /// küçük bir yığında da (Windows ana iş parçacığı 1 MiB) taşmadan bitmeli.
     #[test]
     fn git_status_covers_panel_states_on_small_stack() {
-        if std::process::Command::new("git").arg("--version").output().is_err() {
+        if std::process::Command::new("git")
+            .arg("--version")
+            .output()
+            .is_err()
+        {
             return; // git yoksa panel zaten "git bulunamadı" der; burada sınanacak bir şey yok.
         }
         let run = |dir: PathBuf| {
@@ -1759,7 +1766,14 @@ mod tests {
         };
         let g = |dir: &Path, a: &[&str]| {
             let o = std::process::Command::new("git")
-                .args(["-c", "user.email=t@t", "-c", "user.name=t", "-c", "core.autocrlf=false"])
+                .args([
+                    "-c",
+                    "user.email=t@t",
+                    "-c",
+                    "user.name=t",
+                    "-c",
+                    "core.autocrlf=false",
+                ])
                 .args(a)
                 .current_dir(dir)
                 .env("GIT_TERMINAL_PROMPT", "0")

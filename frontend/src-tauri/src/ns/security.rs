@@ -28,7 +28,6 @@ use tauri::AppHandle;
 use crate::api::{Res, b, opt_s, root, s};
 use crate::state::AppState;
 
-
 /// `.env` dosyaları bundan büyükse okunmaz.
 const MAX_DOTENV: u64 = 1024 * 1024;
 
@@ -110,7 +109,12 @@ fn vault_list(state: &AppState) -> Res {
     let n = names(store(state)?.as_ref())?;
     let scope: serde_json::Map<String, Value> = n
         .iter()
-        .map(|k| (k.clone(), cfg.scope.get(k).map_or(Value::Null, |p| json!(p))))
+        .map(|k| {
+            (
+                k.clone(),
+                cfg.scope.get(k).map_or(Value::Null, |p| json!(p)),
+            )
+        })
         .collect();
     Ok(json!({
         "names": n,
@@ -336,9 +340,7 @@ async fn sandbox_test(root: &Path) -> Res {
 /// `sandbox.setNetwork(["host:port", …])`: `[sandbox] network` kullanıcı ayar dosyasına yazılır.
 /// Geçersiz bir girdi varsa hiçbir şey yazılmaz (genişletmek yerine reddet).
 fn set_network(root: &Path, list: Option<&Value>) -> Res {
-    let items = list
-        .and_then(Value::as_array)
-        .ok_or("Liste bekleniyor")?;
+    let items = list.and_then(Value::as_array).ok_or("Liste bekleniyor")?;
     if items.len() > 64 {
         return Err("En çok 64 girdi".into());
     }
@@ -371,7 +373,9 @@ async fn sandbox_pull(root: &Path) -> Res {
         String::from_utf8_lossy(&out.stdout),
         String::from_utf8_lossy(&out.stderr)
     );
-    Ok(json!({ "image": shown, "ok": out.status.success(), "output": kor_agent::audit::clip(&text) }))
+    Ok(
+        json!({ "image": shown, "ok": out.status.success(), "output": kor_agent::audit::clip(&text) }),
+    )
 }
 
 /// Kenar çubuğu Güvenlik düğmesi (`g12GetSandbox` / `g12SetSandbox(enabled)`): aynı gerçek ayar.
@@ -394,7 +398,11 @@ pub(crate) fn g12_sandbox(state: &AppState, set: Option<bool>) -> Res {
         (Some("on"), true) => format!(
             "Komutlar {} ile izole çalışır: {}, yalnızca proje klasörüne yazılır.",
             st["backend"].as_str().unwrap_or_default(),
-            if st["network"]["on"] == true { "ağ izin listesine göre açık" } else { "ağ kapalı" }
+            if st["network"]["on"] == true {
+                "ağ izin listesine göre açık"
+            } else {
+                "ağ kapalı"
+            }
         ),
         (Some("on"), false) => {
             "Bu makinede sandbox arka ucu bulunamadı: Kor her komuttan önce onay ister.".into()

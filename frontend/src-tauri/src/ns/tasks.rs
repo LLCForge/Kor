@@ -68,7 +68,10 @@ fn settings_from(o: &Value, base: &kor_config::Orchestrator) -> Result<(String, 
     if let Some(n) = small("parallel") {
         st.max_parallel = n;
     }
-    if let Some(b) = o["budgetUsd"].as_f64().filter(|b| b.is_finite() && *b >= 0.0) {
+    if let Some(b) = o["budgetUsd"]
+        .as_f64()
+        .filter(|b| b.is_finite() && *b >= 0.0)
+    {
         st.budget_usd = b;
     }
     if let Some(t) = o["test"].as_str() {
@@ -193,7 +196,8 @@ pub async fn call(
             Ok(r) => serde_json::to_value(task::list(&r)).map_err(|e| e.to_string()),
             Err(_) => Ok(json!([])),
         },
-        "status" => s(args, 0, &m).and_then(|id| repo(state).and_then(|r| task::load(&r, id)))
+        "status" => s(args, 0, &m)
+            .and_then(|id| repo(state).and_then(|r| task::load(&r, id)))
             .and_then(|st| to_value(&st)),
         "start" => start(args.first().unwrap_or(&Value::Null), app, state),
         "resume" => s(args, 0, &m).and_then(|id| resume(id, Step::Run, app, state)),
@@ -229,10 +233,17 @@ mod tests {
         .unwrap();
         assert_eq!(goal, "auth");
         assert_eq!(s.agents, 3);
-        assert_eq!(s.max_parallel, usize::from(base.max_parallel), "out of range ignored");
+        assert_eq!(
+            s.max_parallel,
+            usize::from(base.max_parallel),
+            "out of range ignored"
+        );
         assert!((s.budget_usd - 2.5).abs() < 1e-9);
         assert_eq!(s.test_command, "cargo test");
-        assert_eq!(s.models.get("back-end").map(String::as_str), Some("openai/gpt-4.1"));
+        assert_eq!(
+            s.models.get("back-end").map(String::as_str),
+            Some("openai/gpt-4.1")
+        );
         assert!(!s.models.contains_key("docs"));
         assert!(settings_from(&json!({ "goal": "" }), &base).is_err());
         assert!(settings_from(&json!({ "goal": "x", "models": { "a": "nope" } }), &base).is_err());

@@ -37,7 +37,8 @@ fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 /// Açık görev akışları: `"peer/task"` → komut kanalı.
 fn follows() -> &'static Mutex<HashMap<String, tokio::sync::mpsc::UnboundedSender<Value>>> {
-    static F: OnceLock<Mutex<HashMap<String, tokio::sync::mpsc::UnboundedSender<Value>>>> = OnceLock::new();
+    static F: OnceLock<Mutex<HashMap<String, tokio::sync::mpsc::UnboundedSender<Value>>>> =
+        OnceLock::new();
     F.get_or_init(Mutex::default)
 }
 
@@ -168,7 +169,9 @@ async fn pair_code(state: &AppState, app: &AppHandle) -> Res {
         tokio::spawn(async move {
             let deadline = tokio::time::Instant::now() + pair::TTL;
             while pair::is_pending(&n2.dir, id) && tokio::time::Instant::now() < deadline {
-                if let Ok(Ok((s, _))) = tokio::time::timeout(Duration::from_millis(500), lst.accept()).await {
+                if let Ok(Ok((s, _))) =
+                    tokio::time::timeout(Duration::from_millis(500), lst.accept()).await
+                {
                     let n3 = n2.clone();
                     tokio::spawn(async move {
                         let _ = peer::server::serve_conn(&n3, s).await;
@@ -209,17 +212,26 @@ async fn join(state: &AppState, args: &[Value]) -> Res {
     let code = pair::Code::parse(s(args, 0, "peer.join")?)?;
     let ssh = opt_s(args, 1).filter(|x| !x.trim().is_empty());
     let e = pair::join(&n, &code, ssh).await?;
-    Ok(json!({ "name": e.name, "fingerprint": e.key_bytes().map(|k| peer::fingerprint(&k)).unwrap_or_default() }))
+    Ok(
+        json!({ "name": e.name, "fingerprint": e.key_bytes().map(|k| peer::fingerprint(&k)).unwrap_or_default() }),
+    )
 }
 
 /// Bir görev akışını olaylara bağla; ilk `attached` çerçevesini bekler.
-async fn follow(app: &AppHandle, peer_name: String, mut link: peer::noise::Link) -> Result<String, String> {
+async fn follow(
+    app: &AppHandle,
+    peer_name: String,
+    mut link: peer::noise::Link,
+) -> Result<String, String> {
     let task = loop {
         let v = link.recv_within(Duration::from_secs(60)).await?;
         if v["type"] == "error" {
             return Err(v["message"].as_str().unwrap_or("hata").to_owned());
         }
-        let _ = app.emit("kor:peer/event", json!({ "peer": peer_name, "task": v["task"], "event": v }));
+        let _ = app.emit(
+            "kor:peer/event",
+            json!({ "peer": peer_name, "task": v["task"], "event": v }),
+        );
         if v["type"] == "attached"
             && let Some(t) = v["task"].as_str()
         {
@@ -231,10 +243,16 @@ async fn follow(app: &AppHandle, peer_name: String, mut link: peer::noise::Link)
     let (app2, t2) = (app.clone(), task.clone());
     tokio::spawn(async move {
         while let Some(v) = link.recv().await {
-            let _ = app2.emit("kor:peer/event", json!({ "peer": peer_name, "task": t2, "event": v }));
+            let _ = app2.emit(
+                "kor:peer/event",
+                json!({ "peer": peer_name, "task": t2, "event": v }),
+            );
         }
         lock(follows()).remove(&key);
-        let _ = app2.emit("kor:peer/event", json!({ "peer": peer_name, "task": t2, "event": { "type": "detached" } }));
+        let _ = app2.emit(
+            "kor:peer/event",
+            json!({ "peer": peer_name, "task": t2, "event": { "type": "detached" } }),
+        );
     });
     Ok(task)
 }
@@ -248,7 +266,9 @@ async fn run(state: &AppState, args: &[Value], app: &AppHandle) -> Res {
     }
     let e = if want == "auto" {
         let loads = client::loads(&n).await;
-        client::least_busy(&loads).cloned().ok_or("Ulaşılabilir eşleşmiş makine yok")?
+        client::least_busy(&loads)
+            .cloned()
+            .ok_or("Ulaşılabilir eşleşmiş makine yok")?
     } else {
         entry(&n, want)?
     };
@@ -286,7 +306,10 @@ fn command(name: &str, args: &[Value]) -> Res {
     } else {
         Command::Abort
     };
-    let tx = lock(follows()).get(&key).cloned().ok_or("Bu görev izlenmiyor")?;
+    let tx = lock(follows())
+        .get(&key)
+        .cloned()
+        .ok_or("Bu görev izlenmiyor")?;
     tx.send(serde_json::to_value(c).map_err(|e| e.to_string())?)
         .map_err(|_| "Bağlantı kapandı".to_owned())?;
     Ok(json!(true))
@@ -331,10 +354,12 @@ async fn apply(state: &AppState, args: &[Value]) -> Res {
     let name = s(args, 0, "peer.apply")?;
     let task = s(args, 1, "peer.apply")?;
     let e = entry(&n, name)?;
-    let only: Option<Vec<String>> = args
-        .get(2)
-        .and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).collect());
+    let only: Option<Vec<String>> = args.get(2).and_then(Value::as_array).map(|a| {
+        a.iter()
+            .filter_map(Value::as_str)
+            .map(str::to_owned)
+            .collect()
+    });
     let r = client::result(&n, &e, task).await?;
     let res = snapshot::apply(&root(state)?, &r.changes, only.as_deref());
     peer::audit("apply", name, json!({ "task": task, "files": res.len() }));
@@ -361,7 +386,11 @@ fn allow(state: &AppState, args: &[Value]) -> Res {
         .ok_or("Eşleşmiş makine yok")?;
     p.grant = grant.clone();
     book.save(&n.dir)?;
-    peer::audit("grant", name, serde_json::to_value(&grant).unwrap_or(Value::Null));
+    peer::audit(
+        "grant",
+        name,
+        serde_json::to_value(&grant).unwrap_or(Value::Null),
+    );
     serde_json::to_value(grant).map_err(|e| e.to_string())
 }
 
@@ -374,9 +403,15 @@ fn route(state: &AppState, args: &[Value]) -> Res {
         .iter_mut()
         .find(|p| p.name == name)
         .ok_or("Eşleşmiş makine yok")?;
-    p.ssh = opt_s(args, 1).filter(|x| !x.trim().is_empty()).map(str::to_owned);
+    p.ssh = opt_s(args, 1)
+        .filter(|x| !x.trim().is_empty())
+        .map(str::to_owned);
     if let Some(a) = args.get(2).and_then(Value::as_array) {
-        p.addrs = a.iter().filter_map(Value::as_str).map(str::to_owned).collect();
+        p.addrs = a
+            .iter()
+            .filter_map(Value::as_str)
+            .map(str::to_owned)
+            .collect();
     }
     book.save(&n.dir)?;
     Ok(json!(true))
@@ -452,7 +487,10 @@ fn standby_cmd(state: &AppState, args: &[Value], app: &AppHandle) -> Res {
     tokio::spawn(async move {
         while !token.load(Ordering::Relaxed) {
             if let Ok(standby::Renewed::TakenOver(task)) = standby::renew(&n, &e, &mut m).await {
-                let _ = app2.emit("kor:peer/handoff", json!({ "peer": e.name, "session": m.session, "task": task }));
+                let _ = app2.emit(
+                    "kor:peer/handoff",
+                    json!({ "peer": e.name, "session": m.session, "task": task }),
+                );
                 lock(mirrors()).remove(&m.session);
                 break;
             }
@@ -468,7 +506,10 @@ mod tests {
 
     #[test]
     fn approve_needs_a_followed_task() {
-        let r = command("approve", &[json!("srv"), json!("r-1"), json!("c1"), json!("yes")]);
+        let r = command(
+            "approve",
+            &[json!("srv"), json!("r-1"), json!("c1"), json!("yes")],
+        );
         assert_eq!(r.unwrap_err(), "Bu görev izlenmiyor");
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         lock(follows()).insert("srv/r-2".into(), tx);

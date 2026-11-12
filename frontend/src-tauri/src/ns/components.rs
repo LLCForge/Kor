@@ -54,7 +54,10 @@ fn known(name: &str) -> Result<&str, String> {
 /// `names` için toplam boyutla tek onay, sonra sırayla indir (`kor component install --all` / `update`).
 async fn install_many(app: &AppHandle, names: Vec<String>, what: &str) -> Res {
     let all = kor_components::list();
-    let todo: Vec<_> = all.into_iter().filter(|c| names.contains(&c.name) && c.size.is_some()).collect();
+    let todo: Vec<_> = all
+        .into_iter()
+        .filter(|c| names.contains(&c.name) && c.size.is_some())
+        .collect();
     if todo.is_empty() {
         return Ok(list());
     }
@@ -73,7 +76,11 @@ async fn install_many(app: &AppHandle, names: Vec<String>, what: &str) -> Res {
             failed.push(format!("{}: {e}", c.name));
         }
     }
-    if failed.is_empty() { Ok(list()) } else { Err(failed.join("\n")) }
+    if failed.is_empty() {
+        Ok(list())
+    } else {
+        Err(failed.join("\n"))
+    }
 }
 
 fn verify_all() -> Value {
@@ -128,11 +135,17 @@ pub async fn call(
             },
         },
         "installAll" => {
-            let names = kor_components::list().into_iter().filter(|c| c.installed.is_none()).map(|c| c.name).collect();
+            let names = kor_components::list()
+                .into_iter()
+                .filter(|c| c.installed.is_none())
+                .map(|c| c.name)
+                .collect();
             install_many(app, names, "Bütün bileşenleri kur").await
         }
         "update" => install_many(app, kor_components::outdated(), "Bileşenleri güncelle").await,
-        "verify" => tauri::async_runtime::spawn_blocking(verify_all).await.map_err(|e| e.to_string()),
+        "verify" => tauri::async_runtime::spawn_blocking(verify_all)
+            .await
+            .map_err(|e| e.to_string()),
         "remove" => s(args, 0, m)
             .and_then(known)
             .and_then(|id| kor_components::remove(id).map_err(|e| format!("Silinemedi: {e}")))

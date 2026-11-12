@@ -31,7 +31,9 @@ fn to_json<T: serde::Serialize>(v: &T) -> Res {
 }
 
 fn user_file(root: &Path) -> Result<PathBuf, String> {
-    kor_config::Paths::discover(root).user.ok_or_else(|| "Kullanıcı ayar klasörü bulunamadı".to_owned())
+    kor_config::Paths::discover(root)
+        .user
+        .ok_or_else(|| "Kullanıcı ayar klasörü bulunamadı".to_owned())
 }
 
 /// Write one config key in the user file and log it (§28.14).
@@ -49,7 +51,12 @@ fn scalar(v: &Value) -> Result<String, String> {
     match v {
         Value::Bool(b) => Ok(b.to_string()),
         Value::Number(n) => Ok(n.to_string()),
-        Value::String(s) if s.chars().all(|c| c.is_alphanumeric() || " -_.,".contains(c)) => Ok(format!("\"{s}\"")),
+        Value::String(s)
+            if s.chars()
+                .all(|c| c.is_alphanumeric() || " -_.,".contains(c)) =>
+        {
+            Ok(format!("\"{s}\""))
+        }
         _ => Err("Geçersiz değer".into()),
     }
 }
@@ -70,7 +77,13 @@ fn tree_dirs() -> Result<(PathBuf, PathBuf), String> {
 
 fn strings(v: Option<&Value>) -> Vec<String> {
     v.and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).take(20).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .take(20)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -92,7 +105,10 @@ async fn doctor_fix(app: &AppHandle) -> Res {
     }
     let mut fixed = Vec::new();
     let mut failed = Vec::new();
-    for i in kor_runtime::prefs::find_issues(&kor_runtime::prefs::own_dirs(), std::time::Duration::from_secs(3600)) {
+    for i in kor_runtime::prefs::find_issues(
+        &kor_runtime::prefs::own_dirs(),
+        std::time::Duration::from_secs(3600),
+    ) {
         let p = i.path().display().to_string();
         match kor_runtime::prefs::fix(&i) {
             Ok(()) => fixed.push(p),
@@ -115,7 +131,13 @@ async fn doctor_fix(app: &AppHandle) -> Res {
 }
 
 #[allow(clippy::too_many_lines)] // one arm per method
-pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: &AppState) -> Option<Res> {
+pub async fn call(
+    ns: &str,
+    name: &str,
+    args: &[Value],
+    app: &AppHandle,
+    state: &AppState,
+) -> Option<Res> {
     let m = &format!("{ns}.{name}");
     let r = match (ns, name) {
         (NS, "auto") => root(state).and_then(|r| crate::bridge::load_config(&r)).and_then(|c| to_json(&kor_runtime::prefs::auto_rows(&c))),
@@ -224,14 +246,24 @@ fn sessions(name: &str, args: &[Value], m: &str, app: &AppHandle) -> Res {
             }
             // Only the local embedding model: transcripts never leave the machine.
             let model = kor_memory::LocalEmbedder::installed();
-            to_json(&tree::search(&sd, &md, q, 30, model.as_deref().map(|e| e as &dyn kor_memory::Embed)).map_err(err)?)
+            to_json(
+                &tree::search(
+                    &sd,
+                    &md,
+                    q,
+                    30,
+                    model.as_deref().map(|e| e as &dyn kor_memory::Embed),
+                )
+                .map_err(err)?,
+            )
         }
         "mv" => changed(tree::move_to(&sd, &md, s(args, 0, m)?, opt_s(args, 1))),
         "pin" => changed(tree::pin(&sd, &md, s(args, 0, m)?, on(args, 1))),
         "archive" => changed(tree::archive(&sd, &md, s(args, 0, m)?, on(args, 1))),
         "tag" => {
             let id = s(args, 0, m)?;
-            let tags = tree::tag(&sd, &md, id, &strings(args.get(1)), &strings(args.get(2))).map_err(err)?;
+            let tags = tree::tag(&sd, &md, id, &strings(args.get(1)), &strings(args.get(2)))
+                .map_err(err)?;
             let _ = app.emit("kor:sessionsChanged", Value::Null);
             Ok(json!(tags))
         }
@@ -242,7 +274,8 @@ fn sessions(name: &str, args: &[Value], m: &str, app: &AppHandle) -> Res {
             if !tree::valid_id(id) {
                 return Err("Geçersiz oturum".into());
             }
-            let msgs = kor_agent::session::load(&sd.join(format!("{id}.jsonl"))).map_err(|_| "Oturum bulunamadı".to_owned())?;
+            let msgs = kor_agent::session::load(&sd.join(format!("{id}.jsonl")))
+                .map_err(|_| "Oturum bulunamadı".to_owned())?;
             let sug = tree::suggest(&msgs);
             if on(args, 1) && args.get(1).is_some() {
                 tree::rename(&sd, &md, id, Some(&sug.title)).map_err(err)?;
@@ -254,7 +287,10 @@ fn sessions(name: &str, args: &[Value], m: &str, app: &AppHandle) -> Res {
         "export" => {
             let dir = match opt_s(args, 0) {
                 Some(d) => PathBuf::from(d),
-                None => dirs::document_dir().ok_or("Belgeler klasörü yok")?.join("Kor").join("Oturumlar"),
+                None => dirs::document_dir()
+                    .ok_or("Belgeler klasörü yok")?
+                    .join("Kor")
+                    .join("Oturumlar"),
             };
             let n = tree::export_markdown(&sd, &md, &dir).map_err(err)?;
             Ok(json!({ "count": n, "dir": dir.to_string_lossy() }))
@@ -271,14 +307,24 @@ fn sessions(name: &str, args: &[Value], m: &str, app: &AppHandle) -> Res {
             let chats = match s(args, 0, m)? {
                 "claude-code" => {
                     let home = dirs::home_dir().ok_or("Ev klasörü bulunamadı")?;
-                    let root = app.state::<crate::state::AppState>().root().ok_or("Önce bir klasör aç")?;
+                    let root = app
+                        .state::<crate::state::AppState>()
+                        .root()
+                        .ok_or("Önce bir klasör aç")?;
                     si::claude_code(&home, &root, all)
                 }
                 "cursor" => {
-                    let db = dirs::config_dir().map(|c| si::cursor_db(&c)).filter(|p| p.is_file()).ok_or("Cursor sohbet veritabanı bulunamadı")?;
+                    let db = dirs::config_dir()
+                        .map(|c| si::cursor_db(&c))
+                        .filter(|p| p.is_file())
+                        .ok_or("Cursor sohbet veritabanı bulunamadı")?;
                     si::cursor(&db)?
                 }
-                other => return Err(format!("Bilinmeyen kaynak: {other} (claude-code ya da cursor)")),
+                other => {
+                    return Err(format!(
+                        "Bilinmeyen kaynak: {other} (claude-code ya da cursor)"
+                    ));
+                }
             };
             let n = si::save_new(&sd, &chats).map_err(|e| e.to_string())?;
             let _ = app.emit("kor:sessionsChanged", Value::Null);

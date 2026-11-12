@@ -10,9 +10,9 @@ mod ipc_bytes;
 #[path = "ns/perfmon.rs"]
 mod perfmon;
 // The `kor` CLI the desktop starts: bundled, else the workspace build in debug, else PATH.
-mod kor_cli;
 mod changes;
 mod chat;
+mod kor_cli;
 // Kor tarayıcı eklentisi: köprü ve yan panel istemcisi (§18, ADR 0058).
 mod chrome_bridge;
 mod meta;
@@ -51,7 +51,9 @@ pub fn run() {
     std::mem::forget(runtime);
     tauri::Builder::default()
         // İlk eklenti olmalı: ikinci açılış argümanlarını (bağlam menüsü, atlama listesi, kor://) bu pencereye iletir.
-        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| osint::second_instance(app, argv, cwd)))
+        .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+            osint::second_instance(app, argv, cwd)
+        }))
         .plugin(tauri_plugin_deep_link::init())
         .plugin(osint::shortcut_plugin())
         .plugin(tauri_plugin_dialog::init())
@@ -80,7 +82,11 @@ pub fn run() {
         })
         .on_window_event(presence::window_event)
         .on_window_event(webview_lock::on_window_event)
-        .invoke_handler(tauri::generate_handler![bridge::kor_call, ipc_bytes::kor_bytes, perfmon::kor_perf])
+        .invoke_handler(tauri::generate_handler![
+            bridge::kor_call,
+            ipc_bytes::kor_bytes,
+            perfmon::kor_perf
+        ])
         .build(tauri::generate_context!())
         .expect("Kor masaüstü başlatılamadı")
         .run(|_, event| {

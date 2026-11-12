@@ -783,7 +783,11 @@ const MONO_TRAY: Image<'static> = tauri::include_image!("../../assets/kor-mark-m
 
 fn base_icon(app: &AppHandle) -> Option<(Vec<u8>, u32, u32)> {
     if TEMPLATE_TRAY {
-        return Some((MONO_TRAY.rgba().to_vec(), MONO_TRAY.width(), MONO_TRAY.height()));
+        return Some((
+            MONO_TRAY.rgba().to_vec(),
+            MONO_TRAY.width(),
+            MONO_TRAY.height(),
+        ));
     }
     let i = app.default_window_icon()?;
     Some((i.rgba().to_vec(), i.width(), i.height()))
@@ -960,9 +964,20 @@ fn tray_menu(app: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     // §31.1: eşleşmiş makineler ve yükleri (ADR 0057), dakikada bir yenilenir.
     let peers = lock(peer_loads()).clone();
     if !peers.is_empty() {
-        let sub = Submenu::with_id(app, "peers", l.t_args("tray-peers", &args!("n" => n(peers.len()))), true)?;
+        let sub = Submenu::with_id(
+            app,
+            "peers",
+            l.t_args("tray-peers", &args!("n" => n(peers.len()))),
+            true,
+        )?;
         for (i, label) in peers.iter().enumerate() {
-            sub.append(&MenuItem::with_id(app, format!("peer:{i}"), label, true, None::<&str>)?)?;
+            sub.append(&MenuItem::with_id(
+                app,
+                format!("peer:{i}"),
+                label,
+                true,
+                None::<&str>,
+            )?)?;
         }
         menu.append(&sub)?;
     }
@@ -1026,8 +1041,12 @@ async fn refresh_peers(app: &AppHandle) {
         .and_then(|r| crate::bridge::load_config(&r).ok())
         .map(|l| l.config.vault)
         .unwrap_or_default();
-    let Ok(store) = kor_runtime::secure::vault_store(&cfg, None) else { return };
-    let Ok(node) = kor_runtime::peer::local_node(store.as_ref()) else { return };
+    let Ok(store) = kor_runtime::secure::vault_store(&cfg, None) else {
+        return;
+    };
+    let Ok(node) = kor_runtime::peer::local_node(store.as_ref()) else {
+        return;
+    };
     let l = l();
     let rows: Vec<String> = kor_runtime::peer::client::loads(&node)
         .await
@@ -1066,7 +1085,10 @@ fn quota_lines(l: &Localizer) -> Vec<String> {
         .map(|(provider, s)| {
             #[allow(clippy::cast_possible_truncation)] // a 0–100 percentage
             let percent = (s * 100.0).round().clamp(0.0, 100.0) as i64;
-            l.t_args("tray-tooltip-quota", &args!("provider" => provider, "percent" => percent))
+            l.t_args(
+                "tray-tooltip-quota",
+                &args!("provider" => provider, "percent" => percent),
+            )
         })
         .collect()
 }
@@ -1088,7 +1110,11 @@ fn update_tray(app: &AppHandle) {
     } else {
         l.t("tray-tooltip-idle")
     };
-    let tip = [tip].into_iter().chain(quota_lines(&l)).collect::<Vec<_>>().join("\n");
+    let tip = [tip]
+        .into_iter()
+        .chain(quota_lines(&l))
+        .collect::<Vec<_>>()
+        .join("\n");
     let _ = tray.set_tooltip(Some(&tip));
     set_tray_icon(&tray, tray_icon(app, false));
     if let Ok(menu) = tray_menu(app) {

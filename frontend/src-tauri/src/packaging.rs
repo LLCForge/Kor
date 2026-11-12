@@ -45,7 +45,9 @@ static STATUS: Mutex<Status> = Mutex::new(Status {
 static PENDING: Mutex<Option<(tauri_plugin_updater::Update, Vec<u8>)>> = Mutex::new(None);
 
 fn with_status<T>(f: impl FnOnce(&mut Status) -> T) -> T {
-    f(&mut STATUS.lock().unwrap_or_else(std::sync::PoisonError::into_inner))
+    f(&mut STATUS
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner))
 }
 
 /// `update.channel`, `update.auto` ve gizlilik modu (klasör seçilmemişse ev dizinindeki ayarlar).
@@ -129,7 +131,9 @@ pub async fn check(app: &AppHandle, state: &AppState) -> Value {
     }
     with_status(|s| s.phase = "checking");
     let current = app.package_info().version.to_string();
-    let found = kor_runtime::update::check(&current, channel).await.map(|c| c.available);
+    let found = kor_runtime::update::check(&current, channel)
+        .await
+        .map(|c| c.available);
     let announce = with_status(|s| {
         s.error = None;
         s.percent = None;
@@ -193,7 +197,9 @@ fn start_download(app: AppHandle, channel: Channel) {
         let result = download(&app, &url, channel).await;
         with_status(|s| match result {
             Ok(Some(pending)) => {
-                *PENDING.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Some(pending);
+                *PENDING
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(pending);
                 s.phase = "downloaded";
                 s.percent = Some(100);
             }
@@ -215,7 +221,9 @@ async fn download(
     manifest: &str,
     channel: Channel,
 ) -> Result<Option<(tauri_plugin_updater::Update, Vec<u8>)>, String> {
-    let url = manifest.parse().map_err(|_| "Geçersiz güncelleme adresi".to_owned())?;
+    let url = manifest
+        .parse()
+        .map_err(|_| "Geçersiz güncelleme adresi".to_owned())?;
     let mut builder = app
         .updater_builder()
         .endpoints(vec![url])
@@ -277,7 +285,9 @@ pub async fn prepare_on_exit(app: &AppHandle, state: &AppState) -> Res {
     if privacy {
         return Err("Gizlilik modunda güncelleme yapılmaz.".into());
     }
-    if with_status(|s| s.phase != "available" && s.phase != "downloading" && s.phase != "downloaded") {
+    if with_status(|s| {
+        s.phase != "available" && s.phase != "downloading" && s.phase != "downloaded"
+    }) {
         check(app, state).await;
     }
     let manifest = with_status(|s| s.manifest.is_some());
@@ -359,7 +369,9 @@ fn cli_source() -> Option<std::path::PathBuf> {
 
 fn cli_json(c: Option<kor_platform::cli_path::CliPath>) -> Value {
     match c {
-        None => json!({ "available": false, "installed": false, "removable": false, "byPackage": false, "location": null }),
+        None => {
+            json!({ "available": false, "installed": false, "removable": false, "byPackage": false, "location": null })
+        }
         Some(c) => json!({
             "available": true,
             "installed": c.installed,
@@ -382,7 +394,10 @@ pub fn cli_install() -> Res {
         .map(|c| cli_json(Some(c)))
         .map_err(|e| format!("kor PATH'e eklenemedi: {e}"))?;
     // §26.1: aynı onayla bulunan kabuklara tamamlamalar da kurulur (ADR 0050); başarısızlık PATH'i bozmaz.
-    let _ = std::process::Command::new(&src).no_window().args(["completions", "--install", "--yes"]).output();
+    let _ = std::process::Command::new(&src)
+        .no_window()
+        .args(["completions", "--install", "--yes"])
+        .output();
     Ok(out)
 }
 

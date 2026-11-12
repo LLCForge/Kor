@@ -81,7 +81,9 @@ fn error_text(e: &Error) -> String {
 fn install(app: &AppHandle, id: &str, handoff_url: Option<&str>) -> Res {
     let mut env = env(app)?;
     let opts = Options {
-        handoff_url: handoff_url.filter(|u| !u.trim().is_empty()).map(str::to_owned),
+        handoff_url: handoff_url
+            .filter(|u| !u.trim().is_empty())
+            .map(str::to_owned),
         texts: osx::shortcuts::Texts::default(),
     };
     let st = osx::install(&mut env, id, &opts).map_err(|e| error_text(&e))?;
@@ -112,7 +114,9 @@ async fn request_portals(app: &AppHandle) -> Res {
         notify_title: "Kor".into(),
         notify_body: "Bildirim izni verildi.".into(),
     };
-    let out = portals::request_all(&texts).await.map_err(|e| format!("Portal izinleri istenemedi: {e}"))?;
+    let out = portals::request_all(&texts)
+        .await
+        .map_err(|e| format!("Portal izinleri istenemedi: {e}"))?;
     let mut env = env(app)?;
     osx::install(&mut env, "portals", &Options::default()).map_err(|e| error_text(&e))?;
     let tokens: BTreeMap<String, String> = out
@@ -136,7 +140,10 @@ fn handoff(app: &AppHandle, url: Option<&str>, title: Option<&str>) -> Res {
     let Some(settings) = enabled(app, "handoff") else {
         return Ok(Value::Bool(false));
     };
-    let Some(url) = url.filter(|u| u.starts_with("kor://resume?id=") && u.len() <= 512).map(str::to_owned) else {
+    let Some(url) = url
+        .filter(|u| u.starts_with("kor://resume?id=") && u.len() <= 512)
+        .map(str::to_owned)
+    else {
         let _ = app.run_on_main_thread(mac::handoff_end);
         return Ok(Value::Bool(true));
     };
@@ -202,8 +209,17 @@ fn spotlight_items() -> Vec<mac::SpotItem> {
                 .chars()
                 .take(4000)
                 .collect();
-            let title = text.lines().find(|l| !l.trim().is_empty())?.chars().take(80).collect();
-            Some(mac::SpotItem { url: format!("kor://resume?id={}", kor_runtime::osint::encode(&id)), title, text })
+            let title = text
+                .lines()
+                .find(|l| !l.trim().is_empty())?
+                .chars()
+                .take(80)
+                .collect();
+            Some(mac::SpotItem {
+                url: format!("kor://resume?id={}", kor_runtime::osint::encode(&id)),
+                title,
+                text,
+            })
         })
         .collect()
 }

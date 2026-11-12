@@ -35,8 +35,13 @@ use crate::state::AppState;
 // `ns/mod.rs` routes `system`, `computer` and `layout` here.
 
 fn config(state: &AppState) -> kor_config::Config {
-    let root = crate::api::root(state).ok().or_else(dirs::home_dir).unwrap_or_default();
-    crate::bridge::load_config(&root).map(|l| l.config).unwrap_or_default()
+    let root = crate::api::root(state)
+        .ok()
+        .or_else(dirs::home_dir)
+        .unwrap_or_default();
+    crate::bridge::load_config(&root)
+        .map(|l| l.config)
+        .unwrap_or_default()
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -58,7 +63,9 @@ fn to_value<T: serde::Serialize>(v: &T) -> Res {
 }
 
 async fn blocking<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> Result<T, String> {
-    tauri::async_runtime::spawn_blocking(f).await.map_err(|e| e.to_string())
+    tauri::async_runtime::spawn_blocking(f)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Bugünün numarası (uyarı kartı günde bir kez).
@@ -69,7 +76,11 @@ fn day() -> u64 {
 /// Uyarıyı bildirim merkezine ekler ve sağ alt kartı yayar; bugün gösterildiyse hiçbir şey yapmaz.
 fn raise(app: &AppHandle, shown: &Mutex<HashSet<String>>, a: &health::Alert) {
     let key = format!("health:{}:{}", a.id, day());
-    if !shown.lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert(key.clone()) {
+    if !shown
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .insert(key.clone())
+    {
         return;
     }
     crate::presence::notify(
@@ -88,9 +99,11 @@ fn raise(app: &AppHandle, shown: &Mutex<HashSet<String>>, a: &health::Alert) {
 /// Uygulama açılışında (`ns::start`).
 pub fn start(app: AppHandle) {
     let emitter = app.clone();
-    kor_computer::indicator::set_listener(Arc::new(move |a: &kor_computer::indicator::Activity| {
-        let _ = emitter.emit("kor:computer/activity", a);
-    }));
+    kor_computer::indicator::set_listener(Arc::new(
+        move |a: &kor_computer::indicator::Activity| {
+            let _ = emitter.emit("kor:computer/activity", a);
+        },
+    ));
     tauri::async_runtime::spawn(async move {
         let state = tauri::Manager::state::<AppState>(&app);
         let shown: Arc<Mutex<HashSet<String>>> = Arc::default();
@@ -117,7 +130,10 @@ pub fn start(app: AppHandle) {
             let r2 = root.clone();
             let l = kor_i18n::Localizer::new(lang);
             if let Ok(alerts) = blocking(move || {
-                let mut sample = s2.lock().unwrap_or_else(std::sync::PoisonError::into_inner).sample(&t);
+                let mut sample = s2
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .sample(&t);
                 if deep {
                     kor_health::fill_slow(&mut sample, r2.as_deref());
                 }
@@ -139,7 +155,8 @@ pub fn start(app: AppHandle) {
                 {
                     match kor_tools::layouts::restore(&store, &name, &r, false).await {
                         Ok(plan) => {
-                            let _ = app.emit("kor:layout/restored", json!({ "name": name, "plan": plan }));
+                            let _ = app
+                                .emit("kor:layout/restored", json!({ "name": name, "plan": plan }));
                         }
                         Err(e) => eprintln!("kor: düzen geri getirilemedi ({name}): {e}"),
                     }
@@ -155,10 +172,18 @@ fn computer_status(state: &AppState) -> Value {
     let cfg = config(state).computer;
     let p = Policy::from_config(&cfg);
     let front = kor_platform::desktop_probe::foreground_app();
-    let classes: Vec<Value> = [Class::Kor, Class::Terminal, Class::PasswordManager, Class::Banking, Class::Browser, Class::Ide, Class::Other]
-        .iter()
-        .map(|c| json!({ "class": c, "tier": c.default_tier() }))
-        .collect();
+    let classes: Vec<Value> = [
+        Class::Kor,
+        Class::Terminal,
+        Class::PasswordManager,
+        Class::Banking,
+        Class::Browser,
+        Class::Ide,
+        Class::Other,
+    ]
+    .iter()
+    .map(|c| json!({ "class": c, "tier": c.default_tier() }))
+    .collect();
     json!({
         "enabled": cfg.enabled,
         "front": front.as_ref().map(|a| json!({ "app": a, "tier": p.tier(a).0, "class": policy::classify(a) })),
@@ -171,13 +196,21 @@ fn computer_status(state: &AppState) -> Value {
 }
 
 fn root_or_home(state: &AppState) -> PathBuf {
-    crate::api::root(state).ok().or_else(dirs::home_dir).unwrap_or_default()
+    crate::api::root(state)
+        .ok()
+        .or_else(dirs::home_dir)
+        .unwrap_or_default()
 }
 
 fn ids(args: &[Value]) -> Vec<String> {
     args.first()
         .and_then(Value::as_array)
-        .map(|a| a.iter().filter_map(Value::as_str).map(str::to_owned).collect())
+        .map(|a| {
+            a.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_owned)
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -185,21 +218,32 @@ fn scan_for(root: &Path) -> Scan {
     Scan::standard(health::cache_roots(Some(root)))
 }
 
-pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: &AppState) -> Option<Res> {
+pub async fn call(
+    ns: &str,
+    name: &str,
+    args: &[Value],
+    app: &AppHandle,
+    state: &AppState,
+) -> Option<Res> {
     Some(match (ns, name) {
         ("system", "profile") => match home() {
             Ok(h) => match system::load(&h) {
                 Some(p) => to_value(&p),
-                None => blocking(move || system::refresh(&h, &RealProbe).map_err(|e| e.to_string()))
-                    .await
-                    .and_then(|r| r)
-                    .and_then(|r| to_value(&r.profile)),
+                None => {
+                    blocking(move || system::refresh(&h, &RealProbe).map_err(|e| e.to_string()))
+                        .await
+                        .and_then(|r| r)
+                        .and_then(|r| to_value(&r.profile))
+                }
             },
             Err(e) => Err(e),
         },
         ("system", "refresh") => match home() {
             Ok(h) => {
-                let r = blocking(move || system::refresh(&h, &RealProbe).map_err(|e| e.to_string())).await.and_then(|r| r);
+                let r =
+                    blocking(move || system::refresh(&h, &RealProbe).map_err(|e| e.to_string()))
+                        .await
+                        .and_then(|r| r);
                 if let Ok(r) = &r
                     && !r.changed.is_empty()
                 {
@@ -220,7 +264,9 @@ pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: 
         }
         ("system", "cleanSuggest") => {
             let root = root_or_home(state);
-            blocking(move || clean::suggest(&scan_for(&root))).await.and_then(|v| to_value(&v))
+            blocking(move || clean::suggest(&scan_for(&root)))
+                .await
+                .and_then(|v| to_value(&v))
         }
         ("system", "clean") => {
             let ids = ids(args);
@@ -228,7 +274,9 @@ pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: 
                 return Some(Err("Silinecek öğe seçilmedi".into()));
             }
             let root = root_or_home(state);
-            blocking(move || clean::clean(&scan_for(&root), &ids)).await.and_then(|v| to_value(&v))
+            blocking(move || clean::clean(&scan_for(&root), &ids))
+                .await
+                .and_then(|v| to_value(&v))
         }
         ("system", "mute") => {
             let kind = match s(args, 0, "system.mute") {
@@ -240,7 +288,10 @@ pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: 
                 muted.push(kind);
             }
             user_config()
-                .and_then(|f| kor_config::set_string_list(&f, "health.muted", &muted).map_err(|e| e.to_string()))
+                .and_then(|f| {
+                    kor_config::set_string_list(&f, "health.muted", &muted)
+                        .map_err(|e| e.to_string())
+                })
                 .map(|()| json!(muted))
         }
         ("system", "exportAll") => {
@@ -249,23 +300,38 @@ pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: 
                 return Some(Err("İndirilenler klasörü bulunamadı".into()));
             };
             let out = dir.join(kor_runtime::export::default_name());
-            blocking(move || kor_runtime::export::export_all(&out, env!("CARGO_PKG_VERSION"))).await.and_then(|r| r).and_then(|v| to_value(&v))
+            blocking(move || kor_runtime::export::export_all(&out, env!("CARGO_PKG_VERSION")))
+                .await
+                .and_then(|r| r)
+                .and_then(|v| to_value(&v))
         }
         ("computer", "status") => Ok(computer_status(state)),
         ("computer", "setEnabled") => user_config()
             .and_then(|f| {
-                kor_config::set_scalar(&f, "computer.enabled", if b(args, 0) { "true" } else { "false" }).map_err(|e| e.to_string())
+                kor_config::set_scalar(
+                    &f,
+                    "computer.enabled",
+                    if b(args, 0) { "true" } else { "false" },
+                )
+                .map_err(|e| e.to_string())
             })
             .map(|()| computer_status(state)),
         ("computer", "setTier") => {
-            let (Ok(app_name), Ok(tier)) = (s(args, 0, "computer.setTier"), s(args, 1, "computer.setTier")) else {
+            let (Ok(app_name), Ok(tier)) = (
+                s(args, 0, "computer.setTier"),
+                s(args, 1, "computer.setTier"),
+            ) else {
                 return Some(Err("Uygulama ve katman gerekli".into()));
             };
             let Some(t) = Tier::parse(tier) else {
                 return Some(Err(format!("Bilinmeyen katman: {tier}")));
             };
             policy::config_key(app_name)
-                .and_then(|key| user_config().and_then(|f| kor_config::set_string(&f, &key, t.key()).map_err(|e| e.to_string())))
+                .and_then(|key| {
+                    user_config().and_then(|f| {
+                        kor_config::set_string(&f, &key, t.key()).map_err(|e| e.to_string())
+                    })
+                })
                 .map(|()| {
                     policy::set_policy(Policy::from_config(&config(state).computer));
                     computer_status(state)
@@ -273,7 +339,10 @@ pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: 
         }
         ("computer", "resetTier") => match s(args, 0, "computer.resetTier") {
             Ok(app_name) => policy::config_key(app_name)
-                .and_then(|key| user_config().and_then(|f| kor_config::unset(&f, &key).map_err(|e| e.to_string())))
+                .and_then(|key| {
+                    user_config()
+                        .and_then(|f| kor_config::unset(&f, &key).map_err(|e| e.to_string()))
+                })
                 .map(|()| {
                     policy::set_policy(Policy::from_config(&config(state).computer));
                     computer_status(state)
@@ -285,10 +354,16 @@ pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: 
             Ok(computer_status(state))
         }
         ("layout", "list") => {
-            let linked = crate::api::root(state).ok().and_then(|r| klayout::linked(&r));
+            let linked = crate::api::root(state)
+                .ok()
+                .and_then(|r| klayout::linked(&r));
             layouts().map(|st| json!({ "layouts": st.list(), "linked": linked }))
         }
-        ("layout", "linked") => Ok(json!(crate::api::root(state).ok().and_then(|r| klayout::linked(&r)))),
+        ("layout", "linked") => Ok(json!(
+            crate::api::root(state)
+                .ok()
+                .and_then(|r| klayout::linked(&r))
+        )),
         ("layout", "save") => {
             let name = match s(args, 0, "layout.save") {
                 Ok(n) => n.to_owned(),
@@ -297,7 +372,9 @@ pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: 
             let root = root_or_home(state);
             let project = (b(args, 1)).then(|| crate::api::root(state).ok()).flatten();
             match layouts() {
-                Ok(st) => kor_tools::layouts::save(&st, &name, &root, project.as_deref()).await.and_then(|l| to_value(&l)),
+                Ok(st) => kor_tools::layouts::save(&st, &name, &root, project.as_deref())
+                    .await
+                    .and_then(|l| to_value(&l)),
                 Err(e) => Err(e),
             }
         }
@@ -308,7 +385,9 @@ pub async fn call(ns: &str, name: &str, args: &[Value], app: &AppHandle, state: 
             };
             let root = root_or_home(state);
             match layouts() {
-                Ok(st) => kor_tools::layouts::restore(&st, &name, &root, false).await.and_then(|p| to_value(&p)),
+                Ok(st) => kor_tools::layouts::restore(&st, &name, &root, false)
+                    .await
+                    .and_then(|p| to_value(&p)),
                 Err(e) => Err(e),
             }
         }
@@ -343,8 +422,22 @@ mod tests {
         // The module doc lists the contract; each name must have a match arm.
         let src = include_str!("system.rs");
         for m in [
-            "profile", "refresh", "health", "cleanSuggest", "clean", "mute", "status", "setEnabled", "setTier",
-            "resetTier", "stop", "list", "linked", "save", "restore", "delete",
+            "profile",
+            "refresh",
+            "health",
+            "cleanSuggest",
+            "clean",
+            "mute",
+            "status",
+            "setEnabled",
+            "setTier",
+            "resetTier",
+            "stop",
+            "list",
+            "linked",
+            "save",
+            "restore",
+            "delete",
         ] {
             assert!(src.contains(&format!(", \"{m}\")")), "{m}");
         }

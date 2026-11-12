@@ -27,7 +27,9 @@ fn workspace_build() -> Option<PathBuf> {
 fn on_path() -> Option<PathBuf> {
     let name = kor_platform::exe("kor");
     let path = std::env::var_os("PATH")?;
-    std::env::split_paths(&path).map(|d| d.join(&name)).find(|p| p.is_file())
+    std::env::split_paths(&path)
+        .map(|d| d.join(&name))
+        .find(|p| p.is_file())
 }
 
 /// The CLI to run, if there is one.

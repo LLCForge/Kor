@@ -22,7 +22,9 @@ use std::path::{Path, PathBuf};
 
 use kor_i18n::Localizer;
 use kor_secrets::ExposeSecret as _;
-use kor_web::site::{self as web, client, cms, docs, doctor, host, panels, proposal, redirects, tr, wp};
+use kor_web::site::{
+    self as web, client, cms, docs, doctor, host, panels, proposal, redirects, tr, wp,
+};
 use serde_json::{Value, json};
 use tauri::AppHandle;
 
@@ -49,14 +51,27 @@ fn need<'a>(o: &'a Value, k: &str) -> Result<&'a str, String> {
 
 fn strings(o: &Value, k: &str) -> Vec<String> {
     match &o[k] {
-        Value::Array(a) => a.iter().filter_map(|x| x.as_str().map(|s| s.trim().to_owned())).filter(|s| !s.is_empty()).collect(),
-        Value::String(s) => s.split([',', '\n']).map(|x| x.trim().to_owned()).filter(|x| !x.is_empty()).collect(),
+        Value::Array(a) => a
+            .iter()
+            .filter_map(|x| x.as_str().map(|s| s.trim().to_owned()))
+            .filter(|s| !s.is_empty())
+            .collect(),
+        Value::String(s) => s
+            .split([',', '\n'])
+            .map(|x| x.trim().to_owned())
+            .filter(|x| !x.is_empty())
+            .collect(),
         _ => Vec::new(),
     }
 }
 
 fn values(o: &Value) -> BTreeMap<String, String> {
-    o["values"].as_object().into_iter().flatten().filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_owned()))).collect()
+    o["values"]
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter_map(|(k, v)| v.as_str().map(|s| (k.clone(), s.to_owned())))
+        .collect()
 }
 
 fn localizer(state: &AppState) -> Localizer {
@@ -68,27 +83,46 @@ fn localizer(state: &AppState) -> Localizer {
 }
 
 fn files(v: &[PathBuf]) -> Value {
-    json!(v.iter().map(|p| p.display().to_string()).collect::<Vec<_>>())
+    json!(
+        v.iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>()
+    )
 }
 
 fn to_json<T: serde::Serialize>(v: &T) -> Res {
     serde_json::to_value(v).map_err(|e| e.to_string())
 }
 
-pub async fn call(_ns: &str, name: &str, args: &[Value], _app: &AppHandle, state: &AppState) -> Option<Res> {
+pub async fn call(
+    _ns: &str,
+    name: &str,
+    args: &[Value],
+    _app: &AppHandle,
+    state: &AppState,
+) -> Option<Res> {
     let o = obj(args);
     let l = localizer(state);
     let project = root(state).ok();
     Some(match name {
-        "hosts" | "hostConnect" | "hostRemove" | "inventory" | "hostPlan" | "hostTask" => hosts(name, &o, &l).await,
-        "sites" | "wpConnect" | "wpRemove" | "wpInventory" | "wpHealth" | "wpDoctor" | "wpUpdate" | "wpStaging" | "wpIntegrity"
-        | "wpCleanup" | "wpScaffold" | "detect" => wordpress(name, &o, &l, project.as_deref()).await,
-        "redirectsBuild" | "redirectsExport" | "redirectsCheck" | "redirectsSlugs" => redirects_ns(name, &o, project.as_deref()).await,
-        "businessInit" | "proposal" | "proposalRevise" | "templates" => proposals(name, &o, project.as_deref()),
-        "clients" | "clientAdd" | "clientLog" | "ticket" | "clientCheck" | "clientReport" => clients(name, &o, &l).await,
-        "trCheck" | "trSlug" | "trKdv" | "trKvkk" | "trEfatura" | "trIrsaliye" | "trPayment" | "trMarket" | "trKeywords" => {
-            turkey(name, &o, &l, project.as_deref()).await
+        "hosts" | "hostConnect" | "hostRemove" | "inventory" | "hostPlan" | "hostTask" => {
+            hosts(name, &o, &l).await
         }
+        "sites" | "wpConnect" | "wpRemove" | "wpInventory" | "wpHealth" | "wpDoctor"
+        | "wpUpdate" | "wpStaging" | "wpIntegrity" | "wpCleanup" | "wpScaffold" | "detect" => {
+            wordpress(name, &o, &l, project.as_deref()).await
+        }
+        "redirectsBuild" | "redirectsExport" | "redirectsCheck" | "redirectsSlugs" => {
+            redirects_ns(name, &o, project.as_deref()).await
+        }
+        "businessInit" | "proposal" | "proposalRevise" | "templates" => {
+            proposals(name, &o, project.as_deref())
+        }
+        "clients" | "clientAdd" | "clientLog" | "ticket" | "clientCheck" | "clientReport" => {
+            clients(name, &o, &l).await
+        }
+        "trCheck" | "trSlug" | "trKdv" | "trKvkk" | "trEfatura" | "trIrsaliye" | "trPayment"
+        | "trMarket" | "trKeywords" => turkey(name, &o, &l, project.as_deref()).await,
         _ => return None,
     })
 }
@@ -291,7 +325,10 @@ fn rows_of(o: &Value) -> Result<Vec<redirects::Row>, String> {
 
 async fn redirects_ns(name: &str, o: &Value, project: Option<&Path>) -> Res {
     let http = web::http::Http::new()?;
-    let limit = o["limit"].as_u64().and_then(|x| usize::try_from(x).ok()).unwrap_or(2000);
+    let limit = o["limit"]
+        .as_u64()
+        .and_then(|x| usize::try_from(x).ok())
+        .unwrap_or(2000);
     match name {
         "redirectsBuild" => {
             let (old, mut titles) = redirects::collect(&http, need(o, "old")?, limit).await?;
@@ -306,19 +343,37 @@ async fn redirects_ns(name: &str, o: &Value, project: Option<&Path>) -> Res {
                 }
                 None => None,
             };
-            Ok(json!({ "old": old.len(), "new": new.len(), "rows": rows, "issues": redirects::issues(&rows), "saved": saved }))
+            Ok(
+                json!({ "old": old.len(), "new": new.len(), "rows": rows, "issues": redirects::issues(&rows), "saved": saved }),
+            )
         }
         "redirectsExport" => {
-            let fmt = redirects::Format::parse(need(o, "format")?).ok_or("apache | nginx | cloudflare | redirection | csv")?;
+            let fmt = redirects::Format::parse(need(o, "format")?)
+                .ok_or("apache | nginx | cloudflare | redirection | csv")?;
             let rows = rows_of(o)?;
-            let rows = if o["collapse"] == Value::Bool(true) { redirects::collapse(&rows) } else { rows };
-            Ok(json!({ "text": redirects::render(&rows, fmt, st(o, "host").unwrap_or("")), "issues": redirects::issues(&rows) }))
+            let rows = if o["collapse"] == Value::Bool(true) {
+                redirects::collapse(&rows)
+            } else {
+                rows
+            };
+            Ok(
+                json!({ "text": redirects::render(&rows, fmt, st(o, "host").unwrap_or("")), "issues": redirects::issues(&rows) }),
+            )
         }
-        "redirectsCheck" => to_json(&redirects::verify(&http, need(o, "base")?, &rows_of(o)?).await),
+        "redirectsCheck" => {
+            to_json(&redirects::verify(&http, need(o, "base")?, &rows_of(o)?).await)
+        }
         _ => {
             let (paths, _) = redirects::collect(&http, need(o, "source")?, 5000).await?;
-            let rows: Vec<redirects::Row> =
-                tr::slug_redirects(&paths).into_iter().map(|(old, new)| redirects::Row { old, new, score: 1.0, method: "slug".into() }).collect();
+            let rows: Vec<redirects::Row> = tr::slug_redirects(&paths)
+                .into_iter()
+                .map(|(old, new)| redirects::Row {
+                    old,
+                    new,
+                    score: 1.0,
+                    method: "slug".into(),
+                })
+                .collect();
             to_json(&rows)
         }
     }
@@ -329,7 +384,11 @@ fn proposals(name: &str, o: &Value, project: Option<&Path>) -> Res {
     let biz = proposal::business(&base)?;
     let formats = {
         let f = strings(o, "format");
-        if f.is_empty() { vec!["html".into(), "pdf".into()] } else { f }
+        if f.is_empty() {
+            vec!["html".into(), "pdf".into()]
+        } else {
+            f
+        }
     };
     match name {
         "businessInit" => {
@@ -350,13 +409,24 @@ fn proposals(name: &str, o: &Value, project: Option<&Path>) -> Res {
         "proposal" => {
             let client_name = need(o, "client")?;
             let lang = proposal::Lang::parse(st(o, "lang").unwrap_or("tr")).ok_or("tr | en")?;
-            let mut items = st(o, "text").map(proposal::scope_from_text).unwrap_or_default();
+            let mut items = st(o, "text")
+                .map(proposal::scope_from_text)
+                .unwrap_or_default();
             for i in strings(o, "items") {
                 items.push(proposal::parse_item(&i)?);
             }
             for p in strings(o, "packages") {
-                let x = biz.packages.iter().find(|x| x.name == p).ok_or_else(|| format!("Paket yok: {p}"))?;
-                items.push(proposal::Item { title: x.name.clone(), hours: x.hours, estimated: false, price: Some(x.price) });
+                let x = biz
+                    .packages
+                    .iter()
+                    .find(|x| x.name == p)
+                    .ok_or_else(|| format!("Paket yok: {p}"))?;
+                items.push(proposal::Item {
+                    title: x.name.clone(),
+                    hours: x.hours,
+                    estimated: false,
+                    price: Some(x.price),
+                });
             }
             if items.is_empty() {
                 return Err("Kapsam boş: iş tanımı ya da kalem girin".into());
@@ -368,11 +438,23 @@ fn proposals(name: &str, o: &Value, project: Option<&Path>) -> Res {
                 items,
                 version: 1,
                 date: chrono::Local::now().format("%Y-%m-%d").to_string(),
-                valid_days: o["validDays"].as_u64().and_then(|x| u32::try_from(x).ok()).unwrap_or(15),
+                valid_days: o["validDays"]
+                    .as_u64()
+                    .and_then(|x| u32::try_from(x).ok())
+                    .unwrap_or(15),
                 notes: Vec::new(),
             };
-            let dir = project.ok_or("Önce bir proje klasörü açın")?.join(format!("teklif-{}", tr::slug(client_name)));
-            let out = proposal::write(&base, &dir, &p, &biz, o["contracts"] == Value::Bool(true), &formats)?;
+            let dir = project
+                .ok_or("Önce bir proje klasörü açın")?
+                .join(format!("teklif-{}", tr::slug(client_name)));
+            let out = proposal::write(
+                &base,
+                &dir,
+                &p,
+                &biz,
+                o["contracts"] == Value::Bool(true),
+                &formats,
+            )?;
             let t = proposal::totals(&p, &biz);
             Ok(json!({
                 "dir": dir.display().to_string(), "files": files(&out), "items": p.items,
@@ -387,7 +469,14 @@ fn proposals(name: &str, o: &Value, project: Option<&Path>) -> Res {
             if changes.is_empty() {
                 return Ok(json!({ "changes": [], "files": [] }));
             }
-            let out = proposal::write(&base, &dir, &p, &biz, o["contracts"] == Value::Bool(true), &formats)?;
+            let out = proposal::write(
+                &base,
+                &dir,
+                &p,
+                &biz,
+                o["contracts"] == Value::Bool(true),
+                &formats,
+            )?;
             Ok(json!({ "changes": changes, "files": files(&out), "version": p.version }))
         }
     }
@@ -396,18 +485,27 @@ fn proposals(name: &str, o: &Value, project: Option<&Path>) -> Res {
 async fn clients(name: &str, o: &Value, l: &Localizer) -> Res {
     let base = web::base()?;
     match name {
-        "clients" => Ok(json!(client::list(&base)
-            .into_iter()
-            .map(|id| {
-                let c = client::load(&base, &id).unwrap_or_default();
-                let open = client::tickets(&base, &id).iter().filter(|t| t.open).count();
-                json!({ "id": id, "client": c, "openTickets": open })
-            })
-            .collect::<Vec<_>>())),
+        "clients" => Ok(json!(
+            client::list(&base)
+                .into_iter()
+                .map(|id| {
+                    let c = client::load(&base, &id).unwrap_or_default();
+                    let open = client::tickets(&base, &id)
+                        .iter()
+                        .filter(|t| t.open)
+                        .count();
+                    json!({ "id": id, "client": c, "openTickets": open })
+                })
+                .collect::<Vec<_>>()
+        )),
         "clientAdd" => {
             let id = need(o, "id")?;
             let mut c = client::load(&base, id).unwrap_or_default();
-            for (k, f) in [("name", &mut c.name), ("email", &mut c.email), ("telegram", &mut c.telegram)] {
+            for (k, f) in [
+                ("name", &mut c.name),
+                ("email", &mut c.email),
+                ("telegram", &mut c.telegram),
+            ] {
                 if let Some(v) = st(o, k) {
                     v.clone_into(f);
                 }
@@ -423,24 +521,50 @@ async fn clients(name: &str, o: &Value, l: &Localizer) -> Res {
         "clientLog" => {
             let id = need(o, "id")?;
             client::load(&base, id)?;
-            let h = o["hours"].as_f64().filter(|h| (0.0..=24.0).contains(h)).ok_or("Saat 0–24 olmalı")?;
+            let h = o["hours"]
+                .as_f64()
+                .filter(|h| (0.0..=24.0).contains(h))
+                .ok_or("Saat 0–24 olmalı")?;
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let secs = (h * 3600.0).round() as u64;
-            client::log(&base, id, &client::Entry { ts: web::now(), kind: "manual".into(), target: String::new(), summary: need(o, "note")?.to_owned(), secs, source: "manual".into() })?;
+            client::log(
+                &base,
+                id,
+                &client::Entry {
+                    ts: web::now(),
+                    kind: "manual".into(),
+                    target: String::new(),
+                    summary: need(o, "note")?.to_owned(),
+                    secs,
+                    source: "manual".into(),
+                },
+            )?;
             Ok(json!(true))
         }
         "ticket" => {
             let id = need(o, "id")?;
             match need(o, "action")? {
                 "add" => to_json(&client::ticket_add(&base, id, need(o, "title")?)?),
-                "close" => Ok(json!(client::ticket_close(&base, id, o["number"].as_u64().and_then(|n| u32::try_from(n).ok()).ok_or("Bilet numarası")?)?)),
+                "close" => Ok(json!(client::ticket_close(
+                    &base,
+                    id,
+                    o["number"]
+                        .as_u64()
+                        .and_then(|n| u32::try_from(n).ok())
+                        .ok_or("Bilet numarası")?
+                )?)),
                 _ => to_json(&client::tickets(&base, id)),
             }
         }
-        "clientCheck" => to_json(&client::check(&base, need(o, "id")?, &web::http::Http::new()?).await?),
+        "clientCheck" => {
+            to_json(&client::check(&base, need(o, "id")?, &web::http::Http::new()?).await?)
+        }
         _ => {
             let id = need(o, "id")?;
-            let month = st(o, "month").map_or_else(|| chrono::Local::now().format("%Y-%m").to_string(), str::to_owned);
+            let month = st(o, "month").map_or_else(
+                || chrono::Local::now().format("%Y-%m").to_string(),
+                str::to_owned,
+            );
             let live = client::check(&base, id, &web::http::Http::new()?).await?;
             let biz = proposal::business(&base).unwrap_or_default();
             let r = client::report(l, &base, id, &month, &live, biz.hourly_rate)?;
@@ -461,7 +585,11 @@ async fn turkey(name: &str, o: &Value, l: &Localizer, project: Option<&Path>) ->
             let base = web::base()?;
             let plugins: Vec<String> = match st(o, "site") {
                 Some(s) => match web::tools::open_wp(&base, s) {
-                    Ok(w) => w.inventory().await.map(|i| i.plugins.into_iter().map(|p| p.slug).collect()).unwrap_or_default(),
+                    Ok(w) => w
+                        .inventory()
+                        .await
+                        .map(|i| i.plugins.into_iter().map(|p| p.slug).collect())
+                        .unwrap_or_default(),
                     Err(_) => Vec::new(),
                 },
                 None => Vec::new(),
@@ -472,7 +600,10 @@ async fn turkey(name: &str, o: &Value, l: &Localizer, project: Option<&Path>) ->
         "trSlug" => Ok(json!(tr::slug(need(o, "text")?))),
         "trKdv" => {
             let k = tr::parse_try(need(o, "amount")?).ok_or("Tutar okunamadı")?;
-            let rate = o["rate"].as_u64().and_then(|r| u32::try_from(r).ok()).unwrap_or(20);
+            let rate = o["rate"]
+                .as_u64()
+                .and_then(|r| u32::try_from(r).ok())
+                .unwrap_or(20);
             let (net, tax, gross) = if o["gross"] == Value::Bool(true) {
                 let (n, t) = tr::kdv_from_gross(k, rate);
                 (n, t, k)
@@ -480,7 +611,9 @@ async fn turkey(name: &str, o: &Value, l: &Localizer, project: Option<&Path>) ->
                 let (t, g) = tr::kdv(k, rate);
                 (k, t, g)
             };
-            Ok(json!({ "net": tr::try_format(net), "kdv": tr::try_format(tax), "gross": tr::try_format(gross), "rate": rate }))
+            Ok(
+                json!({ "net": tr::try_format(net), "kdv": tr::try_format(tax), "gross": tr::try_format(gross), "rate": rate }),
+            )
         }
         "trKvkk" => {
             let base = web::base()?;
@@ -489,7 +622,11 @@ async fn turkey(name: &str, o: &Value, l: &Localizer, project: Option<&Path>) ->
                 .iter()
                 .map(|c| {
                     let mut p = c.splitn(3, '|').map(|x| x.trim().to_owned());
-                    (p.next().unwrap_or_default(), p.next().unwrap_or_default(), p.next().unwrap_or_default())
+                    (
+                        p.next().unwrap_or_default(),
+                        p.next().unwrap_or_default(),
+                        p.next().unwrap_or_default(),
+                    )
                 })
                 .collect();
             let input = tr::KvkkInput {
@@ -505,22 +642,45 @@ async fn turkey(name: &str, o: &Value, l: &Localizer, project: Option<&Path>) ->
             };
             let (d, c) = tr::kvkk_text(&input);
             let dir = project.ok_or("Önce bir proje klasörü açın")?.join("kvkk");
-            let mut out = docs::write_all(&dir, "aydinlatma-metni", &d, "Aydınlatma Metni", &biz.accent, &["html".into()])?;
-            out.extend(docs::write_all(&dir, "cerez-politikasi", &c, "Çerez Politikası", &biz.accent, &["html".into()])?);
+            let mut out = docs::write_all(
+                &dir,
+                "aydinlatma-metni",
+                &d,
+                "Aydınlatma Metni",
+                &biz.accent,
+                &["html".into()],
+            )?;
+            out.extend(docs::write_all(
+                &dir,
+                "cerez-politikasi",
+                &c,
+                "Çerez Politikası",
+                &biz.accent,
+                &["html".into()],
+            )?);
             Ok(json!({ "files": files(&out), "disclosure": d, "cookies": c }))
         }
         "trEfatura" | "trIrsaliye" => {
             let uuid = tr::efatura::uuid4()?;
             let xml = if name == "trEfatura" {
-                let inv: tr::efatura::Invoice = serde_json::from_value(o["document"].clone()).map_err(|e| e.to_string())?;
+                let inv: tr::efatura::Invoice =
+                    serde_json::from_value(o["document"].clone()).map_err(|e| e.to_string())?;
                 tr::efatura::invoice_xml(&inv, &uuid)?
             } else {
-                let d: tr::efatura::Despatch = serde_json::from_value(o["document"].clone()).map_err(|e| e.to_string())?;
+                let d: tr::efatura::Despatch =
+                    serde_json::from_value(o["document"].clone()).map_err(|e| e.to_string())?;
                 tr::efatura::despatch_xml(&d, &uuid)?
             };
             let mut out = json!({ "uuid": uuid, "xml": xml });
             if let Some(dir) = project {
-                let p = dir.join(format!("{}-{uuid}.xml", if name == "trEfatura" { "efatura" } else { "eirsaliye" }));
+                let p = dir.join(format!(
+                    "{}-{uuid}.xml",
+                    if name == "trEfatura" {
+                        "efatura"
+                    } else {
+                        "eirsaliye"
+                    }
+                ));
                 std::fs::write(&p, &xml).map_err(|e| e.to_string())?;
                 out["saved"] = json!(p.display().to_string());
             }
@@ -531,28 +691,60 @@ async fn turkey(name: &str, o: &Value, l: &Localizer, project: Option<&Path>) ->
                     return Err("business.toml içinde [efatura] url ve secret tanımlı değil".into());
                 }
                 let token = web::secret(web::vault().ok().as_deref(), &biz.efatura.secret)?;
-                out["sent"] = json!(tr::efatura::send(&web::http::Http::new()?, &biz.efatura.url, token.expose_secret(), &xml).await?);
+                out["sent"] = json!(
+                    tr::efatura::send(
+                        &web::http::Http::new()?,
+                        &biz.efatura.url,
+                        token.expose_secret(),
+                        &xml
+                    )
+                    .await?
+                );
             }
             Ok(out)
         }
         "trPayment" => {
             let list = tr::templates::payment(need(o, "provider")?).ok_or("iyzico | paytr")?;
-            Ok(files(&wp::write_scaffold(project.ok_or("Önce bir proje klasörü açın")?, &list)?))
+            Ok(files(&wp::write_scaffold(
+                project.ok_or("Önce bir proje klasörü açın")?,
+                &list,
+            )?))
         }
         "trMarket" => {
             let base = web::base()?;
             let biz = proposal::business(&base)?;
             let store = web::vault().ok();
-            let get = |n: &str| web::secret(store.as_deref(), n).map(|s| s.expose_secret().to_owned());
+            let get =
+                |n: &str| web::secret(store.as_deref(), n).map(|s| s.expose_secret().to_owned());
             let http = web::http::Http::new()?;
             let mut out = Vec::new();
             if !biz.trendyol.id.is_empty() {
-                let r = tr::market::trendyol(&http, tr::market::TRENDYOL, &biz.trendyol.id, &get(&biz.trendyol.key)?, &get(&biz.trendyol.secret)?).await;
-                out.push(r.map_or_else(|e| json!({ "market": "Trendyol", "error": e }), |c| json!(c)));
+                let r = tr::market::trendyol(
+                    &http,
+                    tr::market::TRENDYOL,
+                    &biz.trendyol.id,
+                    &get(&biz.trendyol.key)?,
+                    &get(&biz.trendyol.secret)?,
+                )
+                .await;
+                out.push(r.map_or_else(
+                    |e| json!({ "market": "Trendyol", "error": e }),
+                    |c| json!(c),
+                ));
             }
             if !biz.hepsiburada.id.is_empty() {
-                let r = tr::market::hepsiburada(&http, tr::market::HEPSIBURADA, &biz.hepsiburada.id, &get(&biz.hepsiburada.key)?, &get(&biz.hepsiburada.secret)?).await;
-                out.push(r.map_or_else(|e| json!({ "market": "Hepsiburada", "error": e }), |c| json!(c)));
+                let r = tr::market::hepsiburada(
+                    &http,
+                    tr::market::HEPSIBURADA,
+                    &biz.hepsiburada.id,
+                    &get(&biz.hepsiburada.key)?,
+                    &get(&biz.hepsiburada.secret)?,
+                )
+                .await;
+                out.push(r.map_or_else(
+                    |e| json!({ "market": "Hepsiburada", "error": e }),
+                    |c| json!(c),
+                ));
             }
             Ok(json!(out))
         }
@@ -563,7 +755,10 @@ async fn turkey(name: &str, o: &Value, l: &Localizer, project: Option<&Path>) ->
             } else {
                 src.to_owned()
             };
-            let top = o["top"].as_u64().and_then(|t| usize::try_from(t).ok()).unwrap_or(20);
+            let top = o["top"]
+                .as_u64()
+                .and_then(|t| usize::try_from(t).ok())
+                .unwrap_or(20);
             Ok(json!(tr::keywords(&text, top)))
         }
     }
@@ -575,7 +770,9 @@ mod tests {
 
     #[test]
     fn argument_helpers() {
-        let o = obj(&[json!({"name": " prod ", "only": "a, b", "values": {"domain": "a.com", "n": 1}})]);
+        let o = obj(&[
+            json!({"name": " prod ", "only": "a, b", "values": {"domain": "a.com", "n": 1}}),
+        ]);
         assert_eq!(need(&o, "name").unwrap(), "prod");
         assert!(need(&o, "missing").is_err());
         assert_eq!(strings(&o, "only"), ["a", "b"]);
