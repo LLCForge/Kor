@@ -93,7 +93,11 @@ export async function serve(scenarioFile: string): Promise<Served> {
 /** The desktop app on the isolated home, with WebView2 remote debugging on `CDP_PORT` (Windows). */
 export function launchDesktop(served: Served, extraEnv: Record<string, string> = {}): ChildProcess {
   const env: Record<string, string> = { ...(process.env as Record<string, string>), ...served.env, ...extraEnv }
-  if (process.platform === 'win32') env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = `--remote-debugging-port=${CDP_PORT}`
+  if (process.platform === 'win32') {
+    env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = `--remote-debugging-port=${CDP_PORT}`
+    // The app disables DevTools (and with it the debugging port) unless asked; debug builds only.
+    env.KOR_DEVTOOLS = '1'
+  }
   const app = spawn(desktopBinary(), [], { env, stdio: ['ignore', 'ignore', 'pipe'], cwd: served.project })
   // The last of its stderr, for the error when it never becomes reachable (a crash at start).
   let tail = ''
