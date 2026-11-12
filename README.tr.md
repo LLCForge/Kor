@@ -183,7 +183,7 @@ edildiler. OpenAI uyumlu bir sağlayıcı yalnızca bir TOML manifestosu ister, 
 - Ajan dosya okumadan önce grafa sorar. Karşılaştırma modu (`kor bench --graph`) graf açıkken ve kapalıyken token
   kullanımını ölçer; hedeflenen azalma şimdilik yalnızca sahte modellerle ölçüldü.
 - **Canlı diyagramlar** (`kor diagram sync | watch | check`): Mermaid, PlantUML ve D2; koddan yeniden üretilir.
-- **Veritabanı şeması katmanı** (`kor db connect | tables | show | indexes | migrate new | apply`) ve monorepo
+- **Veritabanı şeması katmanı** (`kor db connect | tables | show | indexes | migrate new | apply`; `apply` yıkıcı SQL'i önce kopyada dener: SQLite dosyası, Postgres şablon veritabanı, 1 milyon satıra kadar MySQL kopyası, SQL Server'da geri alınan işlem) ve monorepo
   farkındalığı (`kor packages affected | deps | cost`): Cargo, pnpm/yarn/npm, Turborepo, Nx, Lerna, Bazel, Go, Gradle ve .NET.
 
 ### Maliyet kontrolü ve tahminler

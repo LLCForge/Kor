@@ -328,8 +328,7 @@ pub(crate) async fn server_query(
     let (name, default_port) = match d.kind {
         DbKind::Postgres => ("psql", 5432),
         DbKind::Mysql => ("mysql", 3306),
-        DbKind::Mssql if exec == Exec::ReadOnly => ("sqlcmd", 1433),
-        DbKind::Mssql => return Err("Kor only reads the schema of SQL Server databases".into()),
+        DbKind::Mssql => ("sqlcmd", 1433),
         DbKind::Sqlite => unreachable!("sqlite is local"),
     };
     let exe = client(name).ok_or_else(|| {
@@ -420,8 +419,10 @@ pub(crate) async fn server_query(
             };
         }
         DbKind::Mssql => {
-            // -h -1: no header row, -W: trimmed, -s TAB, -b: non-zero exit on errors.
+            // -h -1: no header row, -W: trimmed, -s TAB, -b: non-zero exit on errors,
+            // -X: sqlcmd's own shell and editor commands (`!!`, `:ED`) disabled.
             cmd.args([
+                "-X",
                 "-S",
                 &format!("{host},{port}"),
                 "-b",
@@ -1096,6 +1097,194 @@ pub fn schema_change(
     out
 }
 
+/// Largest `MySQL` database (estimated rows) Kor copies for a [`trial`].
+pub const MYSQL_TRIAL_MAX_ROWS: u64 = 1_000_000;
+
+fn trial_db_name() -> String {
+    format!(
+        "kor_trial_{}_{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs())
+    )
+}
+
+fn mysql_ident(s: &str) -> String {
+    format!("`{}`", s.replace('`', "``"))
+}
+
+/// Foreign keys of the current database: table, name, quoted columns, referenced schema,
+/// referenced table, quoted referenced columns, update rule, delete rule.
+const MYSQL_FKS: &str = "SELECT k.table_name, k.constraint_name, \
+    GROUP_CONCAT(CONCAT('`', REPLACE(k.column_name, '`', '``'), '`') ORDER BY k.ordinal_position), \
+    k.referenced_table_schema, k.referenced_table_name, \
+    GROUP_CONCAT(CONCAT('`', REPLACE(k.referenced_column_name, '`', '``'), '`') ORDER BY k.ordinal_position), \
+    r.update_rule, r.delete_rule \
+    FROM information_schema.key_column_usage k JOIN information_schema.referential_constraints r \
+    ON r.constraint_schema = k.constraint_schema AND r.constraint_name = k.constraint_name AND r.table_name = k.table_name \
+    WHERE k.table_schema = DATABASE() AND k.referenced_table_name IS NOT NULL \
+    GROUP BY k.table_name, k.constraint_name, k.referenced_table_schema, k.referenced_table_name, r.update_rule, r.delete_rule";
+
+/// The script that fills trial database `copy` from `src`: tables, rows, then foreign keys.
+fn mysql_copy_script(
+    src: &str,
+    copy: &str,
+    tables: &[String],
+    fks: &[Vec<String>],
+) -> Result<String, String> {
+    let rule = |r: &str| -> Result<String, String> {
+        match r {
+            "CASCADE" | "SET NULL" | "SET DEFAULT" | "RESTRICT" | "NO ACTION" => Ok(r.to_owned()),
+            other => Err(format!("unexpected foreign key rule `{other}`")),
+        }
+    };
+    let (s, c) = (mysql_ident(src), mysql_ident(copy));
+    let mut out = format!("CREATE DATABASE {c};\nUSE {c};\nSET FOREIGN_KEY_CHECKS = 0;\n");
+    for t in tables {
+        let t = mysql_ident(t);
+        let _ = writeln!(
+            out,
+            "CREATE TABLE {t} LIKE {s}.{t};\nINSERT INTO {t} SELECT * FROM {s}.{t};"
+        );
+    }
+    for fk in fks {
+        let [table, name, cols, ref_schema, ref_table, ref_cols, upd, del] =
+            [0, 1, 2, 3, 4, 5, 6, 7].map(|i| fk.get(i).map_or("", String::as_str));
+        let ref_schema = if ref_schema == src { copy } else { ref_schema };
+        let _ = writeln!(
+            out,
+            "ALTER TABLE {} ADD CONSTRAINT {} FOREIGN KEY ({cols}) REFERENCES {}.{} ({ref_cols}) ON UPDATE {} ON DELETE {};",
+            mysql_ident(table),
+            mysql_ident(name),
+            mysql_ident(ref_schema),
+            mysql_ident(ref_table),
+            rule(upd)?,
+            rule(del)?
+        );
+    }
+    out.push_str("SET FOREIGN_KEY_CHECKS = 1");
+    Ok(out)
+}
+
+/// `MySQL` [`trial`]: copy the database, run `sql` there, report the change, drop the copy.
+async fn mysql_trial(
+    conns: &Connections,
+    id: &str,
+    d: &DbConn,
+    sql: &str,
+) -> Result<Vec<String>, String> {
+    let db = d
+        .database
+        .clone()
+        .ok_or("the connection has no `database` to copy")?;
+    let cancel = tokio_util::sync::CancellationToken::new();
+    let (_, tables, _) = server_query(
+        conns,
+        id,
+        d,
+        "SELECT table_name, COALESCE(table_rows, 0) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE' ORDER BY table_name",
+        100_000,
+        &cancel,
+        Exec::ReadOnly,
+    )
+    .await?;
+    let rows: u64 = tables
+        .iter()
+        .filter_map(|r| r.get(1)?.parse::<u64>().ok())
+        .sum();
+    if rows > MYSQL_TRIAL_MAX_ROWS {
+        return Err(format!(
+            "`{db}` has about {rows} rows; Kor copies MySQL databases of up to {MYSQL_TRIAL_MAX_ROWS} rows for a trial. Try the SQL on a staging database"
+        ));
+    }
+    let (_, fks, _) =
+        server_query(conns, id, d, MYSQL_FKS, 100_000, &cancel, Exec::ReadOnly).await?;
+    let copy = trial_db_name();
+    let names: Vec<String> = tables.iter().filter_map(|r| r.first().cloned()).collect();
+    let script = mysql_copy_script(&db, &copy, &names, &fks)?;
+    let on_copy = DbConn {
+        database: Some(copy.clone()),
+        ..d.clone()
+    };
+    let result = async {
+        server_query(conns, id, d, &script, 0, &cancel, Exec::Write)
+            .await
+            .map_err(|e| format!("could not copy `{db}` for a trial ({e}). Needs the CREATE privilege; Kor does not run destructive SQL without a trial"))?;
+        let (_, before, _) = server_query(conns, id, &on_copy, catalog_sql(DbKind::Mysql), 200_000, &cancel, Exec::ReadOnly).await?;
+        server_query(conns, id, &on_copy, sql, 0, &cancel, Exec::Write).await?;
+        let (_, after, _) = server_query(conns, id, &on_copy, catalog_sql(DbKind::Mysql), 200_000, &cancel, Exec::ReadOnly).await?;
+        Ok::<_, String>(schema_change(&group_catalog(&before), &group_catalog(&after)))
+    }
+    .await;
+    let drop = format!("DROP DATABASE IF EXISTS {}", mysql_ident(&copy));
+    if let Err(e) = server_query(conns, id, d, &drop, 0, &cancel, Exec::Write).await {
+        return Err(format!(
+            "{} (the trial copy `{copy}` could not be dropped: {e})",
+            result.err().unwrap_or_default()
+        ));
+    }
+    result
+}
+
+/// SQL Kor wraps in its own transaction on SQL Server: no transaction control of its own (a
+/// `COMMIT` would make a trial permanent) and no sqlcmd commands (`:r`, `:!!`, `!!`).
+fn check_mssql_script(sql: &str) -> Result<(), String> {
+    if sql.trim().is_empty() {
+        return Err("the SQL is empty".into());
+    }
+    if sql
+        .lines()
+        .map(str::trim_start)
+        .any(|l| l.starts_with(':') || l.starts_with("!!"))
+    {
+        return Err("sqlcmd commands (lines starting with `:` or `!!`) are not allowed".into());
+    }
+    for w in sql
+        .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .map(str::to_ascii_uppercase)
+    {
+        if matches!(
+            w.as_str(),
+            "COMMIT" | "ROLLBACK" | "TRAN" | "TRANSACTION" | "SAVE"
+        ) {
+            return Err(format!(
+                "`{w}`: Kor runs the SQL in its own transaction; leave transaction control out"
+            ));
+        }
+    }
+    Ok(())
+}
+
+const MSSQL_MARK: &str = "kor-trial-catalog";
+
+/// SQL Server [`trial`]: `sql` in a transaction, the catalog read inside it, then rolled back.
+async fn mssql_trial(
+    conns: &Connections,
+    id: &str,
+    d: &DbConn,
+    sql: &str,
+) -> Result<Vec<String>, String> {
+    check_mssql_script(sql)?;
+    let cancel = tokio_util::sync::CancellationToken::new();
+    let catalog = catalog_sql(DbKind::Mssql);
+    let (_, before, _) =
+        server_query(conns, id, d, catalog, 200_000, &cancel, Exec::ReadOnly).await?;
+    let script = format!(
+        "SET XACT_ABORT ON;\nBEGIN TRANSACTION;\n{sql}\nSELECT '{MSSQL_MARK}';\n{catalog};\nROLLBACK TRANSACTION"
+    );
+    let (_, rows, _) = server_query(conns, id, d, &script, 400_000, &cancel, Exec::Write).await?;
+    let after: Vec<Vec<String>> = rows
+        .into_iter()
+        .skip_while(|r| r.first().map(String::as_str) != Some(MSSQL_MARK))
+        .skip(1)
+        .collect();
+    Ok(schema_change(
+        &group_catalog(&before),
+        &group_catalog(&after),
+    ))
+}
+
 static TRIALS: std::sync::Mutex<Vec<(String, std::time::Instant)>> =
     std::sync::Mutex::new(Vec::new());
 
@@ -1132,9 +1321,12 @@ fn quote_ident(s: &str) -> String {
 /// Run `sql` on a throwaway copy of connection `id` and report the schema change, so a
 /// destructive change is seen before it touches the real database. `SQLite`: the file (and its
 /// `-wal`) copied into a private temp folder. Postgres: `CREATE DATABASE … TEMPLATE <db>` (needs
-/// `CREATEDB` and no other session on the database), dropped afterwards. `MySQL` and SQL Server
-/// have no cheap copy: refused with the reason. A passed trial lets [`apply`] run the same SQL
-/// for 30 minutes.
+/// `CREATEDB` and no other session on the database), dropped afterwards. `MySQL`: a new database
+/// with every base table's structure, rows and foreign keys (up to [`MYSQL_TRIAL_MAX_ROWS`];
+/// views, triggers and routines are not copied), dropped afterwards. SQL Server: the SQL runs in
+/// a transaction that is always rolled back (its DDL is transactional). A passed trial lets
+/// [`apply`] run the same SQL for 30 minutes.
+#[allow(clippy::too_many_lines)]
 pub async fn trial(
     connections: Option<PathBuf>,
     id: &str,
@@ -1180,37 +1372,74 @@ pub async fn trial(
                 return Err("privacy mode is on: Kor does not connect to database servers".into());
             }
             check_backslashes(sql)?;
-            let db = d.database.clone().ok_or("the connection has no `database` to copy")?;
+            let db = d
+                .database
+                .clone()
+                .ok_or("the connection has no `database` to copy")?;
             let cancel = tokio_util::sync::CancellationToken::new();
-            let (_, rows, _) = server_query(&conns, id, &d, catalog_sql(d.kind), 200_000, &cancel, Exec::ReadOnly).await?;
+            let (_, rows, _) = server_query(
+                &conns,
+                id,
+                &d,
+                catalog_sql(d.kind),
+                200_000,
+                &cancel,
+                Exec::ReadOnly,
+            )
+            .await?;
             let before = group_catalog(&rows);
-            let copy = format!(
-                "kor_trial_{}_{}",
-                std::process::id(),
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .map_or(0, |d| d.as_secs())
+            let copy = trial_db_name();
+            let admin = DbConn {
+                database: Some("postgres".into()),
+                ..d.clone()
+            };
+            let create = format!(
+                "CREATE DATABASE {} TEMPLATE {}",
+                quote_ident(&copy),
+                quote_ident(&db)
             );
-            let admin = DbConn { database: Some("postgres".into()), ..d.clone() };
-            let create = format!("CREATE DATABASE {} TEMPLATE {}", quote_ident(&copy), quote_ident(&db));
             server_query(&conns, id, &admin, &create, 0, &cancel, Exec::Write)
                 .await
                 .map_err(|e| format!("could not copy `{db}` for a trial ({e}). Needs the CREATEDB privilege and no other session on `{db}`; Kor does not run destructive SQL without a trial"))?;
-            let on_copy = DbConn { database: Some(copy.clone()), ..d.clone() };
+            let on_copy = DbConn {
+                database: Some(copy.clone()),
+                ..d.clone()
+            };
             let result = async {
                 server_query(&conns, id, &on_copy, sql, 0, &cancel, Exec::WriteTx).await?;
-                let (_, rows, _) = server_query(&conns, id, &on_copy, catalog_sql(d.kind), 200_000, &cancel, Exec::ReadOnly).await?;
+                let (_, rows, _) = server_query(
+                    &conns,
+                    id,
+                    &on_copy,
+                    catalog_sql(d.kind),
+                    200_000,
+                    &cancel,
+                    Exec::ReadOnly,
+                )
+                .await?;
                 Ok::<_, String>(schema_change(&before, &group_catalog(&rows)))
             }
             .await;
             let drop = format!("DROP DATABASE IF EXISTS {}", quote_ident(&copy));
             if let Err(e) = server_query(&conns, id, &admin, &drop, 0, &cancel, Exec::Write).await {
-                return Err(format!("{} (the trial copy `{copy}` could not be dropped: {e})", result.err().unwrap_or_default()));
+                return Err(format!(
+                    "{} (the trial copy `{copy}` could not be dropped: {e})",
+                    result.err().unwrap_or_default()
+                ));
             }
             result?
         }
-        DbKind::Mysql => return Err("MySQL has no cheap database copy; Kor refuses destructive SQL here. Try it on a staging database".into()),
-        DbKind::Mssql => return Err("Kor only reads the schema of SQL Server databases".into()),
+        DbKind::Mysql | DbKind::Mssql => {
+            if !allow_network {
+                return Err("privacy mode is on: Kor does not connect to database servers".into());
+            }
+            if d.kind == DbKind::Mysql {
+                check_backslashes(sql)?;
+                mysql_trial(&conns, id, &d, sql).await?
+            } else {
+                mssql_trial(&conns, id, &d, sql).await?
+            }
+        }
     };
     TRIALS
         .lock()
@@ -1220,7 +1449,7 @@ pub async fn trial(
 }
 
 /// Run `sql` on the real database of connection `id` (`SQLite`: one transaction; Postgres:
-/// `psql -1`; `MySQL`: autocommit). Destructive SQL ([`destructive_statements`]) only runs after
+/// `psql -1`; `MySQL`: autocommit; SQL Server: one transaction). Destructive SQL ([`destructive_statements`]) only runs after
 /// a passed [`trial`] of the same SQL in this process; the caller asks the user before each.
 pub async fn apply(
     connections: Option<PathBuf>,
@@ -1244,7 +1473,18 @@ pub async fn apply(
                 .await
                 .map_err(|e| e.to_string())?
         }
-        DbKind::Mssql => Err("Kor only reads the schema of SQL Server databases".into()),
+        DbKind::Mssql => {
+            if !allow_network {
+                return Err("privacy mode is on: Kor does not connect to database servers".into());
+            }
+            check_mssql_script(sql)?;
+            let script =
+                format!("SET XACT_ABORT ON;\nBEGIN TRANSACTION;\n{sql}\nCOMMIT TRANSACTION");
+            let cancel = tokio_util::sync::CancellationToken::new();
+            server_query(&conns, id, &d, &script, 0, &cancel, Exec::Write)
+                .await
+                .map(|_| ())
+        }
         kind => {
             if !allow_network {
                 return Err("privacy mode is on: Kor does not connect to database servers".into());
@@ -1427,7 +1667,7 @@ mod tests {
             .await
             .is_err()
         );
-        // Non-destructive SQL needs no trial; MySQL destructive is refused with the reason.
+        // Non-destructive SQL needs no trial; a server trial needs the network (privacy mode).
         apply(
             Some(conf.clone()),
             "app",
@@ -1438,10 +1678,10 @@ mod tests {
         .await
         .unwrap();
         assert!(
-            trial(Some(conf.clone()), "my", dir.path(), "DROP TABLE x", true)
+            trial(Some(conf.clone()), "my", dir.path(), "DROP TABLE x", false)
                 .await
                 .unwrap_err()
-                .contains("MySQL")
+                .contains("privacy mode")
         );
         assert!(slow_queries(Some(conf), "app", true).await.is_err());
     }
@@ -1461,6 +1701,163 @@ mod tests {
             .unwrap();
         assert_eq!(snap.kind, "postgres");
         assert!(!snap.tables.is_empty());
+    }
+
+    #[test]
+    fn mysql_copy_script_copies_tables_rows_and_foreign_keys() {
+        let fk = |r: &[&str]| r.iter().map(|s| (*s).to_owned()).collect::<Vec<_>>();
+        let script = mysql_copy_script(
+            "app",
+            "kor_trial_1",
+            &["users".into(), "or`ders".into()],
+            &[fk(&[
+                "or`ders",
+                "fk_u",
+                "`user_id`",
+                "app",
+                "users",
+                "`id`",
+                "CASCADE",
+                "RESTRICT",
+            ])],
+        )
+        .unwrap();
+        assert!(script.starts_with(
+            "CREATE DATABASE `kor_trial_1`;\nUSE `kor_trial_1`;\nSET FOREIGN_KEY_CHECKS = 0;\n"
+        ));
+        assert!(script.contains("CREATE TABLE `or``ders` LIKE `app`.`or``ders`;\nINSERT INTO `or``ders` SELECT * FROM `app`.`or``ders`;"));
+        // A key into the copied database points at the copy.
+        assert!(script.contains("ALTER TABLE `or``ders` ADD CONSTRAINT `fk_u` FOREIGN KEY (`user_id`) REFERENCES `kor_trial_1`.`users` (`id`) ON UPDATE CASCADE ON DELETE RESTRICT;"));
+        assert!(script.ends_with("SET FOREIGN_KEY_CHECKS = 1"));
+        // Rules come from the server but are still allowlisted.
+        let bad = [fk(&[
+            "t",
+            "f",
+            "`a`",
+            "app",
+            "u",
+            "`id`",
+            "CASCADE; DROP DATABASE app",
+            "RESTRICT",
+        ])];
+        assert!(mysql_copy_script("app", "c", &[], &bad).is_err());
+    }
+
+    #[test]
+    fn mssql_scripts_keep_kor_in_control_of_the_transaction() {
+        assert!(
+            check_mssql_script("DROP TABLE dbo.old;\nALTER TABLE dbo.users ADD name nvarchar(50)")
+                .is_ok()
+        );
+        for bad in [
+            "",
+            "DROP TABLE x; COMMIT",
+            "begin tran; drop table x",
+            "DROP TABLE x\nROLLBACK TRANSACTION",
+            ":r C:\\evil.sql",
+            "  !! del *",
+            "SAVE TRANSACTION s",
+        ] {
+            assert!(check_mssql_script(bad).is_err(), "{bad}");
+        }
+    }
+
+    /// One server trial, end to end: the copy shows the change, the real database keeps the old
+    /// shape until `apply`, rows are copied (a unique index over duplicates fails), no copy is
+    /// left behind (`leftovers` lists any). `conf` has connection `db` on an empty database.
+    async fn server_trial_round(conf: &Path, root: &Path, setup: &str, leftovers: &str) {
+        let c = Some(conf.to_path_buf());
+        apply(c.clone(), "db", root, setup, true).await.unwrap();
+        let tables = || async {
+            introspect(c.clone(), "db", root, true)
+                .await
+                .unwrap()
+                .tables
+                .into_iter()
+                .map(|t| t.name)
+                .collect::<Vec<_>>()
+        };
+        let sql = "DROP TABLE old_t;\nALTER TABLE users ADD nick varchar(50)";
+        assert!(
+            apply(c.clone(), "db", root, sql, true)
+                .await
+                .unwrap_err()
+                .contains("copy")
+        );
+        let change = trial(c.clone(), "db", root, sql, true).await.unwrap();
+        assert!(
+            change
+                .iter()
+                .any(|l| l.starts_with("- table") && l.contains("old_t")),
+            "{change:?}"
+        );
+        assert!(
+            change
+                .iter()
+                .any(|l| l.starts_with("+ column") && l.ends_with("users.nick")),
+            "{change:?}"
+        );
+        assert!(tables().await.iter().any(|t| t.ends_with("old_t")));
+        // Duplicate emails: the unique index fails on the copy, so the rows were there.
+        let unique = "DROP TABLE orders;\nCREATE UNIQUE INDEX users_email ON users(email)";
+        assert!(trial(c.clone(), "db", root, unique, true).await.is_err());
+        let conns = Connections::parse(&std::fs::read_to_string(conf).unwrap()).unwrap();
+        let d = conns.db.get("db").unwrap().clone();
+        let cancel = tokio_util::sync::CancellationToken::new();
+        let (_, left, _) = server_query(&conns, "db", &d, leftovers, 100, &cancel, Exec::ReadOnly)
+            .await
+            .unwrap();
+        assert!(left.is_empty(), "trial copies left: {left:?}");
+        apply(c.clone(), "db", root, sql, true).await.unwrap();
+        assert!(!tables().await.iter().any(|t| t.ends_with("old_t")));
+    }
+
+    fn server_conf(dir: &Path, kind: &str, spec: &str) -> PathBuf {
+        let p: Vec<&str> = spec.split(':').collect();
+        let conf = dir.join("connections.toml");
+        std::fs::write(&conf, format!("[db.db]\nkind = \"{kind}\"\nhost = \"{}\"\nport = {}\nuser = \"{}\"\ndatabase = \"{}\"\n", p[0], p[1], p[2], p[3])).unwrap();
+        conf
+    }
+
+    /// `KOR_TEST_MYSQL=host:port:user:database` (an empty database) and `KOR_DB_DB_PASSWORD`:
+    /// `cargo test -p kor-agent -- --ignored real_mysql_trial`.
+    #[tokio::test]
+    #[ignore = "needs a MySQL server"]
+    async fn real_mysql_trial() {
+        let dir = tempfile::tempdir().unwrap();
+        let conf = server_conf(
+            dir.path(),
+            "mysql",
+            &std::env::var("KOR_TEST_MYSQL").expect("KOR_TEST_MYSQL"),
+        );
+        server_trial_round(
+            &conf,
+            dir.path(),
+            "CREATE TABLE users(id INT PRIMARY KEY, email VARCHAR(100)); CREATE TABLE orders(id INT PRIMARY KEY, user_id INT, FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE); CREATE TABLE old_t(id INT); INSERT INTO users VALUES (1, 'a@x'), (2, 'a@x'); INSERT INTO orders VALUES (1, 1)",
+            "SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'kor_trial%'",
+        )
+        .await;
+    }
+
+    /// `KOR_TEST_MSSQL=host:port:user:database` (an empty database) and `KOR_DB_DB_PASSWORD`:
+    /// `cargo test -p kor-agent -- --ignored real_mssql_trial`.
+    #[tokio::test]
+    #[ignore = "needs a SQL Server"]
+    async fn real_mssql_trial() {
+        let dir = tempfile::tempdir().unwrap();
+        let conf = server_conf(
+            dir.path(),
+            "mssql",
+            &std::env::var("KOR_TEST_MSSQL").expect("KOR_TEST_MSSQL"),
+        );
+        server_trial_round(
+            &conf,
+            dir.path(),
+            "CREATE TABLE users(id INT PRIMARY KEY, email VARCHAR(100)); CREATE TABLE orders(id INT PRIMARY KEY, user_id INT REFERENCES users(id)); CREATE TABLE old_t(id INT); INSERT INTO users VALUES (1, 'a@x'), (2, 'a@x'); INSERT INTO orders VALUES (1, 1)",
+            // No copy here: the rolled-back transaction must leave no trace.
+            "SELECT name FROM sys.columns WHERE name = 'nick'",
+        )
+        .await;
     }
 
     #[test]

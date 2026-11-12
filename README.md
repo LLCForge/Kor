@@ -183,7 +183,7 @@ against mock servers. An OpenAI-compatible provider needs only a TOML manifest, 
 - The agent asks the graph before reading files. A benchmark mode (`kor bench --graph`) compares token use with the
   graph on and off; the target reduction has been measured only with mock models so far.
 - **Live diagrams** (`kor diagram sync | watch | check`) in Mermaid, PlantUML and D2, regenerated from code.
-- **Database schema layer** (`kor db connect <id or URL> | tables | show | indexes | migrate new | apply`; a URL is saved to `connections.toml`, its password to the OS keychain) and monorepo awareness
+- **Database schema layer** (`kor db connect <id or URL> | tables | show | indexes | migrate new | apply`; a URL is saved to `connections.toml`, its password to the OS keychain; `apply` tries destructive SQL first on a copy: SQLite file, Postgres template database, MySQL database copy up to 1M rows, SQL Server rolled-back transaction) and monorepo awareness
   (`kor packages affected | deps | cost`) for Cargo, pnpm/yarn/npm, Turborepo, Nx, Lerna, Bazel, Go, Gradle and .NET.
 
 ### Cost control and estimates
