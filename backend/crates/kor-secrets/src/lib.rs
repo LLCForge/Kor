@@ -55,16 +55,12 @@ impl KeychainStore {
 
 /// Run a keychain call on its own thread. On Linux the Secret Service goes through zbus's
 /// blocking API, which (with zbus's tokio feature in the tree) calls `block_on` and panics on a
-/// tokio worker; callers are often async. Elsewhere it runs in place.
+/// tokio worker; callers are often async. Keychain calls are rare, so every OS takes the thread.
 fn off_runtime<T: Send>(f: impl FnOnce() -> T + Send) -> T {
-    if cfg!(target_os = "linux") {
-        std::thread::scope(|s| match s.spawn(f).join() {
-            Ok(v) => v,
-            Err(p) => std::panic::resume_unwind(p),
-        })
-    } else {
-        f()
-    }
+    std::thread::scope(|s| match s.spawn(f).join() {
+        Ok(v) => v,
+        Err(p) => std::panic::resume_unwind(p),
+    })
 }
 
 impl SecretStore for KeychainStore {

@@ -549,7 +549,7 @@ pub fn isolated_env_with(
     std::fs::write(
         config.join("config.toml"),
         format!(
-            "[agent]\nmodel = \"{PROVIDER}/{MODEL}\"\nverify = \"off\"\n\n[privacy]\nmode = true\n\n[update]\nauto = false\n\n{}\n",
+            "[agent]\nmodel = \"{PROVIDER}/{MODEL}\"\nverify = \"off\"\n\n[intent]\nenabled = false\n\n[privacy]\nmode = true\n\n[update]\nauto = false\n\n{}\n",
             scenario.project.config
         ),
     )?;

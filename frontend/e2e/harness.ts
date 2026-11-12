@@ -75,14 +75,18 @@ export async function serve(scenarioFile: string): Promise<Served> {
     proc.once('exit', (c) => fail(new Error(`mock_provider exited (${c})`)))
   })
   const info = JSON.parse(line) as Omit<Served, 'root' | 'stop'>
+  // One promise for every caller: a second `once('exit')` after the exit would wait forever.
+  const exited = new Promise<void>((ok) => {
+    if (proc.exitCode !== null || proc.signalCode !== null) ok()
+    else proc.once('exit', () => ok())
+  })
   return {
     ...info,
     root,
-    stop: () =>
-      new Promise((ok) => {
-        proc.once('exit', () => ok())
-        proc.stdin!.end()
-      }),
+    stop: () => {
+      proc.stdin!.end()
+      return exited
+    },
   }
 }
 
