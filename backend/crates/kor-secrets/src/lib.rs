@@ -69,11 +69,15 @@ fn off_runtime<T: Send>(f: impl FnOnce() -> T + Send) -> T {
 
 impl SecretStore for KeychainStore {
     fn get(&self, account: &str) -> Result<Option<SecretString>, SecretError> {
-        off_runtime(|| match Self::entry(account)?.get_password() {
-            Ok(p) => Ok(Some(SecretString::from(p))),
-            Err(keyring::Error::NoEntry) => Ok(None),
-            Err(e) => Err(SecretError::Keychain(e.to_string())),
-        })
+        off_runtime(
+            || match keyring::Entry::new(SERVICE, account).and_then(|e| e.get_password()) {
+                Ok(p) => Ok(Some(SecretString::from(p))),
+                // No credential store on this machine (headless Linux without a Secret Service):
+                // nothing can be stored there, so the key is simply absent; writes still fail.
+                Err(keyring::Error::NoEntry | keyring::Error::NoDefaultStore) => Ok(None),
+                Err(e) => Err(SecretError::Keychain(e.to_string())),
+            },
+        )
     }
 
     fn set(&self, account: &str, secret: &SecretString) -> Result<(), SecretError> {
@@ -85,10 +89,12 @@ impl SecretStore for KeychainStore {
     }
 
     fn delete(&self, account: &str) -> Result<bool, SecretError> {
-        off_runtime(|| match Self::entry(account)?.delete_credential() {
-            Ok(()) => Ok(true),
-            Err(keyring::Error::NoEntry) => Ok(false),
-            Err(e) => Err(SecretError::Keychain(e.to_string())),
+        off_runtime(|| {
+            match keyring::Entry::new(SERVICE, account).and_then(|e| e.delete_credential()) {
+                Ok(()) => Ok(true),
+                Err(keyring::Error::NoEntry | keyring::Error::NoDefaultStore) => Ok(false),
+                Err(e) => Err(SecretError::Keychain(e.to_string())),
+            }
         })
     }
 }

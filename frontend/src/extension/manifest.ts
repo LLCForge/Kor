@@ -19,7 +19,8 @@ export function manifest(target: Target, version: string): Record<string, unknow
     version,
     icons,
     action: { default_title: '__MSG_action__', default_icon: icons },
-    host_permissions: ['http://*/*', 'https://*/*'],
+    // `<all_urls>`: Chrome's tabs.captureVisibleTab (screenshots) refuses narrower host patterns.
+    host_permissions: ['<all_urls>'],
     content_security_policy: { extension_pages: "script-src 'self'; object-src 'none'; connect-src 'self' ws://127.0.0.1:49201" },
   }
   if (target === 'firefox') {

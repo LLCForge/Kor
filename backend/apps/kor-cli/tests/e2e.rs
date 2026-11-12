@@ -16,7 +16,7 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
-use expectrl::{Eof, Regex, Session};
+use expectrl::{Any, Eof, Regex, Session};
 use kor_runtime::e2e::{self, IsolatedEnv, MockServer, Outcome, Scenario, Step};
 use serde_json::Value;
 
@@ -135,26 +135,44 @@ fn text(captures: &expectrl::Captures) -> String {
         + &String::from_utf8_lossy(captures.as_bytes())
 }
 
+/// Waits for `pattern`, answering the cursor-position query (`ESC[6n`) a real terminal answers
+/// and a Unix PTY does not, so the REPL keeps the inline viewport it has on a terminal.
+fn expect_tty(p: &mut Session, pattern: &str, what: &str) -> String {
+    let mut out = String::new();
+    loop {
+        let c = p
+            .expect(Any(vec![Regex(r"\x1b\[6n"), Regex(pattern)]))
+            .unwrap_or_else(|e| panic!("{what}: {e:?}\n--- output so far ---\n{out}"));
+        out.push_str(&String::from_utf8_lossy(c.before()));
+        if c.as_bytes() != b"\x1b[6n" {
+            out.push_str(&String::from_utf8_lossy(c.as_bytes()));
+            return out;
+        }
+        p.send("\x1b[1;1R").expect("answer cursor query");
+    }
+}
+
 /// Consecutive prompt / approve steps: one REPL session in a PTY, answered like a user.
 fn cli_session(env: &IsolatedEnv, steps: &[&Step], out: &mut String) {
     let mut c = command(env);
     c.arg("--lang").arg("en");
     let mut p = pty(c);
     // The hint line ends the banner; the `✶ ` prompt follows it.
-    out.push_str(&text(&p.expect("/exit quits").expect("REPL start")));
-    out.push_str(&text(&p.expect("✶ ").expect("first prompt")));
+    out.push_str(&expect_tty(&mut p, "/exit quits", "REPL start"));
+    out.push_str(&expect_tty(&mut p, "✶ ", "first prompt"));
     for st in steps {
         if let Some(prompt) = &st.prompt {
             p.send_line(prompt).expect("send prompt");
             // The turn ends at the next prompt, or stops at an approval card first.
             let next = steps.iter().skip_while(|s| !std::ptr::eq(**s, *st)).nth(1);
             if next.is_some_and(|n| n.approve.is_some()) {
-                out.push_str(&text(
-                    &p.expect(Regex(r"\[n\] (no|reject all)"))
-                        .expect("approval card"),
+                out.push_str(&expect_tty(
+                    &mut p,
+                    r"\[n\] (no|reject all)",
+                    "approval card",
                 ));
             } else {
-                out.push_str(&text(&p.expect("✶ ").expect("turn end")));
+                out.push_str(&expect_tty(&mut p, "✶ ", "turn end"));
             }
         } else if let Some(a) = &st.approve {
             let key = match a.as_str() {
@@ -163,7 +181,7 @@ fn cli_session(env: &IsolatedEnv, steps: &[&Step], out: &mut String) {
                 _ => "y",
             };
             p.send_line(key).expect("send approval");
-            out.push_str(&text(&p.expect("✶ ").expect("turn end after approval")));
+            out.push_str(&expect_tty(&mut p, "✶ ", "turn end after approval"));
         }
     }
     p.send_line("/exit").expect("exit");

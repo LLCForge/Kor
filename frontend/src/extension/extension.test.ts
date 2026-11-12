@@ -175,6 +175,8 @@ test('manifests: Chrome side panel and tab groups, Firefox sidebar and gecko id,
     assert.equal(m.manifest_version, 3)
     assert.ok((m.permissions as string[]).includes('nativeMessaging'))
     assert.ok((m.permissions as string[]).includes('scripting'))
+    // Chrome's captureVisibleTab needs `<all_urls>`; http/https patterns are refused.
+    assert.deepEqual(m.host_permissions, ['<all_urls>'])
   }
   assert.ok((c.permissions as string[]).includes('tabGroups') && (c.permissions as string[]).includes('sidePanel'))
   assert.deepEqual(c.optional_permissions, ['debugger'])
