@@ -23,6 +23,9 @@ jobs:
       VENICE_API_KEY: ${{ secrets.KOR_SMOKE_VENICE_KEY }}
       KOR_SMOKE_MODEL: ${{ vars.KOR_SMOKE_MODEL || 'venice/venice-uncensored' }}
     steps:
+      # Byte-exact checkout as in the repo (generated files and scanners expect it).
+      - if: runner.os == 'Windows'
+        run: git config --global core.autocrlf false
       - uses: actions/checkout@v4
       - name: Secret present
         id: key

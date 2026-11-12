@@ -1831,13 +1831,24 @@ fn new_terminal(t: &kor_config::Tui) -> std::io::Result<Term> {
     if t.alt_screen {
         return ratatui::Terminal::new(backend);
     }
-    let rows = crossterm::terminal::size().map_or(24, |(_, h)| h.max(10));
+    let (cols, rows) =
+        crossterm::terminal::size().map_or((80, 24), |(w, h)| (w.max(20), h.max(10)));
     ratatui::Terminal::with_options(
         backend,
         ratatui::TerminalOptions {
             viewport: ratatui::Viewport::Inline(rows),
         },
     )
+    .or_else(|_| {
+        // An inline viewport asks the terminal where the cursor is; some (serial consoles, CI
+        // PTYs, a few SSH setups) never answer. Draw over the whole window instead of failing.
+        ratatui::Terminal::with_options(
+            ratatui::backend::CrosstermBackend::new(std::io::stdout()),
+            ratatui::TerminalOptions {
+                viewport: ratatui::Viewport::Fixed(ratatui::layout::Rect::new(0, 0, cols, rows)),
+            },
+        )
+    })
 }
 
 #[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps

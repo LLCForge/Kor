@@ -484,9 +484,10 @@ impl DesktopTool {
             }
             Op::UiaInvoke => {
                 let r = input.reference.as_deref().ok_or("ref is required")?;
-                let bound = lock(&self.refs.elems).get(r).cloned().ok_or_else(|| {
-                    format!("unknown ref `{r}`; call uia_snapshot first (refs belong to the latest snapshot)")
-                })?;
+                let bound = lock(&self.refs.elems)
+                    .get(r)
+                    .cloned()
+                    .ok_or_else(|| unknown_ref(r))?;
                 let verb = input.action.as_deref().unwrap_or("invoke");
                 let value = input.value.clone().unwrap_or_default();
                 if verb == "set_value" {
@@ -772,6 +773,13 @@ impl Tool for DesktopTool {
             Ok(a) => a,
             Err(e) => return ToolOutput::err(format!("invalid input: {e}")),
         };
+        // A stale ref is an input error: report it before asking the app's tier about it.
+        if matches!(self.op, Op::UiaInvoke)
+            && let Some(r) = a.reference.as_deref()
+            && !lock(&self.refs.elems).contains_key(r)
+        {
+            return ToolOutput::err(format!("{}: {}", self.name(), unknown_ref(r)));
+        }
         // §19.1: the target app's tier, the human-first stop, the indicator and the audit log.
         let ticket = match self.gate(&a) {
             Some((action, app, destructive)) => {
@@ -802,6 +810,10 @@ impl Tool for DesktopTool {
         }
         out
     }
+}
+
+fn unknown_ref(r: &str) -> String {
+    format!("unknown ref `{r}`; call uia_snapshot first (refs belong to the latest snapshot)")
 }
 
 #[cfg(test)]
