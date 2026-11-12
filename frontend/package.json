@@ -1,6 +1,6 @@
 {
   "name": "kor-desktop",
-  "version": "0.8.10",
+  "version": "0.8.11",
   "license": "Apache-2.0 OR MIT",
   "scripts": {
     "typecheck": "tsc",

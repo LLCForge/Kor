@@ -1,7 +1,7 @@
 [package]
 name = "kor-runtime"
 description = "Shared agent session assembly for the Kor CLI and desktop app"
-version = "0.6.8"
+version = "0.6.9"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true

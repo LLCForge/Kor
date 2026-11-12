@@ -3691,7 +3691,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kor-agent"
-version = "0.6.7"
+version = "0.6.8"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3756,7 +3756,7 @@ dependencies = [
 
 [[package]]
 name = "kor-computer"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "base64 0.22.1",
  "enigo",
@@ -3784,7 +3784,7 @@ dependencies = [
 
 [[package]]
 name = "kor-core"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "reqwest",
  "serde",
@@ -3795,7 +3795,7 @@ dependencies = [
 
 [[package]]
 name = "kor-desktop"
-version = "0.8.10"
+version = "0.8.11"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3888,7 +3888,7 @@ dependencies = [
 
 [[package]]
 name = "kor-i18n"
-version = "0.1.12"
+version = "0.1.13"
 dependencies = [
  "fluent-bundle",
  "serde",
@@ -3940,7 +3940,7 @@ dependencies = [
 
 [[package]]
 name = "kor-providers"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3959,7 +3959,7 @@ dependencies = [
 
 [[package]]
 name = "kor-proxy"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3988,7 +3988,7 @@ dependencies = [
 
 [[package]]
 name = "kor-runtime"
-version = "0.6.8"
+version = "0.6.9"
 dependencies = [
  "arboard",
  "async-trait",
@@ -4074,7 +4074,7 @@ dependencies = [
 
 [[package]]
 name = "kor-tools"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
