@@ -67,6 +67,7 @@ pub mod osint;
 pub mod perf;
 // Tray, notifications, approval queue, ETA, "call me", window layouts (ADR 0051).
 pub mod builtin_skills;
+pub mod fim;
 pub mod obs;
 pub mod prefs;
 pub mod presence;
@@ -1411,6 +1412,21 @@ pub fn prepare(
         {
             tools.push(Arc::new(kor_agent::semantic::FileSearch::new(
                 h.clone(),
+                &home.join("index"),
+                &tctx.root,
+            )));
+        }
+        // §4.2: a Cohere key backs file_search when nothing above did (embed + rerank).
+        if !tools.iter().any(|t| t.name() == "file_search")
+            && let Some(home) = kor_home()
+            && let Ok(reg) = registry(l, &mut ignored)
+            && let Some(m) = reg.get("cohere")
+            && let Ok(Some((key, _))) = key_for(m)
+            && let Ok(c) = kor_providers::extras::Cohere::new(m, Some(key.clone()))
+        {
+            redactor.register(key);
+            tools.push(Arc::new(kor_agent::semantic::FileSearch::new(
+                c,
                 &home.join("index"),
                 &tctx.root,
             )));

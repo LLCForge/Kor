@@ -102,6 +102,9 @@ pub struct Quirks {
     pub extra_headers: BTreeMap<String, String>,
     /// Model id → id sent on the wire (Azure deployment names).
     pub model_map: BTreeMap<String, String>,
+    /// llama.cpp server: a structured reply is constrained with a GBNF `grammar` built from the
+    /// schema (§15.13), which also works on builds without JSON-schema support.
+    pub grammar: bool,
 }
 
 fn yes() -> bool {

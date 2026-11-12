@@ -54,6 +54,7 @@ fn user_file(l: &Localizer, ctx: &Ctx) -> anyhow::Result<std::path::PathBuf> {
         .ok_or_else(|| anyhow::anyhow!(l.t("config-set-no-user-dir")))
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, cmd: ComputerCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let config = ctx

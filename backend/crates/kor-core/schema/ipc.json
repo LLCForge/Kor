@@ -42518,6 +42518,52 @@
         "items": {}
       }
     },
+    "fim.complete": {
+      "description": "Mistral Codestral ile imleç konumundaki kodu tamamlar; dosya açık projenin içinde olmalı.",
+      "params": [
+        {
+          "name": "file",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "line",
+          "schema": {
+            "type": "number"
+          }
+        },
+        {
+          "name": "col",
+          "schema": {
+            "type": "number"
+          },
+          "optional": true
+        },
+        {
+          "name": "write",
+          "schema": {
+            "type": "boolean"
+          },
+          "optional": true
+        }
+      ],
+      "result": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "written": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "text",
+          "written"
+        ]
+      }
+    },
     "estimate.task": {
       "params": [
         {

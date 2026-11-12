@@ -1,11 +1,14 @@
 //! Real screen capture and input (feature `live`): `xcap` (GDI/DXGI, CoreGraphics, X11/Wayland
 //! portal) and `enigo` (`SendInput`, `CGEvent` with the Accessibility permission, X11 / libei).
 
+#[cfg(not(target_env = "musl"))]
 use std::io::Cursor;
 
+#[cfg(not(target_env = "musl"))]
 use base64::Engine as _;
 use enigo::{Axis, Button, Coordinate, Direction, Enigo, Key, Keyboard, Mouse, Settings};
 use serde::{Deserialize, Serialize};
+#[cfg(not(target_env = "musl"))]
 use xcap::Monitor;
 
 use crate::keys::{KeyName, shot_size, to_input};
@@ -24,6 +27,7 @@ pub struct Display {
 }
 
 /// Every monitor (empty when capture is unavailable, e.g. a headless session).
+#[cfg(not(target_env = "musl"))]
 pub fn displays() -> Vec<Display> {
     Monitor::all()
         .map(|all| {
@@ -42,6 +46,7 @@ pub fn displays() -> Vec<Display> {
         .unwrap_or_default()
 }
 
+#[cfg(not(target_env = "musl"))]
 fn primary() -> Result<Monitor, String> {
     let all = Monitor::all().map_err(|e| format!("screen capture unavailable: {e}"))?;
     let idx = all
@@ -53,6 +58,7 @@ fn primary() -> Result<Monitor, String> {
         .ok_or_else(|| "no monitor found".into())
 }
 
+#[cfg(not(target_env = "musl"))]
 pub fn screen() -> Result<(u32, u32), String> {
     let m = primary()?;
     Ok((
@@ -69,6 +75,7 @@ pub struct Shot {
     pub real: (u32, u32),
 }
 
+#[cfg(not(target_env = "musl"))]
 pub fn screenshot() -> Result<Shot, String> {
     let m = primary()?;
     let img = m
@@ -91,6 +98,26 @@ pub fn screenshot() -> Result<Shot, String> {
         size: (w, h),
         real,
     })
+}
+
+/// The static musl CLI has no screen capture (it links no desktop libraries).
+#[cfg(target_env = "musl")]
+const NO_CAPTURE: &str =
+    "screen capture is not part of the static Linux (musl) build; use the regular Linux build";
+
+#[cfg(target_env = "musl")]
+pub fn displays() -> Vec<Display> {
+    Vec::new()
+}
+
+#[cfg(target_env = "musl")]
+pub fn screen() -> Result<(u32, u32), String> {
+    Err(NO_CAPTURE.into())
+}
+
+#[cfg(target_env = "musl")]
+pub fn screenshot() -> Result<Shot, String> {
+    Err(NO_CAPTURE.into())
 }
 
 fn enigo() -> Result<Enigo, String> {

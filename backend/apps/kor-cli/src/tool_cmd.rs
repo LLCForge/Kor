@@ -102,6 +102,7 @@ fn permits(ctx: &Ctx) -> kor_config::ToolsConfig {
         .unwrap_or_default()
 }
 
+#[allow(clippy::many_single_char_names, clippy::too_many_lines)] // short names of the math or the protocol; one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, cmd: &ToolCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let rt = crate::providers::runtime()?;

@@ -61,6 +61,7 @@ fn project() -> Option<std::path::PathBuf> {
     Some(kor_runtime::osint::project_root(&cwd))
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, cmd: LayoutCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let s = store(l)?;

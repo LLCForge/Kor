@@ -217,7 +217,7 @@ impl Budget {
     }
 }
 
-/// Append one breakdown as a JSON line, rotating the file past [`LOG_MAX_BYTES`].
+/// Append one breakdown as a JSON line, rotating the file past `LOG_MAX_BYTES`.
 pub fn append_log(path: &Path, b: &Breakdown) -> std::io::Result<()> {
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)?;

@@ -53,6 +53,7 @@ fn text(t: &Terminal<TestBackend>) -> String {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 fn every_panel_draws_real_core_events() {
     let scenario = Scenario::parse(SCENARIO).unwrap();
     let l = Localizer::new(Lang::En);

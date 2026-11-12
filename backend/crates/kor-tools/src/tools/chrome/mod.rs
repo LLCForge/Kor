@@ -1,7 +1,7 @@
 //! The Kor browser extension bridge (§18, ADR 0058): Kor drives the user's OWN Chrome / Edge /
 //! Brave / Firefox (their tabs and logins) through the extension in `frontend/src/extension`.
 //!
-//! - [`server`]: the local WebSocket the extension (or the native host relaying for it) connects
+//! - `server`: the local WebSocket the extension (or the native host relaying for it) connects
 //!   to, with pairing ([`pairing`]) and the side-panel channels.
 //! - [`policy`]: the user's domain allow/deny lists (`kor chrome allow|deny`).
 //! - [`native_host`]: `kor chrome-native-host`, the native messaging relay.

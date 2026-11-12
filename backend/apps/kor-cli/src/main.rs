@@ -34,6 +34,7 @@ mod explain_cmd;
 mod export_cmd;
 mod extra;
 mod files_cmd;
+mod fim_cmd;
 mod find_cmd;
 mod folder_cmd;
 mod graph_cmd;
@@ -499,6 +500,8 @@ enum Cmd {
     Comment(comment_cmd::CommentArgs),
     /// Conventional Commits message from the staged diff.
     Commit(commit_cmd::CommitArgs),
+    /// Fill in the code at a cursor position with Mistral Codestral (§4.2).
+    Fim(fim_cmd::FimArgs),
     /// Keep a Changelog section from commits.
     Changelog(commit_cmd::ChangelogArgs),
     /// Prompt and task templates (`kor templates list|show|new`).
@@ -1124,6 +1127,7 @@ fn main() -> ExitCode {
         .map_or(ExitCode::FAILURE, |h| h.join().unwrap_or(ExitCode::FAILURE))
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 fn real_main() -> ExitCode {
     let argv: Vec<String> = std::env::args().collect();
     let flag = prescan_lang(&argv);
@@ -1396,6 +1400,7 @@ fn run_cmd(ctx: &Ctx, cmd: Cmd) -> anyhow::Result<bool> {
         Cmd::Comment(a) => comment_cmd::run(ctx, &a),
         Cmd::Consensus(a) => consensus_cmd::run(ctx, &a),
         Cmd::Commit(a) => commit_cmd::commit(ctx, &a),
+        Cmd::Fim(a) => fim_cmd::run(ctx, &a),
         Cmd::Changelog(a) => commit_cmd::changelog(ctx, &a),
         Cmd::Templates { command } => templates_cmd::run(ctx, &command),
         Cmd::Run { target, inputs } => templates_cmd::run_template(ctx, &target, &inputs),

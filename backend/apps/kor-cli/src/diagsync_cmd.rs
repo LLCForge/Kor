@@ -217,6 +217,7 @@ pub fn sync_for_pr(root: &Path) -> Vec<String> {
     stale.iter().map(|c| ds::summary_line(c)).collect()
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, cmd: &DiagramSub) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let root = crate::graph_cmd::root()?;

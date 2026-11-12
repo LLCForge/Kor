@@ -222,6 +222,40 @@ fr = ["afficher la clé du proxy", "clé d'accès du proxy"]
 eta_s = 1
 
 [[intent]]
+command = "kor proxy auth list"
+run = "auto"
+tr = ["proxy abonelik hesaplarını listele", "proxy hesap havuzu", "bağlı abonelik hesapları"]
+en = ["list the proxy subscription accounts", "proxy account pool", "which subscription accounts are connected"]
+fr = ["lister les comptes d'abonnement du proxy", "pool de comptes du proxy"]
+eta_s = 1
+
+[[intent]]
+command = "kor proxy auth login"
+run = "confirm"
+tr = ["proxy'ye abonelik hesabı ekle", "proxy için hesapla giriş yap", "yeni abonelik hesabı bağla"]
+en = ["add a subscription account to the proxy", "log in an account for the proxy", "connect a new subscription account"]
+fr = ["ajouter un compte d'abonnement au proxy", "connecter un compte au proxy"]
+params = [{ name = "provider", kind = "text", required = true }]
+eta_s = 20
+
+[[intent]]
+command = "kor proxy auth refresh"
+run = "confirm"
+tr = ["proxy belirteçlerini yenile", "abonelik oturumlarını tazele", "proxy hesap belirteci yenile"]
+en = ["refresh the proxy tokens", "renew the subscription sessions", "refresh the proxy account token"]
+fr = ["actualiser les jetons du proxy", "renouveler les sessions d'abonnement"]
+eta_s = 3
+
+[[intent]]
+command = "kor proxy auth remove"
+run = "confirm"
+tr = ["proxy abonelik hesabını kaldır", "proxy hesabını sil", "abonelik hesabını havuzdan çıkar"]
+en = ["remove a proxy subscription account", "delete the proxy account", "take the account out of the pool"]
+fr = ["retirer un compte d'abonnement du proxy", "supprimer le compte du proxy"]
+params = [{ name = "account", kind = "text", required = true }]
+eta_s = 1
+
+[[intent]]
 command = "kor provider add"
 run = "confirm"
 tr = ["yeni sağlayıcı ekle", "özel uç nokta ekle", "yerel model sunucusu ekle", "ollama sunucusunu ekle"]
@@ -2028,6 +2062,15 @@ en = ["look at this screenshot", "explain the image on the clipboard", "what is 
 fr = ["regarde cette capture d'écran", "explique l'image du presse-papiers"]
 params = [{ name = "question", kind = "text", required = true }]
 eta_s = 8
+
+[[intent]]
+command = "kor fim"
+run = "confirm"
+tr = ["buradaki kodu tamamla", "imleçteki boşluğu doldur", "codestral ile tamamla"]
+en = ["complete the code here", "fill in the code at the cursor", "fill in the middle with codestral"]
+fr = ["complète le code ici", "remplis le code au curseur"]
+params = [{ name = "file", kind = "path", required = true }]
+eta_s = 5
 
 [[intent]]
 command = "kor sessions import"

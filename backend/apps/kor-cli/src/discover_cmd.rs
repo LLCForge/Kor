@@ -279,7 +279,7 @@ mod tests {
                 }],
                 ..Default::default()
             },
-            system: Default::default(),
+            system: kor_health::system::Profile::default(),
             sudo_offered: Vec::new(),
             sudo_used: Vec::new(),
         };

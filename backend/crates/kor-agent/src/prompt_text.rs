@@ -106,7 +106,7 @@ pub enum Surface {
     /// The `kor` CLI: Markdown is shown as text in a terminal.
     #[default]
     Terminal,
-    /// The desktop app: fenced blocks in the languages of [`RICH_BLOCKS`] render as visuals.
+    /// The desktop app: fenced blocks in the languages of `RICH_BLOCKS` render as visuals.
     Desktop,
 }
 

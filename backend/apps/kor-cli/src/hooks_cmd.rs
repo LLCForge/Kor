@@ -15,7 +15,7 @@ pub enum HooksCmd {
     List,
     /// Add a hook.
     Add(HookArgs),
-    /// Replace hook <id> of <event> (ids from `kor hooks list --ids`).
+    /// Replace hook `<id>` of `<event>` (ids from `kor hooks list --ids`).
     Edit {
         /// Current event of the hook.
         old_event: String,
@@ -23,7 +23,7 @@ pub enum HooksCmd {
         #[command(flatten)]
         hook: HookArgs,
     },
-    /// Remove hook <id> of <event>.
+    /// Remove hook `<id>` of `<event>`.
     Rm {
         event: String,
         id: String,
@@ -222,6 +222,7 @@ fn list(ctx: &Ctx, root: &std::path::Path) {
     }
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, cmd: &HooksCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let root = kor_runtime::project_root()?;

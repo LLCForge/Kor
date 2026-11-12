@@ -14,3 +14,6 @@ docs = "https://github.com/ggml-org/llama.cpp/tree/master/tools/server"
 tier = "local"
 retention = "Never leaves this machine."
 training_on_data = false
+
+[quirks]
+grammar = true

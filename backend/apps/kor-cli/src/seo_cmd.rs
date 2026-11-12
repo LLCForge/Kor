@@ -1847,17 +1847,16 @@ async fn opp_cmd(
     let (s, e) = dates(days, 0);
     let rows = if let Source::Csv(file) = source {
         // SECURITY: a bounded read; the CSV is the user's own file.
-        match std::fs::metadata(file)
-            .map_err(|e| format!("{}: {e}", file.display()))
-            .and_then(|m| {
-                if m.len() > 20 * 1024 * 1024 {
-                    Err(format!("{}: larger than 20 MB", file.display()))
-                } else {
-                    std::fs::read_to_string(file).map_err(|e| format!("{}: {e}", file.display()))
-                }
-            })
-            .and_then(|text| opportunity::rows_from_csv(&text))
-        {
+        let read = match tokio::fs::metadata(file).await {
+            Ok(m) if m.len() > 20 * 1024 * 1024 => {
+                Err(format!("{}: larger than 20 MB", file.display()))
+            }
+            Ok(_) => tokio::fs::read_to_string(file)
+                .await
+                .map_err(|e| format!("{}: {e}", file.display())),
+            Err(e) => Err(format!("{}: {e}", file.display())),
+        };
+        match read.and_then(|text| opportunity::rows_from_csv(&text)) {
             Ok(r) => r,
             Err(err) => return fail(l, err),
         }

@@ -86,6 +86,7 @@ fn print_sync(l: &Localizer, r: &korfolder::SyncReport) {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)] // owned value from the parsed arguments
 pub fn run(ctx: &Ctx, cmd: FolderCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let lay = layout()?;

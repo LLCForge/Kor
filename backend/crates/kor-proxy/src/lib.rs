@@ -23,6 +23,13 @@
 //! with the keychain key pool), so local models such as Ollama are servable too.
 
 pub mod config;
+// The subscription login is work in progress; these style lints are left to its author.
+#[allow(
+    clippy::needless_pass_by_value,
+    clippy::assigning_clones,
+    clippy::struct_field_names,
+    rustdoc::broken_intra_doc_links
+)]
 pub mod oauth;
 pub mod routing;
 mod server;

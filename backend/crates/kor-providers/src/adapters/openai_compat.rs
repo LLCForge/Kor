@@ -276,7 +276,12 @@ impl Provider for OpenAiCompat {
         if let Some(wire) = self.manifest.quirks.model_map.get(&req.model) {
             req.model.clone_from(wire);
         }
-        let body = body(&req, self.http.provider())?;
+        let mut body = body(&req, self.http.provider())?;
+        if self.manifest.quirks.grammar
+            && let Some(s) = crate::response_schema()
+        {
+            as_grammar(&mut body, &s.schema);
+        }
         let resp = self.http.post_json("/chat/completions", body, &[]).await?;
         Ok(stream::spawn(
             &self.http,
@@ -288,10 +293,42 @@ impl Provider for OpenAiCompat {
     }
 }
 
+/// The structured reply as a llama.cpp GBNF `grammar` instead of `response_format`.
+fn as_grammar(body: &mut Value, schema: &Value) {
+    if let Some(o) = body.as_object_mut() {
+        o.remove("response_format");
+        o.insert("grammar".into(), crate::gbnf::from_schema(schema).into());
+    }
+}
+
 #[cfg(test)]
 mod usage_tests {
     use super::*;
     use crate::stream::{Frame, Mapper};
+
+    #[test]
+    fn llama_cpp_gets_a_grammar_instead_of_a_response_format() {
+        let m = crate::Registry::builtin()
+            .get("local-llamacpp")
+            .unwrap()
+            .clone();
+        assert!(m.quirks.grammar, "the llama.cpp manifest asks for GBNF");
+        assert!(
+            !crate::Registry::builtin()
+                .get("openrouter")
+                .unwrap()
+                .quirks
+                .grammar
+        );
+        let mut body =
+            serde_json::json!({"model": "m", "response_format": {"type": "json_schema"}});
+        as_grammar(
+            &mut body,
+            &serde_json::json!({"type": "object", "properties": {"a": {"type": "string"}}, "required": ["a"]}),
+        );
+        assert!(body.get("response_format").is_none());
+        assert!(body["grammar"].as_str().unwrap().starts_with("root ::= "));
+    }
 
     fn frame(data: &str) -> Frame {
         Frame {

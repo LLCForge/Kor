@@ -172,6 +172,7 @@ fn on_path() -> bool {
     std::env::split_paths(&path).any(|d| d.join(&name).is_file())
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 fn checks(ctx: &Ctx) -> bool {
     let l = &ctx.l;
     let mut failures: i64 = 0;

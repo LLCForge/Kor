@@ -27,6 +27,7 @@ mod docs;
 mod eco;
 mod estimate;
 mod files;
+mod fim;
 mod find;
 mod forge;
 mod forks;
@@ -143,6 +144,7 @@ pub async fn call(method: &str, args: &[Value], app: &AppHandle, state: &AppStat
         diagrams::NS => diagrams::call(ns, name, args, app, state).await,
         docs::NS => docs::call(ns, name, args, app, state).await,
         estimate::NS => estimate::call(ns, name, args, app, state).await,
+        fim::NS => fim::call(ns, name, args, app, state).await,
         forks::NS => forks::call(ns, name, args, app, state).await,
         hooks::NS => hooks::call(ns, name, args, app, state).await,
         intent::NS => intent::call(ns, name, args, app, state).await,

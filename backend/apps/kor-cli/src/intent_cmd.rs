@@ -1,6 +1,7 @@
 //! `kor intents list|test|add|forget` and the intent hook of the REPL / TUI / `kor "<text>"`
 //! (§30, ADR 0056). Routing lives in `kor_runtime::intent`; this file shows decisions and asks.
 
+use std::fmt::Write as _;
 use std::io::Write as _;
 use std::sync::Arc;
 
@@ -80,6 +81,7 @@ fn root() -> Option<std::path::PathBuf> {
     crate::graph_cmd::root().ok()
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, cmd: &IntentsCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let mut router = Router::load(root().as_deref());
@@ -247,7 +249,7 @@ fn suffix(l: &Localizer, p: &Plan) -> String {
         s.push_str(&l.t_args("intent-eta", &args!("seconds" => e)));
     }
     if let Some(u) = p.usd {
-        s.push_str(&format!(", {}", kor_runtime::cost::fmt_usd(u, true)));
+        let _ = write!(s, ", {}", kor_runtime::cost::fmt_usd(u, true));
     }
     if s.is_empty() { s } else { format!(" ({s})") }
 }
@@ -347,6 +349,7 @@ pub fn enabled(ctx: &Ctx) -> bool {
 /// Route one line of free text typed in the line REPL (or `kor "<text>"`): print the decision,
 /// ask where needed, learn corrections, return what to do. `interactive = false` (no terminal)
 /// never runs anything that needs a confirmation.
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub async fn route_line(
     ctx: &Ctx,
     text: &str,

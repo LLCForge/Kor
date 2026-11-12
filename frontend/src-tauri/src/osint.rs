@@ -182,12 +182,11 @@ pub fn terminal_only() -> bool {
     let cwd = std::env::current_dir().unwrap_or_default();
     let preferred = home_config().and_then(|c| c.config.shell.terminal.clone());
     for req in osint::parse_args(&args, &cwd).into_iter().flatten() {
-        if let Request::Terminal { root, .. } = req {
-            if let Err(e) =
+        if let Request::Terminal { root, .. } = req
+            && let Err(e) =
                 kor_platform::terminal::open(&root, preferred.as_deref(), &bundled_cli(), &[])
-            {
-                eprintln!("Terminal açılamadı: {e}");
-            }
+        {
+            eprintln!("Terminal açılamadı: {e}");
         }
     }
     true
@@ -220,10 +219,9 @@ fn dispatch(app: &AppHandle, mut req: Request) {
         quick: Some(q),
         ..
     } = &mut req
+        && prompt.is_empty()
     {
-        if prompt.is_empty() {
-            *prompt = q.prompt(&localizer(), root, files);
-        }
+        *prompt = q.prompt(&localizer(), root, files);
     }
     let open_root = app.state::<AppState>().root();
     match route(&req, open_root.as_deref()) {
@@ -412,11 +410,11 @@ fn watch_recent(app: AppHandle) {
                 continue;
             }
             last.clone_from(&root);
-            if let Some(r) = root.filter(|r| r.is_dir()) {
-                if push_recent(&mut recent, &r.to_string_lossy()) {
-                    save_recent(&recent);
-                    apply_jump_list(&app, &recent);
-                }
+            if let Some(r) = root.filter(|r| r.is_dir())
+                && push_recent(&mut recent, &r.to_string_lossy())
+            {
+                save_recent(&recent);
+                apply_jump_list(&app, &recent);
             }
         }
     });

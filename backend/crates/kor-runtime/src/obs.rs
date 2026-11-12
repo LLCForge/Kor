@@ -114,7 +114,7 @@ pub fn trace_dir() -> Option<PathBuf> {
 }
 
 /// Append the turn to `traces-DD.jsonl` (day of month) in `dir` and drop files older than
-/// [`KEEP_DAYS`]. A file of the same day name last month is replaced, not appended to.
+/// `KEEP_DAYS`. A file of the same day name last month is replaced, not appended to.
 ///
 /// # Errors
 /// When the folder or file cannot be written.

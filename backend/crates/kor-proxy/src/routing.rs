@@ -77,6 +77,7 @@ pub struct CredentialView {
 
 impl Credential {
     /// A subscription login (OAuth auth file) serving one group.
+    #[allow(clippy::too_many_arguments)] // one field each of the credential row
     pub fn subscription(
         label: String,
         group: usize,

@@ -103,6 +103,7 @@ Commands:
   consensus           Ask 2–3 models the same thing in parallel; keep the lines most agree on, show the rest
   comment             Translate code comments into a language; with --missing, write one-line comments for functions without one
   commit              Conventional Commits message from the staged changes
+  fim                 Fill in the code at a cursor position with Mistral Codestral
   changelog           Keep a Changelog section from the commits since the last tag
   templates           Prompt and task templates (project, personal, plugin and built-in)
   run                 Run a task template through the agent: kor run template:<name> --<input> value
@@ -10717,6 +10718,36 @@ Options:
 
   -m, --model <MODEL>
           Model for this command (provider/model)
+
+  -h, --help
+          Print help
+===== kor fim --help
+Fill in the code at a cursor position with Mistral Codestral
+
+Usage: kor fim [OPTIONS] --line <LINE> <FILE>
+
+Arguments:
+  <FILE>
+          File inside this project
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --line <LINE>
+          1-based line of the cursor
+
+      --col <COL>
+          1-based column (default: end of the line)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+      --write
+          Insert the completion into the file instead of printing it
 
   -h, --help
           Print help

@@ -394,7 +394,7 @@ pub async fn extract(source: &str, browser: bool) -> Result<(String, String), St
     }
 }
 
-/// Chunks of about [`CHUNK`] characters on paragraph boundaries.
+/// Chunks of about `CHUNK` characters on paragraph boundaries.
 pub fn chunks(text: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
     let mut cur = String::new();

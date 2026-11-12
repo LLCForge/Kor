@@ -2890,7 +2890,9 @@ mod tests {
         let p = save(dir.path(), "campfire-logo", Some(2), "png", b"x").unwrap();
         let name = p.file_name().unwrap().to_string_lossy().into_owned();
         assert!(!name.chars().any(|c| c.is_ascii_digit()), "{name}");
-        let line = format!("saved: {}", shown(&p));
+        // The name Kor chose, as the project-relative path the model sees (the test's own temp
+        // folder is random on macOS and may look like a token itself).
+        let line = format!("saved: {MEDIA_DIR}/{name}");
         assert_eq!(kor_secrets::Redactor::default().redact(&line), line);
         assert_eq!(letters(0), "a");
         assert_eq!(letters(27), "bb");

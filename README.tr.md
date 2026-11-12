@@ -688,14 +688,13 @@ Geliştirme işleri:
 **Ajan, diller ve hafıza**
 - [ ] 40'tan fazla dil için tree-sitter (şu an 12); grafta doküman/PDF kavram katmanı
 - [ ] Sıcak hafıza katmanı ve RAM'de HNSW
-- [ ] Doğrudan llama.cpp GBNF dilbilgisiyle kısıtlı yanıt (OpenAI, OpenAI uyumlu, Gemini, Ollama ve Anthropic yapıldı)
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
 - [ ] Sandbox'ta alan adı bazlı ağ kuralları, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)
 - [ ] Kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular
 
 **Sağlayıcılar ve maliyet**
 - [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI imzalı kimlik
-- [ ] Codestral FIM, Cohere embed/rerank; katalogda liderlik tablosu skorları (HF, LMArena, LiveBench)
+- [ ] Katalogda liderlik tablosu skorları (HF, LMArena, LiveBench)
 - [ ] `kor quota`'da proxy kotası
 
 **Web, medya ve entegrasyonlar**
@@ -708,7 +707,7 @@ Geliştirme işleri:
 - [ ] Chrome yan panelinde galeri medyası
 
 **Test, sürüm ve kod sağlığı**
-- [ ] Her sürümle `PERFORMANCE.md`, benchmark geçmişi ve E2E raporu; %80 eşikli kapsam; gerçek sağlayıcıyla gece smoke testi
+- [ ] CLI boyut ve başlangıç bütçeleri (bugün 68,6 MB ve 42 ms); statik musl ve Windows ARM64 derlemeleri
 - [ ] CLI yardım/hata snapshot'ları; macOS masaüstü E2E; tekrarlanabilir derleme; PGO
 - [ ] İş mantığının masaüstü köprüsünden çekirdeğe taşınması; büyük crate'lerin bölünmesi; `deny(missing_docs)`; kullanıcı ve eklenti rehberleri
 

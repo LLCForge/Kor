@@ -86,6 +86,7 @@ fn here() -> String {
     kor_memory::project_key(&kor_runtime::project_root().unwrap_or_default())
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, a: &KnowArgs) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let Some(home) = kor_runtime::kor_home() else {

@@ -11,6 +11,7 @@ use kor_i18n::{Localizer, args};
 use crate::Ctx;
 
 #[derive(Debug, clap::Args)]
+#[allow(clippy::struct_excessive_bools)] // clap flags, one per option
 pub struct CleanArgs {
     /// List what can be cleaned and how big it is; deletes nothing.
     #[arg(long)]

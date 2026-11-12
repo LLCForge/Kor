@@ -685,14 +685,13 @@ trials and 5 decisions. The development tasks:
 **Agent, languages and memory**
 - [ ] tree-sitter for 40+ languages (12 today); a docs/PDF concept layer in the graph
 - [ ] Hot memory tier and in-RAM HNSW index
-- [ ] Constrained decoding through llama.cpp GBNF directly (OpenAI, OpenAI-compatible, Gemini, Ollama and Anthropic are done)
 - [ ] fish-style inline shell suggestions from a small local model
 - [ ] Domain-level sandbox network rules, a hard CPU cap on Linux/macOS (today: `nice` priority)
 - [ ] Virtual desktops in saved layouts; Windows remote servers
 
 **Providers and cost**
 - [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI signed auth
-- [ ] Codestral FIM, Cohere embed/rerank; leaderboard scores (HF, LMArena, LiveBench) in the catalogue
+- [ ] Leaderboard scores (HF, LMArena, LiveBench) in the catalogue
 - [ ] Proxy quota in `kor quota`
 
 **Web, media and integrations**
@@ -705,7 +704,7 @@ trials and 5 decisions. The development tasks:
 - [ ] Gallery media in the Chrome side panel
 
 **Testing, release and code health**
-- [ ] `PERFORMANCE.md`, benchmark history and E2E report per release; coverage with an 80 % gate; nightly live smoke test
+- [ ] Meet the CLI size and start-up budgets (68.6 MB and 42 ms today); static musl and Windows ARM64 builds
 - [ ] CLI help/error snapshots; macOS desktop E2E; reproducible builds; PGO
 - [ ] Move business logic out of the desktop bridge; split the largest crates; `deny(missing_docs)`; user and plugin guides
 

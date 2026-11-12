@@ -6,7 +6,7 @@ use std::fmt::Write as _;
 use kor_agent::{FileDecision, PermissionReply, Proposal, Review};
 use kor_i18n::{Localizer, args};
 
-/// "Destructive: <reason>" for a reason key from the core classifier.
+/// "Destructive: `<reason>`" for a reason key from the core classifier.
 pub fn destructive(l: &Localizer, key: &str) -> String {
     l.t_args(
         "destructive",

@@ -31,6 +31,8 @@ const CHUNK_LINES: usize = 60;
 const SNIPPET_CHARS: usize = 300;
 const BATCH: usize = 64;
 const MIN_SCORE: f32 = 0.2;
+/// With a reranker, this many times `k` vector matches are read again with the query.
+const RERANK_POOL: usize = 4;
 const SKIP_NAMES: &[&str] = &[
     "package-lock.json",
     "yarn.lock",
@@ -66,7 +68,7 @@ struct Index {
 /// Where embeddings come from: the local model, Venice, or Hugging Face feature extraction.
 #[async_trait]
 pub trait Embedder: Send + Sync + std::fmt::Debug {
-    /// Shown in the tool description ("sends file text to <name>").
+    /// Shown in the tool description ("sends file text to `<name>`").
     fn name(&self) -> &'static str;
     fn default_model(&self) -> &'static str;
     /// Embeds on this computer: nothing is uploaded, so the tool only reads.
@@ -81,6 +83,62 @@ pub trait Embedder: Send + Sync + std::fmt::Debug {
         texts: &[String],
     ) -> Result<Vec<Vec<f32>>, ProviderError> {
         self.embed(model, texts).await
+    }
+    /// `(index into docs, relevance)` best first, when the provider has a reranker (§4.2).
+    async fn rerank(
+        &self,
+        _query: &str,
+        _docs: &[String],
+    ) -> Option<Result<Vec<(usize, f64)>, ProviderError>> {
+        None
+    }
+}
+
+#[async_trait]
+impl Embedder for kor_providers::extras::Cohere {
+    fn name(&self) -> &'static str {
+        "Cohere"
+    }
+    fn default_model(&self) -> &'static str {
+        kor_providers::extras::COHERE_EMBED_MODEL
+    }
+    async fn embed(&self, model: &str, texts: &[String]) -> Result<Vec<Vec<f32>>, ProviderError> {
+        kor_providers::extras::Cohere::embed(
+            self,
+            model,
+            texts,
+            kor_providers::extras::EmbedKind::Document,
+        )
+        .await
+    }
+    async fn embed_query(
+        &self,
+        model: &str,
+        texts: &[String],
+    ) -> Result<Vec<Vec<f32>>, ProviderError> {
+        kor_providers::extras::Cohere::embed(
+            self,
+            model,
+            texts,
+            kor_providers::extras::EmbedKind::Query,
+        )
+        .await
+    }
+    async fn rerank(
+        &self,
+        query: &str,
+        docs: &[String],
+    ) -> Option<Result<Vec<(usize, f64)>, ProviderError>> {
+        Some(
+            kor_providers::extras::Cohere::rerank(
+                self,
+                kor_providers::extras::COHERE_RERANK_MODEL,
+                query,
+                docs,
+                docs.len(),
+            )
+            .await,
+        )
     }
 }
 
@@ -576,6 +634,28 @@ impl FileSearch {
             .filter(|h| h.score >= MIN_SCORE)
             .collect();
         hits.sort_by(|a, b| b.score.total_cmp(&a.score));
+        // A reranker (Cohere) reorders the closest candidates by reading them with the query; a
+        // failed rerank keeps the vector order.
+        hits.truncate(k.saturating_mul(RERANK_POOL));
+        let docs: Vec<String> = hits
+            .iter()
+            .map(|h| format!("{}\n{}", h.file, h.snippet))
+            .collect();
+        if hits.len() > 1
+            && let Some(Ok(order)) = self.venice.rerank(query, &docs).await
+        {
+            let mut by_rank: Vec<SemanticHit> = Vec::with_capacity(order.len());
+            for (i, score) in order {
+                if let Some(h) = hits.get(i) {
+                    #[allow(clippy::cast_possible_truncation)] // relevance in 0–1
+                    by_rank.push(SemanticHit {
+                        score: score as f32,
+                        ..h.clone()
+                    });
+                }
+            }
+            hits = by_rank;
+        }
         hits.truncate(k);
         Ok(SemanticFound {
             hits,
@@ -588,6 +668,59 @@ impl FileSearch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Vectors favour `alpha.rs`; the reranker prefers `beta.rs`.
+    #[derive(Debug)]
+    struct Reranking;
+
+    #[async_trait]
+    impl Embedder for Reranking {
+        fn name(&self) -> &'static str {
+            "test"
+        }
+        fn default_model(&self) -> &'static str {
+            "test"
+        }
+        async fn embed(&self, _: &str, texts: &[String]) -> Result<Vec<Vec<f32>>, ProviderError> {
+            Ok(texts
+                .iter()
+                .map(|t| {
+                    if t.contains("alpha") || t == "login" {
+                        vec![1.0, 0.0]
+                    } else {
+                        vec![0.8, 0.6]
+                    }
+                })
+                .collect())
+        }
+        async fn rerank(
+            &self,
+            _: &str,
+            docs: &[String],
+        ) -> Option<Result<Vec<(usize, f64)>, ProviderError>> {
+            let mut order: Vec<(usize, f64)> = docs
+                .iter()
+                .enumerate()
+                .map(|(i, d)| (i, if d.contains("beta") { 0.9 } else { 0.1 }))
+                .collect();
+            order.sort_by(|a, b| b.1.total_cmp(&a.1));
+            Some(Ok(order))
+        }
+    }
+
+    #[tokio::test]
+    async fn a_reranker_reorders_the_vector_matches() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("alpha.rs"), "fn alpha_login() {}\n").unwrap();
+        std::fs::write(dir.path().join("beta.rs"), "fn beta_sign_in() {}\n").unwrap();
+        let index = tempfile::tempdir().unwrap();
+        let ctx = ToolCtx::new(dir.path()).unwrap();
+        let s = FileSearch::new(Reranking, index.path(), &ctx.root);
+        let found = s.search(&ctx, "login", 2).await.unwrap();
+        let files: Vec<&str> = found.hits.iter().map(|h| h.file.as_str()).collect();
+        assert_eq!(files, ["beta.rs", "alpha.rs"], "{found:?}");
+        assert!((found.hits[0].score - 0.9).abs() < 1e-6);
+    }
 
     #[test]
     fn chunks_cover_every_line_once() {

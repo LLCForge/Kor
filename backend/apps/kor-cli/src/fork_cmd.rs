@@ -3,6 +3,7 @@
 //! take a branch's conclusion back (its file changes reviewed file by file). Logic:
 //! `kor_runtime::fork`.
 
+use std::fmt::Write as _;
 use std::io::{BufRead as _, IsTerminal as _, Write as _};
 
 use clap::Subcommand;
@@ -121,13 +122,13 @@ fn print_tree(n: &Node, depth: usize, l: &Localizer) {
         }
     );
     if let Some(at) = n.at {
-        line.push_str(&format!("  @{at}"));
+        let _ = write!(line, "  @{at}");
     }
     if let Some(m) = &n.model {
-        line.push_str(&format!("  [{m}]"));
+        let _ = write!(line, "  [{m}]");
     }
     if n.merged.is_some() {
-        line.push_str(&format!("  ({})", l.t("fork-merged")));
+        let _ = write!(line, "  ({})", l.t("fork-merged"));
     }
     println!("{line}");
     for c in &n.children {
@@ -191,6 +192,7 @@ fn review(l: &Localizer, files: &[kor_tools::Proposal]) -> Option<Vec<(String, O
     Some(out)
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, cmd: &ForkCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let (sessions, store) = paths()?;

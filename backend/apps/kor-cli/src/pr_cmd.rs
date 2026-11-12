@@ -1,6 +1,7 @@
 //! `kor pr create|review|respond|list|status` (§8.8, ADR 0040). Forge logic lives in
 //! `kor_runtime::forge` and `kor_runtime::review`; this module asks, prints and confirms.
 
+use std::fmt::Write as _;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -283,10 +284,11 @@ fn create(
     if !diagrams.is_empty() {
         desc.body.push_str("\n\n### Diagrams\n");
         for d in &diagrams {
-            desc.body.push_str(&format!(
-                "- {}\n",
+            let _ = writeln!(
+                desc.body,
+                "- {}",
                 l.t_args("diagram-updated", &args!("summary" => d.clone()))
-            ));
+            );
         }
     }
     println!(

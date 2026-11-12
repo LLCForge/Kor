@@ -38,7 +38,8 @@ function registeredPanelIds(): Set<string> {
 }
 
 test('parity-commands.gen.ts parity.toml ile eşzamanlı (`node scripts/parity-commands.ts`)', () => {
-  assert.equal(readFileSync(GEN_PATH, 'utf8'), renderGenerated(readParity()))
+  // A Windows checkout may have CRLF line endings; the content is what must match.
+  assert.equal(readFileSync(GEN_PATH, 'utf8').replace(/\r\n/g, '\n'), renderGenerated(readParity()))
 })
 
 test('onay listesi yalnızca gerçek parity köprü yöntemlerini içerir', () => {

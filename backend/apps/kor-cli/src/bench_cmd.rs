@@ -17,6 +17,7 @@ use kor_runtime::bench::{self, Report, Spec};
 use crate::Ctx;
 
 #[derive(Debug, clap::Args)]
+#[allow(clippy::struct_excessive_bools)] // clap flags, one per option
 pub struct BenchArgs {
     #[arg(long)]
     file: Option<PathBuf>,
@@ -91,6 +92,7 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
 }
 
 /// `kor doctor --perf` (§32.3): where the time went, from the local `perf.log`.
+#[allow(clippy::unnecessary_wraps)] // same signature as the other command runners
 pub fn doctor_perf(ctx: &Ctx) -> anyhow::Result<bool> {
     use kor_runtime::budgets;
     let l = &ctx.l;

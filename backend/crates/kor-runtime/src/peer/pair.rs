@@ -211,15 +211,21 @@ where
 }
 
 async fn finish(node: &Node, mut link: Link, ssh: Option<String>) -> Result<PeerEntry, String> {
-    let e = store(node, entry_from(&link.remote, &link.hello), ssh)?;
+    let entry = entry_from(&link.remote, &link.hello);
+    link.send(json!({ "type": "paired", "as": entry.name }))?;
+    // SECURITY: the pre-shared secret is mixed in at the handshake's last message, so the joining
+    // side only learns of a wrong secret when the other side drops the link. Nothing is stored
+    // until the other side has confirmed the pairing too.
+    let reply = link.recv_within(Duration::from_secs(10)).await?;
+    if reply["type"] != "paired" {
+        return Err("the other machine did not confirm the pairing".into());
+    }
+    let e = store(node, entry, ssh)?;
     super::audit(
         "paired",
         &e.name,
         json!({ "fingerprint": super::fingerprint(&link.remote) }),
     );
-    link.send(json!({ "type": "paired", "as": e.name }))?;
-    // Wait for the other side's confirmation so neither stores a half-done pairing silently.
-    let _ = link.recv_within(Duration::from_secs(10)).await;
     Ok(e)
 }
 

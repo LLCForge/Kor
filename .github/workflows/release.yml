@@ -311,7 +311,7 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
         with:
           targets: ${{ runner.os == 'macOS' && 'aarch64-apple-darwin,x86_64-apple-darwin' || matrix.target }}
       # BoringSSL (kor-proxy's TLS client) assembles with NASM on Windows; runners do not ship it.
@@ -539,15 +539,62 @@ jobs:
           name: desktop-${{ matrix.name }}
           path: ${{ runner.temp }}/desktop/*
 
+  # §17.2: a release waits for the CI run of its own commit. The end-to-end jobs (CLI, TUI, desktop,
+  # brand visuals) and the UI audit inside the desktop job must pass; their HTML report and the
+  # coverage report are published with the release.
+  gate:
+    needs: plan
+    if: ${{ needs.plan.outputs.publishing == 'true' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SHA: ${{ github.sha }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Wait for the commit's CI run
+        id: ci
+        run: |
+          for i in $(seq 1 150); do
+            run=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&event=push&per_page=1" --jq '.workflow_runs[0] | "\(.id) \(.status)"')
+            set -- $run
+            if [ -n "${1:-}" ] && [ "$2" = "completed" ]; then echo "id=$1" >> "$GITHUB_OUTPUT"; exit 0; fi
+            sleep 60
+          done
+          echo "::error::no completed CI run for $SHA after 150 minutes"
+          exit 1
+      - name: End-to-end jobs and the UI audit passed
+        run: |
+          gh api --paginate "repos/$REPO/actions/runs/${{ steps.ci.outputs.id }}/jobs?per_page=100"             --jq '.jobs[] | select(.name | startswith("e2e ")) | "\(.conclusion) \(.name)"' > jobs.txt
+          cat jobs.txt
+          [ -s jobs.txt ] || { echo "::error::the CI run has no end-to-end jobs"; exit 1; }
+          if grep -v '^success ' jobs.txt; then echo "::error::end-to-end gate failed"; exit 1; fi
+      - name: Collect the reports
+        run: |
+          mkdir -p reports
+          gh run download "${{ steps.ci.outputs.id }}" -R "$REPO" -n coverage -D cov || echo "::warning::no coverage report in the CI run"
+          [ -f cov/coverage-summary.txt ] && cp cov/coverage-summary.txt "reports/coverage-${{ needs.plan.outputs.tag }}.txt"
+          gh run download "${{ steps.ci.outputs.id }}" -R "$REPO" -n e2e-desktop-windows-latest -D e2e || echo "::warning::no desktop e2e artifact"
+          if [ -d e2e/reports ]; then (cd e2e/reports && zip -qr "../../reports/e2e-${{ needs.plan.outputs.tag }}.zip" .); fi
+          ls -l reports
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gate-reports
+          path: reports/*
+          if-no-files-found: ignore
+
   # Determines if we should publish/announce
   host:
     needs:
       - plan
+      - gate
       - build-local-artifacts
       - build-global-artifacts
       - desktop
     # Only run if we're "publishing", and only if plan, local, global and desktop didn't fail (skipped is fine)
-    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && needs.desktop.result == 'success' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && needs.gate.result == 'success' && needs.desktop.result == 'success' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: "ubuntu-24.04"  # minisign is packaged from 24.04 on
@@ -579,6 +626,12 @@ jobs:
       - name: Check desktop installer signatures
         working-directory: .
         run: python3 scripts/desktop_release.py gate desktop ${{ (inputs.allow-unsigned || vars.KOR_REQUIRE_SIGNED != 'true') && '--allow-unsigned' || '' }}
+      - name: Fetch the gate's reports (coverage, end-to-end)
+        uses: actions/download-artifact@v8
+        with:
+          name: gate-reports
+          path: desktop
+        continue-on-error: true
       # Fetch artifacts from scratch-storage
       - name: Fetch artifacts
         uses: actions/download-artifact@v8

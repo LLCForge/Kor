@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# §17.2: a nightly smoke test against a real provider. One short, cheap turn through the whole CLI
+# (config, provider, streaming, the agent loop). Needs the repository secret KOR_SMOKE_VENICE_KEY;
+# without it the job says so and passes.
+name: Nightly smoke
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      VENICE_API_KEY: ${{ secrets.KOR_SMOKE_VENICE_KEY }}
+      KOR_SMOKE_MODEL: ${{ vars.KOR_SMOKE_MODEL || 'venice/venice-uncensored' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secret present
+        id: key
+        run: |
+          if [ -z "$VENICE_API_KEY" ]; then
+            echo "::notice::KOR_SMOKE_VENICE_KEY is not set; the nightly smoke test is skipped"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.key.outputs.skip != 'true'
+        uses: dtolnay/rust-toolchain@1.94.0
+      - if: steps.key.outputs.skip != 'true'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+      - if: steps.key.outputs.skip != 'true'
+        run: bash ../scripts/ci-linux-deps.sh
+      - if: steps.key.outputs.skip != 'true'
+        run: cargo build --locked -p kor-cli
+      - name: One turn against the real provider
+        if: steps.key.outputs.skip != 'true'
+        env:
+          KOR_HOME: ${{ runner.temp }}/kor-home
+          KOR_CONFIG_DIR: ${{ runner.temp }}/kor-config
+          KOR_CACHE_DIR: ${{ runner.temp }}/kor-cache
+        run: |
+          out=$(./target/debug/kor --lang en --model "$KOR_SMOKE_MODEL" --print "Reply with exactly one word: pong" 2>&1) || { echo "$out"; exit 1; }
+          echo "$out"
+          echo "$out" | grep -qi "pong" || { echo "::error::the reply did not contain 'pong'"; exit 1; }
+      - name: Provider check
+        if: steps.key.outputs.skip != 'true'
+        env:
+          KOR_HOME: ${{ runner.temp }}/kor-home
+          KOR_CONFIG_DIR: ${{ runner.temp }}/kor-config
+          KOR_CACHE_DIR: ${{ runner.temp }}/kor-cache
+        run: ./target/debug/kor --lang en provider test venice

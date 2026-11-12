@@ -1,9 +1,9 @@
 //! IPC trace (spec §17.2, ADR 0061): every call, result and event a surface exchanges with the core,
-//! with timing, as JSON lines. Off unless `KOR_IPC_TRACE=<file>` is set (or [`enable`] is called, as
+//! with timing, as JSON lines. Off unless `KOR_IPC_TRACE=<file>` is set (or `enable()` is called, as
 //! `kor doctor --ipc-trace` does). Each line is validated against [`crate::ipc`]; violations are
 //! written next to the message (`schema`), so a trace doubles as a contract check of a real run.
 //!
-//! [`normalize`] reduces a trace to the core event stream (types, tool names, files, text), which is
+//! `normalize()` reduces a trace to the core event stream (types, tool names, files, text), which is
 //! what the CLI, the TUI and the desktop must agree on for the same scenario.
 
 use std::fs::{File, OpenOptions};

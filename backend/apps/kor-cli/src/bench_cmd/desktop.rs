@@ -189,6 +189,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[allow(clippy::float_cmp)] // exact values parsed from a fixture
     fn lines_parse() {
         let l: Line = serde_json::from_str(r#"{"event":"ready"}"#).unwrap();
         assert!(matches!(l, Line::Ready));
@@ -204,6 +205,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::items_after_statements)] // helper kept next to its only use
     fn a_fake_desktop_reports_over_loopback() {
         // The protocol end to end with this test process playing the desktop.
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();

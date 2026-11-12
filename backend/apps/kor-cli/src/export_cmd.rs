@@ -24,6 +24,8 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
         .mut_arg("out", |a| a.help(l.t("arg-export-out")))
 }
 
+#[allow(clippy::cast_precision_loss)] // sizes and ratios for display
+#[allow(clippy::unnecessary_wraps)] // same signature as the other command runners
 pub fn run(ctx: &Ctx, a: &ExportArgs) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let out = a

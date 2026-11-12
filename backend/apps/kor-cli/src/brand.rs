@@ -3,6 +3,7 @@
 //! verb, elapsed time and tokens come from the core's `agent.status` event (§16.2): the CLI
 //! only draws them, so it always shows the same word as the desktop.
 
+use std::fmt::Write as _;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use kor_agent::status::AgentStatus;
@@ -68,6 +69,7 @@ fn ansi256((r, g, b): theme::Rgb) -> u8 {
     u8::try_from(16 + 36 * q(r) + 6 * q(g) + q(b)).unwrap_or(theme::ansi256::EMBER)
 }
 
+#[allow(clippy::many_single_char_names)] // short names of the math or the protocol
 fn paint(depth: Depth, c: theme::Rgb, s: &str) -> String {
     let (r, g, b) = c;
     match depth {
@@ -365,7 +367,7 @@ impl MultiSpinner {
         let lines = self.render(Depth::detect());
         let mut out = String::new();
         if self.drawn > 0 {
-            out.push_str(&format!("\x1b[{}F", self.drawn));
+            let _ = write!(out, "\x1b[{}F", self.drawn);
         }
         for l in &lines {
             out.push_str("\x1b[2K");

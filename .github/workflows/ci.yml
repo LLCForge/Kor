@@ -21,12 +21,14 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
+      - if: runner.os == 'Linux'
+        run: bash ../scripts/ci-linux-deps.sh
       - name: Versions are consistent (ADR 0012)
         run: python3 ../scripts/version.py check
       - name: Desktop release helpers (ADR 0032)
@@ -46,38 +48,57 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest, windows-11-arm]
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-latest, macos-15-intel, windows-latest]
     runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
+      - if: runner.os == 'Linux'
+        run: bash ../scripts/ci-linux-deps.sh
       - run: cargo test --workspace --locked
       # Faz 0 kabulü: sürüm ve doctor her platformda hatasız. Başsız Linux'ta anahtar zinciri uyarıdır, hata değil.
       - run: cargo run --locked -p kor-cli -- --version
       - run: cargo run --locked -p kor-cli -- doctor --lang en
 
-  musl:
+  # §13.3: line coverage of the Rust workspace, with a floor. kor-proxy is measured on its own.
+  coverage:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: backend
+    env:
+      COVERAGE_MIN: 80
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
         with:
-          targets: x86_64-unknown-linux-musl
+          components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
-      - run: sudo apt-get update && sudo apt-get install -y musl-tools
-      - run: cargo build --locked --release -p kor-cli --target x86_64-unknown-linux-musl
-      - run: ./target/x86_64-unknown-linux-musl/release/kor --version
+      - if: runner.os == 'Linux'
+        run: bash ../scripts/ci-linux-deps.sh
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
+      - run: cargo llvm-cov --workspace --locked --exclude kor-proxy --lcov --output-path lcov.info
+      - run: cargo llvm-cov report --summary-only | tee coverage-summary.txt
+      - name: Line coverage at least ${{ env.COVERAGE_MIN }}%
+        run: cargo llvm-cov report --fail-under-lines "$COVERAGE_MIN" > /dev/null
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            backend/lcov.info
+            backend/coverage-summary.txt
+          if-no-files-found: ignore
 
   cross-build:
     name: build (${{ matrix.target }})
@@ -93,7 +114,7 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
         with:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
@@ -110,12 +131,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: frontend/src-tauri
+      - if: runner.os == 'Linux'
+        run: bash scripts/ci-linux-deps.sh
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -155,10 +178,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
+      - if: runner.os == 'Linux'
+        run: bash scripts/ci-linux-deps.sh
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -184,7 +209,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
+      - if: runner.os == 'Linux'
+        run: bash ../scripts/ci-linux-deps.sh
+      # rust-toolchain.toml pins the development toolchain; the MSRV check overrides it.
       - run: cargo check --workspace --locked
+        env:
+          RUSTUP_TOOLCHAIN: "1.88"
 
   # Repo hygiene on every PR: self-tests of the release helpers and of scripts/install.sh
   # (checksum and signature verification).
@@ -204,13 +234,14 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      # On the runner, not in the actions' containers: rust-toolchain.toml names a toolchain the
+      # containers do not have.
+      - uses: dtolnay/rust-toolchain@1.94.0
+      - uses: taiki-e/install-action@v2
         with:
-          manifest-path: backend/Cargo.toml
-      - uses: rustsec/audit-check@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          working-directory: backend
+          tool: cargo-deny,cargo-audit
+      - run: cargo deny --locked check
+      - run: cargo audit
 
   # §32.1/§32.3 (ADR 0062): every PR measures the performance budgets on a release build. A budget over
   # its target, or any measurement more than 5% slower than the runner baseline in bench/history.json
@@ -224,12 +255,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             backend
             frontend/src-tauri
+      - if: runner.os == 'Linux'
+        run: bash scripts/ci-linux-deps.sh
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -270,10 +303,12 @@ jobs:
       CI: "true"
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
+      - if: runner.os == 'Linux'
+        run: bash ../scripts/ci-linux-deps.sh
       - run: git config --global user.name "Kor CI" && git config --global user.email ci@kor.invalid
       - name: IPC schema and validator
         run: cargo test --locked -p kor-core ipc
@@ -328,6 +363,7 @@ jobs:
           path: |
             frontend/e2e/__screenshots__
             frontend/test-results
+            reports
           if-no-files-found: ignore
 
   # The desktop surface: every scenario against the real app and core (same checker as CLI/TUI), every
@@ -342,12 +378,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.94.0
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             backend
             frontend/src-tauri
+      - if: runner.os == 'Linux'
+        run: bash scripts/ci-linux-deps.sh
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -355,7 +393,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: git config --global user.name "Kor CI" && git config --global user.email ci@kor.invalid
       - if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf webkit2gtk-driver xvfb
+        run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf webkitgtk-webdriver xvfb
       - if: runner.os == 'Linux'
         run: cargo install tauri-driver --locked
       - working-directory: backend
@@ -367,6 +405,10 @@ jobs:
       - if: runner.os == 'Windows'
         working-directory: frontend
         run: npx playwright test -c e2e/playwright.config.ts --project desktop --update-snapshots=missing
+      # §17.3: the UI audit is a gate (no open findings, no overflow or console errors on any screen).
+      - if: runner.os == 'Windows'
+        working-directory: frontend
+        run: npx playwright test -c e2e/playwright.config.ts --project audit
       - if: runner.os == 'Linux'
         working-directory: frontend
         env:
@@ -380,5 +422,6 @@ jobs:
           name: e2e-desktop-${{ matrix.os }}
           path: |
             frontend/test-results
+            reports
             frontend/e2e/__screenshots__
           if-no-files-found: ignore

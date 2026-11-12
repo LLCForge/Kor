@@ -17,12 +17,16 @@ live = ["dep:enigo", "dep:xcap", "dep:image", "dep:base64"]
 base64 = { workspace = true, optional = true }
 enigo = { workspace = true, optional = true }
 image = { workspace = true, optional = true }
-xcap = { workspace = true, optional = true }
 kor-config.workspace = true
 kor-i18n.workspace = true
 kor-platform.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+
+# Screen capture needs the desktop's own libraries (Wayland, PipeWire on Linux); the static musl
+# CLI has none, so it is built without capture (input still works).
+[target.'cfg(not(target_env = "musl"))'.dependencies]
+xcap = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true

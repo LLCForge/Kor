@@ -3,7 +3,7 @@
 //! - `kor screenshot` / `kor diagram`: an image goes to the model as an image when the provider has
 //!   vision; otherwise Kor reads it locally (the OS OCR engine through `kor_tools::image_text`, plus
 //!   [`layout`]: rows, cells and dominant colours) and sends that text instead. The reply's files
-//!   are proposals; front ends review them file by file (ADR 0030) before [`write`].
+//!   are proposals; front ends review them file by file (ADR 0030) before [`write()`](fn@write).
 //! - Pasted error screenshots: [`image_context`] turns images into OCR text for the prompt
 //!   (LLM-free, spec §10 table).
 //! - [`map`]: LLM-free architecture / call / data-flow views from the project graph.

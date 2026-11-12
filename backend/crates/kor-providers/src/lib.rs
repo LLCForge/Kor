@@ -4,7 +4,9 @@
 mod adapters;
 pub mod catalog;
 pub mod custom;
+pub mod extras;
 pub mod fal;
+pub mod gbnf;
 pub mod health;
 mod http;
 pub mod huggingface;

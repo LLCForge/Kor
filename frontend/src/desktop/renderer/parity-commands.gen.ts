@@ -220,6 +220,7 @@ export const PARITY_COMMANDS: readonly ParityCommand[] = [
   { name: "kor sessions rename", cli: "kor sessions rename", method: "sessions.rename" },
   { name: "kor sessions suggest", cli: "kor sessions suggest", method: "sessions.suggest" },
   { name: "kor sessions export", cli: "kor sessions export", method: "sessions.export" },
+  { name: "kor fim", cli: "kor fim", method: "fim.complete" },
   { name: "kor sessions import", cli: "kor sessions import", method: "sessions.import" },
   { name: "kor sessions import-from", cli: "kor sessions import-from", method: "sessions.importFrom" },
   { name: "kor sessions fork", cli: "kor sessions fork", method: "fork.create" },

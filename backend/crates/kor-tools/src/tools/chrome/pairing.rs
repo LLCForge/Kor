@@ -117,7 +117,7 @@ fn keys(store: &dyn SecretStore) -> Vec<String> {
 }
 
 /// Trade a one-time code for a new key. The code is used up on success, and after
-/// [`MAX_TRIES`] wrong codes.
+/// `MAX_TRIES` wrong codes.
 ///
 /// # Errors
 /// Wrong, expired or missing code (one generic message), or the keychain refused the write.

@@ -186,6 +186,7 @@ fn or_empty(lines: &[String], l: &Localizer, key: &str) -> Vec<String> {
 }
 
 #[allow(clippy::too_many_lines)] // one arm per panel
+#[allow(clippy::many_single_char_names)] // short names of the math or the protocol
 fn body(screen: &Screen, l: &Localizer, panel: Panel, inner: Rect) -> Vec<Line<'static>> {
     let h = usize::from(inner.height);
     let w = usize::from(inner.width);

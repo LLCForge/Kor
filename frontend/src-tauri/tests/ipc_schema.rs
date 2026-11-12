@@ -51,13 +51,12 @@ fn owners() -> HashMap<String, String> {
         // Files that serve several namespaces match on `(ns, name)`: `("plan", "approve") =>`.
         for (i, _) in body.match_indices("(\"") {
             let rest = &body[i + 2..];
-            if let Some((ns, tail)) = rest.split_once('"') {
-                if tail.starts_with(", ")
-                    && ns.chars().all(|c| c.is_ascii_alphanumeric())
-                    && !ns.is_empty()
-                {
-                    owner.entry(ns.to_owned()).or_insert_with(|| stem.clone());
-                }
+            if let Some((ns, tail)) = rest.split_once('"')
+                && tail.starts_with(", ")
+                && ns.chars().all(|c| c.is_ascii_alphanumeric())
+                && !ns.is_empty()
+            {
+                owner.entry(ns.to_owned()).or_insert_with(|| stem.clone());
             }
         }
     }

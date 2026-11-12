@@ -348,10 +348,11 @@ fn edit(ctx: &Ctx, paths: &[PathBuf]) -> anyhow::Result<bool> {
             .duration_since(SystemTime::UNIX_EPOCH)?
             .as_nanos()
     ));
-    let body: String = absolute(paths)
-        .iter()
-        .map(|p| format!("{}\n", p.display()))
-        .collect();
+    let body = absolute(paths).iter().fold(String::new(), |mut s, p| {
+        s.push_str(&p.to_string_lossy());
+        s.push('\n');
+        s
+    });
     std::fs::write(&mine, body)?;
     let lock_path = dir.with_extension("lock");
     // Explorer starts one process per selected file: the first one collects, the others leave.

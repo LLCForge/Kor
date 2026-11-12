@@ -1173,6 +1173,7 @@ fn print_issues(l: &Localizer, rows: &[redirects::Row]) {
     }
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn redirects_run(ctx: &Ctx, cmd: RedirectsCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let rt = crate::providers::runtime()?;
@@ -1550,7 +1551,7 @@ pub enum ClientCmd {
         #[arg(long)]
         note: String,
     },
-    /// Tickets: add <title>, close <n>, list.
+    /// Tickets: add `<title>`, close `<n>`, list.
     Ticket {
         id: String,
         action: String,
@@ -1578,6 +1579,7 @@ pub fn localize_client(c: clap::Command, l: &Localizer) -> clap::Command {
     c
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn client_run(ctx: &Ctx, cmd: ClientCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let Some(base) = base(l) else {
@@ -2114,6 +2116,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
     fn commands_parse() {
         let t = T::try_parse_from([
             "kor",

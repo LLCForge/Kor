@@ -233,6 +233,7 @@ fn clients(ctx: &Ctx) -> Option<Clients> {
     Some(c)
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, cmd: &MediaCmd) -> anyhow::Result<bool> {
     let root = kor_runtime::project_root()?;
     // The gallery is local: listing, showing and copying work in privacy mode too.
@@ -786,6 +787,7 @@ async fn pick_model(
 /// Plan, show unsupported values with the models that can do them, ask, confirm the cost.
 /// Returns the model (possibly switched) and its final inputs.
 #[allow(clippy::too_many_arguments)] // the request, its context and the user's options
+#[allow(clippy::unused_async)] // called where the other branches await
 async fn plan_and_ask(
     ctx: &Ctx,
     cat: &Catalog,
@@ -1291,6 +1293,7 @@ fn show(ctx: &Ctx, root: &Path, id: &str, as_json: bool) -> bool {
 
 /// What a quick action does with a gallery item.
 #[derive(Debug, PartialEq)]
+#[allow(clippy::struct_excessive_bools)] // independent flags of one quick action
 struct Derived {
     cap: Capability,
     /// Sent as the input file (edit, upscale, video, background removal).

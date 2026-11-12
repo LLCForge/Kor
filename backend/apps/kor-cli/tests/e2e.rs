@@ -36,6 +36,7 @@ fn runtime() -> tokio::runtime::Runtime {
         .expect("runtime")
 }
 
+#[allow(clippy::struct_field_names)] // the scenario's own field names
 struct Env {
     env: IsolatedEnv,
     mock: MockServer,

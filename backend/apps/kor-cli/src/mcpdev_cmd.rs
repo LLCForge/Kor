@@ -169,6 +169,7 @@ enum Input {
     Reload,
 }
 
+#[allow(clippy::many_single_char_names, clippy::too_many_lines)] // short names of the math or the protocol; one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, a: &McpDevArgs) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let target = match (&a.path, a.command.split_first()) {

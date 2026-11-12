@@ -55,7 +55,10 @@ pub fn resolve(root: &Path, input: &str) -> Result<PathBuf, String> {
     for part in rest.iter().rev() {
         real.push(part);
     }
-    if real.starts_with(root) {
+    // The root as given or as it really is (`/var` → `/private/var` on macOS, 8.3 names on
+    // Windows): the resolved path is always the real one.
+    let real_root = root.canonicalize().map(|r| without_verbatim(&r));
+    if real.starts_with(&root) || real_root.is_ok_and(|r| real.starts_with(r)) {
         Ok(real)
     } else {
         Err(format!("`{input}` is outside the project"))
@@ -73,6 +76,23 @@ pub(crate) fn rel(root: &Path, p: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A root that is not written in its real form (macOS `/var` symlink, Windows 8.3 names,
+    /// or here a `..` hop) still contains its own files, and still nothing else.
+    #[test]
+    fn a_root_not_in_canonical_form_still_works() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::create_dir_all(dir.path().join("a")).unwrap();
+        std::fs::create_dir_all(dir.path().join("proj/public")).unwrap();
+        let root = dir.path().join("a").join("..").join("proj");
+        let p = resolve(&root, "public/logo.png").unwrap();
+        assert!(
+            p.ends_with("public/logo.png") || p.ends_with("public\\logo.png"),
+            "{}",
+            p.display()
+        );
+        assert!(resolve(&root, "../a/x").is_err());
+    }
 
     #[test]
     fn stays_inside_root() {

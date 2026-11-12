@@ -85,6 +85,7 @@ fn print_finding(f: &Finding) {
     }
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 pub fn run(ctx: &Ctx, cmd: &RulesCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let root = crate::graph_cmd::root()?;

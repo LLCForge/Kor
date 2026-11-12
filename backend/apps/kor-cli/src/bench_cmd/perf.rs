@@ -19,6 +19,7 @@ use crate::tui::{self, Ev, Panel, Screen};
 
 /// What to measure and what to do with it.
 #[derive(Debug)]
+#[allow(clippy::struct_excessive_bools)] // independent switches of one run
 pub struct Opts {
     pub ui: bool,
     pub cli: bool,

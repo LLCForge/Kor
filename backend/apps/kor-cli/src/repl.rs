@@ -1532,6 +1532,7 @@ async fn tui_apply(out: Out, src: &Sources, ctx: &Ctx, screen: &mut tui::Screen)
 /// One agent turn on the full screen. Returns whether the user quit, and a message typed
 /// meanwhile (sent next).
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::many_single_char_names)] // short names of the math or the protocol
 async fn tui_turn(
     s: &mut Session,
     ctx: &Ctx,
@@ -1839,6 +1840,7 @@ fn new_terminal(t: &kor_config::Tui) -> std::io::Result<Term> {
     )
 }
 
+#[allow(clippy::too_many_lines)] // one linear sequence; splitting it would scatter the steps
 async fn tui_main(s: &mut Session, ctx: &Ctx, style: &Style, busy: &Busy) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let t = tui_config(ctx);

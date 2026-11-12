@@ -100,7 +100,7 @@ pub fn repo_root(dir: &Path) -> Result<PathBuf, FlowError> {
     Ok(PathBuf::from(top.trim()))
 }
 
-/// Staged file names and the staged diff (cut at [`MAX_DIFF`] characters).
+/// Staged file names and the staged diff (cut at `MAX_DIFF` characters).
 pub fn staged(root: &Path) -> Result<(Vec<String>, String), FlowError> {
     let files: Vec<String> = git(root, &["diff", "--cached", "--name-only"])?
         .lines()

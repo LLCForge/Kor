@@ -103,6 +103,7 @@ Commands:
   consensus           Aynı soruyu 2–3 modele paralel sorar; çoğunluğun uyuştuğu satırları alır, ayrışanları gösterir
   comment             Kod yorumlarını hedef dile çevirir; --missing ile yorumsuz fonksiyonlara tek satırlık yorum yazar
   commit              Hazırlanmış (staged) değişikliklerden Conventional Commits mesajı
+  fim                 Codestral ile imleç konumundaki kodu tamamla (orta doldurma)
   changelog           Son etiketten bu yana commit'lerden Keep a Changelog bölümü
   templates           Prompt ve görev şablonları (proje, kişisel, eklenti ve yerleşik)
   run                 Bir görev şablonunu ajanla çalıştır: kor run template:<ad> --<girdi> değer
@@ -10717,6 +10718,36 @@ Options:
 
   -m, --model <MODEL>
           Bu komut için model (sağlayıcı/model)
+
+  -h, --help
+          Print help
+===== kor fim --help
+Codestral ile imleç konumundaki kodu tamamla (orta doldurma)
+
+Usage: kor fim [OPTIONS] --line <LINE> <FILE>
+
+Arguments:
+  <FILE>
+          Bu projedeki dosya
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --line <LINE>
+          İmlecin satırı (1'den başlar)
+
+      --col <COL>
+          Sütun (varsayılan: satırın sonu)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+      --write
+          Tamamlamayı yazdırmak yerine dosyaya ekle
 
   -h, --help
           Print help
