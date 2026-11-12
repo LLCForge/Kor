@@ -1247,7 +1247,9 @@ impl Knowledge {
         if let Some(d) = digests {
             for e in fs::read_dir(d).into_iter().flatten().flatten() {
                 let name = e.file_name().to_string_lossy().into_owned();
-                if e.path().extension().is_some_and(|x| x.eq_ignore_ascii_case("md"))
+                if e.path()
+                    .extension()
+                    .is_some_and(|x| x.eq_ignore_ascii_case("md"))
                     && let Ok(text) = fs::read_to_string(e.path())
                 {
                     put(format!("Özet/{name}"), &text)?;

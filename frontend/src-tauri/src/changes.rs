@@ -202,13 +202,17 @@ mod tests {
 
     #[test]
     fn paths_stay_inside_the_root() {
-        let root = Path::new(r"C:\proj");
+        // Absolute on every OS (`C:\proj` is a relative name on Linux and macOS).
+        let base = std::env::temp_dir();
+        let root = base.join("proj");
+        let root = root.as_path();
         assert_eq!(
             inside(root, "src/a.rs").unwrap(),
             root.join("src").join("a.rs")
         );
         assert!(inside(root, "../x").is_none());
-        assert!(inside(root, r"C:\other\x").is_none());
+        let other = base.join("other").join("x");
+        assert!(inside(root, &other.to_string_lossy()).is_none());
         assert!(inside(root, "").is_none());
     }
 

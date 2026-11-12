@@ -154,6 +154,7 @@ mod tests {
         answer(&[json!(99), json!("allow")]).unwrap();
         assert_eq!(rx.try_recv().unwrap().as_deref(), Some("allow"));
         assert!(answer(&[json!(99), json!("allow")]).is_err());
-        assert!(setup().is_ok());
+        // The editor setup needs the kor CLI next to the app (not built in every test run).
+        assert_eq!(setup().is_ok(), crate::kor_cli::find().is_some());
     }
 }

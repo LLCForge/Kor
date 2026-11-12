@@ -12,6 +12,8 @@ ignore = [
   { id = "RUSTSEC-2026-0370", reason = "zvariant merged into zbus; not a vulnerability" },
   { id = "RUSTSEC-2026-0371", reason = "zbus_names merged into zbus; not a vulnerability" },
   { id = "RUSTSEC-2026-0372", reason = "zvariant_derive merged into zbus; not a vulnerability" },
+  { id = "RUSTSEC-2026-0441", reason = "pin-utils: unmaintained, pulled in by futures-util; tiny pin macros, no vulnerability" },
+  { id = "RUSTSEC-2024-0449", reason = "unsafe-libyaml (via serde_yaml): unmaintained, no vulnerability; only reads local YAML config files. Moving to a safe-Rust parser is tracked" },
 ]
 
 [licenses]

@@ -12,6 +12,8 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
+  # rustc needs more stack than the default for the fat-LTO link of the CLI (SIGBUS/SIGSEGV otherwise).
+  RUST_MIN_STACK: "268435456"
 
 jobs:
   lint:
@@ -34,7 +36,8 @@ jobs:
       - name: Desktop release helpers (ADR 0032)
         run: python3 ../scripts/desktop_release.py selftest
       - run: cargo fmt --all --check
-      - run: cargo clippy --workspace --all-targets -- -D warnings
+      # --keep-going: every crate's findings in one run, not only the first failing crate's.
+      - run: cargo clippy --workspace --all-targets --keep-going -- -D warnings
       # §32.2 (ADR 0062): blocking I/O on async/render threads, unbounded channels, uncached regexes.
       # A ratchet: a file may not gain findings over kor-lint.baseline.json.
       - name: kor-lint
@@ -53,6 +56,9 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # The local embedding model's matrix kernels (candle → gemm) use FP16 instructions on Arm Linux.
+      RUSTFLAGS: ${{ matrix.os == 'ubuntu-24.04-arm' && '-D warnings -C target-feature=+fp16' || '-D warnings' }}
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.94.0
@@ -195,8 +201,10 @@ jobs:
         run: |
           npx --yes @puppeteer/browsers@2.10.5 install chrome@stable --path "$RUNNER_TEMP/cft" > "$RUNNER_TEMP/cft.txt"
           echo "KOR_BROWSER=$(awk '{print $2}' "$RUNNER_TEMP/cft.txt" | tail -n1)" >> "$GITHUB_ENV"
+      # The extension runs in a visible browser window: a virtual display on the runner.
+      - run: sudo apt-get install -y xvfb
       - working-directory: backend
-        run: cargo test --locked -p kor-tools --lib -- --ignored real_extension
+        run: xvfb-run -a cargo test --locked -p kor-tools --lib -- --ignored real_extension
 
   msrv:
     runs-on: ubuntu-latest
@@ -205,7 +213,7 @@ jobs:
         working-directory: backend
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.88
+      - uses: dtolnay/rust-toolchain@1.89
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
@@ -214,7 +222,7 @@ jobs:
       # rust-toolchain.toml pins the development toolchain; the MSRV check overrides it.
       - run: cargo check --workspace --locked
         env:
-          RUSTUP_TOOLCHAIN: "1.88"
+          RUSTUP_TOOLCHAIN: "1.89"
 
   # Repo hygiene on every PR: self-tests of the release helpers and of scripts/install.sh
   # (checksum and signature verification).

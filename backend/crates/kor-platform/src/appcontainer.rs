@@ -74,6 +74,8 @@ impl Child {
     }
 
     /// Wait for exit and collect the output. Dropping the future kills the process tree.
+    // Elsewhere the type is uninhabited; the signature stays the Windows one.
+    #[cfg_attr(not(windows), allow(clippy::unused_async))]
     pub async fn wait_with_output(self) -> io::Result<Output> {
         #[cfg(windows)]
         return self.inner.wait_with_output().await;

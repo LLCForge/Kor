@@ -2796,7 +2796,8 @@ mod tests {
 
     #[test]
     fn tsc_and_eslint_output_is_parsed() {
-        let root = Path::new(r"C:\proj");
+        let base = std::env::temp_dir().join("proj");
+        let root = base.as_path();
         let out = "src/a.ts(3,5): error TS2322: Type 'x' is not assignable.\n  Details here\nerror TS5083: Cannot read file.\n";
         let d = parse_tsc(out, root);
         assert_eq!(d.len(), 2);
@@ -2811,8 +2812,11 @@ mod tests {
         );
         assert_eq!(d[1]["inWorkspace"], false);
 
-        let js = r#"noise [{"filePath":"C:\\proj\\b.js","messages":[{"ruleId":"no-undef","severity":2,"message":"x","line":1,"column":2}]}]"#;
-        let e = parse_eslint(js, root).unwrap();
+        let file = serde_json::to_string(&root.join("b.js").to_string_lossy()).unwrap();
+        let js = format!(
+            r#"noise [{{"filePath":{file},"messages":[{{"ruleId":"no-undef","severity":2,"message":"x","line":1,"column":2}}]}}]"#
+        );
+        let e = parse_eslint(&js, root).unwrap();
         assert_eq!(e[0]["file"], "b.js");
         assert_eq!(e[0]["severity"], "error");
         assert!(parse_eslint("nope", root).is_err());

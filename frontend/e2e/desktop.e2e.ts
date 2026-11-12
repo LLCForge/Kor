@@ -8,7 +8,7 @@ import { test, expect, chromium, type Browser, type Page } from '@playwright/tes
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { cdpDriver, until, webdriverDriver, type Driver } from './driver.ts'
-import { CDP_PORT, SCENARIOS, check, closeDesktop, desktopBinary, launchDesktop, serve, type Served } from './harness.ts'
+import { CDP_PORT, SCENARIOS, appReport, check, closeDesktop, desktopBinary, launchDesktop, serve, type Served } from './harness.ts'
 import { costPanelText, openProject, runSteps } from './flow.ts'
 
 const USE_WEBDRIVER = process.env.KOR_E2E_DRIVER === 'webdriver' || process.platform !== 'win32'
@@ -24,7 +24,9 @@ async function attach(served: Served): Promise<{ d: Driver; page?: Page }> {
   await until(async () => {
     browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP_PORT}`)
     return true
-  }, 60_000, 'the WebView2 debugging port')
+  }, 60_000, 'the WebView2 debugging port').catch((e: unknown) => {
+    throw new Error(`${e instanceof Error ? e.message : String(e)} (${appReport(app)})`)
+  })
   const find = async (): Promise<Page> => {
     let page: Page | undefined
     await until(async () => {

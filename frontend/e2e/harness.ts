@@ -90,7 +90,22 @@ export async function serve(scenarioFile: string): Promise<Served> {
 export function launchDesktop(served: Served, extraEnv: Record<string, string> = {}): ChildProcess {
   const env: Record<string, string> = { ...(process.env as Record<string, string>), ...served.env, ...extraEnv }
   if (process.platform === 'win32') env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = `--remote-debugging-port=${CDP_PORT}`
-  return spawn(desktopBinary(), [], { env, stdio: 'ignore', cwd: served.project })
+  const app = spawn(desktopBinary(), [], { env, stdio: ['ignore', 'ignore', 'pipe'], cwd: served.project })
+  // The last of its stderr, for the error when it never becomes reachable (a crash at start).
+  let tail = ''
+  app.stderr?.on('data', (b: Buffer) => {
+    tail = (tail + b.toString()).slice(-4000)
+  })
+  appLogs.set(app, () => tail)
+  return app
+}
+
+const appLogs = new WeakMap<ChildProcess, () => string>()
+
+/** Exit code and stderr tail of an app started by [`launchDesktop`], for error messages. */
+export function appReport(app: ChildProcess): string {
+  const exited = app.exitCode === null ? 'still running' : `exited with ${app.exitCode}`
+  return `app ${exited}; stderr: ${appLogs.get(app)?.() || '(empty)'}`
 }
 
 /** Ends the app (and on Windows its WebView2 children) without leaving the debugging port open. */

@@ -142,6 +142,8 @@ okuma_bunu_llm/
 # ---- Build outputs ----
 **/target/
 node_modules/
+# Test fixtures that model an installed package tree (the deps scanner reads them).
+!/backend/crates/kor-runtime/tests/fixtures/deps/**/node_modules/
 /frontend/dist/
 /frontend/extension/dist/
 /frontend/src-tauri/gen/

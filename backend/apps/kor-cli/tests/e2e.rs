@@ -212,7 +212,20 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
     let mut c = command(&e.env);
     c.arg("--lang").arg("en").arg("tui").env_remove("KOR_UI");
     let mut p = pty(c);
-    let mut out = text(&p.expect("Idle").expect("TUI start"));
+    // A TUI that exits before it is ready leaves its last screen (an error, a panic) in the
+    // failure message instead of a bare `Eof`.
+    let first = p
+        .expect(expectrl::Any::boxed(vec![
+            Box::new("Idle"),
+            Box::new(expectrl::Eof),
+        ]))
+        .expect("TUI start");
+    let mut out = text(&first);
+    assert!(
+        out.contains("Idle"),
+        "the TUI exited before it was ready:
+{out}"
+    );
     for (i, st) in s.steps.iter().enumerate() {
         let next_is_approval = s.steps.get(i + 1).is_some_and(|n| n.approve.is_some());
         if let Some(prompt) = &st.prompt {
@@ -357,6 +370,13 @@ fn print_json_output_snapshot() {
     // Status ticks depend on timing: the first one stays (it is sent at the start).
     let mut seen = false;
     lines.retain(|v| v["type"] != "status" || !std::mem::replace(&mut seen, true));
+    // The turn summary's wall time ("Took 0s" or "Took 1s") depends on the machine.
+    for v in &mut lines {
+        if let Some(t) = v["text"].as_str().filter(|t| t.starts_with("Took ")) {
+            let rest = t.split_once(" · ").map_or("", |(_, r)| r);
+            v["text"] = Value::from(format!("Took [time] · {rest}"));
+        }
+    }
     insta::assert_json_snapshot!("print_json_lines", lines, {
         "[].elapsedMs" => "[ms]",
         "[].tokens" => "[tokens]",

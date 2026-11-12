@@ -1,6 +1,5 @@
 ---
 source: apps/kor-cli/tests/e2e.rs
-assertion_line: 279
 expression: lines
 ---
 [
@@ -47,7 +46,7 @@ expression: lines
     "type": "usage"
   },
   {
-    "text": "Took 0s · $0.00 · 0 files (estimated ≈ 1m27s · ≈ price unknown)",
+    "text": "Took [time] · $0.00 · 0 files (estimated ≈ 1m27s · ≈ price unknown)",
     "type": "notice"
   }
 ]
