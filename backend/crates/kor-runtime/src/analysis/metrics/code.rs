@@ -397,7 +397,6 @@ impl Walk<'_> {
                 .any(|c| c.kind() == "visibility_modifier" && text(c, src) == "pub"),
             Lang::Go => name.chars().next().is_some_and(char::is_uppercase),
             Lang::Python => !name.starts_with('_'),
-            Lang::Ruby => true,
             Lang::JavaScript | Lang::TypeScript | Lang::Tsx => {
                 let mut p = node.parent();
                 for _ in 0..3 {
@@ -419,6 +418,8 @@ impl Walk<'_> {
                     .any(|c| text(c, src).contains("public"));
                 mods || (self.lang == Lang::Php && node.kind() == "function_definition")
             }
+            // Ruby and the languages without a visibility rule here: every item counts as public.
+            _ => true,
         }
     }
 

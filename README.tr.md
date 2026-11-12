@@ -175,7 +175,7 @@ edildiler. OpenAI uyumlu bir sağlayıcı yalnızca bir TOML manifestosu ister, 
 
 ### Proje grafı
 
-- **`kor graph`** kodu tree-sitter ile (bugün yaklaşık bir düzine dil) ayrıştırır: fonksiyonlar, çağrılar, importlar,
+- **`kor graph`** kodu tree-sitter ile (Rust, Python ve TypeScript'ten Kotlin, Swift, Haskell, Zig, Terraform, SQL ve Verilog'a 46 dil) ayrıştırır: fonksiyonlar, çağrılar, importlar,
   env anahtarları, veritabanı tabloları, git'te birlikte değişen dosyalar ve `WHY:`/ADR gerekçeleri. SQLite'ta saklanır
   ve artımlı güncellenir (release derlemede 110 bin satırlık sentetik depoda yaklaşık 0,1 sn).
 - Sorgular: `kor graph explain | path | query | hotspots | diff | impact | export | update`; JSON, Mermaid, Obsidian,
@@ -686,7 +686,8 @@ Geliştirme işleri:
 - [ ] Takım kasası, şablon/hook/kural senkronu; takım sunucusu üzerinden peer rölesi; Faz 8 kabul testleri
 
 **Ajan, diller ve hafıza**
-- [ ] 40'tan fazla dil için tree-sitter (şu an 12); grafta doküman/PDF kavram katmanı
+- [x] 40'tan fazla dil için tree-sitter (46)
+- [ ] Grafta doküman/PDF kavram katmanı
 - [ ] Sıcak hafıza katmanı ve RAM'de HNSW
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
 - [ ] Sandbox'ta alan adı bazlı ağ kuralları, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)

@@ -126,13 +126,37 @@ pub fn undocumented(lang: Lang, src: &str) -> Vec<Undocumented> {
     out
 }
 
-/// The line-comment marker a new doc comment uses in `lang`.
-pub fn doc_marker(lang: Lang) -> &'static str {
-    match lang {
-        Lang::Rust | Lang::CSharp => "///",
-        Lang::Python | Lang::Ruby => "#",
+/// The line-comment marker a new doc comment uses in `lang`; `None` when the language has no
+/// line comments (`OCaml`).
+pub fn doc_marker(lang: Lang) -> Option<&'static str> {
+    Some(match lang {
+        Lang::Ocaml => return None,
+        Lang::Rust
+        | Lang::CSharp
+        | Lang::Swift
+        | Lang::FSharp
+        | Lang::Dart
+        | Lang::Zig
+        | Lang::D
+        | Lang::Gleam
+        | Lang::Solidity
+        | Lang::ObjC => "///",
+        Lang::Python
+        | Lang::Ruby
+        | Lang::Bash
+        | Lang::Elixir
+        | Lang::R
+        | Lang::Julia
+        | Lang::Nix
+        | Lang::Hcl
+        | Lang::PowerShell => "#",
+        Lang::GdScript => "##",
+        Lang::Haskell | Lang::Lua | Lang::Ada | Lang::Elm | Lang::Sql | Lang::Vhdl => "--",
+        Lang::Erlang => "%%",
+        Lang::Fortran => "!",
+        Lang::CommonLisp => ";;",
         _ => "//",
-    }
+    })
 }
 
 #[cfg(test)]

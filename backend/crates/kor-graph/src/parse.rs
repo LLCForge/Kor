@@ -787,6 +787,258 @@ mod tests {
         assert!(has_ref(&cs, "Base", RefKind::Extends));
     }
 
+    /// Every language beyond the first twelve: its definitions, and calls and imports where the
+    /// query captures them (`None`: the grammar's query has none).
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn added_languages_find_definitions_calls_and_imports() {
+        type Case = (Lang, &'static str, &'static str, Option<&'static str>, bool);
+        let cases: &[Case] = &[
+            (
+                Lang::Bash,
+                "source ./lib.sh\nbuild() { helper all; }\n",
+                "build",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Lua,
+                "local m = require('m')\nfunction run(x) return helper(x) end\n",
+                "run",
+                Some("helper"),
+                false,
+            ),
+            (
+                Lang::Scala,
+                "import a.b.C\nclass Foo extends Bar { def run(x: Int): Int = helper(x) }\n",
+                "run",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Swift,
+                "import Foundation\nclass Foo { func run() { helper() } }\n",
+                "run",
+                Some("helper"),
+                false,
+            ),
+            (
+                Lang::Kotlin,
+                "import a.b.C\nclass Foo : Bar() { fun run() { helper() } }\n",
+                "run",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Haskell,
+                "module M where\nimport Data.List\ndata Shape = Circle\nrun x = helper x\n",
+                "run",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Elixir,
+                "defmodule M do\n  def run(x), do: helper(x)\nend\n",
+                "run",
+                Some("helper"),
+                false,
+            ),
+            (Lang::Ocaml, "let run x = helper x\n", "run", None, false),
+            (
+                Lang::Zig,
+                "const lib = @import(\"lib.zig\");\npub fn run() void { helper(); }\n",
+                "run",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Julia,
+                "using LinearAlgebra\nfunction run(x)\n helper(x)\nend\n",
+                "run",
+                None,
+                true,
+            ),
+            (
+                Lang::R,
+                "run <- function(x) { helper(x) }\n",
+                "run",
+                Some("helper"),
+                false,
+            ),
+            (
+                Lang::Dart,
+                "import 'a.dart';\nclass Foo { void run() { helper(); } }\n",
+                "run",
+                None,
+                false,
+            ),
+            (
+                Lang::Erlang,
+                "-include(\"a.hrl\").\nrun(X) -> helper(X).\n",
+                "run",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Elm,
+                "module M exposing (run)\nrun x = helper x\n",
+                "run",
+                None,
+                false,
+            ),
+            (
+                Lang::Nix,
+                "let\n  lib = import ./lib.nix;\n  build = x: helper x;\nin build\n",
+                "build",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Hcl,
+                "resource \"aws_s3_bucket\" \"logs\" {\n}\nmodule \"vpc\" {\n  source = \"./vpc\"\n}\n",
+                "logs",
+                None,
+                true,
+            ),
+            (
+                Lang::Solidity,
+                "contract Vault { function run() public { helper(); } }\n",
+                "Vault",
+                Some("helper"),
+                false,
+            ),
+            (
+                Lang::Fortran,
+                "subroutine run(x)\n call helper(x)\nend subroutine\n",
+                "run",
+                Some("helper"),
+                false,
+            ),
+            (
+                Lang::Gleam,
+                "pub fn run(x) { helper(x) }\n",
+                "run",
+                Some("helper"),
+                false,
+            ),
+            (
+                Lang::Groovy,
+                "import a.b.C\nclass Foo extends Bar { def run() { } }\n",
+                "run",
+                None,
+                true,
+            ),
+            (
+                Lang::ObjC,
+                "#import \"Foo.h\"\n@implementation Foo\n- (void)run { [self helper]; }\n@end\n",
+                "run",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::PowerShell,
+                ". ./lib.ps1\nfunction Get-Thing { helper }\n",
+                "Get-Thing",
+                Some("helper"),
+                true,
+            ),
+            (Lang::FSharp, "let run x = helper x\n", "run", None, false),
+            (
+                Lang::D,
+                "import std.stdio;\nclass Foo : Bar { void run() { helper(); } }\n",
+                "run",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Verilog,
+                "module counter(input clk);\nendmodule\n",
+                "counter",
+                None,
+                false,
+            ),
+            (
+                Lang::Cuda,
+                "#include \"a.h\"\n__global__ void kern(int x) { helper(x); }\n",
+                "kern",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Ada,
+                "with Ada.Text_IO;\npackage body P is\n procedure Run is\n begin\n  Helper;\n end Run;\nend P;\n",
+                "Run",
+                Some("Helper"),
+                true,
+            ),
+            (
+                Lang::Pascal,
+                "unit U;\ninterface\nuses SysUtils;\nimplementation\nfunction F: Integer; begin Result := 1; end;\nend.\n",
+                "F",
+                None,
+                true,
+            ),
+            (
+                Lang::GdScript,
+                "extends Node\nconst Lib = preload(\"res://lib.gd\")\nfunc run():\n\thelper()\n",
+                "run",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Odin,
+                "package main\nimport \"core:fmt\"\nrun :: proc() { helper() }\n",
+                "run",
+                Some("helper"),
+                true,
+            ),
+            (
+                Lang::Sql,
+                "CREATE TABLE users (id INT);\n",
+                "users",
+                None,
+                false,
+            ),
+            (
+                Lang::Proto,
+                "import \"a.proto\";\nmessage User { string id = 1; }\n",
+                "User",
+                None,
+                true,
+            ),
+            (
+                Lang::Vhdl,
+                "library ieee;\nuse ieee.std_logic_1164.all;\nentity counter is end entity;\n",
+                "counter",
+                None,
+                true,
+            ),
+            (
+                Lang::CommonLisp,
+                "(defun run (x) (helper x))\n",
+                "run",
+                None,
+                false,
+            ),
+        ];
+        let mut missing = Vec::new();
+        for (lang, src, def, call, import) in cases {
+            let f = code(*lang, src);
+            if !def_names(&f).contains(def) {
+                missing.push(format!("{lang:?} def {def}: {:?}", def_names(&f)));
+            }
+            if let Some(c) = call.filter(|c| !has_ref(&f, c, RefKind::Call)) {
+                let refs: Vec<&str> = f.refs.iter().map(|r| r.name.as_str()).collect();
+                missing.push(format!("{lang:?} call {c}: {refs:?}"));
+            }
+            if *import && f.imports.is_empty() {
+                missing.push(format!("{lang:?} import"));
+            }
+        }
+        assert!(missing.is_empty(), "{missing:#?}");
+        assert_eq!(cases.len() + 12, crate::lang::ALL.len());
+    }
+
     #[test]
     fn env_config_adr() {
         let f = parse(

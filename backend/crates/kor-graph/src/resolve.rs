@@ -377,9 +377,10 @@ fn go_import(spec: &str, idx: &FileIndex<'_>) -> Vec<(String, Confidence)> {
     Vec::new()
 }
 
-fn java_import(spec: &str, idx: &FileIndex<'_>) -> Vec<(String, Confidence)> {
+/// `a.b.C` (Java, Kotlin, Scala, Haskell…) → `a/b/C<ext>`; `a.b.*` → every `<ext>` file in `a/b`.
+fn dotted_import(spec: &str, ext: &str, idx: &FileIndex<'_>) -> Vec<(String, Confidence)> {
     if let Some(pkg) = spec.strip_suffix(".*") {
-        return dir_files(idx.dir_suffix(&pkg.replace('.', "/")), ".java", 0.8);
+        return dir_files(idx.dir_suffix(&pkg.replace('.', "/")), ext, 0.8);
     }
     let segs: Vec<&str> = spec.split('.').collect();
     // `a.b.C` or a static member import `a.b.C.m`.
@@ -387,7 +388,7 @@ fn java_import(spec: &str, idx: &FileIndex<'_>) -> Vec<(String, Confidence)> {
         if k == 0 {
             continue;
         }
-        let hits = idx.suffix(&format!("{}.java", segs[..k].join("/")));
+        let hits = idx.suffix(&format!("{}{ext}", segs[..k].join("/")));
         match hits.len() {
             0 => {}
             1 => return vec![(hits[0].to_owned(), Confidence::Extracted)],
@@ -470,7 +471,7 @@ fn resolve_import(
         Lang::Python => python_import(from, spec, idx),
         Lang::JavaScript | Lang::TypeScript | Lang::Tsx => js_import(from, spec, idx),
         Lang::Go => go_import(spec, idx),
-        Lang::Java => java_import(spec, idx),
+        Lang::Java => dotted_import(spec, ".java", idx),
         Lang::CSharp => csharp_import(spec, idx),
         Lang::C | Lang::Cpp => path_import(from, spec, &[], 0.7, idx),
         Lang::Php if form == ImportForm::Relative => path_import(from, spec, &[], 0.7, idx),
@@ -479,6 +480,24 @@ fn resolve_import(
             from,
             spec,
             &[".rb"],
+            if form == ImportForm::Relative {
+                0.9
+            } else {
+                0.7
+            },
+            idx,
+        ),
+        Lang::Scala => dotted_import(spec, ".scala", idx),
+        Lang::Kotlin => dotted_import(spec, ".kt", idx),
+        Lang::Groovy => dotted_import(spec, ".groovy", idx),
+        Lang::Haskell => dotted_import(spec, ".hs", idx),
+        Lang::D => dotted_import(spec, ".d", idx),
+        Lang::Elm => dotted_import(spec, ".elm", idx),
+        // The rest name files: `source ./x.sh`, `#include "a.h"`, `@import("b.zig")`, `import "a.proto"`.
+        other => path_import(
+            from,
+            spec,
+            other.extensions(),
             if form == ImportForm::Relative {
                 0.9
             } else {

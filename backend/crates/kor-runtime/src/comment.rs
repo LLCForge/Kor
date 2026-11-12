@@ -139,9 +139,8 @@ pub async fn run(
             }
         }
     }
-    if missing {
+    if let Some(marker) = comments::doc_marker(lang).filter(|_| missing) {
         let undoc = comments::undocumented(lang, src);
-        let marker = comments::doc_marker(lang);
         for batch in undoc.chunks(BATCH) {
             let sigs: Vec<&str> = batch.iter().map(|u| u.signature.as_str()).collect();
             let reply = ask(provider, model, missing_prompt(&sigs, &target)).await?;

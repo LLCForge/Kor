@@ -175,7 +175,7 @@ against mock servers. An OpenAI-compatible provider needs only a TOML manifest, 
 
 ### Project graph
 
-- **`kor graph`** parses the code with tree-sitter (about a dozen languages today) into functions, calls, imports,
+- **`kor graph`** parses the code with tree-sitter (46 languages, from Rust, Python and TypeScript to Kotlin, Swift, Haskell, Zig, Terraform, SQL and Verilog) into functions, calls, imports,
   env keys, database tables, git co-change and `WHY:`/ADR rationale, stored in SQLite and updated incrementally
   (about 0.1 s for a 110K-line synthetic repo in a release build).
 - Queries: `kor graph explain | path | query | hotspots | diff | impact | export | update`; exports to JSON,
@@ -683,7 +683,8 @@ trials and 5 decisions. The development tasks:
 - [ ] Team vault and template/hook/rule sync; peer relay through the team server; Faz 8 acceptance tests
 
 **Agent, languages and memory**
-- [ ] tree-sitter for 40+ languages (12 today); a docs/PDF concept layer in the graph
+- [x] tree-sitter for 40+ languages (46)
+- [ ] A docs/PDF concept layer in the graph
 - [ ] Hot memory tier and in-RAM HNSW index
 - [ ] fish-style inline shell suggestions from a small local model
 - [ ] Domain-level sandbox network rules, a hard CPU cap on Linux/macOS (today: `nice` priority)
