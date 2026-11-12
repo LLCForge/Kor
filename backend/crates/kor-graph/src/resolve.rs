@@ -677,6 +677,7 @@ fn module_kind(f: &FileFacts) -> NodeKind {
         FileKind::Code | FileKind::Sql | FileKind::Prisma => NodeKind::Module,
         FileKind::Env | FileKind::Config => NodeKind::Config,
         FileKind::Adr => NodeKind::Decision,
+        FileKind::Doc => NodeKind::Doc,
     }
 }
 
@@ -888,27 +889,44 @@ pub fn derive(
                 .map_or(path.as_str(), String::as_str);
             g.edge(src, &id, EdgeKind::DecidedBy, Confidence::Extracted);
         }
-        if f.kind == FileKind::Adr {
-            if let Some(node) = g.nodes.get_mut(path) {
-                node.text.clone_from(&f.title);
+        // A backticked path or a name with 1-3 definitions links the code to the ADR / section.
+        let link = |g: &mut Derived, m: &str, target: &str, kind: EdgeKind| {
+            if let Some(p) = idx.exact(m.trim_start_matches("./")) {
+                g.edge(p, target, kind, Confidence::Extracted);
+                return;
             }
+            let last = m.rsplit([':', '.', '/']).next().unwrap_or(m);
+            let hits = by_name.get(last).map(Vec::as_slice).unwrap_or_default();
+            if (1..=3).contains(&hits.len()) {
+                for (_, id, _) in hits {
+                    g.edge(id, target, kind, Confidence::Inferred { score: 0.5 });
+                }
+            }
+        };
+        if matches!(f.kind, FileKind::Adr | FileKind::Doc)
+            && let Some(node) = g.nodes.get_mut(path)
+        {
+            node.text.clone_from(&f.title);
+        }
+        if f.kind == FileKind::Adr {
             for m in &f.mentions {
-                if let Some(p) = idx.exact(m.trim_start_matches("./")) {
-                    g.edge(p, path, EdgeKind::DecidedBy, Confidence::Extracted);
-                    continue;
-                }
-                let last = m.rsplit([':', '.', '/']).next().unwrap_or(m);
-                let hits = by_name.get(last).map(Vec::as_slice).unwrap_or_default();
-                if (1..=3).contains(&hits.len()) {
-                    for (_, id, _) in hits {
-                        g.edge(
-                            id,
-                            path,
-                            EdgeKind::DecidedBy,
-                            Confidence::Inferred { score: 0.5 },
-                        );
-                    }
-                }
+                link(&mut g, m, path, EdgeKind::DecidedBy);
+            }
+        }
+        // Docs layer: each section is a concept node inside its document.
+        for (k, s) in f.sections.iter().enumerate() {
+            let id = format!("{path}#doc:{}", k + 1);
+            g.node(
+                &id,
+                NodeKind::Doc,
+                &s.title,
+                Some(path),
+                Some((s.line, s.end_line)),
+                &s.title,
+            );
+            g.edge(path, &id, EdgeKind::Contains, Confidence::Extracted);
+            for m in &s.mentions {
+                link(&mut g, m, &id, EdgeKind::DocumentedBy);
             }
         }
     }

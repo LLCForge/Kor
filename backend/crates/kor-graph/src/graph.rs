@@ -104,6 +104,7 @@ fn tag_of(kind: FileKind, lang: Option<Lang>) -> String {
         (FileKind::Adr, _) => "adr".into(),
         (FileKind::Sql, _) => "sql".into(),
         (FileKind::Prisma, _) => "prisma".into(),
+        (FileKind::Doc, _) => "doc".into(),
         _ => "config".into(),
     }
 }
@@ -384,8 +385,16 @@ impl Graph {
             return false;
         };
         job.row.sha = sha256_hex(&bytes);
-        let Ok(text) = String::from_utf8(bytes) else {
-            return false;
+        let text = if job.rel.to_ascii_lowercase().ends_with(".pdf") {
+            match parse::pdf_text(&bytes, 2_000_000) {
+                Some(t) => t,
+                None => return false,
+            }
+        } else {
+            match String::from_utf8(bytes) {
+                Ok(t) => t,
+                Err(_) => return false,
+            }
         };
         // Minified bundles: very long lines make a useless graph.
         if text.len() > 20_000 && text.len() / text.lines().count().max(1) > 1000 {

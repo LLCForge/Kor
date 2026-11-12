@@ -3847,6 +3847,7 @@ dependencies = [
  "globset",
  "ignore",
  "kor-platform",
+ "lopdf",
  "notify",
  "petgraph",
  "regex",

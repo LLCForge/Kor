@@ -10,7 +10,7 @@ use streaming_iterator::StreamingIterator;
 use tree_sitter::{Node, Parser, QueryCursor};
 
 /// Bump when extraction changes so cached facts are re-parsed.
-pub const FACTS_VERSION: u32 = 4;
+pub const FACTS_VERSION: u32 = 5;
 /// Files larger than this are skipped (generated code, bundles, data).
 pub const MAX_FILE_BYTES: u64 = 1024 * 1024;
 const MAX_TEXT: usize = 200;
@@ -26,6 +26,20 @@ pub enum FileKind {
     Sql,
     /// `*.prisma` schema.
     Prisma,
+    /// Documentation: Markdown under a `docs/` folder (and the root README), PDFs there.
+    Doc,
+}
+
+/// One heading of a document (or the whole PDF) and the code it names: a concept node of the
+/// docs layer (§7.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DocSection {
+    pub title: String,
+    /// 1-based first and last line.
+    pub line: u32,
+    pub end_line: u32,
+    /// Identifiers and paths the section names (backticks; code-shaped words in PDFs).
+    pub mentions: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -115,6 +129,9 @@ pub struct FileFacts {
     /// Tables read or written here (SQL literals, ORM calls).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub table_uses: Vec<crate::db::TableUse>,
+    /// Document sections (docs layer).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sections: Vec<DocSection>,
 }
 
 impl FileFacts {
@@ -134,6 +151,7 @@ impl FileFacts {
             mentions: Vec::new(),
             tables: Vec::new(),
             table_uses: Vec::new(),
+            sections: Vec::new(),
         }
     }
 }
@@ -149,10 +167,19 @@ pub fn classify(rel: &str) -> Option<(FileKind, Option<Lang>)> {
         "toml" | "yaml" | "yml" => Some((FileKind::Config, None)),
         "sql" => Some((FileKind::Sql, None)),
         "prisma" => Some((FileKind::Prisma, None)),
-        "md" => {
+        "md" | "markdown" | "pdf" => {
             let dir = rel.rsplit_once('/').map_or("", |(d, _)| d);
-            (dir.ends_with("docs/decisions") || dir.ends_with("docs/adr"))
-                .then_some((FileKind::Adr, None))
+            if ext == "md" && (dir.ends_with("docs/decisions") || dir.ends_with("docs/adr")) {
+                return Some((FileKind::Adr, None));
+            }
+            let in_docs = dir.split('/').any(|s| {
+                matches!(
+                    s.to_ascii_lowercase().as_str(),
+                    "docs" | "doc" | "documentation"
+                )
+            });
+            let readme = dir.is_empty() && name.to_ascii_lowercase().starts_with("readme.");
+            (in_docs || (readme && ext != "pdf")).then_some((FileKind::Doc, None))
         }
         _ => Lang::from_ext(&ext).map(|l| (FileKind::Code, Some(l))),
     }
@@ -164,6 +191,7 @@ pub fn parse(kind: FileKind, lang: Option<Lang>, text: &str) -> FileFacts {
         (FileKind::Code, Some(l)) => parse_code(l, text),
         (FileKind::Env, _) => parse_env(text),
         (FileKind::Adr, _) => parse_adr(text),
+        (FileKind::Doc, _) => parse_doc(text),
         (FileKind::Sql, _) => {
             let mut f = FileFacts::empty(FileKind::Sql, "sql", text);
             (f.tables, f.table_uses) = crate::db::sql_file(text);
@@ -614,6 +642,92 @@ fn parse_config(text: &str) -> FileFacts {
 static MENTION_RE: LazyLock<Option<Regex>> =
     LazyLock::new(|| Regex::new(r"`([A-Za-z_][A-Za-z0-9_:./\-]{1,120})`").ok());
 
+/// Words shaped like code in prose without backticks (PDF text): `snake_case` or `camelCase` /
+/// `PascalCase` with an inner capital, four characters or more.
+static CODE_WORD_RE: LazyLock<Option<Regex>> = LazyLock::new(|| {
+    Regex::new(r"\b([A-Za-z][A-Za-z0-9]*_[A-Za-z0-9_]+|[a-z][a-z0-9]*[A-Z][A-Za-z0-9]*|[A-Z][a-z0-9]+[A-Z][A-Za-z0-9]*)\b").ok()
+});
+
+const MAX_SECTIONS: usize = 200;
+const MAX_SECTION_MENTIONS: usize = 100;
+
+/// A document: Markdown headings become sections (concepts); a document without headings (a PDF)
+/// is one section titled after its first line. Mentions come from backticks, or from code-shaped
+/// words when the text has no backticks at all.
+fn parse_doc(text: &str) -> FileFacts {
+    let mut f = FileFacts::empty(FileKind::Doc, "", text);
+    let first_line = || {
+        text.lines()
+            .map(str::trim)
+            .find(|l| !l.is_empty())
+            .unwrap_or_default()
+    };
+    f.title = truncate(
+        text.lines()
+            .find_map(|l| l.strip_prefix("# "))
+            .unwrap_or_else(first_line),
+    );
+    let lines: Vec<&str> = text.lines().collect();
+    let mut starts: Vec<(usize, String)> = lines
+        .iter()
+        .enumerate()
+        .filter_map(|(i, l)| {
+            let hashes = l.chars().take_while(|c| *c == '#').count();
+            let title = l[hashes..].strip_prefix(' ')?;
+            ((1..=6).contains(&hashes) && !title.trim().is_empty()).then(|| (i, truncate(title)))
+        })
+        .take(MAX_SECTIONS)
+        .collect();
+    if starts.is_empty() {
+        starts.push((0, f.title.clone()));
+    }
+    let backticks = text.contains('`');
+    let re = if backticks {
+        MENTION_RE.as_ref()
+    } else {
+        CODE_WORD_RE.as_ref()
+    };
+    for (k, (start, title)) in starts.iter().enumerate() {
+        let end = starts.get(k + 1).map_or(lines.len(), |(n, _)| *n);
+        let mut mentions: Vec<String> = Vec::new();
+        if let Some(re) = re {
+            for l in &lines[*start..end] {
+                for c in re.captures_iter(l) {
+                    let m = c[1].trim_end_matches(['.', ':', '/']).to_owned();
+                    if !mentions.contains(&m) && mentions.len() < MAX_SECTION_MENTIONS {
+                        mentions.push(m);
+                    }
+                }
+            }
+        }
+        let line = |n: usize| u32::try_from(n).unwrap_or(u32::MAX);
+        f.sections.push(DocSection {
+            title: title.clone(),
+            line: line(start + 1),
+            end_line: line(end.max(start + 1)),
+            mentions,
+        });
+    }
+    f
+}
+
+/// Text of a PDF for the docs layer: pages in order, at most `max` bytes. `None` when it does not
+/// load (encrypted, damaged).
+pub fn pdf_text(bytes: &[u8], max: usize) -> Option<String> {
+    let doc = lopdf::Document::load_mem(bytes).ok()?;
+    let mut out = String::new();
+    for p in doc.get_pages().keys() {
+        if let Ok(t) = doc.extract_text_with_limit(&[*p], 64 * 1024 * 1024) {
+            out.push_str(&t);
+            out.push('\n');
+        }
+        if out.len() > max {
+            break;
+        }
+    }
+    Some(out)
+}
+
 fn parse_adr(text: &str) -> FileFacts {
     let mut f = FileFacts::empty(FileKind::Adr, "", text);
     f.title = text
@@ -1040,6 +1154,116 @@ mod tests {
     }
 
     #[test]
+    fn docs_are_classified_and_split_into_sections() {
+        assert_eq!(classify("docs/guide.md"), Some((FileKind::Doc, None)));
+        assert_eq!(classify("api/doc/spec.pdf"), Some((FileKind::Doc, None)));
+        assert_eq!(classify("README.md"), Some((FileKind::Doc, None)));
+        assert_eq!(
+            classify("docs/decisions/0001-x.md"),
+            Some((FileKind::Adr, None))
+        );
+        assert_eq!(classify("src/notes.md"), None);
+        assert_eq!(classify("invoice.pdf"), None);
+        let f = parse(
+            FileKind::Doc,
+            None,
+            "# Guide\nIntro.\n## Running tasks\nCall `run_task` from `src/task.rs`.\n## Storage\nSee `Store`.\n",
+        );
+        assert_eq!(f.title, "Guide");
+        let titles: Vec<&str> = f.sections.iter().map(|s| s.title.as_str()).collect();
+        assert_eq!(titles, ["Guide", "Running tasks", "Storage"]);
+        assert_eq!(f.sections[1].mentions, ["run_task", "src/task.rs"]);
+        assert_eq!((f.sections[1].line, f.sections[1].end_line), (3, 4));
+        assert_eq!(f.sections[2].mentions, ["Store"]);
+        // Text without backticks (a PDF): code-shaped words, not ordinary prose.
+        let pdf = parse(
+            FileKind::Doc,
+            None,
+            "Design notes\nThe run_task loop and TaskQueue drive the agent.\n",
+        );
+        assert_eq!(pdf.sections.len(), 1);
+        assert_eq!(pdf.sections[0].title, "Design notes");
+        assert_eq!(pdf.sections[0].mentions, ["run_task", "TaskQueue"]);
+    }
+
+    #[allow(clippy::similar_names)] // page_id / pages_id mirror the PDF object names
+    fn one_page_pdf(text: &str) -> Vec<u8> {
+        use lopdf::content::{Content, Operation};
+        use lopdf::{Document, Object, Stream, dictionary};
+        let mut doc = Document::with_version("1.5");
+        let pages_id = doc.new_object_id();
+        let font_id = doc.add_object(
+            dictionary! {"Type" => "Font", "Subtype" => "Type1", "BaseFont" => "Courier"},
+        );
+        let resources_id = doc.add_object(dictionary! {"Font" => dictionary! {"F1" => font_id}});
+        let content = Content {
+            operations: vec![
+                Operation::new("BT", vec![]),
+                Operation::new("Tf", vec!["F1".into(), 12.into()]),
+                Operation::new("Td", vec![100.into(), 600.into()]),
+                Operation::new("Tj", vec![Object::string_literal(text)]),
+                Operation::new("ET", vec![]),
+            ],
+        };
+        let content_id = doc.add_object(Stream::new(dictionary! {}, content.encode().unwrap()));
+        let page_id = doc.add_object(
+            dictionary! {"Type" => "Page", "Parent" => pages_id, "Contents" => content_id},
+        );
+        doc.objects.insert(pages_id, Object::Dictionary(dictionary! {"Type" => "Pages", "Kids" => vec![page_id.into()], "Count" => 1, "Resources" => resources_id, "MediaBox" => vec![0.into(), 0.into(), 595.into(), 842.into()]}));
+        let catalog_id = doc.add_object(dictionary! {"Type" => "Catalog", "Pages" => pages_id});
+        doc.trailer.set("Root", catalog_id);
+        let mut out = Vec::new();
+        doc.save_to(&mut out).unwrap();
+        out
+    }
+
+    /// The docs layer end to end: Markdown sections and a PDF become concept nodes inside their
+    /// documents, linked to the code they name.
+    #[test]
+    fn docs_layer_links_sections_and_pdfs_to_code() -> crate::Result<()> {
+        use crate::model::EdgeKind;
+        let dir = tempfile::tempdir()?;
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("src"))?;
+        std::fs::create_dir_all(root.join("docs"))?;
+        std::fs::write(
+            root.join("src/task.rs"),
+            "pub fn run_task() {}\npub struct TaskQueue;\n",
+        )?;
+        std::fs::write(
+            root.join("docs/guide.md"),
+            "# Guide\n## Running tasks\nCall `run_task`.\n",
+        )?;
+        std::fs::write(
+            root.join("docs/design.pdf"),
+            one_page_pdf("The TaskQueue holds work."),
+        )?;
+        let mut g = crate::graph::Graph::open(root)?;
+        g.update()?;
+        let section = g
+            .node("docs/guide.md#doc:2")
+            .map(|n| (n.kind, n.name.clone()));
+        assert_eq!(section, Some((NodeKind::Doc, "Running tasks".to_owned())));
+        assert!(g.edges().any(|e| e.source == "docs/guide.md"
+            && e.target == "docs/guide.md#doc:2"
+            && e.kind == EdgeKind::Contains));
+        let documented = |code: &str, target: &str| {
+            g.edges().any(|e| {
+                e.source.ends_with(code) && e.target == target && e.kind == EdgeKind::DocumentedBy
+            })
+        };
+        assert!(
+            documented("run_task", "docs/guide.md#doc:2"),
+            "markdown section"
+        );
+        assert!(
+            documented("TaskQueue", "docs/design.pdf#doc:1"),
+            "pdf section"
+        );
+        Ok(())
+    }
+
+    #[test]
     fn env_config_adr() {
         let f = parse(
             FileKind::Env,
@@ -1070,7 +1294,7 @@ mod tests {
             classify("docs/decisions/0001-x.md").map(|c| c.0),
             Some(FileKind::Adr)
         );
-        assert_eq!(classify("README.md"), None);
+        assert_eq!(classify("src/README.md"), None);
         assert_eq!(classify("a/.env.local").map(|c| c.0), Some(FileKind::Env));
         assert_eq!(classify("src/a.rs").map(|c| c.1), Some(Some(Lang::Rust)));
     }
