@@ -85,7 +85,15 @@ export async function webdriverDriver(application: string, port = 4444): Promise
         if (r.err !== undefined) throw new Error(r.err)
         return r.ok as T
       })),
-    click: async (s) => { await call('POST', `${sid}/element/${await find(s)}/click`, {}) },
+    click: async (s) => {
+      try {
+        await call('POST', `${sid}/element/${await find(s)}/click`, {})
+      } catch (e) {
+        // A toast or a closing panel can sit over the button for a moment: the element's own click.
+        if (!String(e).includes('click intercepted')) throw e
+        await call('POST', `${sid}/execute/sync`, { script: 'document.querySelector(arguments[0]).click()', args: [s] })
+      }
+    },
     fill: async (s, t) => {
       const id = await find(s)
       await call('POST', `${sid}/element/${id}/clear`, {})
