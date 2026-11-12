@@ -232,6 +232,7 @@ fn embedder() -> Option<std::sync::Arc<kor_memory::LocalEmbedder>> {
     kor_memory::LocalEmbedder::installed()
 }
 
+#[allow(clippy::too_many_lines)] // one arm per `kor sessions` subcommand
 pub fn run(ctx: &Ctx, args: &SessionsArgs) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let Some(cmd) = &args.command else {
@@ -356,6 +357,18 @@ pub fn run(ctx: &Ctx, args: &SessionsArgs) -> anyhow::Result<bool> {
             };
             let chats = chats
                 .map_err(|e| anyhow::anyhow!(l.t_args("sessions-error", &args!("error" => e))))?;
+            // §3.3: this project's Claude Code chats also leave a summary in its memory (not
+            // `--all`, whose chats belong to other projects; not Cursor, which is not per project).
+            if matches!(tool, HistoryTool::ClaudeCode)
+                && !*all
+                && let (Some(home), Ok(root)) = (kor_runtime::kor_home(), std::env::current_dir())
+                && let Err(e) = si::remember(&home, &root, &si::fresh(&sd, &chats), "Claude Code")
+            {
+                eprintln!(
+                    "{}",
+                    l.t_args("sessions-error", &args!("error" => e.to_string()))
+                );
+            }
             si::save_new(&sd, &chats)
                 .map_err(tree::TreeError::from)
                 .map(|n| {

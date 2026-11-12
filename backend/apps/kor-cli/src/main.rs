@@ -1749,7 +1749,7 @@ pub(crate) fn print_mcp_servers(root: &std::path::Path, trusted: bool) {
 pub(crate) fn config_error(l: &Localizer, e: &ConfigError) -> String {
     l.t_args(
         "config-invalid",
-        &args!("origin" => e.origin().to_owned(), "error" => e.to_string()),
+        &args!("origin" => e.origin().to_owned(), "error" => e.message()),
     )
 }
 
@@ -1789,6 +1789,38 @@ mod tests {
         );
         assert_eq!(run_slash(&ctx, "/mcp serve"), None);
         assert_eq!(run_slash(&ctx, "/no-such-command"), None);
+    }
+
+    /// §17.3: every command's `--help`, in English and Turkish, is a reviewed snapshot; a change
+    /// shows up as a diff (`cargo insta review`).
+    #[test]
+    fn help_of_every_command_is_snapshotted() {
+        fn walk(c: &clap::Command, path: &str, out: &mut String) {
+            use std::fmt::Write as _;
+            let _ = writeln!(
+                out,
+                "===== {path} --help\n{}",
+                c.clone().render_long_help().to_string().trim_end()
+            );
+            for s in c
+                .get_subcommands()
+                .filter(|s| s.get_name() != "help" && !s.is_hide_set())
+            {
+                walk(s, &format!("{path} {}", s.get_name()), out);
+            }
+        }
+        for (lang, name) in [
+            (kor_i18n::Lang::En, "help_en"),
+            (kor_i18n::Lang::Tr, "help_tr"),
+        ] {
+            let mut c = localized_command(&Localizer::new(lang))
+                .term_width(100)
+                .max_term_width(100);
+            c.build();
+            let mut out = String::new();
+            walk(&c, "kor", &mut out);
+            insta::assert_snapshot!(name, out);
+        }
     }
 
     #[test]

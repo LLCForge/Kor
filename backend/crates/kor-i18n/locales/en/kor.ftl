@@ -1936,6 +1936,7 @@ arg-seo-brand = Brand line shown at the top of HTML/PDF reports
 arg-seo-schedule = Repeat daily or weekly (adds a routine)
 arg-seo-client-json = Google OAuth client JSON (type "Desktop app")
 arg-seo-site = Search Console property (sc-domain:example.com or https://example.com/) or site
+arg-seo-keywords = Keyword CSV instead of Search Console: a "Queries" export or a list with keyword, impressions (or volume) and position columns
 arg-seo-days = Number of days
 arg-seo-dims = Dimensions, comma-separated (query, page, country, device, date)
 arg-seo-limit = Maximum rows

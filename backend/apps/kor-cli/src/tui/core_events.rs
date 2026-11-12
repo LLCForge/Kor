@@ -89,6 +89,12 @@ fn every_panel_draws_real_core_events() {
     let mut notes = Vec::new();
     let mut prepared =
         kor_runtime::prepare(&l, &loaded, &opts, &mut notes).expect("agent assembles");
+    // `prepare` turns on the full-disk write stop (§19.3); this test is about the screen, not the
+    // disk of the machine it runs on.
+    kor_health::set_config(kor_config::Health {
+        disk_critical: 100,
+        ..kor_config::Health::default()
+    });
     let mut manifest = kor_providers::Registry::builtin()
         .get("local-vllm")
         .expect("local-vllm manifest")

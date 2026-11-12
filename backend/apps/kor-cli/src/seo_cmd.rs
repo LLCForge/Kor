@@ -329,7 +329,10 @@ pub enum SeoSub {
         model: Option<String>,
     },
     Opportunities {
-        site: String,
+        #[arg(required_unless_present = "keywords")]
+        site: Option<String>,
+        #[arg(long, value_name = "CSV")]
+        keywords: Option<std::path::PathBuf>,
         #[arg(long, default_value_t = 28)]
         days: u32,
         #[arg(long, default_value = "query")]
@@ -517,13 +520,36 @@ pub fn run(ctx: &Ctx, a: SeoArgs) -> anyhow::Result<bool> {
         }
         SeoSub::Opportunities {
             site,
+            keywords,
             days,
             dims,
             top,
             cached,
             explain,
             json,
-        } => rt.block_on(opp_cmd(ctx, &site, days, &dims, top, cached, explain, json)),
+        } => match keywords {
+            // §29.16: a keyword list (Search Console "Queries" export or one's own CSV) instead of the API.
+            Some(file) => rt.block_on(opp_cmd(
+                ctx,
+                Source::Csv(&file),
+                site.as_deref().unwrap_or("csv"),
+                days,
+                "query",
+                top,
+                explain,
+                json,
+            )),
+            None => rt.block_on(opp_cmd(
+                ctx,
+                if cached { Source::Cached } else { Source::Api },
+                site.as_deref().unwrap_or_default(),
+                days,
+                &dims,
+                top,
+                explain,
+                json,
+            )),
+        },
     })
 }
 
@@ -1793,14 +1819,22 @@ async fn agents_cmd(ctx: &Ctx, root: &Path, a: AgentsRun) -> bool {
     true
 }
 
-#[allow(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
+/// Where `kor seo opportunities` reads its rows.
+#[derive(Clone, Copy)]
+enum Source<'a> {
+    Api,
+    Cached,
+    Csv(&'a std::path::Path),
+}
+
+#[allow(clippy::too_many_arguments, clippy::too_many_lines)] // three sources, one table
 async fn opp_cmd(
     ctx: &Ctx,
+    source: Source<'_>,
     site: &str,
     days: u32,
     dims: &str,
     top: usize,
-    cached: bool,
     explain: bool,
     json: bool,
 ) -> bool {
@@ -1811,7 +1845,23 @@ async fn opp_cmd(
         .filter(|s| !s.is_empty())
         .collect();
     let (s, e) = dates(days, 0);
-    let rows = if cached {
+    let rows = if let Source::Csv(file) = source {
+        // SECURITY: a bounded read; the CSV is the user's own file.
+        match std::fs::metadata(file)
+            .map_err(|e| format!("{}: {e}", file.display()))
+            .and_then(|m| {
+                if m.len() > 20 * 1024 * 1024 {
+                    Err(format!("{}: larger than 20 MB", file.display()))
+                } else {
+                    std::fs::read_to_string(file).map_err(|e| format!("{}: {e}", file.display()))
+                }
+            })
+            .and_then(|text| opportunity::rows_from_csv(&text))
+        {
+            Ok(r) => r,
+            Err(err) => return fail(l, err),
+        }
+    } else if matches!(source, Source::Cached) {
         match google_db()
             .ok_or_else(|| "no data directory".to_owned())
             .and_then(|db| google::load_rows(&db, site, &s, &e, &d))
@@ -1835,7 +1885,9 @@ async fn opp_cmd(
         }
     };
     let scored = opportunity::score(&rows);
+    // A keyword list is a one-off: it is not recorded for calibration against the site.
     let calib = kor_runtime::kor_home()
+        .filter(|_| !matches!(source, Source::Csv(_)))
         .map(|h| h.join("seo").join("predictions.sqlite"))
         .and_then(|db| {
             let today = chrono::Local::now().date_naive();
@@ -1953,6 +2005,9 @@ mod tests {
         assert!(T::try_parse_from(["x", "logs", "a.log", "--verify-dns"]).is_ok());
         assert!(T::try_parse_from(["x", "competitors", "schedule", "weekly"]).is_ok());
         assert!(T::try_parse_from(["x", "opportunities", "sc-domain:x.test", "--explain"]).is_ok());
+        // §29.16: a keyword list needs no Search Console property; without either it is an error.
+        assert!(T::try_parse_from(["x", "opportunities", "--keywords", "list.csv"]).is_ok());
+        assert!(T::try_parse_from(["x", "opportunities"]).is_err());
         assert!(T::try_parse_from(["x", "verify", "x.test"]).is_ok());
         assert!(T::try_parse_from(["x", "bing", "query", "https://x.test/"]).is_ok());
         assert!(

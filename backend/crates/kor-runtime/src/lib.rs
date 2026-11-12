@@ -71,6 +71,7 @@ pub mod obs;
 pub mod prefs;
 pub mod presence;
 pub mod privacycard;
+pub mod project_alias;
 pub mod quota;
 pub mod remote;
 pub mod replay;

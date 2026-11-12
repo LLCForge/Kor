@@ -92,7 +92,21 @@ pub(crate) fn body(req: &ChatRequest, provider: &str) -> Result<Value, ProviderE
     if !req.tools.is_empty() {
         body["tools"] = req.tools.iter().map(tool_body).collect();
     }
-    let thinking = add_reasoning(&mut body, req);
+    // §15.13: no response-format parameter here; the answer is a forced call of one tool whose
+    // input schema is the requested one (the mapper turns its input back into the reply text).
+    // A forced tool choice does not combine with extended thinking, so thinking stays off.
+    let structured = crate::response_schema();
+    if let Some(s) = &structured {
+        let mut tools = body["tools"].as_array().cloned().unwrap_or_default();
+        tools.push(json!({
+            "name": s.name,
+            "description": "Give the whole answer through this tool, in exactly this structure.",
+            "input_schema": s.schema,
+        }));
+        body["tools"] = Value::Array(tools);
+        body["tool_choice"] = json!({"type": "tool", "name": s.name});
+    }
+    let thinking = structured.is_none() && add_reasoning(&mut body, req);
     // Thinking is not compatible with a modified temperature.
     if let Some(t) = req.temperature.filter(|_| !thinking) {
         body["temperature"] = t.into();
@@ -175,6 +189,9 @@ fn tool_body(t: &kor_core::ToolSpec) -> Value {
 pub(crate) struct MessagesMapper {
     provider: String,
     tools: BTreeSet<u32>,
+    /// The forced answer tool of a structured request, and its block index once started.
+    answer_tool: Option<String>,
+    answer: Option<u32>,
     usage: Usage,
     finish: Option<FinishReason>,
     done: bool,
@@ -186,6 +203,12 @@ impl MessagesMapper {
             provider: provider.to_owned(),
             ..Self::default()
         }
+    }
+
+    /// For [`crate::Provider::complete_structured`]: calls of `tool` are the reply text.
+    pub(crate) fn answering(mut self, tool: Option<String>) -> Self {
+        self.answer_tool = tool;
+        self
     }
 }
 
@@ -223,6 +246,22 @@ impl Mapper for MessagesMapper {
                 };
                 return Ok(Vec::new());
             }
+            "content_block_start"
+                if str_at(&v, "/content_block/type") == Some("tool_use")
+                    && self.answer_tool.is_some()
+                    && str_at(&v, "/content_block/name") == self.answer_tool.as_deref() =>
+            {
+                self.answer = Some(index);
+                return Ok(Vec::new());
+            }
+            "content_block_delta"
+                if self.answer == Some(index)
+                    && str_at(&v, "/delta/type") == Some("input_json_delta") =>
+            {
+                StreamEvent::TextDelta {
+                    text: s("/delta/partial_json"),
+                }
+            }
             "content_block_start" if str_at(&v, "/content_block/type") == Some("tool_use") => {
                 self.tools.insert(index);
                 StreamEvent::ToolCallStart {
@@ -252,8 +291,10 @@ impl Mapper for MessagesMapper {
                 if let Some(out) = v.pointer("/usage/output_tokens").and_then(Value::as_u64) {
                     self.usage.output = out;
                 }
+                let answered = self.answer.is_some();
                 self.finish = str_at(&v, "/delta/stop_reason").map(|r| match r {
                     "max_tokens" => FinishReason::MaxTokens,
+                    "tool_use" if answered => FinishReason::Stop,
                     "tool_use" => FinishReason::ToolUse,
                     "refusal" => FinishReason::ContentFiltered,
                     _ => FinishReason::Stop,
@@ -340,7 +381,8 @@ impl Provider for Anthropic {
             &self.http,
             resp,
             Framing::Sse,
-            MessagesMapper::new(self.http.provider()),
+            MessagesMapper::new(self.http.provider())
+                .answering(crate::response_schema().map(|s| s.name)),
             cancel,
         ))
     }
@@ -364,6 +406,75 @@ impl Provider for Anthropic {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn structured_replies_go_through_a_forced_tool() {
+        let req = ChatRequest {
+            model: "claude-x".into(),
+            messages: vec![kor_core::Message::text(Role::User, "split")],
+            reasoning: Some(kor_core::Reasoning {
+                budget_tokens: Some(2048),
+                effort: None,
+            }),
+            ..Default::default()
+        };
+        let schema = crate::ResponseSchema {
+            name: "commit_split".into(),
+            schema: json!({"type": "object", "properties": {"commits": {"type": "array"}}}),
+            strict: true,
+        };
+        let b = crate::RESPONSE_SCHEMA
+            .scope(schema, async { body(&req, "anthropic").unwrap() })
+            .await;
+        assert_eq!(
+            b["tool_choice"],
+            json!({"type": "tool", "name": "commit_split"})
+        );
+        assert_eq!(b["tools"][0]["input_schema"]["type"], "object");
+        assert!(
+            b.get("thinking").is_none(),
+            "a forced tool excludes thinking"
+        );
+        assert!(
+            body(&req, "anthropic")
+                .unwrap()
+                .get("tool_choice")
+                .is_none()
+        );
+
+        // The forced call's input is the reply text; the turn ends normally.
+        let mut m = MessagesMapper::new("anthropic").answering(Some("commit_split".into()));
+        let frame = |d: Value| crate::stream::Frame {
+            event: None,
+            data: d.to_string(),
+        };
+        let mut out = Vec::new();
+        for f in [
+            json!({"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "t1", "name": "commit_split"}}),
+            json!({"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": "{\"commits\":"}}),
+            json!({"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": "[]}"}}),
+            json!({"type": "content_block_stop", "index": 0}),
+            json!({"type": "message_delta", "delta": {"stop_reason": "tool_use"}}),
+            json!({"type": "message_stop"}),
+        ] {
+            out.extend(m.frame(frame(f)).unwrap());
+        }
+        let text: String = out
+            .iter()
+            .filter_map(|e| match e {
+                StreamEvent::TextDelta { text } => Some(text.as_str()),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(text, "{\"commits\":[]}");
+        assert!(
+            out.iter()
+                .all(|e| !matches!(e, StreamEvent::ToolCallStart { .. }))
+        );
+        assert!(out.contains(&StreamEvent::Finish {
+            reason: FinishReason::Stop
+        }));
+    }
 
     #[test]
     fn web_search_tool_uses_the_server_tool_shape() {

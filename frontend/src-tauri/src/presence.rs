@@ -576,9 +576,18 @@ pub fn notify(app: &AppHandle, n: Notification) {
     if alert.toast {
         let app2 = app.clone();
         let target = (saved.session.clone(), saved.approval.clone());
+        // §6.5: the OS shows toasts outside Kor (lock screen, notification centre); in privacy
+        // mode project names and paths there become aliases.
+        let roots: Vec<String> = lock(&shell().tracker)
+            .sessions
+            .values()
+            .map(|r| r.root.clone())
+            .chain(crate::osint::load_recent())
+            .collect();
+        let roots: Vec<&std::path::Path> = roots.iter().map(std::path::Path::new).collect();
         let toast = kor_platform::toast::Toast {
-            title: saved.title.clone(),
-            body: saved.body.clone(),
+            title: kor_runtime::project_alias::mask(&saved.title, &roots),
+            body: kor_runtime::project_alias::mask(&saved.body, &roots),
             app_id: (!cfg!(debug_assertions)).then(|| app.config().identifier.clone()),
         };
         if let Err(e) = kor_platform::toast::show(&toast, move || {

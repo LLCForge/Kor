@@ -109,8 +109,8 @@ pub trait Provider: Send + Sync {
 
     /// §15.13: `complete` with the reply constrained to `schema` where the API can do it: `OpenAI`
     /// `json_schema`, OpenAI-compatible `response_format` (llama.cpp's server turns it into a
-    /// grammar), Gemini `responseSchema`, Ollama `format`. Other providers ignore it, so callers
-    /// still parse and check the reply.
+    /// grammar), Gemini `responseSchema`, Ollama `format`, Anthropic a forced tool call whose
+    /// input is the reply. Other providers ignore it, so callers still parse and check the reply.
     async fn complete_structured(
         &self,
         req: ChatRequest,

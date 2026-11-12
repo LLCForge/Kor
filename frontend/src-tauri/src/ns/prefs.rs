@@ -311,7 +311,13 @@ fn sessions(name: &str, args: &[Value], m: &str, app: &AppHandle) -> Res {
                         .state::<crate::state::AppState>()
                         .root()
                         .ok_or("Önce bir klasör aç")?;
-                    si::claude_code(&home, &root, all)
+                    let chats = si::claude_code(&home, &root, all);
+                    // §3.3: bu projenin sohbetleri hafızaya da özet bırakır (`all` başka projelerinkini de getirir).
+                    if !all && let Some(kh) = kor_runtime::kor_home() {
+                        si::remember(&kh, &root, &si::fresh(&sd, &chats), "Claude Code")
+                            .map_err(|e| e.to_string())?;
+                    }
+                    chats
                 }
                 "cursor" => {
                     let db = dirs::config_dir()

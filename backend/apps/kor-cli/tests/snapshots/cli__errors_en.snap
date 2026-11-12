@@ -1,0 +1,50 @@
+---
+source: apps/kor-cli/tests/cli.rs
+expression: out
+---
+$ kor --version
+exit: 0
+kor <version>
+
+$ kor sessions no-such-subcommand
+exit: 2
+error: unrecognized subcommand 'no-such-subcommand'
+
+Usage: kor sessions [OPTIONS] [COMMAND]
+
+For more information, try '--help'.
+
+$ kor config set
+exit: 2
+error: the following required arguments were not provided:
+  <KEY>
+  <VALUE>
+
+Usage: kor config set <KEY> <VALUE>
+
+For more information, try '--help'.
+
+$ kor config set no.such.key 1
+exit: 1
+Invalid configuration in <tmp>/.kor-test-home/config/config.toml: unknown field `no`, expected one of `ui`, `agent`, `privacy`, `permissions`, `computer`, `health`, `update`, `routing`, `budget`, `context`, `memory`, `graph`, `sandbox`, `team`, `offline`, `vault`, `forge`, `triggers`, `daemon`, `notify`, `orchestrator`, `record`, `env`, `audit`, `stats`, `tray`, `pip`, `auto`, `tui`, `plan`, `keys`, `desktop`, `shell`, `integrations`, `intent`, `tools`, `media`, `browser`, `perf`, `acp`
+
+$ kor seo opportunities
+exit: 2
+error: the following required arguments were not provided:
+  <SITE>
+
+Usage: kor seo opportunities <SITE>
+
+For more information, try '--help'.
+
+$ kor seo opportunities --keywords no-position.csv
+exit: 1
+SEO: no position column (position / konum / pozisyon)
+
+$ kor commit --yes
+exit: 1
+This folder is not inside a git repository.
+
+$ kor changelog
+exit: 1
+This folder is not inside a git repository.

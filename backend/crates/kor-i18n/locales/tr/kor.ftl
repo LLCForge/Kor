@@ -1931,6 +1931,7 @@ arg-seo-brand = HTML/PDF raporların üstündeki marka satırı
 arg-seo-schedule = Günlük veya haftalık tekrarla (rutin ekler)
 arg-seo-client-json = Google OAuth istemci JSON'u (tür "Masaüstü uygulaması")
 arg-seo-site = Search Console mülkü (sc-domain:ornek.com veya https://ornek.com/) ya da site
+arg-seo-keywords = Search Console yerine anahtar kelime CSV'si: "Sorgular" dışa aktarımı ya da anahtar kelime, gösterim (ya da hacim) ve konum sütunlu bir liste
 arg-seo-days = Gün sayısı
 arg-seo-dims = Boyutlar, virgülle (query, page, country, device, date)
 arg-seo-limit = En fazla satır

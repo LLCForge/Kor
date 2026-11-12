@@ -114,7 +114,8 @@ is `kor update rollback`, which has no desktop button yet.
 - **Zero telemetry.** No usage data, no crash upload, no phone-home, no mandatory account.
 - **Privacy mode** (`kor --privacy-mode`, `privacy.mode = true`): only local providers; web search, MCP, browser,
   SSH, catalog refresh and update checks are off. One network guard in `kor-core` builds every HTTP client, so the
-  rule holds for every crate.
+  rule holds for every crate. Desktop notifications and the taskbar jump list, which the OS shows outside Kor, name
+  projects by an alias (`proje-1a2b`) instead of their folder.
 - **Provider privacy cards** (`kor providers privacy`): for each provider, whether it trains on your data, how long
   it keeps it, where it processes it, with the policy URL, the date it was read and a short quote. Unknown values
   are shown as "unknown", never guessed.
@@ -273,7 +274,8 @@ against mock servers. An OpenAI-compatible provider needs only a TOML manifest, 
 - **WordPress / WooCommerce** (`kor wp …`): inventory, health, updates, staging, integrity, cleanup, scaffolding.
 - **SEO** (`kor seo audit | verify | meta | content | competitors | opportunities`), redirect maps (`kor redirects`),
   proposals and client reports (`kor proposal`, `kor client`). Google Search Console, GA4 and Bing need your own
-  OAuth client or API key.
+  OAuth client or API key; `kor seo opportunities --keywords list.csv` scores a Search Console "Queries" export or
+  any keyword list without one.
 - **Turkey layer** (`kor tr …`): KVKK check, Turkish slugs, VAT (KDV), e-Fatura and e-İrsaliye XML, iyzico/PayTR
   payment templates, marketplace helpers and Turkish keyword tools.
 
@@ -682,10 +684,10 @@ trials and 5 decisions. The development tasks:
 
 **Agent, languages and memory**
 - [ ] tree-sitter for 40+ languages (12 today); a docs/PDF concept layer in the graph
-- [ ] Hot memory tier and in-RAM HNSW index; a "what was done here" memory summary from imported chats
-- [ ] Constrained decoding through llama.cpp GBNF directly and Anthropic forced tools (OpenAI, OpenAI-compatible, Gemini and Ollama are done)
+- [ ] Hot memory tier and in-RAM HNSW index
+- [ ] Constrained decoding through llama.cpp GBNF directly (OpenAI, OpenAI-compatible, Gemini, Ollama and Anthropic are done)
 - [ ] fish-style inline shell suggestions from a small local model
-- [ ] Domain-level sandbox network rules, project-name masking in privacy mode, a hard CPU cap on Linux/macOS (today: `nice` priority)
+- [ ] Domain-level sandbox network rules, a hard CPU cap on Linux/macOS (today: `nice` priority)
 - [ ] Virtual desktops in saved layouts; Windows remote servers
 
 **Providers and cost**
@@ -694,7 +696,7 @@ trials and 5 decisions. The development tasks:
 - [ ] Proxy quota in `kor quota`
 
 **Web, media and integrations**
-- [ ] Turkish payment, cargo, marketplace and registrar adapters; backlink tools; bulk keyword opportunities
+- [ ] Turkish payment, cargo, marketplace and registrar adapters; backlink tools
 - [ ] Direct media providers (OpenAI Images, Imagen/Veo, Stability, Runway, Luma) and local ComfyUI
 - [ ] Forge: fix from CI status, issue → task, release notes, Bitbucket Server
 

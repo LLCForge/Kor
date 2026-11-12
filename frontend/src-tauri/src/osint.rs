@@ -139,9 +139,8 @@ fn jump_list(l: &kor_i18n::Localizer, recent: &[String]) -> kor_platform::jumpli
             .map(|p| {
                 let path = Path::new(p);
                 Item {
-                    title: path
-                        .file_name()
-                        .map_or_else(|| p.clone(), |n| n.to_string_lossy().into_owned()),
+                    // §6.5: the taskbar shows it outside Kor; an alias in privacy mode.
+                    title: kor_runtime::project_alias::label(path),
                     args: vec![osint::open_url(path)],
                 }
             })
@@ -365,7 +364,7 @@ fn recent_file() -> Option<PathBuf> {
     kor_platform::data_dir().map(|d| d.join("desktop-recent.json"))
 }
 
-fn load_recent() -> Vec<String> {
+pub(crate) fn load_recent() -> Vec<String> {
     recent_file()
         .and_then(|f| std::fs::read_to_string(f).ok())
         .and_then(|t| serde_json::from_str::<Vec<String>>(&t).ok())

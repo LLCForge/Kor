@@ -234,9 +234,177 @@ pub fn calibration(
     }))
 }
 
+/// Keyword rows from a CSV (`kor seo opportunities --keywords list.csv`): a Search Console
+/// "Queries" export in English or Turkish, or any list with a keyword, impressions (or search
+/// volume) and position column. Delimiter `,`, `;` or tab; decimals with `.` or `,`; CTR as
+/// `0.032`, `3.2%` or `3,2%` (computed from clicks when missing).
+///
+/// # Errors
+/// No header row, or no keyword / impressions / position column.
+#[allow(clippy::too_many_lines)] // header aliases and number formats, read in one pass
+pub fn rows_from_csv(text: &str) -> Result<Vec<Row>, String> {
+    let text = text.trim_start_matches('\u{feff}');
+    let mut lines = text.lines().filter(|l| !l.trim().is_empty());
+    let head = lines.next().ok_or("empty file")?;
+    let delim = [',', ';', '\t']
+        .into_iter()
+        .max_by_key(|d| head.matches(*d).count())
+        .unwrap_or(',');
+    let norm = |s: &str| {
+        s.trim()
+            .trim_matches('"')
+            .to_lowercase()
+            .replace(['ı', 'İ'], "i")
+            .replace('ş', "s")
+            .replace('ğ', "g")
+            .replace('ü', "u")
+            .replace('ö', "o")
+            .replace('ç', "c")
+    };
+    let cols: Vec<String> = split_csv(head, delim).iter().map(|c| norm(c)).collect();
+    let find = |names: &[&str]| cols.iter().position(|c| names.iter().any(|n| c == n));
+    let kw = find(&[
+        "query",
+        "queries",
+        "top queries",
+        "keyword",
+        "keywords",
+        "sorgu",
+        "sorgular",
+        "en cok yapilan sorgular",
+        "anahtar kelime",
+        "kelime",
+    ])
+    .ok_or("no keyword column (query / keyword / sorgu / anahtar kelime)")?;
+    let imp = find(&[
+        "impressions",
+        "gosterimler",
+        "gosterim",
+        "volume",
+        "search volume",
+        "hacim",
+        "arama hacmi",
+    ])
+    .ok_or("no impressions or search volume column (impressions / gösterimler / volume / hacim)")?;
+    let pos = find(&[
+        "position",
+        "average position",
+        "konum",
+        "ortalama konum",
+        "pozisyon",
+        "sira",
+    ])
+    .ok_or("no position column (position / konum / pozisyon)")?;
+    let clicks = find(&["clicks", "tiklamalar", "tiklama"]);
+    let ctr = find(&["ctr", "to", "tiklama orani"]);
+    let num = |s: &str| -> Option<f64> {
+        let s = s.trim().trim_matches('"').trim_end_matches('%').trim();
+        // `1.234,5` and `1,234.5` both mean 1234.5; a lone comma is a decimal comma.
+        let s = match (s.rfind(','), s.rfind('.')) {
+            (Some(c), Some(d)) if c > d => s.replace('.', "").replace(',', "."),
+            (Some(_), Some(_)) => s.replace(',', ""),
+            (Some(_), None) => s.replace(',', "."),
+            _ => s.to_owned(),
+        };
+        s.parse().ok()
+    };
+    // Counts (impressions, clicks) are whole numbers: `1.200` / `1,200` is a thousands separator.
+    let count = |s: &str| -> Option<f64> {
+        let raw = s.trim().trim_matches('"');
+        let groups: Vec<&str> = raw.split(['.', ',']).collect();
+        let grouped = groups.len() > 1
+            && groups[0].len() <= 3
+            && groups
+                .iter()
+                .all(|g| !g.is_empty() && g.bytes().all(|b| b.is_ascii_digit()))
+            && groups[1..].iter().all(|g| g.len() == 3);
+        if grouped {
+            groups.concat().parse().ok()
+        } else {
+            num(raw)
+        }
+    };
+    let mut out = Vec::new();
+    for line in lines {
+        let f = split_csv(line, delim);
+        let get = |i: usize| f.get(i).map_or("", String::as_str);
+        let (Some(impressions), Some(position)) = (count(get(imp)), num(get(pos))) else {
+            continue;
+        };
+        let keyword = get(kw).trim().to_owned();
+        if keyword.is_empty() || impressions <= 0.0 {
+            continue;
+        }
+        let clicks = clicks.and_then(|i| count(get(i))).unwrap_or(0.0);
+        let ctr = ctr
+            .and_then(|i| {
+                let raw = get(i);
+                num(raw).map(|v| {
+                    if raw.contains('%') || v > 1.0 {
+                        v / 100.0
+                    } else {
+                        v
+                    }
+                })
+            })
+            .unwrap_or(clicks / impressions);
+        out.push(Row {
+            keys: vec![keyword],
+            clicks,
+            impressions,
+            ctr,
+            position,
+        });
+    }
+    Ok(out)
+}
+
+/// One CSV line; `"…"` fields may hold the delimiter and `""` for a quote.
+fn split_csv(line: &str, delim: char) -> Vec<String> {
+    let mut out = vec![String::new()];
+    let mut quoted = false;
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' if quoted && chars.peek() == Some(&'"') => {
+                chars.next();
+                out.last_mut().unwrap_or(&mut String::new()).push('"');
+            }
+            '"' => quoted = !quoted,
+            c if c == delim && !quoted => out.push(String::new()),
+            c => {
+                if let Some(s) = out.last_mut() {
+                    s.push(c);
+                }
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn keyword_csv_in_turkish_and_english() {
+        let tr = "\u{feff}En çok yapılan sorgular;Tıklamalar;Gösterimler;TO;Konum\n\"kargo takip; online\";12;1.200;1%;8,4\nboş satır;0;0;0%;3\nkdv hesaplama;40;800;5%;2,1\n";
+        let rows = rows_from_csv(tr).unwrap();
+        assert_eq!(rows.len(), 2, "rows without impressions are skipped");
+        assert_eq!(rows[0].keys, ["kargo takip; online"]);
+        assert!((rows[0].impressions - 1200.0).abs() < 1e-9);
+        assert!((rows[0].ctr - 0.01).abs() < 1e-9);
+        assert!((rows[0].position - 8.4).abs() < 1e-9);
+        let en = "keyword,search volume,position\nseo audit,500,14\n";
+        let rows = rows_from_csv(en).unwrap();
+        assert!((rows[0].ctr).abs() < 1e-9, "no clicks: CTR 0");
+        assert!(!score(&rows).is_empty());
+        assert!(
+            rows_from_csv("keyword,volume\nx,1\n")
+                .unwrap_err()
+                .contains("position")
+        );
+    }
 
     fn r(k: &str, imp: f64, ctr: f64, pos: f64) -> Row {
         Row {

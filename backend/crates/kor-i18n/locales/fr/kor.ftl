@@ -1937,6 +1937,7 @@ arg-seo-brand = Ligne de marque en tête des rapports HTML/PDF
 arg-seo-schedule = Répéter chaque jour ou chaque semaine (ajoute une routine)
 arg-seo-client-json = JSON du client OAuth Google (type « Application de bureau »)
 arg-seo-site = Propriété Search Console (sc-domain:exemple.com ou https://exemple.com/) ou site
+arg-seo-keywords = CSV de mots-clés au lieu de Search Console : un export « Requêtes » ou une liste avec mot-clé, impressions (ou volume) et position
 arg-seo-days = Nombre de jours
 arg-seo-dims = Dimensions séparées par des virgules (query, page, country, device, date)
 arg-seo-limit = Nombre maximal de lignes

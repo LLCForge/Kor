@@ -1483,6 +1483,15 @@ impl ConfigError {
             }
         }
     }
+
+    /// What is wrong, without the file (for messages that name [`Self::origin`] themselves).
+    pub fn message(&self) -> String {
+        match self {
+            Self::Io { source, .. } => source.to_string(),
+            Self::TooLarge { .. } => format!("file exceeds {MAX_FILE_BYTES} bytes"),
+            Self::Invalid { message, .. } => message.clone(),
+        }
+    }
 }
 
 /// Candidate config file locations.
@@ -1824,7 +1833,7 @@ pub fn unset(file: &Path, key: &str) -> Result<(), ConfigError> {
         let _ = fs::remove_file(&tmp);
         return Err(ConfigError::Invalid {
             origin,
-            message: e.to_string(),
+            message: e.message(),
         });
     }
     fs::rename(&tmp, file).map_err(io)
@@ -1895,7 +1904,8 @@ fn set_item(file: &Path, key: &str, item: toml_edit::Item) -> Result<(), ConfigE
     };
     if let Err(e) = load(&check, std::iter::empty(), &[]) {
         let _ = fs::remove_file(&tmp);
-        return Err(invalid(e.to_string()));
+        // The check ran on the temporary copy; the message is about the user's file.
+        return Err(invalid(e.message()));
     }
     fs::rename(&tmp, file).map_err(io)
 }

@@ -114,7 +114,8 @@ boşluk, henüz masaüstü düğmesi olmayan `kor update rollback`.
 - **Sıfır telemetri.** Kullanım verisi yok, çökme raporu yüklemesi yok, "ev arama" yok, zorunlu hesap yok.
 - **Gizlilik modu** (`kor --privacy-mode`, `privacy.mode = true`): yalnızca yerel sağlayıcılar; web araması, MCP,
   tarayıcı, SSH, katalog yenileme ve güncelleme denetimi kapalı. `kor-core` içindeki tek ağ kapısı bütün HTTP
-  istemcilerini kurduğu için kural her crate'te geçerlidir.
+  istemcilerini kurduğu için kural her crate'te geçerlidir. İşletim sisteminin Kor dışında gösterdiği masaüstü
+  bildirimleri ve görev çubuğu atlama listesi projeleri klasör adı yerine takma adla (`proje-1a2b`) gösterir.
 - **Sağlayıcı gizlilik kartları** (`kor providers privacy`): her sağlayıcı için verini eğitimde kullanıp kullanmadığı,
   ne kadar sakladığı, hangi bölgede işlediği; politika adresi, okunduğu tarih ve kısa bir alıntıyla. Bilinmeyen
   değerler "bilinmiyor" diye yazılır, asla tahmin edilmez.
@@ -274,7 +275,8 @@ edildiler. OpenAI uyumlu bir sağlayıcı yalnızca bir TOML manifestosu ister, 
 - **WordPress / WooCommerce** (`kor wp …`): envanter, sağlık, güncellemeler, staging, bütünlük, temizlik, iskele oluşturma.
 - **SEO** (`kor seo audit | verify | meta | content | competitors | opportunities`), yönlendirme haritaları
   (`kor redirects`), teklifler ve müşteri raporları (`kor proposal`, `kor client`). Google Search Console, GA4 ve Bing
-  için kendi OAuth istemcin ya da API anahtarın gerekir.
+  için kendi OAuth istemcin ya da API anahtarın gerekir; `kor seo opportunities --keywords liste.csv` bunlar olmadan
+  Search Console "Sorgular" dışa aktarımını ya da herhangi bir anahtar kelime listesini puanlar.
 - **Türkiye katmanı** (`kor tr …`): KVKK denetimi, Türkçe slug, KDV, e-Fatura ve e-İrsaliye XML, iyzico/PayTR ödeme
   şablonları, pazar yeri yardımcıları ve Türkçe anahtar kelime araçları.
 
@@ -685,10 +687,10 @@ Geliştirme işleri:
 
 **Ajan, diller ve hafıza**
 - [ ] 40'tan fazla dil için tree-sitter (şu an 12); grafta doküman/PDF kavram katmanı
-- [ ] Sıcak hafıza katmanı ve RAM'de HNSW; içe aktarılan sohbetlerden "burada ne yapıldı" hafıza özeti
-- [ ] Doğrudan llama.cpp GBNF dilbilgisi ve Anthropic zorunlu araç yoluyla kısıtlı yanıt (OpenAI, OpenAI uyumlu, Gemini ve Ollama yapıldı)
+- [ ] Sıcak hafıza katmanı ve RAM'de HNSW
+- [ ] Doğrudan llama.cpp GBNF dilbilgisiyle kısıtlı yanıt (OpenAI, OpenAI uyumlu, Gemini, Ollama ve Anthropic yapıldı)
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
-- [ ] Sandbox'ta alan adı bazlı ağ kuralları, gizlilik modunda proje adı maskeleme, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)
+- [ ] Sandbox'ta alan adı bazlı ağ kuralları, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)
 - [ ] Kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular
 
 **Sağlayıcılar ve maliyet**
@@ -697,7 +699,7 @@ Geliştirme işleri:
 - [ ] `kor quota`'da proxy kotası
 
 **Web, medya ve entegrasyonlar**
-- [ ] Türk ödeme, kargo, pazaryeri ve alan adı firmaları bağdaştırıcıları; backlink araçları; toplu kelime fırsatları
+- [ ] Türk ödeme, kargo, pazaryeri ve alan adı firmaları bağdaştırıcıları; backlink araçları
 - [ ] Doğrudan medya sağlayıcıları (OpenAI Images, Imagen/Veo, Stability, Runway, Luma) ve yerel ComfyUI
 - [ ] Forge: CI durumundan düzeltme, issue → görev, sürüm notları, Bitbucket Server
 

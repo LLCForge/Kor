@@ -222,21 +222,134 @@ pub fn cursor(db: &Path) -> Result<Vec<Chat>, String> {
 /// When a session file cannot be written.
 pub fn save_new(sessions_dir: &Path, chats: &[Chat]) -> std::io::Result<usize> {
     std::fs::create_dir_all(sessions_dir)?;
-    let mut n = 0;
-    for c in chats {
-        let path = sessions_dir.join(format!("{}.jsonl", c.id));
-        if path.exists() || c.messages.is_empty() {
-            continue;
-        }
-        kor_agent::session::save(&path, &c.messages)?;
-        n += 1;
+    let fresh = fresh(sessions_dir, chats);
+    for c in &fresh {
+        kor_agent::session::save(&sessions_dir.join(format!("{}.jsonl", c.id)), &c.messages)?;
     }
-    Ok(n)
+    Ok(fresh.len())
+}
+
+/// Chats with messages that are not in `sessions_dir` yet.
+pub fn fresh<'a>(sessions_dir: &Path, chats: &'a [Chat]) -> Vec<&'a Chat> {
+    chats
+        .iter()
+        .filter(|c| {
+            !c.messages.is_empty() && !sessions_dir.join(format!("{}.jsonl", c.id)).exists()
+        })
+        .collect()
+}
+
+/// §3.3: "what was done in this project", from chats imported for `root`: one entry per chat in
+/// the project memory (`sessions/<date>.md`) with its requests and its last answer. Built from
+/// the text alone (no model call); secrets are masked by the memory writer.
+///
+/// # Errors
+/// When the memory file cannot be written.
+pub fn remember(home: &Path, root: &Path, chats: &[&Chat], source: &str) -> std::io::Result<usize> {
+    use std::fmt::Write as _;
+    // The agent's form of the root (canonical), so this lands in the same memory folder.
+    let root = kor_tools::ToolCtx::new(root).map_or_else(|_| root.to_owned(), |c| c.root);
+    let mem = kor_memory::project::ProjectMemory::new(home, &root);
+    let date = chrono::Local::now().format("%Y-%m-%d %H:%M").to_string();
+    let first_line = |m: &Message, n: usize| -> String {
+        let t = m.plain_text();
+        let line = t
+            .lines()
+            .find(|l| !l.trim().is_empty())
+            .unwrap_or_default()
+            .trim();
+        match line.char_indices().nth(n) {
+            Some((i, _)) => format!("{}…", &line[..i]),
+            None => line.to_owned(),
+        }
+    };
+    for c in chats {
+        let asks: Vec<String> = c
+            .messages
+            .iter()
+            .filter(|m| m.role == Role::User)
+            .map(|m| first_line(m, 120))
+            .filter(|s| !s.is_empty())
+            .collect();
+        let Some(task) = asks.first().cloned() else {
+            continue;
+        };
+        let outcome = c
+            .messages
+            .iter()
+            .rev()
+            .find(|m| m.role == Role::Assistant)
+            .map(|m| first_line(m, 400))
+            .unwrap_or_default();
+        let mut result = format!("Imported from {source} ({} messages).", c.messages.len());
+        if asks.len() > 1 {
+            let more: Vec<String> = asks
+                .iter()
+                .skip(1)
+                .take(4)
+                .map(|a| format!("- {a}"))
+                .collect();
+            let _ = write!(result, "\nLater requests:\n{}", more.join("\n"));
+        }
+        if !outcome.is_empty() {
+            let _ = write!(result, "\nLast answer: {outcome}");
+        }
+        mem.add_session(&kor_memory::project::SessionSummary {
+            date: date.clone(),
+            task,
+            result,
+        })?;
+    }
+    Ok(chats.len())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn imported_chats_leave_a_summary_in_project_memory() {
+        let home = tempfile::tempdir().unwrap();
+        let root = tempfile::tempdir().unwrap();
+        let sd = home.path().join("sessions");
+        let chats = vec![Chat {
+            id: "cc-1".into(),
+            messages: vec![
+                Message::text(Role::User, "add a login page\nwith details"),
+                Message::text(Role::Assistant, "Done."),
+                Message::text(Role::User, "now add tests"),
+                Message::text(Role::Assistant, "Added tests in tests/login.rs; all pass."),
+            ],
+        }];
+        let new = fresh(&sd, &chats);
+        assert_eq!(
+            remember(home.path(), root.path(), &new, "Claude Code").unwrap(),
+            1
+        );
+        assert_eq!(save_new(&sd, &chats).unwrap(), 1);
+        assert!(
+            fresh(&sd, &chats).is_empty(),
+            "a second import has nothing new to remember"
+        );
+        let canonical = kor_tools::ToolCtx::new(root.path()).unwrap().root;
+        let mem = kor_memory::project::ProjectMemory::new(home.path(), &canonical);
+        let day = std::fs::read_dir(mem.sessions_dir())
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        let text = std::fs::read_to_string(day).unwrap();
+        assert!(text.contains("add a login page"), "{text}");
+        assert!(
+            text.contains("- now add tests") && text.contains("Last answer: Added tests"),
+            "{text}"
+        );
+        assert!(
+            text.contains("Imported from Claude Code (4 messages)"),
+            "{text}"
+        );
+    }
 
     #[test]
     fn claude_code_chat_keeps_only_the_conversation() {
