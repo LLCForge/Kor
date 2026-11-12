@@ -3771,7 +3771,7 @@ dependencies = [
 
 [[package]]
 name = "kor-config"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "dirs 7.0.0",
  "kor-core",
@@ -3795,7 +3795,7 @@ dependencies = [
 
 [[package]]
 name = "kor-desktop"
-version = "0.8.9"
+version = "0.8.10"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3888,7 +3888,7 @@ dependencies = [
 
 [[package]]
 name = "kor-i18n"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "fluent-bundle",
  "serde",
@@ -3940,7 +3940,7 @@ dependencies = [
 
 [[package]]
 name = "kor-providers"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -3988,7 +3988,7 @@ dependencies = [
 
 [[package]]
 name = "kor-runtime"
-version = "0.6.7"
+version = "0.6.8"
 dependencies = [
  "arboard",
  "async-trait",
@@ -4103,7 +4103,7 @@ dependencies = [
 
 [[package]]
 name = "kor-web"
-version = "0.0.3"
+version = "0.0.4"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
