@@ -26,6 +26,8 @@ pub(crate) struct Http {
     provider: String,
     extra_body: Option<Arc<Value>>,
     secret: Option<SecretString>,
+    /// A cloud identity that authorises each request (when the provider has no key).
+    authorizer: Option<Arc<dyn crate::identity::Authorizer>>,
 }
 
 impl std::fmt::Debug for Http {
@@ -113,7 +115,16 @@ impl Http {
             provider: m.id.clone(),
             extra_body: m.quirks.extra_body.clone().map(Arc::new),
             secret: key,
+            authorizer: None,
         })
+    }
+
+    pub(crate) fn with_authorizer(
+        mut self,
+        a: Option<Arc<dyn crate::identity::Authorizer>>,
+    ) -> Self {
+        self.authorizer = a;
+        self
     }
 
     pub(crate) fn provider(&self) -> &str {
@@ -186,7 +197,17 @@ impl Http {
         // The resolver guards names; an IP-literal base URL (a LAN server) is checked here.
         kor_core::net::check_url(&self.base)
             .map_err(|b| self.err(ProviderErrorKind::InvalidRequest, b.message))?;
-        let resp = req.send().await.map_err(|e| self.transport(&e))?;
+        let resp = match &self.authorizer {
+            Some(a) => {
+                let mut r = req.build().map_err(|e| self.transport(&e))?;
+                a.authorize(&mut r)
+                    .await
+                    .map_err(|m| self.err(ProviderErrorKind::AuthFailed, m))?;
+                self.client.execute(r).await
+            }
+            None => req.send().await,
+        }
+        .map_err(|e| self.transport(&e))?;
         crate::health::record_headers(&self.provider, resp.headers());
         crate::quota::record(&self.provider, self.secret.as_ref(), resp.headers());
         let status = resp.status();

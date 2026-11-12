@@ -10,6 +10,7 @@ pub mod gbnf;
 pub mod health;
 mod http;
 pub mod huggingface;
+pub mod identity;
 mod manifest;
 pub mod media;
 pub mod media_catalog;
@@ -155,19 +156,26 @@ pub fn build(
             manifest.docs.as_deref().unwrap_or("the provider docs")
         )));
     }
-    // AWS: without an endpoint URL, the regional one for AWS_REGION.
+    // AWS / Vertex: without an endpoint URL, the one for AWS_REGION / GOOGLE_CLOUD_PROJECT.
     let regional;
-    let manifest = match adapters::bedrock::regional(manifest) {
-        Some(m) => {
-            regional = m;
-            &regional
-        }
-        None => manifest,
-    };
+    let manifest =
+        match adapters::bedrock::regional(manifest).or_else(|| identity::regional(manifest)) {
+            Some(m) => {
+                regional = m;
+                &regional
+            }
+            None => manifest,
+        };
     let manifest = &*manifest
         .resolved(|v| std::env::var(v).ok())
         .map_err(|e| invalid(e.message))?;
-    if manifest.needs_key() && key.is_none() {
+    // §4.2: no key, but a cloud identity (Vertex ADC, Entra ID, OCI signing) is configured.
+    let identity = if manifest.needs_key() && key.is_none() {
+        identity::for_manifest(manifest)
+    } else {
+        None
+    };
+    if manifest.needs_key() && key.is_none() && identity.is_none() {
         return Err(ProviderError::new(
             &manifest.id,
             ProviderErrorKind::AuthFailed,
@@ -178,7 +186,7 @@ pub fn build(
             ),
         ));
     }
-    let http = http::Http::new(manifest, key)?;
+    let http = http::Http::new(manifest, key)?.with_authorizer(identity);
     let m = manifest.clone();
     Ok(match manifest.adapter {
         AdapterKind::OpenaiCompat => Arc::new(adapters::openai_compat::OpenAiCompat::new(m, http)),

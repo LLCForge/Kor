@@ -63,6 +63,8 @@ regex = "1"
 rusqlite = { version = "0.41", features = ["bundled"] }
 rpassword = "7"
 sha2 = "0.10"
+# RSA signing for cloud identities (Vertex service accounts, OCI); already in the tree via rustls.
+ring = "0.17"
 secrecy = "0.10"
 # Encrypted local vault fallback (ADR 0036): RustCrypto, audited AEAD + password KDF.
 argon2 = "0.5"

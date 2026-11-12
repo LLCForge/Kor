@@ -147,7 +147,8 @@ pub fn list_models(
     for m in reg.iter().filter(|m| only.is_none_or(|id| id == m.id)) {
         let key = match key_for(m)? {
             Some((k, _)) => Some(k),
-            None if m.needs_key() => {
+            // §4.2: a cloud identity (Vertex ADC, Entra ID, OCI signing) stands in for the key.
+            None if m.needs_key() && kor_providers::identity::for_manifest(m).is_none() => {
                 skipped.push(m.id.clone());
                 continue;
             }

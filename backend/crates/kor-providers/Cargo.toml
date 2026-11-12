@@ -17,6 +17,7 @@ futures.workspace = true
 kor-core.workspace = true
 kor-secrets.workspace = true
 reqwest.workspace = true
+ring.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
