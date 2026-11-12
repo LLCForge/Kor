@@ -101,6 +101,9 @@ pub(crate) fn body(req: &ChatRequest, provider: &str) -> Result<Value, ProviderE
     if !options.is_empty() {
         body["options"] = Value::Object(options);
     }
+    if let Some(s) = crate::response_schema() {
+        body["format"] = s.schema;
+    }
     Ok(body)
 }
 

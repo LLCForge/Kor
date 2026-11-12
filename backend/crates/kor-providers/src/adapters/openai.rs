@@ -77,6 +77,9 @@ pub(crate) fn body(req: &ChatRequest, provider: &str) -> Result<Value, ProviderE
     if let Some(e) = req.reasoning.and_then(kor_core::Reasoning::level) {
         body["reasoning"] = json!({"effort": e.as_str()});
     }
+    if let Some(s) = crate::response_schema() {
+        body["text"] = json!({"format": {"type": "json_schema", "name": s.name, "schema": s.schema, "strict": s.strict}});
+    }
     Ok(body)
 }
 

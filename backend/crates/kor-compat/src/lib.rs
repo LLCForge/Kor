@@ -23,7 +23,7 @@ use serde::Serialize;
 /// Files larger than this are skipped with a warning.
 const MAX_FILE_BYTES: u64 = 256 * 1024;
 /// At most this many entries are read from one directory.
-const MAX_DIR_ENTRIES: usize = 500;
+pub(crate) const MAX_DIR_ENTRIES: usize = 500;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "lowercase")]

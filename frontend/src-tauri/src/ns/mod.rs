@@ -7,6 +7,9 @@ use tauri::AppHandle;
 use crate::api::Res;
 use crate::state::AppState;
 
+mod acp;
+mod analysis;
+mod batch;
 mod bench;
 pub(crate) mod catalog;
 mod chrome;
@@ -14,68 +17,65 @@ mod compat;
 mod components;
 mod context;
 mod core;
-mod db;
 mod cost;
-mod eco;
-mod files;
-mod gitflow;
-mod local;
-mod media;
-mod graph;
-mod memory;
-mod offline;
-mod analysis;
-mod deps;
-mod metrics;
-mod perf;
-mod visual;
+mod db;
 mod deploy;
+mod deps;
 mod devenv;
-mod find;
-mod forge;
-mod mcpgen;
-mod remote;
-mod replay;
-mod tasks;
-mod triggers;
-mod watch;
-mod packages;
-mod provider;
-mod projmem;
-mod providers;
-mod proxy;
-mod security;
-mod shell;
-mod team;
-mod templates;
-mod acp;
-mod batch;
 mod diagrams;
 mod docs;
+mod eco;
 mod estimate;
+mod files;
+mod find;
+mod forge;
 mod forks;
+mod gitflow;
+mod graph;
 mod hooks;
 mod intent;
 mod know;
 mod korfolder;
+mod local;
 mod mcpdev;
+mod mcpgen;
+mod media;
+mod memory;
+mod metrics;
+mod offline;
 pub(crate) mod osextra;
 mod osint;
+mod packages;
 mod peer;
+mod perf;
 mod prefs;
 mod prereq;
 mod privacycard;
+mod projmem;
+mod provider;
+mod providers;
+mod proxy;
+mod remote;
+mod replay;
 mod rules;
+mod security;
 mod seo;
+mod shell;
 mod shellui;
 mod system;
+mod tasks;
+mod team;
+mod templates;
 mod tools;
+mod triggers;
+mod visual;
+mod watch;
 mod web;
 mod webview;
 
 pub(crate) use files::session_prompt_block;
-pub(crate) use security::g12_sandbox;
 pub(crate) use providers::shutdown;
+pub(crate) use security::g12_sandbox;
 
 /// Uygulama açılışında: zamanlanmış görevler.
 pub fn start(app: AppHandle) {
@@ -229,15 +229,22 @@ mod tests {
                 owner.insert(n, file.clone());
             }
         }
-        // `"name"` gerçek bir eşleşme kolu mu: ardından `=>`, `|` ya da `) =>` (demet kolu) gelir veya `== "name"` korumasıdır.
+        // `"name"` gerçek bir eşleşme kolu mu: ardından `=>`, `|` ya da `) =>` (demet kolu) gelir,
+        // `== "name"` / `!= "name"` korumasıdır ya da `matches!(name, …)` izin listesindedir.
         let has_arm = |body: &str, name: &str| {
             let lit = format!("\"{name}\"");
             body.match_indices(&lit).any(|(i, _)| {
+                let before = &body[..i];
                 let after = body[i + lit.len()..].trim_start();
                 let after = after.strip_prefix(')').map_or(after, str::trim_start);
+                let in_matches = before
+                    .rfind("matches!(")
+                    .is_some_and(|m| !before[m..].contains(')'));
                 after.starts_with("=>")
                     || after.starts_with('|')
-                    || body[..i].trim_end().ends_with("==")
+                    || before.trim_end().ends_with("==")
+                    || before.trim_end().ends_with("!=")
+                    || in_matches
             })
         };
         let text = std::fs::read_to_string(src.join("../../../parity.toml")).unwrap();

@@ -3,4 +3,3 @@ rule opencode/project repo/docs/rules.md [always] OpenCode instruction file.
 command /test opencode/project repo/.opencode/command/test.md
 agent planner opencode/project repo/.opencode/agents/planner.md
 mcp jira opencode/project repo/opencode.json
-warning /repo/opencode.json: instruction pattern `docs/*.md` is not expanded; name files directly

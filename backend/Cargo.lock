@@ -3134,9 +3134,11 @@ dependencies = [
 name = "kor-compat"
 version = "0.2.2"
 dependencies = [
+ "globset",
  "kor-core",
  "serde",
  "serde_json",
+ "serde_yaml",
  "tempfile",
  "toml",
 ]

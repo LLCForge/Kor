@@ -153,6 +153,11 @@ impl Localizer {
         self.format(id, None)
     }
 
+    /// Whether `id` exists in this language (the English fallback does not count).
+    pub fn has(&self, id: &str) -> bool {
+        self.primary.has_message(id)
+    }
+
     pub fn t_args(&self, id: &str, args: &FluentArgs<'_>) -> String {
         self.format(id, Some(args))
     }

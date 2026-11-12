@@ -272,7 +272,7 @@ fn continue_servers(dir: &Path) -> Map<String, Value> {
     out
 }
 
-/// OpenCode: `opencode.json` → `mcp: { <id>: { type: "local", command: [prog, args…], environment } }`.
+/// `OpenCode`: `opencode.json` → `mcp: { <id>: { type: "local", command: [prog, args…], environment } }`.
 fn opencode_servers(home: &Path, app_config: Option<&Path>) -> Map<String, Value> {
     let paths = [
         Some(home.join(".config").join("opencode").join("opencode.json")),

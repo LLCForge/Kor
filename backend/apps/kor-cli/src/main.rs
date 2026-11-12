@@ -679,7 +679,7 @@ fn parse_mode(s: &str) -> Result<PermissionMode, String> {
 #[allow(clippy::too_many_lines)] // one flat builder chain, one block per command
 fn localized_command(l: &Localizer) -> clap::Command {
     let provider = |c: clap::Command| c.mut_arg("provider", |a| a.help(l.t("arg-provider")));
-    Cli::command()
+    let c = Cli::command()
         .about(l.t("app-about"))
         .mut_arg("lang", |a| a.help(l.t("arg-lang")))
         .mut_arg("privacy_mode", |a| a.help(l.t("arg-privacy-mode")))
@@ -1045,7 +1045,52 @@ fn localized_command(l: &Localizer) -> clap::Command {
                 .mut_arg("system", |a| a.help(l.t("arg-system")))
                 .mut_arg("max_tokens", |a| a.help(l.t("arg-max-tokens")))
                 .mut_arg("prompt", |a| a.help(l.t("arg-prompt")))
-        })
+        });
+    fill_help(&Cli::command(), c, "", l)
+}
+
+/// §12.2: help a command's own `localize` left empty or English (the doc comment) comes from
+/// `clihelp-*` Fluent ids: `clihelp-<path>` for a command; `clihelp-<path>--<arg>`, then
+/// `clihelp-<top command>--<arg>`, then `clihelp--<arg>` for an argument.
+fn fill_help(en: &clap::Command, mut c: clap::Command, path: &str, l: &Localizer) -> clap::Command {
+    let gap = |now: Option<String>, orig: Option<String>| {
+        now.as_deref().is_none_or(|s| s.trim().is_empty()) || now == orig
+    };
+    let text = |s: Option<&clap::builder::StyledStr>| s.map(ToString::to_string);
+    let id = |p: &str| format!("clihelp-{}", p.trim().replace(' ', "-"));
+    if !path.is_empty() && gap(text(c.get_about()), text(en.get_about())) && l.has(&id(path)) {
+        c = c.about(l.t(&id(path)));
+    }
+    let top = path.split(' ').find(|s| !s.is_empty()).unwrap_or_default();
+    for a in en.get_arguments() {
+        let arg = a.get_id().as_str();
+        let now = c
+            .get_arguments()
+            .find(|x| x.get_id() == arg)
+            .and_then(|x| text(x.get_help()));
+        // English keeps a doc comment as written; only empty help is filled there.
+        let english_doc = l.lang() == kor_i18n::Lang::En
+            && a.get_help()
+                .is_some_and(|h| !h.to_string().trim().is_empty());
+        if english_doc || !gap(now, text(a.get_help())) {
+            continue;
+        }
+        let keys = [
+            format!("{}--{arg}", id(path)),
+            format!("clihelp-{top}--{arg}"),
+            format!("clihelp--{arg}"),
+        ];
+        if let Some(k) = keys.iter().find(|k| l.has(k)) {
+            let h = l.t(k);
+            c = c.mut_arg(arg, |x| x.help(h));
+        }
+    }
+    for s in en.get_subcommands().filter(|s| s.get_name() != "help") {
+        let name = s.get_name().to_owned();
+        let sub_path = format!("{path} {name}");
+        c = c.mut_subcommand(&name, |sc| fill_help(s, sc, sub_path.trim(), l));
+    }
+    c
 }
 
 /// `--lang` must be known before clap renders localized help, so scan for it first.
@@ -1478,10 +1523,19 @@ fn split_words(s: &str) -> Option<Vec<String>> {
     Some(out)
 }
 
+/// §12.2: short keys for the settings people change most (`kor config set language tr`).
+fn config_key(key: &str) -> String {
+    match key {
+        "language" | "lang" => "ui.language".into(),
+        _ => key.to_owned(),
+    }
+}
+
 fn config_cmd(ctx: &Ctx, cmd: &ConfigCmd) -> bool {
     let l = &ctx.l;
     match cmd {
         ConfigCmd::Set { key, value } => {
+            let key = &config_key(key);
             let Some(file) = ctx.paths.user.clone() else {
                 eprintln!("{}", l.t("config-set-no-user-dir"));
                 return false;
@@ -1735,6 +1789,52 @@ mod tests {
         );
         assert_eq!(run_slash(&ctx, "/mcp serve"), None);
         assert_eq!(run_slash(&ctx, "/no-such-command"), None);
+    }
+
+    #[test]
+    fn config_set_takes_the_short_language_key() {
+        assert_eq!(config_key("language"), "ui.language");
+        assert_eq!(config_key("lang"), "ui.language");
+        assert_eq!(config_key("ui.theme"), "ui.theme");
+    }
+
+    /// §12.2: every command and argument has Turkish help — none empty, none left as the English
+    /// doc comment.
+    #[test]
+    fn turkish_help_covers_every_command_and_argument() {
+        fn walk(en: &clap::Command, tr: &clap::Command, path: &str, bad: &mut Vec<String>) {
+            let about =
+                |c: &clap::Command| c.get_about().map(ToString::to_string).unwrap_or_default();
+            if about(tr).trim().is_empty() || (about(tr) == about(en) && !about(en).is_empty()) {
+                bad.push(format!("{path}: {:?}", about(tr)));
+            }
+            for (a_en, a_tr) in en.get_arguments().zip(tr.get_arguments()) {
+                if a_tr.is_hide_set() || ["help", "version"].contains(&a_tr.get_id().as_str()) {
+                    continue;
+                }
+                let h = |a: &clap::Arg| a.get_help().map(ToString::to_string).unwrap_or_default();
+                if h(a_tr).trim().is_empty() || (h(a_tr) == h(a_en) && !h(a_en).is_empty()) {
+                    bad.push(format!("{path} --{}: {:?}", a_tr.get_id(), h(a_tr)));
+                }
+            }
+            for s_en in en
+                .get_subcommands()
+                .filter(|s| s.get_name() != "help" && !s.is_hide_set())
+            {
+                if let Some(s_tr) = tr.find_subcommand(s_en.get_name()) {
+                    walk(s_en, s_tr, &format!("{path} {}", s_en.get_name()), bad);
+                }
+            }
+        }
+        let tr = localized_command(&Localizer::new(kor_i18n::Lang::Tr));
+        let mut bad = Vec::new();
+        walk(&Cli::command(), &tr, "kor", &mut bad);
+        assert!(
+            bad.is_empty(),
+            "{} untranslated:\n{}",
+            bad.len(),
+            bad.join("\n")
+        );
     }
 
     /// `parity.toml` (repo root) must name every CLI command, and open gaps may only go down.

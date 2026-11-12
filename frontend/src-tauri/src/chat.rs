@@ -80,7 +80,11 @@ impl Chats {
     pub fn reload_idle_under(&self, root: &std::path::Path) {
         let running: Vec<String> = lock(&self.running).keys().cloned().collect();
         let mut chats = lock(&self.chats);
-        let ids: Vec<String> = chats.keys().filter(|id| !running.contains(id)).cloned().collect();
+        let ids: Vec<String> = chats
+            .keys()
+            .filter(|id| !running.contains(id))
+            .cloned()
+            .collect();
         for id in ids {
             let Some(chat) = chats.get(&id) else { continue };
             let Ok(c) = chat.try_lock() else { continue };
@@ -142,7 +146,9 @@ impl Chats {
     /// Answer a question or a compaction preview (`prefs.answer`): `{ choice, remember }` or
     /// `{ keep: [index…] }` / `{ cancel: true }`.
     pub fn answer(&self, id: &str, value: Value) -> Result<(), String> {
-        let p = lock(&self.answers).remove(id).ok_or("Bu soru artık beklenmiyor")?;
+        let p = lock(&self.answers)
+            .remove(id)
+            .ok_or("Bu soru artık beklenmiyor")?;
         let _ = p.reply.send(value);
         Ok(())
     }
@@ -150,13 +156,25 @@ impl Chats {
     /// Wait for the renderer's answer to `id`; `None` when the turn was stopped.
     async fn ask(&self, session_id: &str, id: &str) -> Option<Value> {
         let (tx, rx) = oneshot::channel();
-        lock(&self.answers).insert(id.to_owned(), PendingAnswer { session_id: session_id.to_owned(), reply: tx });
+        lock(&self.answers).insert(
+            id.to_owned(),
+            PendingAnswer {
+                session_id: session_id.to_owned(),
+                reply: tx,
+            },
+        );
         rx.await.ok()
     }
 
     /// `approval`: 'yes' | 'no' | 'always' (`core/agent.ts` `Approval`). `files` (isteğe bağlı,
     /// `ipc-review.ts` `FileDecisions`): dosya başına `"accept"` | `"reject"` | `{ "edit": içerik }`.
-    pub fn approve(&self, id: &str, approval: &str, files: Option<&Value>, by: &'static str) -> Result<(), String> {
+    pub fn approve(
+        &self,
+        id: &str,
+        approval: &str,
+        files: Option<&Value>,
+        by: &'static str,
+    ) -> Result<(), String> {
         let reply = match approval {
             "yes" => PermissionReply::Allow,
             "always" => PermissionReply::AllowAlways,
@@ -208,13 +226,20 @@ fn emit(app: &AppHandle, session_id: &str, mut body: Value) {
 /// with the limits of the observability settings (`g14.getSettings`); nothing when alerts are off.
 async fn g14_settings(app: &AppHandle) -> Option<Value> {
     let state = app.state::<AppState>();
-    let s = crate::ns::call("g14.getSettings", &[], app, &state).await.ok()?;
+    let s = crate::ns::call("g14.getSettings", &[], app, &state)
+        .await
+        .ok()?;
     (s["alerts"].as_bool() == Some(true)).then_some(s)
 }
 
 fn g14_alert(app: &AppHandle, session_id: &str, kind: &str, message: String) {
-    let body = json!({ "at": meta::now_ms(), "sessionId": session_id, "kind": kind, "message": message });
-    kor_core::ipc_trace::event(kor_core::ipc_trace::Surface::Desktop, "kor:g14/alert", &body);
+    let body =
+        json!({ "at": meta::now_ms(), "sessionId": session_id, "kind": kind, "message": message });
+    kor_core::ipc_trace::event(
+        kor_core::ipc_trace::Surface::Desktop,
+        "kor:g14/alert",
+        &body,
+    );
     let _ = app.emit("kor:g14/alert", body);
 }
 
@@ -280,8 +305,14 @@ impl Approver for DesktopApprover {
             json!({ "type": "question", "id": id, "question": q.question, "options": q.options, "default": q.default }),
         );
         let v = chats.ask(&self.session_id, &id).await?;
-        let index = v["choice"].as_u64().and_then(|n| usize::try_from(n).ok()).filter(|n| *n < q.options.len());
-        Some(kor_agent::ask::Choice { index: index.unwrap_or(q.default), remember: v["remember"].as_bool() == Some(true) })
+        let index = v["choice"]
+            .as_u64()
+            .and_then(|n| usize::try_from(n).ok())
+            .filter(|n| *n < q.options.len());
+        Some(kor_agent::ask::Choice {
+            index: index.unwrap_or(q.default),
+            remember: v["remember"].as_bool() == Some(true),
+        })
     }
 
     /// §20.2: a media tool's parameter card (`paramCard` event): every choice at once as chips,
@@ -289,24 +320,43 @@ impl Approver for DesktopApprover {
     async fn params(&self, card: &kor_tools::ParamCard) -> Option<kor_tools::ParamAnswer> {
         let chats = &self.app.state::<AppState>().chats;
         let id = format!("p-{}", chats.next_id.fetch_add(1, Ordering::Relaxed));
-        emit(&self.app, &self.session_id, json!({ "type": "paramCard", "id": id, "card": card }));
+        emit(
+            &self.app,
+            &self.session_id,
+            json!({ "type": "paramCard", "id": id, "card": card }),
+        );
         let v = chats.ask(&self.session_id, &id).await?;
         if v["cancel"].as_bool() == Some(true) {
-            return Some(kor_tools::ParamAnswer { values: serde_json::Map::new(), go: false });
+            return Some(kor_tools::ParamAnswer {
+                values: serde_json::Map::new(),
+                go: false,
+            });
         }
-        let values = v["values"].as_object().cloned().unwrap_or_else(|| card.defaults());
+        let values = v["values"]
+            .as_object()
+            .cloned()
+            .unwrap_or_else(|| card.defaults());
         Some(kor_tools::ParamAnswer { values, go: true })
     }
 
     /// §28.1: `kor:context/compactPreview` with what the summary replaces; the card answers with
     /// the items to keep or a cancel. Without `compact_confirm` the event is informational.
-    async fn compact(&self, items: &[kor_agent::ask::CompactItem], confirm: bool) -> kor_agent::ask::CompactChoice {
+    async fn compact(
+        &self,
+        items: &[kor_agent::ask::CompactItem],
+        confirm: bool,
+    ) -> kor_agent::ask::CompactChoice {
         use kor_agent::ask::CompactChoice;
         let chats = &self.app.state::<AppState>().chats;
         let id = format!("c-{}", chats.next_id.fetch_add(1, Ordering::Relaxed));
-        let body = json!({ "sessionId": self.session_id, "id": id, "items": items, "confirm": confirm });
+        let body =
+            json!({ "sessionId": self.session_id, "id": id, "items": items, "confirm": confirm });
         let _ = self.app.emit("kor:context/compactPreview", body.clone());
-        emit(&self.app, &self.session_id, json!({ "type": "compactPreview", "id": id, "items": items, "confirm": confirm }));
+        emit(
+            &self.app,
+            &self.session_id,
+            json!({ "type": "compactPreview", "id": id, "items": items, "confirm": confirm }),
+        );
         if !confirm {
             return CompactChoice::default();
         }
@@ -315,7 +365,11 @@ impl Approver for DesktopApprover {
             Some(v) => CompactChoice::Proceed {
                 keep: v["keep"]
                     .as_array()
-                    .map(|a| a.iter().filter_map(|n| n.as_u64().and_then(|n| usize::try_from(n).ok())).collect())
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|n| n.as_u64().and_then(|n| usize::try_from(n).ok()))
+                            .collect()
+                    })
                     .unwrap_or_default(),
             },
             None => CompactChoice::default(),
@@ -587,7 +641,11 @@ fn apply_choices(
     // "Skip permissions" chosen in the selector wins over a mode stored for this session earlier:
     // the user asked never to be asked.
     let global = state.mode();
-    let chosen = if global == Some(PermissionMode::BypassPermissions) { global } else { own_mode.or(global) };
+    let chosen = if global == Some(PermissionMode::BypassPermissions) {
+        global
+    } else {
+        own_mode.or(global)
+    };
     if let Some(mut mode) = chosen {
         if mode == PermissionMode::Auto && !agent.ctx.sandbox.is_enforcing() {
             return Err(l.t("mode-auto-needs-sandbox"));
@@ -600,7 +658,10 @@ fn apply_choices(
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .is_some();
-        if mode == PermissionMode::Plan && agent.permissions.mode != PermissionMode::Plan && !approved_before {
+        if mode == PermissionMode::Plan
+            && agent.permissions.mode != PermissionMode::Plan
+            && !approved_before
+        {
             gate.enter();
         }
         let approved = gate.refresh(&root);
@@ -623,7 +684,10 @@ async fn run_turn(app: &AppHandle, a: SendArgs) -> Result<(), String> {
     // written with the first message (the full transcript replaces it when the turn ends).
     if let Some(p) = chat.path.clone().filter(|p| !p.exists()) {
         let mut first = chat.agent.messages.clone();
-        first.push(kor_core::Message::text(kor_core::Role::User, a.text.clone()));
+        first.push(kor_core::Message::text(
+            kor_core::Role::User,
+            a.text.clone(),
+        ));
         if kor_agent::session::save(&p, &first).is_ok() {
             let _ = app.emit("kor:sessionsChanged", ());
         }
@@ -636,7 +700,8 @@ async fn run_turn(app: &AppHandle, a: SendArgs) -> Result<(), String> {
     apply_desktop_prefs(&mut chat.agent, &id);
     // §19.3: on the first turn with a local model, say so when it does not fit the GPU.
     if chat.agent.messages.is_empty()
-        && let Some(n) = kor_runtime::vram::check(&l, &*chat.agent.provider, &chat.agent.model).await
+        && let Some(n) =
+            kor_runtime::vram::check(&l, &*chat.agent.provider, &chat.agent.model).await
     {
         emit(app, &id, json!({ "type": "notice", "text": n }));
     }
@@ -661,6 +726,8 @@ async fn run_turn(app: &AppHandle, a: SendArgs) -> Result<(), String> {
     let mut turn_usage = kor_core::Usage::default();
     let alerts = g14_settings(app).await;
     let turn_start = std::time::Instant::now();
+    let turn_start_ms = meta::now_ms();
+    let mut spans: Vec<kor_runtime::obs::ToolSpan> = Vec::new();
     let pump = async {
         // İzin reddedilen çağrı için ajan yalnızca ToolEnd yayar; arayüz sonucu bir araç kartına bağladığından
         // eksik `tool` olayı sonuçtan önce üretilir.
@@ -678,18 +745,43 @@ async fn run_turn(app: &AppHandle, a: SendArgs) -> Result<(), String> {
                     body["sessionId"] = Value::String(id.clone());
                     // Tepsi/PiP/`kor status` aynı fiili gösterir (ADR 0051 tracker `type: "status"`).
                     crate::presence::observe(app, &id, &body);
-                    kor_core::ipc_trace::event(kor_core::ipc_trace::Surface::Desktop, "kor:event", &body);
-                    kor_tools::chrome::broadcast_event(&json!({ "type": "agentStatus", "status": body }));
+                    kor_core::ipc_trace::event(
+                        kor_core::ipc_trace::Surface::Desktop,
+                        "kor:event",
+                        &body,
+                    );
+                    kor_tools::chrome::broadcast_event(
+                        &json!({ "type": "agentStatus", "status": body }),
+                    );
                     let _ = app.emit("kor:agent/status", body);
                 }
                 continue;
             }
-            if let AgentEvent::ToolEnd { id: tool_id, name, .. } = &ev
-                && let (Some(s), Some(t0)) = (&alerts, tool_clock.remove(tool_id))
+            if let AgentEvent::ToolEnd {
+                id: tool_id,
+                name,
+                is_error,
+                ..
+            } = &ev
+                && let Some(t0) = tool_clock.remove(tool_id)
             {
                 let ms = u64::try_from(t0.elapsed().as_millis()).unwrap_or(u64::MAX);
-                if ms >= s["slowToolMs"].as_u64().unwrap_or(30_000) {
-                    g14_alert(app, &id, "slowTool", format!("{name} {} sn sürdü", ms / 1000));
+                let end_ms = meta::now_ms();
+                spans.push(kor_runtime::obs::ToolSpan {
+                    name: name.clone(),
+                    start_ms: end_ms.saturating_sub(ms),
+                    end_ms,
+                    ok: !*is_error,
+                });
+                if let Some(s) = &alerts
+                    && ms >= s["slowToolMs"].as_u64().unwrap_or(30_000)
+                {
+                    g14_alert(
+                        app,
+                        &id,
+                        "slowTool",
+                        format!("{name} {} sn sürdü", ms / 1000),
+                    );
                 }
             }
             let change = match &ev {
@@ -730,16 +822,56 @@ async fn run_turn(app: &AppHandle, a: SendArgs) -> Result<(), String> {
         }
     };
     let (result, ()) = tokio::join!(turn, pump);
+    // Gözlem > Ayarlar: iz dosyası, yerel OTLP ve Prometheus sayaçları (§5.2).
+    {
+        let state = app.state::<AppState>();
+        let s = crate::ns::call("g14.getSettings", &[], app, &state)
+            .await
+            .unwrap_or_default();
+        let trace = kor_runtime::obs::TurnTrace {
+            session: id.clone(),
+            model: usage_model.clone(),
+            start_ms: turn_start_ms,
+            end_ms: meta::now_ms(),
+            ok: result.is_ok(),
+            tools: std::mem::take(&mut spans),
+            input_tokens: turn_usage.input,
+            output_tokens: turn_usage.output,
+        };
+        kor_runtime::obs::export(
+            &trace,
+            s["traceExport"].as_bool() == Some(true),
+            s["otlpEndpoint"].as_str().unwrap_or_default(),
+        )
+        .await;
+    }
     if let Some(s) = &alerts {
         let ms = u64::try_from(turn_start.elapsed().as_millis()).unwrap_or(u64::MAX);
         if ms >= s["turnBudgetMs"].as_u64().unwrap_or(600_000) {
-            g14_alert(app, &id, "turnBudget", format!("Tur {} sn sürdü (bütçe {} sn)", ms / 1000, s["turnBudgetMs"].as_u64().unwrap_or(0) / 1000));
+            g14_alert(
+                app,
+                &id,
+                "turnBudget",
+                format!(
+                    "Tur {} sn sürdü (bütçe {} sn)",
+                    ms / 1000,
+                    s["turnBudgetMs"].as_u64().unwrap_or(0) / 1000
+                ),
+            );
         }
         let state = app.state::<AppState>();
         if let Ok(o) = crate::ns::call("g14.overview", &[], app, &state).await {
-            let (mb, budget) = (o["health"]["memoryMb"].as_f64().unwrap_or(0.0), s["memoryBudgetMb"].as_f64().unwrap_or(f64::MAX));
+            let (mb, budget) = (
+                o["health"]["memoryMb"].as_f64().unwrap_or(0.0),
+                s["memoryBudgetMb"].as_f64().unwrap_or(f64::MAX),
+            );
             if mb > budget {
-                g14_alert(app, &id, "memoryBudget", format!("Bellek {mb:.0} MB (bütçe {budget:.0} MB)"));
+                g14_alert(
+                    app,
+                    &id,
+                    "memoryBudget",
+                    format!("Bellek {mb:.0} MB (bütçe {budget:.0} MB)"),
+                );
             }
         }
     }
@@ -918,7 +1050,12 @@ pub async fn context_items(app: &AppHandle, id: &str) -> Result<Value, String> {
 }
 
 /// §28.1 `context.drop(sessionId, index)` / `context.pin(sessionId, index, on)`. Çalışırken reddedilir.
-pub async fn context_change(app: &AppHandle, id: &str, index: usize, pin: Option<bool>) -> Result<Value, String> {
+pub async fn context_change(
+    app: &AppHandle,
+    id: &str,
+    index: usize,
+    pin: Option<bool>,
+) -> Result<Value, String> {
     if is_running(app, id) {
         return Err("Sohbet çalışırken bağlam değiştirilemez".into());
     }

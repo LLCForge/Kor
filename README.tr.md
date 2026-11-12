@@ -257,7 +257,7 @@ edildiler. OpenAI uyumlu bir sağlayıcı yalnızca bir TOML manifestosu ister, 
 
 ### Git, PR'lar, incelemeler ve kod kalitesi
 
-- **`kor commit`** (diff'ten Conventional Commits mesajı) ve **`kor changelog`**.
+- **`kor commit`** (diff'ten Conventional Commits mesajı) ve **`kor changelog`**. İkisi de kırıcı değişikliği proje grafiyle doğrular: değişikliğin kaldırdığı ya da imzasını değiştirdiği, başka dosyaların hâlâ kullandığı dışa açık bir sembol, mesaj bunu söylemiyorsa bildirilir.
 - **`kor pr create | review | respond | list | status`**: GitHub, GitLab, Gitea, Bitbucket ve Azure DevOps (forge
   belirtecin gerekir; sahte forge sunucularıyla test edildi).
 - **`kor review --persona security`** ve diğer inceleyici personaları.
@@ -462,7 +462,7 @@ kor -p "src/ altındaki açık TODO'ları özetle" --json
 
 Kor katmanlı TOML okur; en düşükten en yükseğe: yerleşik varsayılanlar, sistem, kullanıcı, proje, ortam değişkenleri
 (`KOR_<BÖLÜM>__<ANAHTAR>`) ve komut satırı bayrakları. `kor config explain` her etkin değeri ve nereden geldiğini
-gösterir; `kor config paths` dosyaları yazdırır; `kor config set <anahtar> <değer>` doğrulanmış bir değer yazar.
+gösterir; `kor config paths` dosyaları yazdırır; `kor config set <anahtar> <değer>` doğrulanmış bir değer yazar (`kor config set language tr`, `ui.language` için kısaltmadır).
 
 | Katman | Windows | macOS | Linux |
 | --- | --- | --- | --- |
@@ -686,7 +686,7 @@ Geliştirme işleri:
 **Ajan, diller ve hafıza**
 - [ ] 40'tan fazla dil için tree-sitter (şu an 12); grafta doküman/PDF kavram katmanı
 - [ ] Sıcak hafıza katmanı ve RAM'de HNSW; içe aktarılan sohbetlerden "burada ne yapıldı" hafıza özeti
-- [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
+- [ ] Doğrudan llama.cpp GBNF dilbilgisi ve Anthropic zorunlu araç yoluyla kısıtlı yanıt (OpenAI, OpenAI uyumlu, Gemini ve Ollama yapıldı)
 - [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
 - [ ] Sandbox'ta alan adı bazlı ağ kuralları, gizlilik modunda proje adı maskeleme, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)
 - [ ] Kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular
@@ -694,7 +694,7 @@ Geliştirme işleri:
 **Sağlayıcılar ve maliyet**
 - [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI imzalı kimlik
 - [ ] Codestral FIM, Cohere embed/rerank; katalogda liderlik tablosu skorları (HF, LMArena, LiveBench)
-- [ ] `kor quota`'da proxy kotası; Prometheus ucu
+- [ ] `kor quota`'da proxy kotası
 
 **Web, medya ve entegrasyonlar**
 - [ ] Türk ödeme, kargo, pazaryeri ve alan adı firmaları bağdaştırıcıları; backlink araçları; toplu kelime fırsatları

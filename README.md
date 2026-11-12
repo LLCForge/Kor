@@ -256,7 +256,7 @@ against mock servers. An OpenAI-compatible provider needs only a TOML manifest, 
 
 ### Git, pull requests, reviews and code quality
 
-- **`kor commit`** (Conventional Commits message from the diff) and **`kor changelog`**.
+- **`kor commit`** (Conventional Commits message from the diff) and **`kor changelog`**. Both check breaking changes against the project graph: a public symbol the change removes or re-signs while other files still use it is reported when the message does not say so.
 - **`kor pr create | review | respond | list | status`** for GitHub, GitLab, Gitea, Bitbucket and Azure DevOps
   (needs your forge token; tested against mock forges).
 - **`kor review --persona security`** and other reviewer personas.
@@ -461,7 +461,7 @@ kor -p "summarise the open TODOs in src/" --json
 
 Kor reads layered TOML, lowest to highest: built-in defaults, system, user, project, environment (`KOR_<SECTION>__<KEY>`),
 then command-line flags. `kor config explain` shows every effective value and where it came from; `kor config paths`
-prints the files; `kor config set <key> <value>` writes a validated value.
+prints the files; `kor config set <key> <value>` writes a validated value (`kor config set language tr` is short for `ui.language`).
 
 | Layer | Windows | macOS | Linux |
 | --- | --- | --- | --- |
@@ -683,7 +683,7 @@ trials and 5 decisions. The development tasks:
 **Agent, languages and memory**
 - [ ] tree-sitter for 40+ languages (12 today); a docs/PDF concept layer in the graph
 - [ ] Hot memory tier and in-RAM HNSW index; a "what was done here" memory summary from imported chats
-- [ ] Constrained decoding (`json_schema`, `responseSchema`, llama.cpp grammar)
+- [ ] Constrained decoding through llama.cpp GBNF directly and Anthropic forced tools (OpenAI, OpenAI-compatible, Gemini and Ollama are done)
 - [ ] fish-style inline shell suggestions from a small local model
 - [ ] Domain-level sandbox network rules, project-name masking in privacy mode, a hard CPU cap on Linux/macOS (today: `nice` priority)
 - [ ] Virtual desktops in saved layouts; Windows remote servers
@@ -691,7 +691,7 @@ trials and 5 decisions. The development tasks:
 **Providers and cost**
 - [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI signed auth
 - [ ] Codestral FIM, Cohere embed/rerank; leaderboard scores (HF, LMArena, LiveBench) in the catalogue
-- [ ] Proxy quota in `kor quota`; Prometheus endpoint
+- [ ] Proxy quota in `kor quota`
 
 **Web, media and integrations**
 - [ ] Turkish payment, cargo, marketplace and registrar adapters; backlink tools; bulk keyword opportunities

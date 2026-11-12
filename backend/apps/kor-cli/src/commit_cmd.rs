@@ -127,6 +127,9 @@ pub fn commit(ctx: &Ctx, a: &CommitArgs) -> anyhow::Result<bool> {
         return Ok(true);
     }
     println!("{}\n\n{}", l.t("commit-proposed"), prop.message.render());
+    if let Some(note) = graph_note(l, &prop) {
+        eprintln!("\n{note}");
+    }
     if !crate::shell_cmd::confirm(l, &l.t("commit-confirm"), a.yes) {
         return Ok(false);
     }
@@ -140,6 +143,34 @@ pub fn commit(ctx: &Ctx, a: &CommitArgs) -> anyhow::Result<bool> {
             Err(e) => flow_err(l, &e),
         },
     )
+}
+
+/// `(symbols, users)` of the graph's evidence, for the messages.
+fn breaks_args(b: &[kor_agent::graph::ApiBreak]) -> (String, String) {
+    let symbols = b
+        .iter()
+        .map(|x| format!("`{}`", x.symbol))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let users: std::collections::BTreeSet<&str> = b
+        .iter()
+        .flat_map(|x| x.users.iter().map(String::as_str))
+        .collect();
+    (symbols, users.into_iter().collect::<Vec<_>>().join(", "))
+}
+
+/// §15.5: the graph check next to the proposed message (warning when they disagree).
+fn graph_note(l: &Localizer, prop: &gitflow::Proposal) -> Option<String> {
+    if prop.api_breaks.is_empty() {
+        return None;
+    }
+    let (symbols, users) = breaks_args(&prop.api_breaks);
+    let key = if prop.message.breaking {
+        "commit-graph-confirms"
+    } else {
+        "commit-graph-breaking"
+    };
+    Some(l.t_args(key, &args!("symbols" => symbols, "users" => users)))
 }
 
 pub fn changelog(ctx: &Ctx, a: &ChangelogArgs) -> anyhow::Result<bool> {
@@ -156,6 +187,16 @@ pub fn changelog(ctx: &Ctx, a: &ChangelogArgs) -> anyhow::Result<bool> {
     if entries.is_empty() {
         println!("{}", l.t("changelog-empty"));
         return Ok(true);
+    }
+    for (hash, breaks) in gitflow::unmarked_breaks(&root, &entries) {
+        let (symbols, users) = breaks_args(&breaks);
+        eprintln!(
+            "{}",
+            l.t_args(
+                "changelog-graph-breaking",
+                &args!("hash" => hash, "symbols" => symbols, "users" => users)
+            )
+        );
     }
     let section = gitflow::section(&entries, "Unreleased");
     if !a.write {

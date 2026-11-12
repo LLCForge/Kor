@@ -1,9 +1,10 @@
 //! `kor commit` and `kor changelog` (§15.5): Conventional Commits messages from the staged diff,
 //! split proposals, the `prepare-commit-msg` hook, and Keep a Changelog sections from history.
 //!
-//! git runs through its CLI. The commit scope comes from the changed package or directory; the
-//! spec's graph community name and `graph_impact` check for breaking changes arrive with the
-//! graph (Faz 3). Breaking changes are detected from commit markers (`!`, `BREAKING CHANGE:`).
+//! git runs through its CLI. The commit scope comes from the changed package or graph community,
+//! else the directory. Breaking changes come from commit markers (`!`, `BREAKING CHANGE:`) and are
+//! checked against the project graph: public symbols a change removes or re-signs while other
+//! files still use them ([`crate::graph::api_breaks`]).
 
 use std::collections::BTreeSet;
 use std::io::Write as _;
@@ -271,11 +272,34 @@ pub fn split_prompt(files: &[String], diff: &str, scope: Option<&str>) -> String
     format!(
         "Split these staged changes into the smallest set of logical commits (one when they belong \
          together). Every file goes into exactly one commit.\n{}\nReply with JSON only: \
-         [{{\"files\": [\"path\", ...], \"message\": \"type(scope): subject\\n\\nbody\"}}, ...]\
+         {{\"commits\": [{{\"files\": [\"path\", ...], \"message\": \"type(scope): subject\\n\\nbody\"}}, ...]}}\
          \n\nFiles:\n{}\n\nDiff:\n{diff}",
         rules(scope),
         files.join("\n")
     )
+}
+
+/// The split reply's shape, for providers that constrain decoding (an object at the top: `OpenAI`
+/// requires one). [`parse_split`] reads the array either way.
+pub fn split_schema() -> kor_providers::ResponseSchema {
+    kor_providers::ResponseSchema {
+        name: "commit_split".into(),
+        schema: serde_json::json!({
+            "type": "object",
+            "properties": {"commits": {"type": "array", "items": {
+                "type": "object",
+                "properties": {
+                    "files": {"type": "array", "items": {"type": "string"}},
+                    "message": {"type": "string"}
+                },
+                "required": ["files", "message"],
+                "additionalProperties": false
+            }}},
+            "required": ["commits"],
+            "additionalProperties": false
+        }),
+        strict: true,
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -335,6 +359,18 @@ pub async fn ask(
     prompt: String,
     max_tokens: u32,
 ) -> Result<String, FlowError> {
+    ask_structured(provider, model, prompt, max_tokens, None).await
+}
+
+/// [`ask`] with the reply constrained to a JSON Schema where the provider supports it (§15.13);
+/// the caller still parses and checks the reply.
+pub async fn ask_structured(
+    provider: &Arc<dyn Provider>,
+    model: &str,
+    prompt: String,
+    max_tokens: u32,
+    schema: Option<kor_providers::ResponseSchema>,
+) -> Result<String, FlowError> {
     let req = ChatRequest {
         model: model.to_owned(),
         system: Some(
@@ -345,10 +381,15 @@ pub async fn ask(
         max_tokens: Some(max_tokens),
         ..ChatRequest::default()
     };
-    let stream = provider
-        .complete(req, CancellationToken::new())
-        .await
-        .map_err(|e| FlowError::Model(e.message))?;
+    let stream = match schema {
+        Some(s) => {
+            provider
+                .complete_structured(req, s, CancellationToken::new())
+                .await
+        }
+        None => provider.complete(req, CancellationToken::new()).await,
+    }
+    .map_err(|e| FlowError::Model(e.message))?;
     let (text, thinking, usage) = collect_answer(stream)
         .await
         .map_err(|e| FlowError::Model(e.message))?;
@@ -396,6 +437,8 @@ pub struct Proposal {
     pub message: CommitMsg,
     /// Only with `split`.
     pub parts: Vec<SplitPart>,
+    /// Public symbols the graph says this commit breaks for other files.
+    pub api_breaks: Vec<crate::graph::ApiBreak>,
 }
 
 /// Read the staged changes under `dir` and ask the model for a message (or a split).
@@ -409,20 +452,27 @@ pub async fn propose(
     let (files, diff) = staged(&root)?;
     // Faz 3: the changed files' package or graph community, else the directory rule.
     let scope = crate::graph::commit_scope(&root, &files).or_else(|| scope_for(&files));
-    let reply = ask(
-        provider,
-        model,
-        commit_prompt(&files, &diff, scope.as_deref()),
-        1024,
+    // §15.5: the graph says which public symbols this commit removes or re-signs while other
+    // files still use them; the model is told, and the user is warned if it disagrees.
+    let api_breaks = git(
+        &root,
+        &["diff", "--cached", "--no-color", "--no-ext-diff", "-U0"],
     )
-    .await?;
+    .map(|d| crate::graph::api_breaks(&root, &files, &d))
+    .unwrap_or_default();
+    let mut prompt = commit_prompt(&files, &diff, scope.as_deref());
+    if !api_breaks.is_empty() {
+        prompt.push_str(&breaking_note(&api_breaks));
+    }
+    let reply = ask(provider, model, prompt, 1024).await?;
     let message = parse_commit(&reply, scope.as_deref())?;
     let parts = if split {
-        let reply = ask(
+        let reply = ask_structured(
             provider,
             model,
             split_prompt(&files, &diff, scope.as_deref()),
             4096,
+            Some(split_schema()),
         )
         .await?;
         parse_split(&reply, &files)?
@@ -434,7 +484,62 @@ pub async fn propose(
         scope,
         message,
         parts,
+        api_breaks,
     })
+}
+
+/// The graph's evidence, for the model.
+fn breaking_note(breaks: &[crate::graph::ApiBreak]) -> String {
+    use std::fmt::Write as _;
+    let mut s = String::from(
+        "\n\nGraph check (graph_impact): these public symbols are removed or changed while files \
+         outside this commit still use them. Mark the commit breaking (`!` and a `BREAKING CHANGE:` \
+         footer) unless the change stays compatible:\n",
+    );
+    for b in breaks {
+        let _ = writeln!(
+            s,
+            "- `{}` ({}) used by {}",
+            b.symbol,
+            b.file,
+            b.users.join(", ")
+        );
+    }
+    s
+}
+
+/// §15.5: changelog entries the graph says may break callers although their message does not
+/// say so (public symbols the commit removed or re-signed that other files still use).
+pub fn unmarked_breaks(
+    root: &Path,
+    entries: &[Entry],
+) -> Vec<(String, Vec<crate::graph::ApiBreak>)> {
+    entries
+        .iter()
+        .filter(|e| e.breaking.is_none())
+        .filter_map(|e| {
+            let files: Vec<String> = git(root, &["show", "--format=", "--name-only", &e.hash])
+                .ok()?
+                .lines()
+                .filter(|l| !l.is_empty())
+                .map(str::to_owned)
+                .collect();
+            let diff = git(
+                root,
+                &[
+                    "show",
+                    "--format=",
+                    "--no-color",
+                    "--no-ext-diff",
+                    "-U0",
+                    &e.hash,
+                ],
+            )
+            .ok()?;
+            let breaks = crate::graph::api_breaks(root, &files, &diff);
+            (!breaks.is_empty()).then(|| (e.hash.clone(), breaks))
+        })
+        .collect()
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -749,6 +854,18 @@ mod tests {
                 StreamEvent::TextDelta { text },
             )])))
         }
+        async fn complete_structured(
+            &self,
+            req: ChatRequest,
+            schema: kor_providers::ResponseSchema,
+            c: CancellationToken,
+        ) -> Result<EventStream, ProviderError> {
+            self.seen
+                .lock()
+                .unwrap()
+                .push(format!("schema:{}", schema.name));
+            self.complete(req, c).await
+        }
     }
 
     fn git_ok() -> bool {
@@ -806,6 +923,8 @@ mod tests {
         assert_eq!(prop.message.header(), "feat(docs): add guide");
         assert_eq!(prop.parts.len(), 1);
         assert!(mock.seen.lock().unwrap()[0].contains("+hello"));
+        // §15.13: the split asks for its JSON shape; the message itself is free text.
+        assert_eq!(mock.seen.lock().unwrap()[1], "schema:commit_split");
         let summary = commit(d.path(), &prop.message.render()).unwrap();
         assert!(summary.contains("feat(docs): add guide"), "{summary}");
 
@@ -820,6 +939,63 @@ mod tests {
             install_hook(d.path()),
             Err(FlowError::HookExists(_))
         ));
+    }
+
+    #[tokio::test]
+    async fn breaking_changes_are_checked_against_the_graph() {
+        if !git_ok() {
+            eprintln!("git missing; skipped");
+            return;
+        }
+        let d = repo();
+        let p = d.path();
+        std::fs::create_dir_all(p.join("src")).unwrap();
+        std::fs::write(
+            p.join("src/lib.rs"),
+            "mod auth;\nuse crate::auth::login;\npub fn entry() { login(\"u\"); }\n",
+        )
+        .unwrap();
+        std::fs::write(
+            p.join("src/auth.rs"),
+            "pub fn login(u: &str) -> bool { !u.is_empty() }\n",
+        )
+        .unwrap();
+        git(p, &["add", "."]).unwrap();
+        commit(p, "feat: login").unwrap();
+        kor_graph::Graph::open(p)
+            .and_then(|mut g| g.update())
+            .unwrap();
+
+        // The signature changes, the caller in lib.rs does not: the graph says it breaks.
+        std::fs::write(
+            p.join("src/auth.rs"),
+            "pub fn login(u: &str, pass: &str) -> bool { !u.is_empty() && !pass.is_empty() }\n",
+        )
+        .unwrap();
+        git(p, &["add", "src/auth.rs"]).unwrap();
+        let mock = Arc::new(Mock {
+            manifest: Registry::builtin().get("local").unwrap().clone(),
+            replies: Mutex::new(vec!["feat(auth): require a password".into()]),
+            seen: Mutex::new(Vec::new()),
+        });
+        let provider: Arc<dyn Provider> = mock.clone();
+        let prop = propose(&provider, "m", p, false).await.unwrap();
+        assert_eq!(prop.api_breaks.len(), 1, "{:?}", prop.api_breaks);
+        assert_eq!(prop.api_breaks[0].users, ["src/lib.rs"]);
+        assert!(
+            mock.seen.lock().unwrap()[0].contains("Graph check"),
+            "the model is told"
+        );
+        assert!(
+            !prop.message.breaking,
+            "the model did not mark it; the CLI warns"
+        );
+
+        commit(p, &prop.message.render()).unwrap();
+        let entries = log(p, None).unwrap();
+        let unmarked = unmarked_breaks(p, &entries);
+        assert_eq!(unmarked.len(), 1, "{unmarked:?}");
+        assert_eq!(unmarked[0].0, entries[0].hash);
     }
 
     #[test]

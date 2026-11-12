@@ -357,6 +357,111 @@ pub fn commit_scope(root: &Path, files: &[String]) -> Option<String> {
     short_scope(label.split(':').next().unwrap_or(label))
 }
 
+/// §15.5: a public symbol a diff removes or re-declares, and the files outside the change that
+/// still depend on it according to the project graph (`graph_impact`, one hop).
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+pub struct ApiBreak {
+    pub symbol: String,
+    pub file: String,
+    pub users: Vec<String>,
+}
+
+/// Public declarations (Rust `pub`, TS/JS `export`, top-level Python, exported Go) whose line a
+/// unified diff removes without adding the same line back: removed, renamed or re-signed.
+pub fn changed_public_symbols(diff: &str) -> Vec<(String, String)> {
+    use std::sync::LazyLock;
+    static DECL: LazyLock<Vec<regex::Regex>> = LazyLock::new(|| {
+        [
+            r#"^\s*pub\s+(?:(?:async|const|unsafe)\s+|extern\s+"[^"]*"\s+)*(?:fn|struct|enum|trait|type|const|static|mod|union)\s+([A-Za-z_]\w*)"#,
+            r"^\s*export\s+(?:default\s+)?(?:declare\s+)?(?:abstract\s+)?(?:async\s+)?(?:function\*?|class|const|let|var|interface|type|enum)\s+([A-Za-z_$][\w$]*)",
+            r"^(?:async\s+)?(?:def|class)\s+([A-Za-z]\w*)",
+            r"^func\s+(?:\([^)]*\)\s*)?([A-Z]\w*)",
+            r"^type\s+([A-Z]\w*)\s",
+        ]
+        .iter()
+        .filter_map(|p| regex::Regex::new(p).ok())
+        .collect()
+    });
+    let decl = |line: &str| {
+        DECL.iter().find_map(|r| {
+            r.captures(line)
+                .and_then(|c| c.get(1))
+                .map(|m| m.as_str().to_owned())
+        })
+    };
+    let mut out = Vec::new();
+    let mut flush =
+        |file: &Option<String>, removed: &mut Vec<(String, String)>, added: &mut Vec<String>| {
+            if let Some(f) = file {
+                for (name, line) in removed.drain(..) {
+                    if !added.contains(&line)
+                        && !out
+                            .iter()
+                            .any(|(of, on): &(String, String)| of == f && *on == name)
+                    {
+                        out.push((f.clone(), name));
+                    }
+                }
+            }
+            removed.clear();
+            added.clear();
+        };
+    let (mut file, mut removed, mut added) = (None, Vec::new(), Vec::new());
+    for l in diff.lines() {
+        if let Some(p) = l.strip_prefix("+++ ") {
+            flush(&file, &mut removed, &mut added);
+            file = p.strip_prefix("b/").map(str::to_owned);
+        } else if l.starts_with("--- ") || l.starts_with("diff --git") {
+        } else if let Some(t) = l.strip_prefix('-') {
+            if let Some(n) = decl(t) {
+                removed.push((n, t.trim().to_owned()));
+            }
+        } else if let Some(t) = l.strip_prefix('+') {
+            added.push(t.trim().to_owned());
+        }
+    }
+    flush(&file, &mut removed, &mut added);
+    out
+}
+
+/// [`changed_public_symbols`] that the stored graph knows, with their users outside `changed`.
+/// The graph is read as stored (not updated), so a symbol the diff deletes is still found.
+pub fn api_breaks(root: &Path, changed: &[String], diff: &str) -> Vec<ApiBreak> {
+    let decls = changed_public_symbols(diff);
+    if decls.is_empty()
+        || !kor_graph::store::graph_dir(root)
+            .join("graph.sqlite")
+            .is_file()
+    {
+        return Vec::new();
+    }
+    let Ok(g) = Graph::open(root) else {
+        return Vec::new();
+    };
+    decls
+        .into_iter()
+        .filter_map(|(file, symbol)| {
+            let node = g.find(&symbol).into_iter().find(|n| {
+                n.name == symbol
+                    && n.file
+                        .as_ref()
+                        .is_some_and(|f| f.to_string_lossy().replace('\\', "/") == file)
+            })?;
+            let users: Vec<String> = g
+                .impact(&node.id, 1)
+                .files
+                .into_iter()
+                .filter(|f| *f != file && !changed.contains(f))
+                .collect();
+            (!users.is_empty()).then_some(ApiBreak {
+                symbol,
+                file,
+                users,
+            })
+        })
+        .collect()
+}
+
 /// `@acme/web-ui` → `web-ui`, `src/auth` → `auth`; lowercase letters, digits, `-` and `_` only.
 fn short_scope(s: &str) -> Option<String> {
     let last = s.trim().rsplit(['/', '\\', ':']).next().unwrap_or(s);
@@ -1170,5 +1275,40 @@ name = \"app\"
         assert_eq!(commit_scope(dir.path(), &files).as_deref(), Some("core"));
         let both = vec![files[0].clone(), "crates/app/src/main.rs".to_owned()];
         assert_ne!(commit_scope(dir.path(), &both).as_deref(), Some("core"));
+    }
+
+    #[test]
+    fn removed_public_symbols_are_checked_against_their_users() {
+        let diff = "diff --git a/src/auth.rs b/src/auth.rs\n--- a/src/auth.rs\n+++ b/src/auth.rs\n@@ -3 +3 @@\n-pub fn login(u: &str) -> bool { true }\n+pub fn sign_in(u: &str) -> bool { true }\n-pub struct Kept;\n+pub struct Kept;\n-fn private() {}\n";
+        assert_eq!(
+            changed_public_symbols(diff),
+            [("src/auth.rs".to_owned(), "login".to_owned())],
+            "moved lines and private items are not API changes"
+        );
+        let ts = "+++ b/web/api.ts\n-export async function fetchUser(id: string) {\n+export async function fetchUser(id: number) {\n";
+        assert_eq!(
+            changed_public_symbols(ts),
+            [("web/api.ts".to_owned(), "fetchUser".to_owned())]
+        );
+
+        let dir = fixture();
+        // No stored graph: nothing to verify against.
+        assert!(api_breaks(dir.path(), &["src/auth.rs".into()], diff).is_empty());
+        Graph::open(dir.path())
+            .and_then(|mut g| g.update())
+            .expect("build");
+        let found = api_breaks(dir.path(), &["src/auth.rs".into()], diff);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert_eq!(found[0].symbol, "login");
+        assert_eq!(found[0].users, ["src/lib.rs"]);
+        // Callers updated in the same change: not breaking for this repository.
+        assert!(
+            api_breaks(
+                dir.path(),
+                &["src/auth.rs".into(), "src/lib.rs".into()],
+                diff
+            )
+            .is_empty()
+        );
     }
 }

@@ -13,16 +13,17 @@ const HEADROOM: f64 = 1.1;
 /// not fit.
 pub fn note(l: &Localizer, model: &str, model_bytes: u64, vram_mb: u64) -> Option<String> {
     #[allow(clippy::cast_precision_loss)] // sizes in bytes, shown to one decimal
-    let (need_gb, have_gb) = (
+    let (need_gb, have_gb, size_gb) = (
         model_bytes as f64 * HEADROOM / 1e9,
         vram_mb as f64 * 1_048_576.0 / 1e9,
+        model_bytes as f64 / 1e9,
     );
     (need_gb > have_gb).then(|| {
         l.t_args(
             "vram-short",
             &args!(
                 "model" => model.to_owned(),
-                "size" => format!("{:.1}", model_bytes as f64 / 1e9),
+                "size" => format!("{size_gb:.1}"),
                 "vram" => format!("{have_gb:.1}")
             ),
         )

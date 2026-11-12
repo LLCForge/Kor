@@ -67,6 +67,7 @@ pub mod osint;
 pub mod perf;
 // Tray, notifications, approval queue, ETA, "call me", window layouts (ADR 0051).
 pub mod builtin_skills;
+pub mod obs;
 pub mod prefs;
 pub mod presence;
 pub mod privacycard;

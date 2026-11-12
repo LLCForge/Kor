@@ -62,17 +62,24 @@ enum Route {
 fn same_dir(a: &Path, b: &Path) -> bool {
     let norm = |p: &Path| {
         let c = p.canonicalize().unwrap_or_else(|_| p.to_path_buf());
-        kor_tools::without_verbatim(&c).to_string_lossy().to_lowercase()
+        kor_tools::without_verbatim(&c)
+            .to_string_lossy()
+            .to_lowercase()
     };
     norm(a) == norm(b)
 }
 
 fn route(req: &Request, open_root: Option<&Path>) -> Route {
     match req {
-        Request::Open { root, files, origin: Origin::Shell } if files.is_empty() && open_root.is_some_and(|o| same_dir(o, root)) => {
-            Route::FocusOnly
-        }
-        Request::Edit { files, origin: Origin::Shell } => Route::Collect(files.clone()),
+        Request::Open {
+            root,
+            files,
+            origin: Origin::Shell,
+        } if files.is_empty() && open_root.is_some_and(|o| same_dir(o, root)) => Route::FocusOnly,
+        Request::Edit {
+            files,
+            origin: Origin::Shell,
+        } => Route::Collect(files.clone()),
         Request::Terminal { root, .. } => Route::Terminal(root.clone()),
         _ => Route::Emit,
     }
@@ -140,8 +147,14 @@ fn jump_list(l: &kor_i18n::Localizer, recent: &[String]) -> kor_platform::jumpli
             })
             .collect(),
         tasks: vec![
-            Item { title: l.t("osint-jump-new"), args: vec!["kor://new".into()] },
-            Item { title: l.t("osint-jump-running"), args: vec!["kor://running".into()] },
+            Item {
+                title: l.t("osint-jump-new"),
+                args: vec!["kor://new".into()],
+            },
+            Item {
+                title: l.t("osint-jump-running"),
+                args: vec!["kor://running".into()],
+            },
         ],
     }
 }
@@ -171,7 +184,9 @@ pub fn terminal_only() -> bool {
     let preferred = home_config().and_then(|c| c.config.shell.terminal.clone());
     for req in osint::parse_args(&args, &cwd).into_iter().flatten() {
         if let Request::Terminal { root, .. } = req {
-            if let Err(e) = kor_platform::terminal::open(&root, preferred.as_deref(), &bundled_cli(), &[]) {
+            if let Err(e) =
+                kor_platform::terminal::open(&root, preferred.as_deref(), &bundled_cli(), &[])
+            {
                 eprintln!("Terminal açılamadı: {e}");
             }
         }
@@ -199,7 +214,14 @@ fn emit(app: &AppHandle, req: &Request) {
 
 fn dispatch(app: &AppHandle, mut req: Request) {
     // Hızlı görevin (§25.1 alt menü) istemi kullanıcının dilinde burada yazılır; arayüz yalnızca gönderir.
-    if let Request::Task { prompt, root: Some(root), files, quick: Some(q), .. } = &mut req {
+    if let Request::Task {
+        prompt,
+        root: Some(root),
+        files,
+        quick: Some(q),
+        ..
+    } = &mut req
+    {
         if prompt.is_empty() {
             *prompt = q.prompt(&localizer(), root, files);
         }
@@ -210,7 +232,9 @@ fn dispatch(app: &AppHandle, mut req: Request) {
         Route::FocusOnly => focus(app),
         Route::Terminal(root) => {
             let preferred = home_config().and_then(|c| c.config.shell.terminal.clone());
-            if let Err(e) = kor_platform::terminal::open(&root, preferred.as_deref(), &bundled_cli(), &[]) {
+            if let Err(e) =
+                kor_platform::terminal::open(&root, preferred.as_deref(), &bundled_cli(), &[])
+            {
                 eprintln!("Terminal açılamadı: {e}");
             }
         }
@@ -247,7 +271,13 @@ fn collect(app: &AppHandle, files: Vec<PathBuf>) {
             std::mem::take(&mut g.0)
         };
         if !files.is_empty() {
-            emit(&app, &Request::Edit { files, origin: Origin::Shell });
+            emit(
+                &app,
+                &Request::Edit {
+                    files,
+                    origin: Origin::Shell,
+                },
+            );
         }
     });
 }
@@ -255,7 +285,11 @@ fn collect(app: &AppHandle, files: Vec<PathBuf>) {
 /// Argümanlar (ilk açılış ya da tek örnek eklentisinin ilettiği ikinci açılış). `kor:` bağlantıları
 /// deep-link eklentisinden gelir; burada atlanır ki iki kez işlenmesin.
 fn handle_args(app: &AppHandle, args: &[String], cwd: &Path) {
-    let args: Vec<String> = args.iter().filter(|a| !a.starts_with("kor:")).cloned().collect();
+    let args: Vec<String> = args
+        .iter()
+        .filter(|a| !a.starts_with("kor:"))
+        .cloned()
+        .collect();
     for r in osint::parse_args(&args, cwd) {
         match r {
             Ok(req) => dispatch(app, req),
@@ -280,7 +314,14 @@ fn handle_urls(app: &AppHandle, urls: Vec<tauri::Url>) {
         }
     }
     if let Some((root, files)) = osint::resolve(&dropped) {
-        dispatch(app, Request::Open { root, files, origin: Origin::Shell });
+        dispatch(
+            app,
+            Request::Open {
+                root,
+                files,
+                origin: Origin::Shell,
+            },
+        );
     }
 }
 
@@ -312,8 +353,9 @@ fn register_hotkey(app: &AppHandle, next: Option<Shortcut>) -> Result<(), String
         let _ = gs.unregister(old);
     }
     if let Some(s) = next {
-        gs.register(s)
-            .map_err(|e| format!("Kısayol kaydedilemedi (başka bir uygulama kullanıyor olabilir): {e}"))?;
+        gs.register(s).map_err(|e| {
+            format!("Kısayol kaydedilemedi (başka bir uygulama kullanıyor olabilir): {e}")
+        })?;
         *current = Some(s);
     }
     Ok(())
@@ -384,13 +426,17 @@ fn watch_recent(app: AppHandle) {
 /// `setup` içinde: bağlantı dinleyicisi, ilk açılışın argümanları ve bağlantısı, kısayol, atlama listesi.
 pub fn start(app: &AppHandle) {
     let handle = app.clone();
-    app.deep_link().on_open_url(move |event| handle_urls(&handle, event.urls()));
+    app.deep_link()
+        .on_open_url(move |event| handle_urls(&handle, event.urls()));
     if let Ok(Some(urls)) = app.deep_link().get_current() {
         handle_urls(app, urls);
     }
     let args: Vec<String> = std::env::args().skip(1).collect();
     handle_args(app, &args, &std::env::current_dir().unwrap_or_default());
-    let hotkey = home_config().map_or_else(|| kor_config::DesktopConfig::default().hotkey, |c| c.config.desktop.hotkey);
+    let hotkey = home_config().map_or_else(
+        || kor_config::DesktopConfig::default().hotkey,
+        |c| c.config.desktop.hotkey,
+    );
     match parse_hotkey(&hotkey) {
         Ok(s) => {
             if let Err(e) = register_hotkey(app, s) {
@@ -417,7 +463,12 @@ pub fn dropped(paths: &[String]) -> Value {
     match paths {
         [one] if Path::new(one).is_dir() => {
             let root = osint::project_root(Path::new(one));
-            serde_json::to_value(Request::Open { root, files: vec![], origin: Origin::Shell }).unwrap_or(Value::Null)
+            serde_json::to_value(Request::Open {
+                root,
+                files: vec![],
+                origin: Origin::Shell,
+            })
+            .unwrap_or(Value::Null)
         }
         _ => Value::Null,
     }
@@ -436,7 +487,10 @@ fn user_config() -> Result<PathBuf, String> {
 
 /// `osint.hotkeyGet`.
 pub fn hotkey_get() -> Value {
-    let value = home_config().map_or_else(|| kor_config::DesktopConfig::default().hotkey, |c| c.config.desktop.hotkey);
+    let value = home_config().map_or_else(
+        || kor_config::DesktopConfig::default().hotkey,
+        |c| c.config.desktop.hotkey,
+    );
     json!({ "hotkey": value, "default": kor_config::DesktopConfig::default().hotkey, "active": lock(&HOTKEY).is_some() })
 }
 
@@ -448,27 +502,39 @@ pub fn hotkey_set(app: &AppHandle, value: &str) -> Res {
         let _ = register_hotkey(app, previous);
         return Err(e);
     }
-    kor_config::set_string(&user_config()?, "desktop.hotkey", value.trim()).map_err(|e| e.to_string())?;
+    kor_config::set_string(&user_config()?, "desktop.hotkey", value.trim())
+        .map_err(|e| e.to_string())?;
     Ok(hotkey_get())
 }
 
 fn apps() -> kor_platform::shell_integration::Apps {
     let cli = crate::kor_cli::find();
-    kor_platform::shell_integration::Apps { desktop: std::env::current_exe().ok(), cli }
+    kor_platform::shell_integration::Apps {
+        desktop: std::env::current_exe().ok(),
+        cli,
+    }
 }
 
 /// `osint.menuStatus`.
 pub fn menu_status() -> Res {
-    serde_json::to_value(kor_platform::shell_integration::status(&apps())).map_err(|e| e.to_string())
+    serde_json::to_value(kor_platform::shell_integration::status(&apps()))
+        .map_err(|e| e.to_string())
 }
 
 /// `osint.menuInstall(extended)`: yalnızca arayüzdeki açık onaydan sonra (kullanıcı kaydına yazar).
 pub fn menu_install(extended: bool) -> Res {
     let lang = home_config().map_or(kor_i18n::Lang::Tr, |c| c.config.ui.language.resolve());
-    let opts = kor_platform::shell_integration::Options { extended, lang: lang.code().to_owned() };
+    let opts = kor_platform::shell_integration::Options {
+        extended,
+        lang: lang.code().to_owned(),
+    };
     // The CLI (`kor integrate install`) reads the same switch.
-    kor_config::set_scalar(&user_config()?, "shell.context_menu.extended", if extended { "true" } else { "false" })
-        .map_err(|e| e.to_string())?;
+    kor_config::set_scalar(
+        &user_config()?,
+        "shell.context_menu.extended",
+        if extended { "true" } else { "false" },
+    )
+    .map_err(|e| e.to_string())?;
     kor_platform::shell_integration::install(&apps(), &opts)
         .map_err(|e| format!("Sağ tık menüsü kurulamadı: {e}"))
         .and_then(|s| serde_json::to_value(s).map_err(|e| e.to_string()))
@@ -496,14 +562,17 @@ pub fn first_run(app: &AppHandle) {
         if !cfg.integrations.auto {
             return;
         }
-        let shell = Some(kor_runtime::shell::default_kind()).filter(|k| kor_runtime::shell::present(*k));
+        let shell =
+            Some(kor_runtime::shell::default_kind()).filter(|k| kor_runtime::shell::present(*k));
         let mut env = crate::ns::osextra::env(&app).ok();
         let avail: Vec<&'static str> = env
             .as_ref()
             .map(|e| {
                 osx::status_all(e)
                     .into_iter()
-                    .filter(|s| matches!(s.kind, "install" | "desktop") && s.available && !s.installed)
+                    .filter(|s| {
+                        matches!(s.kind, "install" | "desktop") && s.available && !s.installed
+                    })
                     .map(|s| s.id)
                     .collect()
             })
@@ -512,14 +581,21 @@ pub fn first_run(app: &AppHandle) {
         let lang = cfg.ui.language.resolve();
         let out = auto::run_once(&data, blocked, &items, |it| match it {
             Item::ContextMenu => {
-                let opts = kor_platform::shell_integration::Options { extended: cfg.shell.context_menu.extended, lang: lang.code().to_owned() };
-                kor_platform::shell_integration::install(&apps(), &opts).map(drop).map_err(|e| e.to_string())
+                let opts = kor_platform::shell_integration::Options {
+                    extended: cfg.shell.context_menu.extended,
+                    lang: lang.code().to_owned(),
+                };
+                kor_platform::shell_integration::install(&apps(), &opts)
+                    .map(drop)
+                    .map_err(|e| e.to_string())
             }
             Item::Shell(k) => kor_runtime::shell::plan_install(*k)
                 .map_err(|e| format!("{e:?}"))
                 .and_then(|p| kor_runtime::shell::apply(&p).map_err(|e| e.to_string())),
             Item::Os(id) => match env.as_mut() {
-                Some(e) => osx::install(e, id, &osx::Options::default()).map(drop).map_err(|e| e.to_string()),
+                Some(e) => osx::install(e, id, &osx::Options::default())
+                    .map(drop)
+                    .map_err(|e| e.to_string()),
                 None => Err("no-env".into()),
             },
         });
@@ -531,7 +607,10 @@ pub fn first_run(app: &AppHandle) {
                     kor_runtime::presence::notifications::Notification {
                         category: kor_runtime::presence::notifications::Category::Component,
                         title: l.t("autoint-notice-title"),
-                        body: l.t_args("autoint-notice-body", &kor_i18n::args!("list" => auto::names(&l, &m.installed))),
+                        body: l.t_args(
+                            "autoint-notice-body",
+                            &kor_i18n::args!("list" => auto::names(&l, &m.installed)),
+                        ),
                         key: Some("autointegrate:first-run".into()),
                         ..Default::default()
                     },
@@ -545,7 +624,8 @@ pub fn first_run(app: &AppHandle) {
 
 /// `osint.menuUninstall`: Kor'un eklediği her şeyi kaldırır.
 pub fn menu_uninstall() -> Res {
-    let s = kor_platform::shell_integration::uninstall().map_err(|e| format!("Sağ tık menüsü kaldırılamadı: {e}"))?;
+    let s = kor_platform::shell_integration::uninstall()
+        .map_err(|e| format!("Sağ tık menüsü kaldırılamadı: {e}"))?;
     crate::api::remember_off("integrations.context_menu");
     serde_json::to_value(s).map_err(|e| e.to_string())
 }
@@ -558,20 +638,44 @@ mod tests {
     fn routing_focuses_same_project_and_collects_edits() {
         let d = tempfile::tempdir().unwrap();
         let root = d.path().to_path_buf();
-        let open = Request::Open { root: root.clone(), files: vec![], origin: Origin::Shell };
+        let open = Request::Open {
+            root: root.clone(),
+            files: vec![],
+            origin: Origin::Shell,
+        };
         assert_eq!(route(&open, Some(&root)), Route::FocusOnly);
         assert_eq!(route(&open, None), Route::Emit);
-        let with_file = Request::Open { root: root.clone(), files: vec![root.join("a")], origin: Origin::Shell };
+        let with_file = Request::Open {
+            root: root.clone(),
+            files: vec![root.join("a")],
+            origin: Origin::Shell,
+        };
         assert_eq!(route(&with_file, Some(&root)), Route::Emit);
         // A link always reaches the UI (it asks before switching).
-        let link = Request::Open { root: root.clone(), files: vec![], origin: Origin::Link };
+        let link = Request::Open {
+            root: root.clone(),
+            files: vec![],
+            origin: Origin::Link,
+        };
         assert_eq!(route(&link, Some(&root)), Route::Emit);
-        let edit = Request::Edit { files: vec![root.join("x")], origin: Origin::Shell };
+        let edit = Request::Edit {
+            files: vec![root.join("x")],
+            origin: Origin::Shell,
+        };
         assert_eq!(route(&edit, None), Route::Collect(vec![root.join("x")]));
-        let edit_link = Request::Edit { files: vec![root.join("x")], origin: Origin::Link };
+        let edit_link = Request::Edit {
+            files: vec![root.join("x")],
+            origin: Origin::Link,
+        };
         assert_eq!(route(&edit_link, None), Route::Emit);
         assert_eq!(
-            route(&Request::Terminal { root: root.clone(), files: vec![] }, None),
+            route(
+                &Request::Terminal {
+                    root: root.clone(),
+                    files: vec![]
+                },
+                None
+            ),
             Route::Terminal(root)
         );
         assert_eq!(route(&Request::Palette, None), Route::Emit);
@@ -583,11 +687,19 @@ mod tests {
         merge(&mut v, vec![PathBuf::from("/b"), PathBuf::from("/a")]);
         assert_eq!(v, vec![PathBuf::from("/a"), PathBuf::from("/b")]);
         let mut big = Vec::new();
-        merge(&mut big, (0..osint::MAX_PATHS + 10).map(|i| PathBuf::from(format!("/{i}"))).collect());
+        merge(
+            &mut big,
+            (0..osint::MAX_PATHS + 10)
+                .map(|i| PathBuf::from(format!("/{i}")))
+                .collect(),
+        );
         assert_eq!(big.len(), osint::MAX_PATHS);
         let t = Instant::now();
         assert_eq!(remaining(t, t), Some(EDIT_WINDOW));
-        assert_eq!(remaining(t, t + Duration::from_millis(200)), Some(Duration::from_millis(300)));
+        assert_eq!(
+            remaining(t, t + Duration::from_millis(200)),
+            Some(Duration::from_millis(300))
+        );
         assert_eq!(remaining(t, t + EDIT_WINDOW), None);
     }
 
@@ -596,7 +708,11 @@ mod tests {
         assert!(parse_hotkey("").unwrap().is_none());
         assert!(parse_hotkey("  ").unwrap().is_none());
         assert!(parse_hotkey("CmdOrCtrl+Shift+K").unwrap().is_some());
-        assert!(parse_hotkey(&kor_config::DesktopConfig::default().hotkey).unwrap().is_some());
+        assert!(
+            parse_hotkey(&kor_config::DesktopConfig::default().hotkey)
+                .unwrap()
+                .is_some()
+        );
         assert!(parse_hotkey("Alt+Space").unwrap().is_some());
         assert!(parse_hotkey("Shift+Nope").is_err());
         assert!(parse_hotkey(&"K".repeat(80)).is_err());
@@ -608,8 +724,10 @@ mod tests {
         assert!(!push_recent(&mut r, "/a"));
         assert!(push_recent(&mut r, "/b"));
         assert_eq!(r, vec!["/b", "/a"]);
+        // Absolute on every OS (`/p1` is relative on Windows), as real project paths are.
         for i in 0..20 {
-            push_recent(&mut r, &format!("/p{i}"));
+            let p = std::env::temp_dir().join(format!("p{i}"));
+            push_recent(&mut r, &p.to_string_lossy());
         }
         assert_eq!(r.len(), MAX_RECENT);
         let l = kor_i18n::Localizer::new(kor_i18n::Lang::Tr);
@@ -617,7 +735,13 @@ mod tests {
         assert_eq!(list.recent.len(), JUMP_RECENT);
         assert_eq!(list.recent[0].title, "p19");
         assert!(list.recent[0].args[0].starts_with("kor://open?path="));
-        assert_eq!(list.tasks.iter().map(|t| t.args[0].as_str()).collect::<Vec<_>>(), ["kor://new", "kor://running"]);
+        assert_eq!(
+            list.tasks
+                .iter()
+                .map(|t| t.args[0].as_str())
+                .collect::<Vec<_>>(),
+            ["kor://new", "kor://running"]
+        );
         // Every link in the list parses back.
         for it in list.recent.iter().chain(&list.tasks) {
             kor_runtime::osint::parse_url(&it.args[0]).unwrap();
@@ -636,6 +760,12 @@ mod tests {
         assert_eq!(v["kind"], "open");
         assert_eq!(PathBuf::from(v["root"].as_str().unwrap()), d.path());
         assert!(dropped(&[f.to_string_lossy().into_owned()]).is_null());
-        assert!(dropped(&[sub.to_string_lossy().into_owned(), sub.to_string_lossy().into_owned()]).is_null());
+        assert!(
+            dropped(&[
+                sub.to_string_lossy().into_owned(),
+                sub.to_string_lossy().into_owned()
+            ])
+            .is_null()
+        );
     }
 }

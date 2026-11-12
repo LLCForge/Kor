@@ -52,6 +52,27 @@ pub struct ChatRequest {
     pub reasoning: Option<Reasoning>,
 }
 
+/// A JSON Schema the reply must follow ([`Provider::complete_structured`]).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ResponseSchema {
+    /// Short identifier (`OpenAI` requires one): letters, digits, `_`, `-`.
+    pub name: String,
+    pub schema: serde_json::Value,
+    /// `OpenAI` strict mode: every property required, no extra properties.
+    pub strict: bool,
+}
+
+tokio::task_local! {
+    // Set by `complete_structured` for the request bodies built inside it (wrappers such as the
+    // key pool pass through unchanged).
+    static RESPONSE_SCHEMA: ResponseSchema;
+}
+
+/// The schema of the request being built, if any.
+pub(crate) fn response_schema() -> Option<ResponseSchema> {
+    RESPONSE_SCHEMA.try_with(Clone::clone).ok()
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ModelInfo {
     pub id: String,
@@ -85,6 +106,21 @@ pub trait Provider: Send + Sync {
         req: ChatRequest,
         cancel: CancellationToken,
     ) -> Result<EventStream, ProviderError>;
+
+    /// §15.13: `complete` with the reply constrained to `schema` where the API can do it: `OpenAI`
+    /// `json_schema`, OpenAI-compatible `response_format` (llama.cpp's server turns it into a
+    /// grammar), Gemini `responseSchema`, Ollama `format`. Other providers ignore it, so callers
+    /// still parse and check the reply.
+    async fn complete_structured(
+        &self,
+        req: ChatRequest,
+        schema: ResponseSchema,
+        cancel: CancellationToken,
+    ) -> Result<EventStream, ProviderError> {
+        RESPONSE_SCHEMA
+            .scope(schema, self.complete(req, cancel))
+            .await
+    }
 
     /// Input token count, when the provider offers an endpoint for it.
     async fn count_tokens(&self, _req: &ChatRequest) -> Result<Option<u64>, ProviderError> {
@@ -208,4 +244,56 @@ pub fn with_fallbacks(
         model: Some(model),
     }));
     pool::Failover::new(members).map_or(primary, |f| Arc::new(f) as Arc<dyn Provider>)
+}
+
+#[cfg(test)]
+mod structured_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[tokio::test]
+    async fn the_schema_reaches_every_api_that_constrains_decoding() {
+        let req = ChatRequest {
+            model: "m".into(),
+            messages: vec![kor_core::Message::text(kor_core::Role::User, "hi")],
+            ..Default::default()
+        };
+        let schema = ResponseSchema {
+            name: "plan".into(),
+            schema: json!({"type": "object", "properties": {"steps": {"type": "array", "items": {"type": "string"}}}, "required": ["steps"], "additionalProperties": false}),
+            strict: true,
+        };
+        let build = || {
+            (
+                adapters::openai::body(&req, "p").unwrap(),
+                adapters::openai_compat::body(&req, "p").unwrap(),
+                adapters::gemini::body(&req, "p").unwrap(),
+                adapters::ollama::body(&req, "p").unwrap(),
+            )
+        };
+        let (o, c, g, l) = build();
+        assert!(
+            o.get("text").is_none()
+                && c.get("response_format").is_none()
+                && g.get("generationConfig").is_none()
+                && l.get("format").is_none()
+        );
+        let (o, c, g, l) = RESPONSE_SCHEMA
+            .scope(schema.clone(), async { build() })
+            .await;
+        assert_eq!(o["text"]["format"]["type"], "json_schema");
+        assert_eq!(o["text"]["format"]["strict"], true);
+        assert_eq!(c["response_format"]["json_schema"]["name"], "plan");
+        assert_eq!(
+            g["generationConfig"]["responseMimeType"],
+            "application/json"
+        );
+        assert!(
+            g["generationConfig"]["responseSchema"]
+                .get("additionalProperties")
+                .is_none(),
+            "Gemini rejects it"
+        );
+        assert_eq!(l["format"], schema.schema);
+    }
 }

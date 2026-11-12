@@ -122,6 +122,11 @@ pub(crate) fn body(req: &ChatRequest, provider: &str) -> Result<Value, ProviderE
     if let Some(t) = req.reasoning.and_then(|r| thinking_config(r, &req.model)) {
         gen_config.insert("thinkingConfig".into(), t);
     }
+    // §15.13: constrained decoding (the same schema subset as tool parameters).
+    if let Some(s) = crate::response_schema() {
+        gen_config.insert("responseMimeType".into(), "application/json".into());
+        gen_config.insert("responseSchema".into(), clean_schema(&s.schema));
+    }
     if !gen_config.is_empty() {
         body["generationConfig"] = Value::Object(gen_config);
     }

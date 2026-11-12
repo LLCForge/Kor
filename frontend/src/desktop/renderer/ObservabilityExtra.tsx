@@ -423,8 +423,9 @@ export function SettingsTab() {
           Tamamlanan tur izlerini OTLP/JSON olarak yerel dosyaya yaz
         </label>
         <p className="g14-note">
-          Klasör: <code>{status.traceDir}</code> (traces-GG.jsonl, 14 gün saklanır). Araç özetleri maskelenir; mesaj içeriği yazılmaz.
+          Klasör: <code>{status.traceDir}</code> (traces-GG.jsonl, 14 gün saklanır). Yalnızca araç adları, süreler, sonuçlar ve token sayıları yazılır. Mesaj içeriği ve araç özetleri yazılmaz.
         </p>
+        {status.traceError && <p className="error-text">{status.traceError}</p>}
         <label htmlFor="g14-otlp">OTLP/HTTP uç noktası (isteğe bağlı, yalnızca bu makine)</label>
         <input id="g14-otlp" className="g14-input" value={draft.otlpEndpoint} maxLength={300} placeholder="http://127.0.0.1:4318/v1/traces" onChange={(e) => set({ otlpEndpoint: e.target.value })} />
         <p className="g14-note">Boş bırakılırsa gönderim kapalıdır. Yalnızca 127.0.0.1, localhost veya [::1] kabul edilir; yönlendirmeler reddedilir.</p>
@@ -442,7 +443,7 @@ export function SettingsTab() {
         <input id="g14-port" className="g14-input g14-narrow" inputMode="numeric" value={draft.prometheusPort} onChange={(e) => set({ prometheusPort: e.target.value })} />
         {status.prometheusUrl && (
           <p className="muted">
-            Yayında: <code>{status.prometheusUrl}</code> (istek, hata, token, maliyet, gecikme)
+            Yayında: <code>{status.prometheusUrl}</code> (tur, araç çağrısı, token, süre)
           </p>
         )}
         {status.prometheusError && <p className="error-text">{status.prometheusError}</p>}

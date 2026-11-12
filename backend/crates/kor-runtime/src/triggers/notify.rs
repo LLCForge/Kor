@@ -14,6 +14,9 @@ use tokio::sync::oneshot;
 
 use super::smtp;
 
+/// The answer to an approval: approved or not, and the surface that answered.
+pub type Verdict = oneshot::Receiver<(bool, &'static str)>;
+
 pub const TELEGRAM_TOKEN: &str = "KOR_TELEGRAM_TOKEN";
 pub const SLACK_WEBHOOK: &str = "KOR_SLACK_WEBHOOK";
 pub const SMTP_PASSWORD: &str = "KOR_SMTP_PASSWORD";
@@ -355,7 +358,7 @@ impl Hub {
         job: &str,
         summary: &str,
         details: &str,
-    ) -> Result<(String, String, oneshot::Receiver<(bool, &'static str)>), String> {
+    ) -> Result<(String, String, Verdict), String> {
         let id = random_hex(8)?;
         let token = random_hex(24)?;
         let (tx, rx) = oneshot::channel();

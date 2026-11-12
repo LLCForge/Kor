@@ -2,7 +2,7 @@
 //! `command/`), `opencode.json` (`instructions` files, `mcp` servers). Global: `~/.config/opencode/`
 //! (`AGENTS.md`, `opencode.json`, `agents/`, `commands/`).
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
@@ -44,7 +44,48 @@ fn extras(c: &mut Compat, dir: &Path, scope: Scope) {
     }
 }
 
-/// `instructions`: literal paths inside `base` (glob patterns are reported, not expanded).
+/// Files under `base` matching an `instructions` glob (`docs/*.md`, `packages/*/AGENTS.md`), in
+/// path order. The walk is bounded like every other compat scan and skips build/vendor folders.
+fn expand(base: &Path, pattern: &str) -> Result<Vec<PathBuf>, String> {
+    fn walk(
+        dir: &Path,
+        base: &Path,
+        g: &globset::GlobMatcher,
+        out: &mut Vec<PathBuf>,
+        depth: usize,
+    ) {
+        let Ok(rd) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for e in rd.filter_map(Result::ok).take(crate::MAX_DIR_ENTRIES) {
+            let p = e.path();
+            let Ok(t) = e.file_type() else { continue };
+            let name = e.file_name();
+            if t.is_dir()
+                && depth < 6
+                && !matches!(
+                    name.to_str(),
+                    Some(".git" | "node_modules" | "target" | "dist" | "build")
+                )
+            {
+                walk(&p, base, g, out, depth + 1);
+            } else if t.is_file() && p.strip_prefix(base).is_ok_and(|r| g.is_match(r)) {
+                out.push(p);
+            }
+        }
+    }
+    let g = globset::GlobBuilder::new(pattern.trim_start_matches("./"))
+        .literal_separator(true)
+        .build()
+        .map_err(|e| e.to_string())?
+        .compile_matcher();
+    let mut out = Vec::new();
+    walk(base, base, &g, &mut out, 0);
+    out.sort();
+    Ok(out)
+}
+
+/// `instructions`: paths and glob patterns, both confined to `base`.
 fn config(c: &mut Compat, path: &Path, base: &Path, scope: Scope) {
     mcp(c, path, ECO, scope);
     let Some(text) = read(path, &mut c.warnings) else {
@@ -59,10 +100,28 @@ fn config(c: &mut Compat, path: &Path, base: &Path, scope: Scope) {
             continue;
         };
         if entry.contains(['*', '?', '[']) {
-            c.warnings.push(format!(
-                "{}: instruction pattern `{entry}` is not expanded; name files directly",
-                path.display()
-            ));
+            // SECURITY: patterns that climb out of `base` are refused, like literal paths below.
+            if Path::new(entry).is_absolute()
+                || entry.starts_with(['/', '\\'])
+                || entry.split(['/', '\\']).any(|s| s == "..")
+            {
+                c.warnings.push(format!(
+                    "{}: `{entry}` is outside {}, skipped",
+                    path.display(),
+                    base.display()
+                ));
+                continue;
+            }
+            match expand(base, entry) {
+                Ok(found) => {
+                    for f in found {
+                        plain(c, &f, ECO, scope, Applies::Always);
+                    }
+                }
+                Err(e) => c
+                    .warnings
+                    .push(format!("{}: `{entry}`: {e}", path.display())),
+            }
             continue;
         }
         let Ok(target) = base.join(entry).canonicalize() else {
@@ -77,5 +136,37 @@ fn config(c: &mut Compat, path: &Path, base: &Path, scope: Scope) {
                 base.display()
             ));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn instruction_globs_expand_inside_the_project_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("docs/deep")).unwrap();
+        std::fs::create_dir_all(root.join("packages/api")).unwrap();
+        std::fs::write(root.join("docs/a.md"), "doc a").unwrap();
+        std::fs::write(root.join("docs/deep/b.md"), "doc b").unwrap();
+        std::fs::write(root.join("packages/api/AGENTS.md"), "api rules").unwrap();
+        std::fs::write(
+            root.join("opencode.json"),
+            r#"{"instructions": ["docs/*.md", "packages/*/AGENTS.md", "../*.md", "/etc/*"]}"#,
+        )
+        .unwrap();
+        let mut c = Compat::default();
+        config(&mut c, &root.join("opencode.json"), root, Scope::Project);
+        let texts: Vec<&str> = c.instructions.iter().map(|i| i.text.as_str()).collect();
+        // `*` stays within one folder: docs/deep/b.md is not matched by `docs/*.md`.
+        assert_eq!(texts, ["doc a", "api rules"], "{:?}", c.warnings);
+        assert_eq!(
+            c.warnings.iter().filter(|w| w.contains("outside")).count(),
+            2,
+            "{:?}",
+            c.warnings
+        );
     }
 }

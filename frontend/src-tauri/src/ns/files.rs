@@ -2072,14 +2072,17 @@ fn set_obs_settings(args: &[Value]) -> Res {
     let mut clean = Map::new();
     for (k, v) in patch {
         match k.as_str() {
-            "traceExport" | "prometheus" if v.as_bool() == Some(true) => {
-                return Err("Kor'da iz dışa aktarma, OTLP ve Prometheus henüz yok".into());
+            "otlpEndpoint" => {
+                let e = v.as_str().ok_or(format!("{k} geçersiz"))?.trim();
+                // SECURITY: iz verisi makineden çıkmaz; yalnızca loopback toplayıcıya gider.
+                if !e.is_empty() && kor_runtime::obs::check_endpoint(e).is_err() {
+                    return Err(
+                        "OTLP adresi yalnızca 127.0.0.1, localhost veya [::1] olabilir".into(),
+                    );
+                }
+                clean.insert(k.clone(), json!(e));
             }
-            "otlpEndpoint" if v.as_str().is_some_and(|e| !e.trim().is_empty()) => {
-                return Err("Kor'da iz dışa aktarma, OTLP ve Prometheus henüz yok".into());
-            }
-            "traceExport" | "prometheus" | "otlpEndpoint" => {}
-            "alerts" => {
+            "alerts" | "traceExport" | "prometheus" => {
                 clean.insert(
                     k.clone(),
                     json!(v.as_bool().ok_or(format!("{k} geçersiz"))?),
@@ -2099,12 +2102,26 @@ fn set_obs_settings(args: &[Value]) -> Res {
             }
         }
     }
-    obs_store(|v| {
+    let s = obs_store(|v| {
         let mut saved = v["settings"].as_object().cloned().unwrap_or_default();
         saved.extend(clean);
         v["settings"] = Value::Object(saved);
         Ok(obs_settings(v))
-    })
+    })?;
+    apply_prometheus(&s);
+    Ok(s)
+}
+
+/// Starts, moves or stops `/metrics` to match the settings; a bind error shows in `exportStatus`.
+fn apply_prometheus(s: &Value) {
+    let port = (s["prometheus"].as_bool() == Some(true))
+        .then(|| {
+            s["prometheusPort"]
+                .as_u64()
+                .and_then(|p| u16::try_from(p).ok())
+        })
+        .flatten();
+    let _ = kor_runtime::obs::set_prometheus(port);
 }
 
 fn ratings_of(store: &Value) -> Map<String, Value> {
@@ -2345,6 +2362,9 @@ async fn overview(state: &AppState) -> Res {
             .collect();
         Ok((obs_settings(v), r))
     })?;
+    // Uygulama yeniden açıldığında açık kalan Prometheus burada başlar.
+    apply_prometheus(&settings);
+    let export_status = kor_runtime::obs::status();
     // Kor tur/araç/model izi (süre, hata) tutmaz: bu listeler dürüstçe boş; maliyet ve tokenlar `cost`ta.
     Ok(json!({
         "now": meta::now_ms(),
@@ -2353,7 +2373,7 @@ async fn overview(state: &AppState) -> Res {
         "ratings": ratings,
         "events": [], "live": [],
         "settings": settings,
-        "exportStatus": { "traceDir": "", "prometheusUrl": null, "prometheusError": null, "otlpSent": 0, "otlpError": null },
+        "exportStatus": export_status,
     }))
 }
 
@@ -2483,7 +2503,8 @@ fn cost(args: &[Value], prices: &BTreeMap<String, (f64, f64)>) -> Res {
         "byTag": if calls > 0.0 { vec![slice("(etiketsiz)", usd, tokens, calls)] } else { vec![] },
         "byDay": by_day.iter().map(|(d, (u, t, c))| slice(&d.format("%Y-%m-%d").to_string(), *u, *t, *c)).collect::<Vec<_>>(),
     });
-    let daily: BTreeMap<chrono::NaiveDate, f64> = by_day.iter().map(|(d, (u, _, _))| (*d, *u)).collect();
+    let daily: BTreeMap<chrono::NaiveDate, f64> =
+        by_day.iter().map(|(d, (u, _, _))| (*d, *u)).collect();
     let (ratings, tags) = obs_store(|v| Ok((ratings_of(v), v["tags"].clone())))?;
     Ok(json!({
         "days": days,

@@ -7247,6 +7247,16 @@
         "traceDir": {
           "type": "string"
         },
+        "traceError": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "prometheusUrl": {
           "anyOf": [
             {
@@ -7283,6 +7293,7 @@
       },
       "required": [
         "traceDir",
+        "traceError",
         "prometheusUrl",
         "prometheusError",
         "otlpSent",
@@ -37677,6 +37688,42 @@
         },
         "required": [
           "id"
+        ]
+      }
+    },
+    "sessions.importFrom": {
+      "description": "Claude Code ya da Cursor sohbetlerini salt okunur içe aktarır; zaten alınmış olanlar atlanır.",
+      "params": [
+        {
+          "name": "tool",
+          "schema": {
+            "enum": [
+              "claude-code",
+              "cursor"
+            ]
+          }
+        },
+        {
+          "name": "all",
+          "schema": {
+            "type": "boolean"
+          },
+          "optional": true
+        }
+      ],
+      "result": {
+        "type": "object",
+        "properties": {
+          "imported": {
+            "type": "number"
+          },
+          "found": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "imported",
+          "found"
         ]
       }
     },

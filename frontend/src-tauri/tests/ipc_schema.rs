@@ -28,7 +28,8 @@ fn rs_files(dir: &Path) -> Vec<PathBuf> {
 }
 
 fn schema() -> Value {
-    let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../backend/crates/kor-core/schema/ipc.json");
+    let p =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../backend/crates/kor-core/schema/ipc.json");
     serde_json::from_str(&read(&p)).expect("ipc.json parses")
 }
 
@@ -40,14 +41,21 @@ fn owners() -> HashMap<String, String> {
     for f in rs_files(&ns_dir) {
         let stem = f.file_stem().unwrap().to_string_lossy().into_owned();
         let body = read(&f);
-        if let Some(ns) = body.lines().find(|l| l.starts_with("pub const NS: &str")).and_then(|l| l.split('"').nth(1)) {
+        if let Some(ns) = body
+            .lines()
+            .find(|l| l.starts_with("pub const NS: &str"))
+            .and_then(|l| l.split('"').nth(1))
+        {
             owner.insert(ns.to_owned(), stem.clone());
         }
         // Files that serve several namespaces match on `(ns, name)`: `("plan", "approve") =>`.
         for (i, _) in body.match_indices("(\"") {
             let rest = &body[i + 2..];
             if let Some((ns, tail)) = rest.split_once('"') {
-                if tail.starts_with(", ") && ns.chars().all(|c| c.is_ascii_alphanumeric()) && !ns.is_empty() {
+                if tail.starts_with(", ")
+                    && ns.chars().all(|c| c.is_ascii_alphanumeric())
+                    && !ns.is_empty()
+                {
                     owner.entry(ns.to_owned()).or_insert_with(|| stem.clone());
                 }
             }
@@ -55,7 +63,11 @@ fn owners() -> HashMap<String, String> {
     }
     let mod_rs = read(&ns_dir.join("mod.rs"));
     let lines: Vec<&str> = mod_rs.lines().collect();
-    for (i, line) in lines.iter().enumerate().filter(|(_, l)| l.contains("::call(ns, name")) {
+    for (i, line) in lines
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| l.contains("::call(ns, name"))
+    {
         let (pat, target) = match line.split_once("=>") {
             Some(split) => split,
             None => match lines[..i].last().and_then(|p| p.split_once("=>")) {
@@ -66,7 +78,12 @@ fn owners() -> HashMap<String, String> {
         if pat.contains("::NS") {
             continue;
         }
-        let file = target.trim().split("::").next().unwrap_or_default().to_owned();
+        let file = target
+            .trim()
+            .split("::")
+            .next()
+            .unwrap_or_default()
+            .to_owned();
         for n in pat.split('"').skip(1).step_by(2) {
             owner.insert(n.to_owned(), file.clone());
         }
@@ -112,7 +129,10 @@ fn every_schema_method_has_a_rust_handler() {
             missing.push(method.clone());
         }
     }
-    assert!(missing.is_empty(), "schema methods without a Rust handler: {missing:?}");
+    assert!(
+        missing.is_empty(),
+        "schema methods without a Rust handler: {missing:?}"
+    );
 }
 
 /// Every `"kor:…"` event the app emits (literal names next to `emit(`, and `EVENT` constants).
@@ -143,12 +163,23 @@ fn emitted() -> BTreeSet<String> {
 #[test]
 fn emitted_events_and_schema_events_match() {
     let s = schema();
-    let schema_events: BTreeSet<String> = s["events"].as_object().expect("events").keys().cloned().collect();
+    let schema_events: BTreeSet<String> = s["events"]
+        .as_object()
+        .expect("events")
+        .keys()
+        .cloned()
+        .collect();
     let emitted = emitted();
     let unknown: Vec<_> = emitted.difference(&schema_events).collect();
-    assert!(unknown.is_empty(), "Rust emits events missing from ipc.json: {unknown:?}");
+    assert!(
+        unknown.is_empty(),
+        "Rust emits events missing from ipc.json: {unknown:?}"
+    );
     let never: Vec<_> = schema_events.difference(&emitted).collect();
-    assert!(never.is_empty(), "ipc.json events nothing in Rust emits (dead subscriptions): {never:?}");
+    assert!(
+        never.is_empty(),
+        "ipc.json events nothing in Rust emits (dead subscriptions): {never:?}"
+    );
 }
 
 #[test]
@@ -158,12 +189,17 @@ fn parity_desktop_methods_are_in_the_schema() {
     let doc: toml_edit::DocumentMut = parity.parse().expect("parity.toml");
     let mut missing = Vec::new();
     for f in doc["feature"].as_array_of_tables().expect("features") {
-        let Some(d) = f.get("desktop").and_then(toml_edit::Item::as_str) else { continue };
+        let Some(d) = f.get("desktop").and_then(toml_edit::Item::as_str) else {
+            continue;
+        };
         if d != "-" && s["methods"].get(d).is_none() {
             missing.push(d.to_owned());
         }
     }
-    assert!(missing.is_empty(), "parity.toml desktop methods missing from ipc.json: {missing:?}");
+    assert!(
+        missing.is_empty(),
+        "parity.toml desktop methods missing from ipc.json: {missing:?}"
+    );
 }
 
 #[test]
@@ -173,15 +209,36 @@ fn agent_event_types_sent_by_the_app_are_in_the_schema() {
     let text = serde_json::to_string(&s["$defs"]).expect("$defs");
     let mut missing = BTreeSet::new();
     for f in [src().join("chat.rs"), src().join("presence.rs")] {
-        // Lines that build `kor:event` items; the Chrome side panel's broadcast has its own types.
-        for line in read(&f).lines().filter(|l| !l.contains("broadcast_event")) {
+        // Lines that build `kor:event` items; the Chrome side panel's broadcast (one call, possibly
+        // over several lines) has its own types.
+        let source = read(&f);
+        let mut in_broadcast = false;
+        let lines = source.lines().filter(|l| {
+            if l.contains("broadcast_event(") {
+                in_broadcast = !l.trim_end().ends_with(");");
+                return false;
+            }
+            if in_broadcast {
+                in_broadcast = !l.trim_end().ends_with(");");
+                return false;
+            }
+            true
+        });
+        for line in lines {
             for (i, _) in line.match_indices("\"type\": \"") {
-                let ty = line[i + 9..].split('"').next().unwrap_or_default().to_owned();
+                let ty = line[i + 9..]
+                    .split('"')
+                    .next()
+                    .unwrap_or_default()
+                    .to_owned();
                 if !text.contains(&format!("\"type\":{{\"const\":\"{ty}\"}}")) {
                     missing.insert(ty);
                 }
             }
         }
     }
-    assert!(missing.is_empty(), "`kor:event` types missing from AgentEventBody: {missing:?}");
+    assert!(
+        missing.is_empty(),
+        "`kor:event` types missing from AgentEventBody: {missing:?}"
+    );
 }
