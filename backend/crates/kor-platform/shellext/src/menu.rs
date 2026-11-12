@@ -273,8 +273,10 @@ mod tests {
 
     #[test]
     fn desktop_is_next_to_or_above_the_dll() {
-        let c = desktop_candidates(Path::new(r"C:\Kor\shellext"));
-        assert_eq!(c[0], Path::new(r"C:\Kor\shellext\kor-desktop.exe"));
-        assert_eq!(c[1], Path::new(r"C:\Kor\kor-desktop.exe"));
+        // Built from the host's separator: the test also runs on Linux and macOS.
+        let root = std::env::temp_dir().join("Kor");
+        let c = desktop_candidates(&root.join("shellext"));
+        assert_eq!(c[0], root.join("shellext").join("kor-desktop.exe"));
+        assert_eq!(c[1], root.join("kor-desktop.exe"));
     }
 }

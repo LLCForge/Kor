@@ -1641,6 +1641,13 @@ async fn tui_turn(
                     tui::reduce(screen, l, ev)
                 }
                 result = &mut work => {
+                    // Events sent in the turn's last poll are still queued: show them before ending.
+                    while let Ok(ev) = ev_rx.try_recv() {
+                        trace_ev(kor_core::ipc_trace::Surface::Tui, &ev);
+                        if let Some(shown) = tui_ev(ev) {
+                            tui::reduce(screen, l, shown);
+                        }
+                    }
                     if let Err(e) = result {
                         let msg = provider_error(l, &e);
                         trace_item(kor_core::ipc_trace::Surface::Tui, json!({ "type": "error", "message": msg }));

@@ -360,6 +360,19 @@ async fn scenario() {
             break;
         }
     }
+    // The job is saved as done before the result is broadcast: wait for the message before stopping.
+    for _ in 0..100 {
+        if bot
+            .sent
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|m| m["text"].as_str().is_some_and(|t| t.contains("pull/7")))
+        {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
     running.stop().await;
     let job = job.expect("the push fired no job within 60 s");
     assert_eq!(job.status, Status::Done, "{job:#?}");

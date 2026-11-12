@@ -124,7 +124,7 @@ async fn dropping_the_child_kills_the_whole_tree() {
     let pid_file = root.join("pid.txt");
     let args = ps(&format!(
         "$p = [Diagnostics.Process]::Start('powershell', '-NoProfile -Command Start-Sleep 120'); \
-         [IO.File]::WriteAllText('{}', $p.Id); Start-Sleep 120",
+         [IO.File]::WriteAllText('{}', \"$($p.Id);\"); Start-Sleep 120",
         pid_file.display()
     ));
     let env = env();
@@ -136,7 +136,8 @@ async fn dropping_the_child_kills_the_whole_tree() {
         tokio::time::sleep(Duration::from_millis(100)).await;
         if let Some(pid) = std::fs::read_to_string(&pid_file)
             .ok()
-            .and_then(|s| s.trim().parse::<u32>().ok())
+            .and_then(|s| s.strip_suffix(';')?.trim().parse::<u32>().ok())
+        // `;`: the write is complete
         {
             grandchild = Some(pid);
             break;
