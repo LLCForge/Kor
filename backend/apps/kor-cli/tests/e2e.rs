@@ -252,7 +252,14 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
         } else {
             Regex("Idle")
         };
-        out.push_str(&text(&p.expect(until).expect("TUI step")));
+        match p.expect(until) {
+            Ok(found) => out.push_str(&text(&found)),
+            // The screen so far, so a CI failure shows where the TUI stopped.
+            Err(e) => panic!(
+                "TUI step {i} ({st:?}): {e:?}\n--- screen so far ---\n{}",
+                strip_ansi(&out)
+            ),
+        }
     }
     p.send("\x1b").expect("Esc quits");
     out.push_str(&text(&p.expect(Eof).expect("TUI exits")));

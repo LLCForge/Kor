@@ -485,6 +485,7 @@ jobs:
         working-directory: frontend
         env:
           KOR_E2E_DRIVER: webdriver
+          RUST_BACKTRACE: "1"
         # tauri-driver starts the app, so it must run inside the virtual display too.
         run: |
           xvfb-run -a sh -c 'tauri-driver --port 4444 & npx playwright test -c e2e/playwright.config.ts --project desktop'

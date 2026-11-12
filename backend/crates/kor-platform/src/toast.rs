@@ -25,10 +25,22 @@ pub fn show(t: &Toast, on_click: impl FnOnce() + Send + 'static) -> Result<(), S
         .body(&clip(&t.body, 400))
         .appname("Kor");
     set_app_id(&mut n, t.app_id.as_deref());
-    let handle = n.show().map_err(|e| e.to_string())?;
+    // On Linux `show` goes through zbus's blocking API, which with zbus's tokio feature calls
+    // `block_on` and panics on a tokio worker; so it runs on its own thread, the result comes back.
+    let (tx, rx) = std::sync::mpsc::channel();
     std::thread::Builder::new()
         .name("kor-toast".into())
         .spawn(move || {
+            let handle = match n.show() {
+                Ok(h) => {
+                    let _ = tx.send(Ok(()));
+                    h
+                }
+                Err(e) => {
+                    let _ = tx.send(Err(e.to_string()));
+                    return;
+                }
+            };
             let _ = handle.wait_for_response(|r: &notify_rust::NotificationResponse| {
                 if matches!(
                     r,
@@ -39,8 +51,9 @@ pub fn show(t: &Toast, on_click: impl FnOnce() + Send + 'static) -> Result<(), S
                 }
             });
         })
-        .map(|_| ())
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    rx.recv()
+        .map_err(|_| "the notification thread ended".to_owned())?
 }
 
 #[cfg(all(feature = "toast", windows))]

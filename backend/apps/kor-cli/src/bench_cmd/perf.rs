@@ -640,7 +640,8 @@ mod tests {
     fn token_path_measures_every_token() {
         let s = token_path().unwrap().unwrap();
         assert_eq!(s.n, 300);
-        assert!(s.p95 < 1000.0, "{s:?}");
+        // Timing is the perf gate's job (`cli.token_path`); shared CI runners vary too much here.
+        assert!(s.p95 >= s.p50 && s.p50 > 0.0, "{s:?}");
     }
 
     #[test]
