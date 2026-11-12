@@ -71,7 +71,18 @@ export async function runSteps(d: Driver, served: Served): Promise<string> {
         return JSON.stringify(r)
       }, method, st.desktop_args ?? [])
       output += `${result}\n`
-      if (method === 'tasks.start') await turnEnd(d)
+      // A task runs in the background (not a chat session): wait until its status is final.
+      if (method === 'tasks.start') {
+        const id = (JSON.parse(result) as { id: string }).id
+        await until(async () => {
+          const st = await d.run(async (i: string) => {
+            const k = (window as unknown as { kor: { tasks: { status(id: string): Promise<{ status: string }> } } }).kor
+            return (await k.tasks.status(i)).status
+          }, id)
+          return ['done', 'failed', 'cancelled', 'conflict'].includes(st)
+        }, 300_000, `task #${id} to finish`)
+        await turnEnd(d)
+      }
     }
   }
   return output

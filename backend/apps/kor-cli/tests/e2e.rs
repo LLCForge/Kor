@@ -292,6 +292,15 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
         if let Some(prompt) = &st.prompt {
             p.send(prompt).expect("type prompt");
             p.send("\r").expect("submit");
+            // "Idle" can still be in the output from before the prompt: see the turn start first
+            // (a turn too fast to be drawn as running just goes on to the "Idle" wait).
+            if !next_is_approval {
+                p.set_expect_timeout(Some(Duration::from_secs(15)));
+                if let Ok(found) = p.expect(Regex(r"Working on|Running tool")) {
+                    out.push_str(&text(&found));
+                }
+                p.set_expect_timeout(Some(TIMEOUT));
+            }
         } else if let Some(a) = &st.approve {
             p.send(match a.as_str() {
                 "always" => "A",
@@ -301,9 +310,17 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
             .expect("answer");
         } else if let Some(cli) = &st.command {
             let mut line = tui_command(cli);
-            for a in &st.args {
+            for raw in &st.args {
+                let arg = raw.replace(e2e::KOR_PLACEHOLDER, KOR);
                 line.push(' ');
-                line.push_str(&a.replace(e2e::KOR_PLACEHOLDER, KOR));
+                // One argument stays one word (`--test "git status"`), as the CLI run passes it.
+                if arg.contains(char::is_whitespace) {
+                    line.push('"');
+                    line.push_str(&arg);
+                    line.push('"');
+                } else {
+                    line.push_str(&arg);
+                }
             }
             p.send(&line).expect("type command");
             p.send("\r").expect("submit");
