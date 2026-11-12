@@ -53,27 +53,43 @@ impl KeychainStore {
     }
 }
 
+/// Run a keychain call on its own thread. On Linux the Secret Service goes through zbus's
+/// blocking API, which (with zbus's tokio feature in the tree) calls `block_on` and panics on a
+/// tokio worker; callers are often async. Elsewhere it runs in place.
+fn off_runtime<T: Send>(f: impl FnOnce() -> T + Send) -> T {
+    if cfg!(target_os = "linux") {
+        std::thread::scope(|s| match s.spawn(f).join() {
+            Ok(v) => v,
+            Err(p) => std::panic::resume_unwind(p),
+        })
+    } else {
+        f()
+    }
+}
+
 impl SecretStore for KeychainStore {
     fn get(&self, account: &str) -> Result<Option<SecretString>, SecretError> {
-        match Self::entry(account)?.get_password() {
+        off_runtime(|| match Self::entry(account)?.get_password() {
             Ok(p) => Ok(Some(SecretString::from(p))),
             Err(keyring::Error::NoEntry) => Ok(None),
             Err(e) => Err(SecretError::Keychain(e.to_string())),
-        }
+        })
     }
 
     fn set(&self, account: &str, secret: &SecretString) -> Result<(), SecretError> {
-        Self::entry(account)?
-            .set_password(secret.expose_secret())
-            .map_err(|e| SecretError::Keychain(e.to_string()))
+        off_runtime(|| {
+            Self::entry(account)?
+                .set_password(secret.expose_secret())
+                .map_err(|e| SecretError::Keychain(e.to_string()))
+        })
     }
 
     fn delete(&self, account: &str) -> Result<bool, SecretError> {
-        match Self::entry(account)?.delete_credential() {
+        off_runtime(|| match Self::entry(account)?.delete_credential() {
             Ok(()) => Ok(true),
             Err(keyring::Error::NoEntry) => Ok(false),
             Err(e) => Err(SecretError::Keychain(e.to_string())),
-        }
+        })
     }
 }
 
@@ -435,6 +451,12 @@ fn looks_random(s: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn off_runtime_returns_the_value_inside_a_runtime() {
+        let rt = tokio::runtime::Builder::new_multi_thread().build().unwrap();
+        assert_eq!(rt.block_on(async { off_runtime(|| 41 + 1) }), 42);
+    }
+
     use super::*;
 
     #[test]

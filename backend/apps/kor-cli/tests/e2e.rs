@@ -246,6 +246,15 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
             }
             p.send(&line).expect("type command");
             p.send("\r").expect("submit");
+            // Slash commands run on the normal screen and wait for Enter before the TUI returns.
+            match p.expect(Regex("Press Enter to go back")) {
+                Ok(found) => out.push_str(&text(&found)),
+                Err(e) => panic!(
+                    "TUI step {i} ({st:?}) never finished: {e:?}\n--- screen so far ---\n{}",
+                    strip_ansi(&out)
+                ),
+            }
+            p.send("\r").expect("back to the TUI");
         }
         let until = if next_is_approval {
             Regex(r"\[d\] deny")

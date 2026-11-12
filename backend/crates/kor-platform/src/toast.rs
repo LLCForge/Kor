@@ -27,7 +27,7 @@ pub fn show(t: &Toast, on_click: impl FnOnce() + Send + 'static) -> Result<(), S
     set_app_id(&mut n, t.app_id.as_deref());
     // On Linux `show` goes through zbus's blocking API, which with zbus's tokio feature calls
     // `block_on` and panics on a tokio worker; so it runs on its own thread, the result comes back.
-    let (tx, rx) = std::sync::mpsc::channel();
+    let (tx, rx) = std::sync::mpsc::sync_channel(1);
     std::thread::Builder::new()
         .name("kor-toast".into())
         .spawn(move || {

@@ -619,20 +619,32 @@ mod tests {
                 .call(None, "Target.getTargets", json!({}))
                 .await
                 .unwrap();
-            if let Some(u) = t["targetInfos"]
+            // Chrome for Testing runs built-in extensions with a `background.js` too: wait for ours;
+            // if it never shows, the first one makes the id check below fail with what was seen.
+            let workers: Vec<&str> = t["targetInfos"]
                 .as_array()
                 .into_iter()
                 .flatten()
                 .filter_map(|x| x["url"].as_str())
-                .find(|u| u.ends_with("/background.js"))
-            {
-                id = u
-                    .trim_start_matches("chrome-extension://")
+                .filter(|u| u.ends_with("/background.js"))
+                .collect();
+            let ours = format!(
+                "chrome-extension://{}/",
+                kor_platform::native_messaging::CHROME_EXTENSION_ID
+            );
+            let id_of = |u: &str| {
+                u.trim_start_matches("chrome-extension://")
                     .split('/')
                     .next()
                     .unwrap_or("")
-                    .to_owned();
+                    .to_owned()
+            };
+            if let Some(u) = workers.iter().find(|u| u.starts_with(&ours)) {
+                id = id_of(u);
                 break;
+            }
+            if let Some(u) = workers.first() {
+                id = id_of(u);
             }
             tokio::time::sleep(Duration::from_millis(200)).await;
         }
