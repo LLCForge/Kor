@@ -3323,7 +3323,9 @@ version = "0.2.8"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
+ "chrono",
  "dhat",
+ "dirs",
  "futures",
  "kor-agent",
  "kor-core",

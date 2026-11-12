@@ -301,6 +301,7 @@ pub(crate) const BUILTIN: &[(&str, &str)] = builtin![
     "arliai",
     "azure",
     "bedrock",
+    "bedrock-iam",
     "cerebras",
     "codestral",
     "cohere",

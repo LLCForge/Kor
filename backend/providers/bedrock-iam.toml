@@ -1,0 +1,21 @@
+# Bedrock Converse API with IAM credentials (SigV4): every Bedrock chat model through one API.
+# Source: https://docs.aws.amazon.com/bedrock/latest/APIReference/API_runtime_Converse.html
+# Credentials: AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY (+ AWS_SESSION_TOKEN) or ~/.aws/credentials.
+# Region: BEDROCK_RUNTIME_URL, else AWS_REGION. Any Bedrock model id or inference profile works;
+# the list below is only what is offered without one.
+id = "bedrock-iam"
+name = "AWS Bedrock (IAM, Converse)"
+category = "cloud"
+adapter = "bedrock"
+base_url = "https://bedrock-runtime.your-region.invalid"
+base_url_env = "BEDROCK_RUNTIME_URL"
+auth = { kind = "none" }
+static_models = ["amazon.nova-pro-v1:0", "amazon.nova-lite-v1:0", "amazon.nova-micro-v1:0", "meta.llama3-3-70b-instruct-v1:0", "mistral.mistral-large-2407-v1:0"]
+tool_calling = true
+verified = false
+docs = "https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html"
+
+[privacy]
+tier = "no_train"
+retention = "AWS states Bedrock does not store or train on prompts and completions (verify)."
+jurisdiction = "per region"

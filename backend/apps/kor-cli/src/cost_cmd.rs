@@ -112,6 +112,17 @@ pub fn quota(ctx: &Ctx) -> anyhow::Result<bool> {
                            "failed" => n(&u["failure_count"]), "tokens" => n(&u["total_tokens"]))
                 )
             );
+            // §4.3, §15.10: each subscription account or key of the gateway.
+            for a in kor_proxy::usage::account_rows(&r) {
+                println!(
+                    "  {}",
+                    l.t_args(
+                        "quota-proxy-account",
+                        &args!("account" => a.account, "requests" => a.requests, "failed" => a.failed,
+                               "limited" => a.rate_limited, "tokens" => a.tokens)
+                    )
+                );
+            }
         }
     }
     Ok(true)

@@ -142,7 +142,7 @@ is `kor update rollback`, which has no desktop button yet.
 | Local runtimes | Ollama, llama.cpp server, LM Studio, vLLM, Jan, KoboldCpp, LocalAI, text-generation-webui |
 | Standard APIs | Anthropic, OpenAI, Google AI (Gemini API), DeepSeek, Mistral, Mistral Codestral, Groq, xAI (Grok), Together AI, Fireworks AI, Cerebras, Cohere, Perplexity, SambaNova Cloud, NVIDIA NIM, Moonshot AI (Kimi), Z.ai (GLM), Z.ai GLM Coding Plan, Zhipu AI (BigModel) |
 | Aggregators | OpenRouter, Hugging Face Inference Providers, fal.ai (LLM router), Abacus.ai RouteLLM |
-| Cloud platforms | Azure OpenAI, Microsoft Foundry Models, AWS Bedrock, Amazon SageMaker, Google Vertex AI, OCI Generative AI, Alibaba Cloud Model Studio (international and China), GitHub Models (retired) |
+| Cloud platforms | Azure OpenAI, Microsoft Foundry Models, AWS Bedrock (API key, or IAM through the Converse API), Amazon SageMaker (IAM), Google Vertex AI, OCI Generative AI, Alibaba Cloud Model Studio (international and China), GitHub Models (retired) |
 
 None of these has been verified against the live API yet (`verified = false` in every manifest); they are tested
 against mock servers. An OpenAI-compatible provider needs only a TOML manifest, no code
@@ -690,8 +690,8 @@ trials and 5 decisions. The development tasks:
 - [ ] Virtual desktops in saved layouts; Windows remote servers
 
 **Providers and cost**
-- [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI signed auth
-- [ ] Leaderboard scores (HF, LMArena, LiveBench) in the catalogue
+- [ ] Vertex ADC, Azure Entra ID, OCI signed auth
+- [ ] LMArena and LiveBench scores in the catalogue (neither publishes a data endpoint)
 - [ ] Proxy quota in `kor quota`
 
 **Web, media and integrations**

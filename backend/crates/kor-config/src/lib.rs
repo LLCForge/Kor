@@ -876,6 +876,7 @@ impl Default for ContextBudget {
 /// `[memory]`: knowledge base recall at task start, "what we learned" at task end, git notes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
+#[allow(clippy::struct_excessive_bools)] // independent switches of the `[memory]` table
 pub struct Memory {
     /// Put relevant knowledge base records into the prompt at task start.
     pub inject: bool,
@@ -885,6 +886,10 @@ pub struct Memory {
     pub learn: bool,
     /// Allow `kor memory notes push|pull` (decisions as `git notes --ref=kor`).
     pub git_notes: bool,
+    /// §27.15: keep the knowledge base as browsable Markdown in `folder` (one way).
+    pub folder_view: bool,
+    /// The folder of the view; empty = `~/Kor/Bilgi`.
+    pub folder: String,
 }
 
 impl Default for Memory {
@@ -894,6 +899,8 @@ impl Default for Memory {
             max_tokens: 1500,
             learn: true,
             git_notes: false,
+            folder_view: false,
+            folder: String::new(),
         }
     }
 }

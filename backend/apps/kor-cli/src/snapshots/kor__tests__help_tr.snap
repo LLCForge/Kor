@@ -5685,6 +5685,7 @@ Usage: kor know [OPTIONS] [QUERY]...
 
 Commands:
   digest  Haftalık özet (en çok başvurulan notlar)
+  folder  Bilgi tabanını okunabilir Markdown olarak yaz (`~/Kor/Bilgi` ya da `[memory] folder`)
   stale   Dosyaları ya da sembolleri değişmiş veya kaybolmuş notlar
   help    Print this message or the help of the given subcommand(s)
 
@@ -5699,11 +5700,11 @@ Options:
       --privacy-mode
           Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
 
-      --here
-          Yalnızca bu projenin notları
-
       --remote <REMOTE>
           Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+      --here
+          Yalnızca bu projenin notları
 
   -n, --limit <LIMIT>
           En fazla sonuç
@@ -5729,6 +5730,23 @@ Options:
 
       --print
           Dosyaya yazmak yerine ekrana yazdır
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor know folder --help
+Bilgi tabanını okunabilir Markdown olarak yaz (`~/Kor/Bilgi` ya da `[memory] folder`)
+
+Usage: kor know folder [OPTIONS]
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
 
       --privacy-mode
           Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz

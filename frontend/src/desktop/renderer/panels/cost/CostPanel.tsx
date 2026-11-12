@@ -317,6 +317,41 @@ function Quota() {
         </p>
       )}
 
+      {q.data.proxy && (
+        <section className="g14-section" aria-label="Proxy hesapları">
+          <h3 className="g14-h">Proxy hesapları</h3>
+          <p className="muted" translate="no">{q.data.proxy.url}</p>
+          {q.data.proxy.accounts.length === 0 ? (
+            <p className="muted g14-empty">Ağ geçidi çalışıyor; henüz istek yok.</p>
+          ) : (
+            <div className="g7-table-wrap">
+              <table className="g7-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Hesap</th>
+                    <th scope="col" className="num">İstek</th>
+                    <th scope="col" className="num">Hata</th>
+                    <th scope="col" className="num">Hız sınırı</th>
+                    <th scope="col" className="num">Token</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {q.data.proxy.accounts.map((a) => (
+                    <tr key={a.account}>
+                      <td translate="no" className="g7-mono">{a.account}</td>
+                      <td className="num">{a.requests}</td>
+                      <td className="num">{a.failed}</td>
+                      <td className="num">{a.rateLimited}</td>
+                      <td className="num">{formatTokens(a.tokens)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="g14-section" aria-label="Son 24 saat">
         <h3 className="g14-h">Son 24 saat</h3>
         {r.last_24h.length === 0 ? (

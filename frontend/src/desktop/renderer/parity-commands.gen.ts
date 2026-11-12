@@ -389,6 +389,7 @@ export const PARITY_COMMANDS: readonly ParityCommand[] = [
   { name: "Sistem gereksinimini onayla kur", cli: "kor prereq install", method: "prereq.install" },
   { name: "kor export", cli: "kor export", method: "system.exportAll" },
   { name: "kor know digest", cli: "kor know digest", method: "know.digest" },
+  { name: "kor know folder", cli: "kor know folder", method: "know.folder" },
   { name: "kor know stale", cli: "kor know stale", method: "know.stale" },
   { name: "kor know", cli: "kor know", method: "know.search" },
   { name: "kor estimate", cli: "kor estimate", method: "estimate.task" },

@@ -163,8 +163,19 @@ async fn placeholder_base_urls_need_their_env_var() {
         let e = build(m, Some(SecretString::from("k"))).err().unwrap();
         assert!(e.message.contains(&var), "{id}: {}", e.message);
     }
-    let e = build(reg.get("sagemaker").unwrap(), None).err().unwrap();
-    assert!(e.message.contains("SigV4"));
+    // AWS (SigV4): without an endpoint URL and without AWS_REGION, the URL variable is named.
+    if std::env::var_os("AWS_REGION").is_none() && std::env::var_os("AWS_DEFAULT_REGION").is_none()
+    {
+        for (id, var) in [
+            ("sagemaker", "SAGEMAKER_RUNTIME_URL"),
+            ("bedrock-iam", "BEDROCK_RUNTIME_URL"),
+        ] {
+            if std::env::var_os(var).is_none() {
+                let e = build(reg.get(id).unwrap(), None).err().unwrap();
+                assert!(e.message.contains(var), "{id}: {}", e.message);
+            }
+        }
+    }
     let e = build(reg.get("github-models").unwrap(), None)
         .err()
         .unwrap();

@@ -6339,5 +6339,8 @@
   "Sunucu çalışıyor{0}": "Server running{0}",
   "{0} oluşturuldu ({1} karakter).{2} Yeni sohbetlerde kullanılır.": "{0} created ({1} characters).{2} Used in new chats.",
   "hook hooks.toml settings.json olay event pre-edit post-edit pre-commit kuru çalıştır": "hook hooks.toml settings.json event pre-edit post-edit pre-commit dry run",
-  "Kor masaüstünü kontrol ediyor{0}. Durdurmak için fareyi oynatın.": "Kor is controlling the desktop{0}. Move the mouse to stop."
+  "Kor masaüstünü kontrol ediyor{0}. Durdurmak için fareyi oynatın.": "Kor is controlling the desktop{0}. Move the mouse to stop.",
+  "Proxy hesapları": "Proxy accounts",
+  "Hız sınırı": "Rate-limited",
+  "Ağ geçidi çalışıyor; henüz istek yok.": "The gateway is running; no requests yet."
 }

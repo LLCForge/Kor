@@ -6339,5 +6339,8 @@
   "Sunucu çalışıyor{0}": "Serveur en cours d'exécution{0}",
   "{0} oluşturuldu ({1} karakter).{2} Yeni sohbetlerde kullanılır.": "{0} créé ({1} caractères).{2} Utilisé dans les nouvelles discussions.",
   "hook hooks.toml settings.json olay event pre-edit post-edit pre-commit kuru çalıştır": "hook hooks.toml settings.json événement pre-edit post-edit pre-commit exécution à blanc",
-  "Kor masaüstünü kontrol ediyor{0}. Durdurmak için fareyi oynatın.": "Kor contrôle le bureau{0}. Bougez la souris pour arrêter."
+  "Kor masaüstünü kontrol ediyor{0}. Durdurmak için fareyi oynatın.": "Kor contrôle le bureau{0}. Bougez la souris pour arrêter.",
+  "Proxy hesapları": "Comptes du proxy",
+  "Hız sınırı": "Limitées",
+  "Ağ geçidi çalışıyor; henüz istek yok.": "La passerelle tourne ; aucune requête pour l'instant."
 }

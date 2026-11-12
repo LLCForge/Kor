@@ -11,6 +11,7 @@ function m(model_id: string, extra: Partial<CatalogEntry> = {}): CatalogEntry {
     aa_intelligence_index: null,
     aa_coding_index: null,
     aa_math_index: null,
+    hf_leaderboard_avg: null,
     speed_tps: null,
     ttft_ms: null,
     input_price_per_m: null,

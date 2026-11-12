@@ -28,6 +28,12 @@ import urllib.request
 OPENROUTER_URL = "https://openrouter.ai/api/v1/models"
 HF_URL = "https://huggingface.co/api/models/"
 AA_URL = "https://artificialanalysis.ai/api/v2/language/models/free"
+# §4.4: the Open LLM Leaderboard's rows through the Hugging Face datasets-server (public, no key).
+# LMArena and LiveBench publish no machine-readable endpoint (checked); they are not included.
+HF_LB_URL = "https://datasets-server.huggingface.co/rows?dataset=open-llm-leaderboard/contents&config=default&split=train"
+HF_LB_SRC = "open-llm-leaderboard"
+HF_LB_PAGE = 100
+HF_LB_MAX_PAGES = 80
 USER_AGENT = "kor-model-catalog (+https://github.com/LLCForge/Kor)"
 MAX_BYTES = 32 * 1024 * 1024
 HF_MAX_LOOKUPS = 400
@@ -41,7 +47,7 @@ AA_FIELDS = [
 FIELDS = [
     "model_id", "provider", "aa_intelligence_index", "aa_coding_index", "aa_math_index",
     "speed_tps", "ttft_ms", "input_price_per_m", "output_price_per_m", "context", "tool_calling",
-    "vision", "license", "updated_at", "aa_fetched", "source",
+    "vision", "license", "hf_leaderboard_avg", "updated_at", "aa_fetched", "source",
 ]
 
 
@@ -109,7 +115,7 @@ def from_openrouter(doc, now):
 def add_licenses(models):
     seen = {}
     for m in models:
-        hf = m.pop("_hf", None)
+        hf = m.get("_hf")
         if not hf or not re.fullmatch(r"[\w.-]+/[\w.-]+", hf):
             continue
         if hf not in seen:
@@ -126,6 +132,41 @@ def add_licenses(models):
                 lic = next((t[8:] for t in tags if t.startswith("license:")), None)
             seen[hf] = lic
         put(m, "license", seen[hf], "huggingface")
+
+
+def fetch_hf_leaderboard():
+    """Model repo id (lower case) -> the leaderboard's average score (0-100), best of its rows."""
+    scores = {}
+    for page in range(HF_LB_MAX_PAGES):
+        doc = get_json(f"{HF_LB_URL}&offset={page * HF_LB_PAGE}&length={HF_LB_PAGE}")
+        rows = doc.get("rows") or []
+        for r in rows:
+            row = r.get("row") or {}
+            name = row.get("fullname")
+            avg = next((num(v) for k, v in row.items() if isinstance(k, str) and k.startswith("Average")), None)
+            if isinstance(name, str) and avg is not None:
+                key = name.lower()
+                scores[key] = max(avg, scores.get(key, avg))
+        if len(rows) < HF_LB_PAGE:
+            break
+    return scores
+
+
+def merge_hf_leaderboard(models, scores, prev):
+    """Scores by the model's Hugging Face id; when the fetch failed, last catalog's values."""
+    old = {m.get("model_id"): m for m in (prev or {}).get("models") or []}
+    n = 0
+    for m in models:
+        hf = (m.get("_hf") or "").lower()
+        if scores is not None and hf in scores:
+            put(m, "hf_leaderboard_avg", round(scores[hf], 2), HF_LB_SRC)
+            n += 1
+        elif scores is None:
+            o = old.get(m["model_id"]) or {}
+            if num(o.get("hf_leaderboard_avg")) is not None:
+                put(m, "hf_leaderboard_avg", o["hf_leaderboard_avg"], HF_LB_SRC)
+                n += 1
+    return n
 
 
 def num(v):
@@ -201,6 +242,15 @@ def build(prev=None):
     now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
     models = from_openrouter(get_json(OPENROUTER_URL), now)
     add_licenses(models)
+    try:
+        lb = fetch_hf_leaderboard()
+    except (urllib.error.URLError, ValueError, OSError) as e:
+        print(f"open-llm-leaderboard: {type(e).__name__}: {e}", file=sys.stderr)
+        lb = None
+    n = merge_hf_leaderboard(models, lb, prev)
+    print(f"open-llm-leaderboard: {n} models", file=sys.stderr)
+    for m in models:
+        m.pop("_hf", None)
     key = os.environ.get("AA_API_KEY", "").strip()
     fresh = False
     if key:
@@ -219,7 +269,7 @@ def build(prev=None):
     return {
         "schema": 1,
         "generated_at": now,
-        "attribution": "Data: Artificial Analysis https://artificialanalysis.ai/ ; prices: https://openrouter.ai/",
+        "attribution": "Data: Artificial Analysis https://artificialanalysis.ai/ ; prices: https://openrouter.ai/ ; Open LLM Leaderboard https://huggingface.co/open-llm-leaderboard",
         "models": models,
     }
 
@@ -302,7 +352,15 @@ def self_test_build():
     def fake(url, headers=None):
         seen.append(url)
         if url == OPENROUTER_URL:
-            return {"data": [{"id": "anthropic/claude-3.5-sonnet", "pricing": {"prompt": "0.000003"}}]}
+            return {"data": [{"id": "anthropic/claude-3.5-sonnet", "pricing": {"prompt": "0.000003"}},
+                             {"id": "meta-llama/llama-3-8b", "hugging_face_id": "meta-llama/Meta-Llama-3-8B"}]}
+        if url.startswith(HF_URL):
+            return {"cardData": {"license": "llama3"}}
+        if url.startswith(HF_LB_URL):
+            if aa_down[0]:
+                raise urllib.error.URLError("datasets-server down")
+            return {"rows": [{"row": {"fullname": "meta-llama/Meta-Llama-3-8B", "Average \u2b06\ufe0f": 13.4123}},
+                             {"row": {"fullname": "other/model", "Average \u2b06\ufe0f": 50}}]}
         if url.startswith(AA_URL):
             assert (headers or {}).get("x-api-key") == key and key not in url
             if aa_down[0]:
@@ -321,6 +379,9 @@ def self_test_build():
         assert c["source"]["aa_math_index"] == AA_SRC and c["input_price_per_m"] == 3.0
         assert c["aa_fetched"] == day1["generated_at"] and a["aa-only"]["aa_fetched"]
         assert "artificialanalysis.ai" in day1["attribution"]
+        llama = a["meta-llama/llama-3-8b"]
+        assert llama["hf_leaderboard_avg"] == 13.41 and llama["source"]["hf_leaderboard_avg"] == HF_LB_SRC
+        assert llama["license"] == "llama3" and "_hf" not in llama
         old = "2026-01-01T00:00:00+00:00"
         for m in day1["models"]:
             m["aa_fetched"] = old
@@ -332,6 +393,7 @@ def self_test_build():
         assert c2["aa_fetched"] == old and c2["source"]["speed_tps"] == AA_SRC
         assert c2["source"]["input_price_per_m"] == "openrouter"
         assert b["aa-only"]["aa_intelligence_index"] == 20 and b["aa-only"]["provider"] == "Acme"
+        assert b["meta-llama/llama-3-8b"]["hf_leaderboard_avg"] == 13.41, "carried forward"
         # No previous catalog either: AA fields stay empty, the keyless data still ships.
         assert build(None)["models"][0]["aa_intelligence_index"] is None
         try:

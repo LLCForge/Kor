@@ -203,9 +203,75 @@ pub fn knowledge_digest_tick() -> Option<PathBuf> {
     kor_memory::digest::write_due(&k, &home, now).ok().flatten()
 }
 
+/// §27.15: the folder of the knowledge view (`[memory] folder`, else `~/Kor/Bilgi`).
+pub fn knowledge_folder(memory: &kor_config::Memory) -> Option<PathBuf> {
+    let f = memory.folder.trim();
+    if f.is_empty() {
+        dirs::home_dir().map(|h| h.join("Kor").join("Bilgi"))
+    } else if let Some(rest) = f.strip_prefix("~/").or_else(|| f.strip_prefix("~\\")) {
+        dirs::home_dir().map(|h| h.join(rest))
+    } else {
+        Some(PathBuf::from(f))
+    }
+}
+
+/// §27.15: bring the knowledge folder view up to date, with the digests. Returns
+/// `(folder, written, removed)`.
+///
+/// # Errors
+/// When the base cannot be opened or the folder cannot be written.
+pub fn sync_knowledge_folder(
+    memory: &kor_config::Memory,
+) -> Result<(PathBuf, usize, usize), String> {
+    let home = crate::kor_home().ok_or("no Kor home")?;
+    let dir = knowledge_folder(memory).ok_or("no home folder")?;
+    let k = kor_memory::open_knowledge(&home).map_err(|e| e.to_string())?;
+    let (w, r) = k
+        .sync_folder(&dir, Some(&kor_memory::digest::digest_dir(&home)))
+        .map_err(|e| e.to_string())?;
+    Ok((dir, w, r))
+}
+
+/// The schedulers' half (`kor daemon`, the desktop app; called every minute): syncs at most every
+/// ten minutes when the user's `[memory] folder_view` is on.
+pub fn knowledge_folder_tick() {
+    use std::sync::atomic::{AtomicI64, Ordering};
+    static LAST: AtomicI64 = AtomicI64::new(0);
+    let now = chrono::Utc::now().timestamp();
+    if now - LAST.load(Ordering::Relaxed) < 600 {
+        return;
+    }
+    LAST.store(now, Ordering::Relaxed);
+    let paths = kor_config::Paths {
+        system: None,
+        user: kor_config::user_dir().map(|d| d.join("config.toml")),
+        project: None,
+    };
+    if let Ok(loaded) = kor_config::load(&paths, std::iter::empty(), &[])
+        && loaded.config.memory.folder_view
+    {
+        let _ = sync_knowledge_folder(&loaded.config.memory);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_knowledge_folder_defaults_to_kor_bilgi() {
+        let m = kor_config::Memory::default();
+        assert!(
+            knowledge_folder(&m)
+                .unwrap()
+                .ends_with(std::path::Path::new("Kor").join("Bilgi"))
+        );
+        let m = kor_config::Memory {
+            folder: "D:/notes".into(),
+            ..m
+        };
+        assert_eq!(knowledge_folder(&m).unwrap(), PathBuf::from("D:/notes"));
+    }
 
     #[test]
     fn add_pause_due_and_remove() {

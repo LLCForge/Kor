@@ -187,5 +187,9 @@ async fn quota(state: &AppState) -> Res {
     let cfg = config(state);
     let l = kor_i18n::Localizer::new(cfg.ui.language.resolve());
     let r = kor_runtime::quota::report(&l, &cfg).await;
-    Ok(json!({ "lines": kor_runtime::quota::lines(&l, &r), "report": r }))
+    // §4.3, §15.10: the subscription accounts and keys of a running gateway.
+    let proxy = crate::ns::proxy::usage()
+        .await
+        .map(|(url, v)| json!({ "url": url, "accounts": kor_proxy::usage::account_rows(&v) }));
+    Ok(json!({ "lines": kor_runtime::quota::lines(&l, &r), "report": r, "proxy": proxy }))
 }

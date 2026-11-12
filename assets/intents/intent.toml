@@ -3500,6 +3500,14 @@ fr = ["résumé hebdomadaire des connaissances", "digest hebdomadaire des notes"
 eta_s = 5
 
 [[intent]]
+command = "kor know folder"
+run = "confirm"
+tr = ["bilgi tabanını klasöre yaz", "notlarımı markdown olarak göster", "bilgi klasörünü güncelle"]
+en = ["write the knowledge base to a folder", "show my notes as markdown files", "update the knowledge folder"]
+fr = ["écrire la base de connaissances dans un dossier", "mettre à jour le dossier de connaissances"]
+eta_s = 3
+
+[[intent]]
 command = "kor know stale"
 run = "auto"
 tr = ["eskimiş notları bul", "değişen dosyalara atıf yapan notlar", "güncelliğini yitirmiş bilgi notları"]

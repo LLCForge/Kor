@@ -8,7 +8,7 @@
 //! thread indexes the newest unindexed records in small transactions, so a write waits for at
 //! most one chunk. Readers use their own connection (WAL lets them run while the writer commits).
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 use std::fmt;
 use std::fs;
 use std::io::{self, BufWriter, Write as _};
@@ -1195,6 +1195,81 @@ impl Knowledge {
         Ok(n)
     }
 
+    /// §27.15: the knowledge base as a folder people can browse (`~/Kor/Bilgi/` by default):
+    /// `<project folder name>/<kind>/<date>-<id>-<title>.md`, plus the weekly digests under
+    /// `Özet/` when `digests` is given. One way: Kor rewrites only files whose text changed and
+    /// removes only files it wrote itself (listed in `.kor-folder.json`); anything else in the
+    /// folder is left alone. Returns `(written, removed)`.
+    ///
+    /// # Errors
+    /// When the folder or a file cannot be written.
+    pub fn sync_folder(&self, dir: &Path, digests: Option<&Path>) -> Result<(usize, usize)> {
+        const LIST: &str = ".kor-folder.json";
+        fs::create_dir_all(dir)?;
+        let before: BTreeSet<String> = fs::read_to_string(dir.join(LIST))
+            .ok()
+            .and_then(|t| serde_json::from_str(&t).ok())
+            .unwrap_or_default();
+        let mut now: BTreeSet<String> = BTreeSet::new();
+        let mut written = 0;
+        let mut put = |rel: String, text: &str| -> Result<()> {
+            let path = dir.join(&rel);
+            if fs::read_to_string(&path).ok().as_deref() != Some(text) {
+                if let Some(p) = path.parent() {
+                    fs::create_dir_all(p)?;
+                }
+                fs::write(&path, text)?;
+                written += 1;
+            }
+            now.insert(rel);
+            Ok(())
+        };
+        put(
+            "README.md".into(),
+            "# Kor bilgi tabanı\n\nKor'un hafızası, okunabilir Markdown olarak. Kor bu klasörü \
+             kendisi günceller; buradaki değişiklikler hafızaya geri alınmaz (düzenlemek için \
+             `kor know`, `kor forget`).\n",
+        )?;
+        let c = connect(&self.path)?;
+        let mut st = c.prepare(&format!("SELECT {COLUMNS} FROM records r ORDER BY r.id"))?;
+        let mut rows = st.query([])?;
+        while let Some(r) = rows.next()? {
+            let r = row(r)?;
+            let project = Path::new(&r.project)
+                .file_name()
+                .map_or_else(|| "Genel".to_owned(), |n| folder_name(&n.to_string_lossy()));
+            let kind = folder_name(if r.kind.is_empty() { "note" } else { &r.kind });
+            put(
+                format!("{project}/{kind}/{}", markdown_name(&r)),
+                &markdown(&r),
+            )?;
+        }
+        if let Some(d) = digests {
+            for e in fs::read_dir(d).into_iter().flatten().flatten() {
+                let name = e.file_name().to_string_lossy().into_owned();
+                if e.path().extension().is_some_and(|x| x.eq_ignore_ascii_case("md"))
+                    && let Ok(text) = fs::read_to_string(e.path())
+                {
+                    put(format!("Özet/{name}"), &text)?;
+                }
+            }
+        }
+        let mut removed = 0;
+        for rel in before.difference(&now) {
+            // Only paths inside the folder (the list file could have been edited).
+            if !rel.split(['/', '\\']).any(|s| s == ".." || s.is_empty())
+                && fs::remove_file(dir.join(rel)).is_ok()
+            {
+                removed += 1;
+            }
+        }
+        fs::write(
+            dir.join(LIST),
+            serde_json::to_string_pretty(&now).map_err(io::Error::other)?,
+        )?;
+        Ok((written, removed))
+    }
+
     /// Register folders for the multi-repo view: a path, or a path whose last part has
     /// wildcards (`~/projects/*`). Returns the folders added (already registered ones too).
     ///
@@ -1406,6 +1481,27 @@ pub fn date(ts: i64) -> String {
         .unwrap_or_default()
 }
 
+/// A folder name people can read (letters of any script kept), safe on every file system.
+fn folder_name(s: &str) -> String {
+    let name: String = s
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || matches!(c, ' ' | '-' | '_' | '.') {
+                c
+            } else {
+                '-'
+            }
+        })
+        .take(80)
+        .collect();
+    let name = name.trim_matches(['.', ' ', '-']).to_owned();
+    if name.is_empty() {
+        "Genel".into()
+    } else {
+        name
+    }
+}
+
 fn markdown_name(r: &Record) -> String {
     let mut slug = String::new();
     for c in r.task.chars().flat_map(char::to_lowercase) {
@@ -1507,6 +1603,38 @@ mod tests {
             .unwrap();
         // Everything left is indexed (1500 may have been indexed before it was forgotten).
         assert!(upto >= 1499, "{upto}");
+    }
+
+    #[test]
+    fn the_folder_view_follows_the_base_one_way() {
+        let dir = tempfile::tempdir().unwrap();
+        let kb = Knowledge::open(&dir.path().join("k.sqlite")).unwrap();
+        kb.record(rec("/work/Şirket Sitesi", "login added", "s"))
+            .unwrap();
+        kb.flush().unwrap();
+        let view = dir.path().join("Bilgi");
+        std::fs::create_dir_all(&view).unwrap();
+        std::fs::write(view.join("mine.md"), "the user's own note").unwrap();
+        let (w, r) = kb.sync_folder(&view, None).unwrap();
+        assert_eq!((w, r), (2, 0), "README and the note");
+        let note = std::fs::read_dir(view.join("Şirket Sitesi").join("task"))
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
+        assert!(
+            std::fs::read_to_string(&note)
+                .unwrap()
+                .contains("login added")
+        );
+        // Unchanged: nothing rewritten. Removed from the base: its file goes, the user's stays.
+        assert_eq!(kb.sync_folder(&view, None).unwrap(), (0, 0));
+        let id = kb.search("login", None, None, 1).unwrap()[0].record.id;
+        kb.forget(id).unwrap();
+        assert_eq!(kb.sync_folder(&view, None).unwrap(), (0, 1));
+        assert!(!note.exists());
+        assert!(view.join("mine.md").exists());
     }
 
     #[test]

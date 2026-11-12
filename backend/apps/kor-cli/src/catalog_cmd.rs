@@ -144,7 +144,7 @@ fn table(rows: &[&ModelData]) {
 
 fn details(l: &Localizer, m: &ModelData) {
     println!("{}  ({})", m.model_id, m.provider.as_deref().unwrap_or("-"));
-    let rows: [(&str, &str, String); 13] = [
+    let rows: [(&str, &str, String); 14] = [
         (
             "catalog-f-intelligence",
             "aa_intelligence_index",
@@ -183,6 +183,11 @@ fn details(l: &Localizer, m: &ModelData) {
             "catalog-f-license",
             "license",
             m.license.clone().unwrap_or_else(|| "-".into()),
+        ),
+        (
+            "catalog-f-hf-leaderboard",
+            "hf_leaderboard_avg",
+            num(m.hf_leaderboard_avg),
         ),
         (
             "catalog-f-updated",

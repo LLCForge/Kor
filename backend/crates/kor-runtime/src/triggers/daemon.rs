@@ -715,6 +715,7 @@ fn run_routines(s: &Shared, now: u64) {
     if let Some(p) = crate::routines::knowledge_digest_tick() {
         log(&format!("knowledge digest written: {}", p.display()));
     }
+    crate::routines::knowledge_folder_tick();
     let Some(path) = crate::routines::file() else {
         return;
     };

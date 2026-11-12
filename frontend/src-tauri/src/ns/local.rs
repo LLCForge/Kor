@@ -766,6 +766,8 @@ pub fn start_scheduler(app: AppHandle) {
             if !kor_runtime::triggers::daemon::is_running() {
                 let _ =
                     tokio::task::spawn_blocking(kor_runtime::routines::knowledge_digest_tick).await;
+                let _ =
+                    tokio::task::spawn_blocking(kor_runtime::routines::knowledge_folder_tick).await;
             }
         }
     });

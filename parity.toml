@@ -2448,6 +2448,12 @@ tui = "/know digest"
 desktop = "know.digest"
 
 [[feature]]
+name = "kor know folder"
+cli = "kor know folder"
+tui = "/know folder"
+desktop = "know.folder"
+
+[[feature]]
 name = "kor know stale"
 cli = "kor know stale"
 tui = "/know stale"

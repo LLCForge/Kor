@@ -95,9 +95,84 @@ impl Stats {
     }
 }
 
+/// One credential (account or key) of a running gateway, for `kor quota` and the cost panel.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountRow {
+    pub account: String,
+    pub requests: u64,
+    pub failed: u64,
+    pub rate_limited: u64,
+    pub tokens: u64,
+    /// Unix seconds of the last request.
+    pub last_used: u64,
+}
+
+/// [`Stats::to_json`] (as served on `/v0/management/usage`, also by CLIProxyAPI) per account,
+/// busiest first.
+pub fn account_rows(usage: &Value) -> Vec<AccountRow> {
+    let n = |v: &Value| v.as_u64().unwrap_or(0);
+    let mut rows: Vec<AccountRow> = usage["usage"]["apis"]
+        .as_object()
+        .into_iter()
+        .flatten()
+        .map(|(account, api)| {
+            let mut r = AccountRow {
+                account: account.clone(),
+                requests: n(&api["total_requests"]),
+                tokens: n(&api["total_tokens"]),
+                ..AccountRow::default()
+            };
+            for m in api["models"]
+                .as_object()
+                .into_iter()
+                .flatten()
+                .map(|(_, m)| m)
+            {
+                r.failed += n(&m["failure_count"]);
+                r.rate_limited += n(&m["rate_limited"]);
+                r.last_used = r.last_used.max(n(&m["last_used"]));
+            }
+            r
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        b.requests
+            .cmp(&a.requests)
+            .then_with(|| a.account.cmp(&b.account))
+    });
+    rows
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn accounts_from_the_usage_document() {
+        let s = Stats::default();
+        s.request("claude:a@x", "m1", true, false);
+        s.request("claude:a@x", "m2", false, true);
+        s.request("codex:b@y", "m1", true, false);
+        s.tokens(
+            "codex:b@y",
+            "m1",
+            &Usage {
+                input: 5,
+                output: 5,
+                ..Usage::default()
+            },
+        );
+        let rows = account_rows(&s.to_json());
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].account, "claude:a@x");
+        assert_eq!(
+            (rows[0].requests, rows[0].failed, rows[0].rate_limited),
+            (2, 1, 1)
+        );
+        assert_eq!(rows[1].tokens, 10);
+        assert!(account_rows(&serde_json::json!({})).is_empty());
+    }
 
     #[test]
     fn counts_roll_up_per_credential() {

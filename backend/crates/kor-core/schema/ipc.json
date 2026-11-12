@@ -23574,6 +23574,16 @@
             }
           ]
         },
+        "hf_leaderboard_avg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "license": {
           "anyOf": [
             {
@@ -23625,6 +23635,7 @@
         "context",
         "tool_calling",
         "vision",
+        "hf_leaderboard_avg",
         "license",
         "updated_at",
         "aa_fetched",
@@ -29232,6 +29243,38 @@
         "properties": {
           "report": {
             "$ref": "#/$defs/QuotaReport"
+          },
+          "proxy": {
+            "description": "Çalışan ağ geçidinin (kor proxy / CLIProxyAPI) hesapları; çalışmıyorsa null.",
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string"
+                  },
+                  "accounts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "account": { "type": "string" },
+                        "requests": { "type": "number" },
+                        "failed": { "type": "number" },
+                        "rateLimited": { "type": "number" },
+                        "tokens": { "type": "number" },
+                        "lastUsed": { "type": "number" }
+                      },
+                      "required": ["account", "requests", "failed", "rateLimited", "tokens", "lastUsed"]
+                    }
+                  }
+                },
+                "required": ["url", "accounts"]
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "lines": {
             "type": "array",
@@ -42474,6 +42517,29 @@
       "result": {
         "type": "array",
         "items": {}
+      }
+    },
+    "know.folder": {
+      "description": "Bilgi tabanını okunabilir Markdown klasörüne yazar (~/Kor/Bilgi ya da [memory] folder); tek yönlü.",
+      "params": [],
+      "result": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "written": {
+            "type": "number"
+          },
+          "removed": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "path",
+          "written",
+          "removed"
+        ]
       }
     },
     "know.digest": {

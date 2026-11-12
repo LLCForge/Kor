@@ -142,7 +142,7 @@ boşluk, henüz masaüstü düğmesi olmayan `kor update rollback`.
 | Yerel çalıştırıcılar | Ollama, llama.cpp sunucusu, LM Studio, vLLM, Jan, KoboldCpp, LocalAI, text-generation-webui |
 | Standart API'ler | Anthropic, OpenAI, Google AI (Gemini API), DeepSeek, Mistral, Mistral Codestral, Groq, xAI (Grok), Together AI, Fireworks AI, Cerebras, Cohere, Perplexity, SambaNova Cloud, NVIDIA NIM, Moonshot AI (Kimi), Z.ai (GLM), Z.ai GLM Coding Plan, Zhipu AI (BigModel) |
 | Toplayıcılar | OpenRouter, Hugging Face Inference Providers, fal.ai (LLM yönlendirici), Abacus.ai RouteLLM |
-| Bulut platformları | Azure OpenAI, Microsoft Foundry Models, AWS Bedrock, Amazon SageMaker, Google Vertex AI, OCI Generative AI, Alibaba Cloud Model Studio (uluslararası ve Çin), GitHub Models (kullanımdan kalktı) |
+| Bulut platformları | Azure OpenAI, Microsoft Foundry Models, AWS Bedrock (API anahtarı ya da Converse API ile IAM), Amazon SageMaker (IAM), Google Vertex AI, OCI Generative AI, Alibaba Cloud Model Studio (uluslararası ve Çin), GitHub Models (kullanımdan kalktı) |
 
 Bunların hiçbiri henüz canlı API'ye karşı doğrulanmadı (her manifestoda `verified = false`); sahte sunucularla test
 edildiler. OpenAI uyumlu bir sağlayıcı yalnızca bir TOML manifestosu ister, kod gerekmez
@@ -693,8 +693,8 @@ Geliştirme işleri:
 - [ ] Kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular
 
 **Sağlayıcılar ve maliyet**
-- [ ] SageMaker, Bedrock Converse/IAM, Vertex ADC, Azure Entra ID, OCI imzalı kimlik
-- [ ] Katalogda liderlik tablosu skorları (HF, LMArena, LiveBench)
+- [ ] Vertex ADC, Azure Entra ID, OCI imzalı kimlik
+- [ ] Katalogda LMArena ve LiveBench skorları (ikisinin de veri ucu yok)
 - [ ] `kor quota`'da proxy kotası
 
 **Web, medya ve entegrasyonlar**

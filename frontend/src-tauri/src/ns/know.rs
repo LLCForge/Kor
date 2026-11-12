@@ -60,7 +60,7 @@ pub async fn call(
     _app: &AppHandle,
     state: &AppState,
 ) -> Option<Res> {
-    if !matches!(name, "search" | "digest" | "digests" | "stale") {
+    if !matches!(name, "search" | "digest" | "digests" | "stale" | "folder") {
         return None;
     }
     let here = here(state);
@@ -71,6 +71,16 @@ pub async fn call(
             let home = home()?;
             if name == "digests" {
                 return Ok(digests(&home));
+            }
+            if name == "folder" {
+                // §27.15: the user's `[memory]` settings decide the folder.
+                let memory = kor_config::user_dir()
+                    .map(|d| kor_config::Paths { system: None, user: Some(d.join("config.toml")), project: None })
+                    .and_then(|p| kor_config::load(&p, std::iter::empty(), &[]).ok())
+                    .map(|l| l.config.memory)
+                    .unwrap_or_default();
+                let (dir, written, removed) = kor_runtime::routines::sync_knowledge_folder(&memory)?;
+                return Ok(json!({ "path": dir.to_string_lossy(), "written": written, "removed": removed }));
             }
             let kb = kor_memory::open_knowledge(&home).map_err(|e| e.to_string())?;
             match name.as_str() {

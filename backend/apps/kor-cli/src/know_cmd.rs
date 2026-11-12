@@ -36,6 +36,8 @@ pub enum KnowSub {
         #[arg(long)]
         print: bool,
     },
+    /// Write the knowledge base as browsable Markdown (`~/Kor/Bilgi` or `[memory] folder`).
+    Folder,
     /// Notes that refer to files or symbols that changed or are gone.
     Stale {
         /// Only this project's notes.
@@ -125,6 +127,26 @@ pub fn run(ctx: &Ctx, a: &KnowArgs) -> anyhow::Result<bool> {
                 );
             }
             Ok(true)
+        }
+        Some(KnowSub::Folder) => {
+            let memory = ctx
+                .config
+                .as_ref()
+                .map(|c| c.config.memory.clone())
+                .unwrap_or_default();
+            match kor_runtime::routines::sync_knowledge_folder(&memory) {
+                Ok((dir, written, removed)) => {
+                    println!(
+                        "{}",
+                        l.t_args(
+                            "know-folder-synced",
+                            &args!("path" => dir.display().to_string(), "written" => written, "removed" => removed)
+                        )
+                    );
+                    Ok(true)
+                }
+                Err(e) => Ok(fail(l, e)),
+            }
         }
         Some(KnowSub::Stale {
             here: only,

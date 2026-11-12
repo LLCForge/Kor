@@ -2,6 +2,7 @@
 //! response stream back into `StreamEvent`s.
 
 pub(crate) mod anthropic;
+pub(crate) mod bedrock;
 pub(crate) mod cohere;
 pub(crate) mod gemini;
 pub(crate) mod ollama;
@@ -9,6 +10,7 @@ pub(crate) mod openai;
 pub(crate) mod openai_compat;
 #[cfg(test)]
 mod reasoning_tests;
+pub(crate) mod sagemaker;
 
 use std::collections::HashMap;
 

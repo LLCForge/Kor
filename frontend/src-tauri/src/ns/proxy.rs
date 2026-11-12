@@ -279,6 +279,30 @@ async fn stop() -> Res {
     }
 }
 
+/// The running gateway's address and usage document: the one this app started, else one started
+/// by `kor proxy serve` on the configured port (asked with the access key, on this machine only).
+pub(crate) async fn usage() -> Option<(String, Value)> {
+    {
+        let running = RUNNING.lock().await;
+        if let Some(r) = running.as_ref().filter(|r| !r.is_finished()) {
+            return Some((format!("http://{}", r.addr), r.gateway.usage_json()));
+        }
+    }
+    let key = kor_proxy::access_key(&kor_secrets::KeychainStore, false)
+        .ok()
+        .flatten()?;
+    let port = kor_proxy::default_config_path()
+        .and_then(|p| kor_proxy::config::load(&p).ok())
+        .unwrap_or_default()
+        .port;
+    let base = format!("http://127.0.0.1:{port}");
+    let v = kor_proxy::remote_usage(&base, Some(&key))
+        .await
+        .ok()
+        .flatten()?;
+    Some((base, v))
+}
+
 async fn status() -> Res {
     let running = RUNNING.lock().await;
     match running.as_ref().filter(|r| !r.is_finished()) {

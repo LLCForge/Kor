@@ -19,6 +19,7 @@ pub mod pool;
 pub mod privacy_card;
 pub mod probe;
 pub mod quota;
+pub mod sigv4;
 mod stream;
 
 use std::pin::Pin;
@@ -154,13 +155,15 @@ pub fn build(
             manifest.docs.as_deref().unwrap_or("the provider docs")
         )));
     }
-    if manifest.adapter == AdapterKind::Sagemaker {
-        return Err(invalid(
-            "SageMaker needs SigV4 signing, not implemented yet; serve the model with an \
-             OpenAI-compatible container and use `kor provider add <id> --url <base>`"
-                .into(),
-        ));
-    }
+    // AWS: without an endpoint URL, the regional one for AWS_REGION.
+    let regional;
+    let manifest = match adapters::bedrock::regional(manifest) {
+        Some(m) => {
+            regional = m;
+            &regional
+        }
+        None => manifest,
+    };
     let manifest = &*manifest
         .resolved(|v| std::env::var(v).ok())
         .map_err(|e| invalid(e.message))?;
@@ -184,6 +187,16 @@ pub fn build(
         AdapterKind::Gemini => Arc::new(adapters::gemini::Gemini::new(m, http)),
         AdapterKind::Ollama => Arc::new(adapters::ollama::Ollama::new(m, http)),
         AdapterKind::Cohere => Arc::new(adapters::cohere::Cohere::new(m, http)),
+        AdapterKind::Bedrock => Arc::new(adapters::bedrock::Aws::new(
+            m,
+            http,
+            adapters::bedrock::Service::Bedrock,
+        )?),
+        AdapterKind::Sagemaker => Arc::new(adapters::bedrock::Aws::new(
+            m,
+            http,
+            adapters::bedrock::Service::Sagemaker,
+        )?),
         other => {
             return Err(ProviderError::new(
                 &manifest.id,

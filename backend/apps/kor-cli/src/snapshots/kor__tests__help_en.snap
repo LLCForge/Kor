@@ -5685,6 +5685,7 @@ Usage: kor know [OPTIONS] [QUERY]...
 
 Commands:
   digest  The weekly digest (most referenced notes)
+  folder  Write the knowledge base as browsable Markdown (`~/Kor/Bilgi` or `[memory] folder`)
   stale   Notes whose files or symbols changed or vanished
   help    Print this message or the help of the given subcommand(s)
 
@@ -5699,11 +5700,11 @@ Options:
       --privacy-mode
           Privacy mode: local models only, no outbound calls from Kor
 
-      --here
-          Only this project's notes
-
       --remote <REMOTE>
           Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+      --here
+          Only this project's notes
 
   -n, --limit <LIMIT>
           Most results
@@ -5729,6 +5730,23 @@ Options:
 
       --print
           Print it instead of writing the file
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor know folder --help
+Write the knowledge base as browsable Markdown (`~/Kor/Bilgi` or `[memory] folder`)
+
+Usage: kor know folder [OPTIONS]
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
 
       --privacy-mode
           Privacy mode: local models only, no outbound calls from Kor

@@ -28,6 +28,10 @@ id = "bedrock"
 adapter = "openai_compat"
 
 [[provider]]
+id = "bedrock-iam"
+adapter = "bedrock"
+
+[[provider]]
 id = "cerebras"
 adapter = "openai_compat"
 
@@ -151,7 +155,6 @@ adapter = "openai_compat"
 [[provider]]
 id = "sagemaker"
 adapter = "sagemaker"
-status = "not_yet"
 
 [[provider]]
 id = "sambanova"

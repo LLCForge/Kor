@@ -42,6 +42,8 @@ pub struct ModelData {
     pub tool_calling: Option<bool>,
     pub vision: Option<bool>,
     pub license: Option<String>,
+    /// Open LLM Leaderboard average (0-100) of the model's Hugging Face repo, open models only.
+    pub hf_leaderboard_avg: Option<f64>,
     pub updated_at: Option<String>,
     /// When CI last fetched this model's AA values (kept on carry-forward when AA was down).
     pub aa_fetched: Option<String>,
