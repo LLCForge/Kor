@@ -674,7 +674,7 @@ tasarruf hedeflerinin gerçek modellerle ölçümü.
 
 ### Yapılacaklar
 
-Toplam 66 açık madde: **34 geliştirme işi**, bakımcı için 12 hesap/yayın adımı, 16 gerçek ortam denemesi ve 4 karar.
+Toplam 53 açık madde: **33 geliştirme işi**, 16 gerçek ortam denemesi ve 4 karar.
 Geliştirme işleri:
 
 **Faz 8 — takım ve platform (8)**

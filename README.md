@@ -671,8 +671,7 @@ back-ends for OCR, accessibility and sandbox on real machines, and the router/gr
 
 ### To do
 
-66 open items in total: **34 development tasks**, 12 account/publishing steps for the maintainer, 16 real-world
-trials and 4 decisions. The development tasks:
+53 open items in total: **33 development tasks**, 16 real-world trials and 4 decisions. The development tasks:
 
 **Faz 8 — team and platform (8)**
 - [ ] Kor Server: team mode on your own server (shared rules, graph and memory, task queue, central audit, Postgres, mTLS)
