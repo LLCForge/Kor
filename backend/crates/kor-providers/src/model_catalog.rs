@@ -44,6 +44,10 @@ pub struct ModelData {
     pub license: Option<String>,
     /// Open LLM Leaderboard average (0-100) of the model's Hugging Face repo, open models only.
     pub hf_leaderboard_avg: Option<f64>,
+    /// `LMArena` text arena rating (style control, overall), matched by model name.
+    pub lmarena_rating: Option<f64>,
+    /// `LiveBench` global average (0-100), from a maintainer-supplied CSV when one is published.
+    pub livebench_avg: Option<f64>,
     pub updated_at: Option<String>,
     /// When CI last fetched this model's AA values (kept on carry-forward when AA was down).
     pub aa_fetched: Option<String>,

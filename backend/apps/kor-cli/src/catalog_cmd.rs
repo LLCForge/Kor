@@ -144,7 +144,7 @@ fn table(rows: &[&ModelData]) {
 
 fn details(l: &Localizer, m: &ModelData) {
     println!("{}  ({})", m.model_id, m.provider.as_deref().unwrap_or("-"));
-    let rows: [(&str, &str, String); 14] = [
+    let rows: [(&str, &str, String); 16] = [
         (
             "catalog-f-intelligence",
             "aa_intelligence_index",
@@ -189,6 +189,8 @@ fn details(l: &Localizer, m: &ModelData) {
             "hf_leaderboard_avg",
             num(m.hf_leaderboard_avg),
         ),
+        ("catalog-f-lmarena", "lmarena_rating", num(m.lmarena_rating)),
+        ("catalog-f-livebench", "livebench_avg", num(m.livebench_avg)),
         (
             "catalog-f-updated",
             "updated_at",

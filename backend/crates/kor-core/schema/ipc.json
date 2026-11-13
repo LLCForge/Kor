@@ -23584,6 +23584,26 @@
             }
           ]
         },
+        "lmarena_rating": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "livebench_avg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "license": {
           "anyOf": [
             {
@@ -23636,6 +23656,8 @@
         "tool_calling",
         "vision",
         "hf_leaderboard_avg",
+        "lmarena_rating",
+        "livebench_avg",
         "license",
         "updated_at",
         "aa_fetched",

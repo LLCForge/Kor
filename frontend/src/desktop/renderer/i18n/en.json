@@ -1118,6 +1118,8 @@
   "Görsel bilgileri": "Image info",
   "Görsel ekleri henüz ajana iletilemiyor; görselleri kaldırıp tekrar gönder.": "Image attachments can't be sent to the agent yet; remove the images and send again.",
   "Görsel girdi": "Image input",
+  "LMArena puanı (lmarena.ai)": "LMArena rating (lmarena.ai)",
+  "LiveBench ortalaması (livebench.ai)": "LiveBench average (livebench.ai)",
   "Görsel okunamadı:": "Could not read image:",
   "Görsel varsayılanı": "Image default",
   "Görünüm": "View",
