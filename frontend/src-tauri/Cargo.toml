@@ -40,6 +40,8 @@ futures = "0.3"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 toml_edit = "0.25"
 base64 = "0.22"
+# §20.3 yan panel galerisi küçük resimleri (kor-runtime ile aynı sürüm, Cargo.lock'ta zaten var).
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
 rusqlite = { version = "0.41", features = ["bundled"] }
 # §32.2 (ADR 0062): genel ayırıcı.

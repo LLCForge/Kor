@@ -2,6 +2,7 @@
 // (panel başlığı sekmeleri, kenar çubuğu "Araçlar" grupları, Ayarlar bölümleri). Tüm görünümler komut paletinde de kalır.
 import { Activity, Bot, Columns2, Compass, Eye, FolderKanban, GitBranch, Globe, ScrollText, SquareTerminal, Stethoscope, StickyNote } from 'lucide-react'
 import type { ComponentType } from 'react'
+import type { SettingsSection } from './g7-bus.ts'
 import { findPanel } from './panels/registry.ts'
 import { OPEN_TARGET_EVENT } from './shellui/bridge.ts'
 
@@ -45,6 +46,25 @@ export const SIDEBAR_VIEW_GROUPS: readonly ViewGroup[] = [
   { id: 'web', label: 'Web ve medya', icon: Globe, views: ['web', 'media', 'visual', 'browser', 'devpreview'] },
   { id: 'ops', label: 'Operasyon', icon: Activity, views: ['deploy', 'triggers', 'remote', 'peers', 'logs', 'diagnostics', 'perf', 'cost'] },
 ]
+
+/**
+ * Yapılandırma niteliğindeki görünümler sağ panelde değil Ayarlar'da yaşar: palet, kısayol, `/komut` ve `openView`
+ * onları bu bölümde açar (App `openPanel`). Diğer her görünüm panel başlığında ya da kenar çubuğu grubundadır
+ * (view-catalog.test.ts her görünümün tek bir yeri olduğunu doğrular).
+ */
+export const SETTINGS_VIEWS: Readonly<Record<string, SettingsSection>> = {
+  system: 'system',
+  prereqs: 'prereqs',
+  security: 'security',
+  offline: 'offline',
+  mcpdev: 'mcpdev',
+  providers: 'providers',
+  tools: 'tools',
+  hooks: 'hooks',
+  compat: 'compat',
+  team: 'team',
+  shellui: 'notifications',
+}
 
 /** Sağ paneli açar ve görünümü seçer (App, OPEN_TARGET_EVENT → openPanel). sessionId verilirse önce o sohbet açılır. */
 export function openView(id: string, sessionId: string | null = null): void {

@@ -47,7 +47,7 @@ export const PROVIDER_LOGO_ID: Readonly<Record<string, string>> = {
   ollama: 'ollama', openai: 'openai', openrouter: 'openrouter', perplexity: 'perplexity', sagemaker: 'aws',
   sambanova: 'sambanova', together: 'together', venice: 'venice', vertex: 'vertexai', xai: 'xai', zai: 'zai',
   'zai-coding': 'zai', zhipu: 'zhipu', abliteration: 'abliteration', arliai: 'arliai', mancer: 'mancer',
-  uncensoredllm: 'uncensoredllm', 'local-localai': 'localai', local: 'ollama',
+  uncensoredllm: 'uncensoredllm', 'local-localai': 'localai', 'local-llamacpp': 'llamacpp', local: 'ollama',
 }
 
 /** Ham SVG metnini currentColor + sabit boyutla gömer (CSP img-src sorunu olmaz). */

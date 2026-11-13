@@ -5,13 +5,14 @@ import { Settings } from 'lucide-react'
 import { call, client, on, type Status } from './bus.ts'
 import { Chat, type Context, type Session } from './Chat.tsx'
 import { empty, fromTranscript, reduce, type View } from './events.ts'
+import { Gallery } from './Gallery.tsx'
 import { Hosting, detect, type PanelInfo } from './Hosting.tsx'
 import { ContextTools, DocsReader, FormFiller, PageToCode } from './PageTools.tsx'
 import { Project } from './Project.tsx'
 import { Setup } from './Setup.tsx'
 import { t } from './i18n.ts'
 
-type Tab = 'chat' | 'page' | 'project' | 'panel'
+type Tab = 'chat' | 'page' | 'project' | 'gallery' | 'panel'
 
 const offline: Status = { mode: 'none', core: false, paired: false, needsPairing: false, error: '', canLaunch: false }
 
@@ -101,9 +102,9 @@ export function App() {
     <div className="app">
       <Header status={status} onGear={() => setShowSetup(true)} />
       <nav className="tabs" role="tablist">
-        {(['chat', 'page', 'project', ...(hosting ? ['panel'] : [])] as Tab[]).map((x) => (
+        {(['chat', 'page', 'project', 'gallery', ...(hosting ? ['panel'] : [])] as Tab[]).map((x) => (
           <button key={x} type="button" role="tab" aria-selected={tab === x} className={tab === x ? 'on' : ''} onClick={() => setTab(x)}>
-            {x === 'chat' ? t('Sohbet') : x === 'page' ? t('Sayfa') : x === 'project' ? t('Proje') : t('Panel')}
+            {x === 'chat' ? t('Sohbet') : x === 'page' ? t('Sayfa') : x === 'project' ? t('Proje') : x === 'gallery' ? t('Galeri') : t('Panel')}
           </button>
         ))}
       </nav>
@@ -156,6 +157,11 @@ export function App() {
               setTab('chat')
             }}
           />
+        </div>
+      ) : null}
+      {tab === 'gallery' ? (
+        <div className="scroll">
+          <Gallery />
         </div>
       ) : null}
       {tab === 'panel' && hosting ? (

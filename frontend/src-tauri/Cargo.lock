@@ -3802,6 +3802,7 @@ dependencies = [
  "chrono",
  "dirs 7.0.0",
  "futures",
+ "image",
  "kor-agent",
  "kor-compat",
  "kor-components",

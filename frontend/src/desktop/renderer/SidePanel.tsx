@@ -23,7 +23,7 @@ import { findPanel } from './panels/registry.ts'
 import { PanelBoundary } from './PanelBoundary.tsx'
 import { Tooltip } from './kor-ui/index.ts'
 import { usePersistentState } from './use-persistent-state.ts'
-import { BUILTIN_VIEWS, HEADER_TABS, openAllViews, viewInfo, type ViewInfo } from './view-catalog.ts'
+import { BUILTIN_VIEWS, HEADER_TABS, SETTINGS_VIEWS, openAllViews, viewInfo, type ViewInfo } from './view-catalog.ts'
 
 /** Grup 4: satıra gitme, harici değişiklik uyarıları ve tanılamadan dosya açma. */
 export interface G4PanelProps {
@@ -154,7 +154,7 @@ export function SidePanel({ changes, previewPath, onAttach, onRevert, onClose, s
   useEffect(() => {
     const onView = (e: Event) => {
       const v = (e as CustomEvent<string>).detail as Tab
-      if (BUILTIN_TABS.includes(v) || findPanel(v)) setTab(v)
+      if ((BUILTIN_TABS.includes(v) || findPanel(v)) && !SETTINGS_VIEWS[v]) setTab(v)
     }
     window.addEventListener('panel:view', onView)
     return () => window.removeEventListener('panel:view', onView)
@@ -206,7 +206,7 @@ export function SidePanel({ changes, previewPath, onAttach, onRevert, onClose, s
   }
 
   // Panel başlığı: gündelik görünümler sekme; diğerleri "Diğer" menüsünde (sabitlenen + son açılan) ve paletten.
-  const available = (id: string) => (id === 'preview' ? !!previewPath : id === 'diagnostics' ? !!g4 : viewInfo(id) !== undefined)
+  const available = (id: string) => (SETTINGS_VIEWS[id] ? false : id === 'preview' ? !!previewPath : id === 'diagnostics' ? !!g4 : viewInfo(id) !== undefined)
   const registered = findPanel(currentTab)
   const currentView: ViewInfo = viewInfo(currentTab) ?? BUILTIN_VIEWS[0]!
   const CurrentIcon = currentView.icon
