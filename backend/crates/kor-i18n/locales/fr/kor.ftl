@@ -424,6 +424,7 @@ arg-proxy-background = Continuer à servir en arrière-plan de cette session
 arg-proxy-rotate = Remplacer la clé par une nouvelle clé aléatoire
 arg-proxy-show = Afficher la clé complète
 proxy-listening = Proxy Kor à l’écoute sur { $url } (compatible OpenAI, Anthropic et Gemini)
+proxy-not-in-build = `kor proxy` n’est pas disponible dans cette version (les versions Linux statique musl et Windows ARM64 n’incluent pas sa bibliothèque TLS). Utilisez la version Linux classique ou Windows x64.
 proxy-key-line = Clé d’accès : { $key } (clé complète : `kor proxy key --show`)
 proxy-no-auth = Authentification désactivée (--no-auth, boucle locale uniquement).
 proxy-privacy = Mode confidentialité : seuls les fournisseurs locaux sont servis.

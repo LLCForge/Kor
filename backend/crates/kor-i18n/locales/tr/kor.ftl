@@ -423,6 +423,7 @@ arg-proxy-background = Bu oturumun arka planında sunmaya devam et
 arg-proxy-rotate = Anahtarı yeni rastgele bir anahtarla değiştir
 arg-proxy-show = Anahtarın tamamını yazdır
 proxy-listening = Kor proxy { $url } adresinde dinliyor (OpenAI, Anthropic ve Gemini uyumlu)
+proxy-not-in-build = `kor proxy` bu derlemede yok (statik Linux musl ve Windows ARM64 derlemeleri TLS kütüphanesini içermez). Normal Linux ya da Windows x64 derlemesini kullanın.
 proxy-key-line = Erişim anahtarı: { $key } (tamamı: `kor proxy key --show`)
 proxy-no-auth = Kimlik doğrulama kapalı (--no-auth, yalnızca loopback).
 proxy-privacy = Gizlilik modu: yalnızca yerel sağlayıcılar sunuluyor.
