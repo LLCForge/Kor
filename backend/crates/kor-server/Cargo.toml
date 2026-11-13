@@ -18,6 +18,7 @@ http-body-util.workspace = true
 hyper = { workspace = true, features = ["server", "http1"] }
 hyper-util.workspace = true
 kor-core.workspace = true
+kor-platform.workspace = true
 reqwest.workspace = true
 rusqlite.workspace = true
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std"] }

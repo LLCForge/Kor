@@ -3797,3 +3797,156 @@ en = ["run my mcp server in dev mode", "hot reload the mcp server", "try the mcp
 fr = ["lancer mon serveur mcp en mode dev", "recharger le serveur mcp à chaud"]
 params = [{ name = "path", kind = "path", required = false }]
 eta_s = 10
+
+[[intent]]
+command = "kor plugin search"
+run = "confirm"
+tr = ["wasm eklenti kataloğunda ara", "eklenti indeksinde eklenti bul", "kor eklentisi ara"]
+en = ["search the wasm plugin catalogue", "find a plugin in the plugin index", "search for a kor plugin"]
+fr = ["chercher dans le catalogue de plugins wasm", "trouver un plugin dans l'index"]
+params = [{ name = "query", kind = "text", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor plugin create"
+run = "confirm"
+tr = ["yeni wasm eklenti projesi oluştur", "skill klasörünü wasm eklentisine paketle", "eklenti iskeleti oluştur"]
+en = ["scaffold a new wasm plugin project", "pack a skill folder as a wasm plugin", "create a plugin skeleton"]
+fr = ["créer un projet de plugin wasm", "empaqueter un dossier de skill en plugin wasm"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 2
+
+[[intent]]
+command = "kor plugin revoke"
+run = "never"
+tr = ["eklentinin izinlerini geri al", "wasm eklentisinden yetki kaldır"]
+en = ["revoke a plugin's permissions", "take capabilities back from a wasm plugin"]
+fr = ["révoquer les permissions d'un plugin", "retirer des capacités à un plugin wasm"]
+eta_s = 1
+
+[[intent]]
+command = "kor plugin run"
+run = "never"
+tr = ["wasm eklentisini çalıştır", "kurulu eklentiyi çalıştır"]
+en = ["run a wasm plugin", "run an installed plugin"]
+fr = ["exécuter un plugin wasm", "lancer un plugin installé"]
+eta_s = 5
+
+[[intent]]
+command = "kor pr ci"
+run = "confirm"
+tr = ["ci kontrolleri neden kırmızı", "başarısız ci loglarını oku ve düzelt", "ci hatalarını göster"]
+en = ["why are the ci checks red", "read the failing ci logs and fix them", "show the ci failures for this commit"]
+fr = ["pourquoi les vérifications ci échouent", "lire les journaux ci en échec et corriger"]
+eta_s = 20
+
+[[intent]]
+command = "kor pr issue"
+run = "confirm"
+tr = ["issue'yu göreve çevir", "şu issue'yu çöz", "issue'dan görev başlat"]
+en = ["turn this issue into a task", "work on issue number", "start a task from an issue"]
+fr = ["transformer cette issue en tâche", "traiter l'issue numéro"]
+params = [{ name = "number", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor pr release"
+run = "never"
+tr = ["sürüm notlarını yayımla", "etiket için release notu yayınla"]
+en = ["publish release notes", "publish the release for this tag"]
+fr = ["publier les notes de version", "publier la release de ce tag"]
+params = [{ name = "tag", kind = "text", required = true }]
+eta_s = 10
+
+[[intent]]
+command = "kor tr cargo"
+run = "confirm"
+tr = ["kargom nerede yurtiçi", "yurtiçi kargo takip numarası sorgula", "kargo gönderimini takip et"]
+en = ["where is my yurtici shipment", "track a yurtici cargo number", "track my cargo shipment"]
+fr = ["où est mon colis yurtici", "suivre un envoi yurtici"]
+params = [{ name = "tracking", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor tr dns"
+run = "confirm"
+tr = [".com.tr alan adımın dns kayıtları", "alan adı firmasında dns kayıtlarını göster", "alan adımın name serverlarını göster"]
+en = ["dns records of my .com.tr domain", "show dns records at my turkish registrar", "show my domain's name servers"]
+fr = ["enregistrements dns de mon domaine .com.tr", "afficher le dns chez mon registraire turc"]
+params = [{ name = "domain", kind = "text", required = true }]
+eta_s = 5
+
+[[intent]]
+command = "kor seo meta opencart"
+run = "confirm"
+tr = ["opencart meta başlıklarını güncelle", "seo meta açıklamalarını opencart'a yaz", "opencart ürün meta etiketlerini düzelt"]
+en = ["update opencart meta titles", "write seo meta descriptions back to opencart", "fix opencart product meta tags"]
+fr = ["mettre à jour les titres meta opencart", "écrire les méta-descriptions dans opencart"]
+eta_s = 10
+
+[[intent]]
+command = "kor seo backlinks"
+run = "confirm"
+tr = ["sitemin backlinklerini göster", "ahrefs semrush moz backlink raporu", "bana kimler link vermiş"]
+en = ["show my site's backlinks", "ahrefs semrush moz backlink report", "who links to my site"]
+fr = ["afficher les backlinks de mon site", "rapport de backlinks ahrefs semrush moz"]
+params = [{ name = "domain", kind = "text", required = true }]
+eta_s = 15
+
+[[intent]]
+command = "kor seo competition"
+run = "confirm"
+tr = ["bu kelimede rekabet ne kadar zor", "anahtar kelime için serp rekabetini puanla", "anahtar kelime zorluğunu hesapla"]
+en = ["how hard is this keyword to rank for", "score the serp competition for a keyword", "calculate keyword difficulty"]
+fr = ["quelle est la difficulté de ce mot-clé", "évaluer la concurrence serp d'un mot-clé"]
+params = [{ name = "keyword", kind = "text", required = true }]
+eta_s = 20
+
+[[intent]]
+command = "kor server init"
+run = "never"
+tr = ["takım sunucusu kur", "kendi kor takım sunucumu başlat"]
+en = ["set up a team server", "initialise my own kor team server"]
+fr = ["installer un serveur d'équipe", "initialiser mon serveur d'équipe kor"]
+eta_s = 5
+
+[[intent]]
+command = "kor server add-member"
+run = "never"
+tr = ["takıma üye ekle", "takım sunucusuna yeni geliştirici ekle"]
+en = ["add a member to the team", "add a developer to the team server"]
+fr = ["ajouter un membre à l'équipe", "ajouter un développeur au serveur d'équipe"]
+params = [{ name = "name", kind = "text", required = true }]
+eta_s = 3
+
+[[intent]]
+command = "kor server status"
+run = "auto"
+tr = ["takım sunucusunun durumu", "takım sunucusunda kimler var", "takım sunucusu çalışıyor mu"]
+en = ["team server status", "who is on the team server", "is the team server running"]
+fr = ["état du serveur d'équipe", "qui est sur le serveur d'équipe"]
+eta_s = 2
+
+[[intent]]
+command = "kor server start"
+run = "never"
+tr = ["takım sunucusunu çalıştır", "takım sunucusunu başlat"]
+en = ["run the team server", "start the team server"]
+fr = ["lancer le serveur d'équipe", "démarrer le serveur d'équipe"]
+eta_s = 3
+
+[[intent]]
+command = "kor server join"
+run = "never"
+tr = ["takım sunucusuna katıl", "davet paketiyle takıma bağlan"]
+en = ["join the team server", "connect to the team with an invite bundle"]
+fr = ["rejoindre le serveur d'équipe", "se connecter à l'équipe avec une invitation"]
+eta_s = 5
+
+[[intent]]
+command = "kor server login"
+run = "never"
+tr = ["takım sunucusuna sso ile giriş yap", "takım hesabıma giriş yap"]
+en = ["sign in to the team server with sso", "log in to my team account"]
+fr = ["se connecter au serveur d'équipe en sso", "me connecter à mon compte d'équipe"]
+eta_s = 10

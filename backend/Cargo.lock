@@ -3814,6 +3814,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "kor-core",
+ "kor-platform",
  "rcgen",
  "reqwest",
  "rusqlite",

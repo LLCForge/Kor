@@ -127,7 +127,7 @@ function Body({ onClose }: { onClose: () => void }) {
         {RERENDER_TRACKING && (
           <>
             <dt>Gereksiz render</dt>
-            <dd className={view && view.rerenders > 0 ? 'kpm-bad' : undefined} data-kor-cmd="perfmon.rerenders">
+            <dd className={view && view.rerenders > 0 ? 'kpm-bad' : undefined}>
               {view ? view.rerenders : '–'}
             </dd>
           </>

@@ -674,40 +674,28 @@ tasarruf hedeflerinin gerçek modellerle ölçümü.
 
 ### Yapılacaklar
 
-Toplam 53 açık madde: **33 geliştirme işi**, 16 gerçek ortam denemesi ve 4 karar.
+Toplam 35 açık madde: **12 geliştirme işi**, 16 gerçek ortam denemesi ve 7 karar.
 Geliştirme işleri:
 
-**Faz 8 — takım ve platform (8)**
-- [ ] Kor Server: kendi sunucunda takım modu (paylaşılan kurallar, graf ve hafıza, görev kuyruğu, merkezi denetim, Postgres, mTLS)
-- [ ] OIDC / SSO (Keycloak, Authentik, Google, GitHub) ve rol tabanlı yetki
-- [ ] KaaS API (`POST /api/v1/tasks`, WebSocket, callback) ve Kor'un OpenAI uyumlu bir model ucu olarak sunulması
-- [ ] İmzalı eklentiler, izin onayı ve katalogla WASM eklenti çalışma zamanı (`kor plugin search/create`)
-- [ ] VS Code, Neovim, Zed ve JetBrains için `kor lsp`
-- [ ] Takım kasası, şablon/hook/kural senkronu; takım sunucusu üzerinden peer rölesi; Faz 8 kabul testleri
+**Kod sağlığı (sırayla, tek tek yapılacak)**
+- [ ] İşletim sistemine özel kodun tamamının `kor-platform`'a taşınması
+- [ ] İş mantığının masaüstü köprüsünden çekirdeğe taşınması; masaüstünde karşılığı olmayan 9 yeni komut için köprü
+- [ ] Büyük crate'lerin bölünmesi; `deny(missing_docs)`
+- [ ] Kullanıcı kılavuzu ve eklenti yazma rehberi
+- [ ] Masaüstü metinlerinin Fluent'e taşınması
+- [ ] Test kapsamının %70'ten %80'e çıkarılması
 
-**Ajan, diller ve hafıza**
-- [ ] Yerel küçük modelle fish tarzı satır içi kabuk önerisi
-- [ ] Sandbox'ta alan adı bazlı ağ kuralları, Linux/macOS'ta kesin CPU tavanı (bugün: `nice` önceliği)
-- [ ] Kayıtlı düzenlerde sanal masaüstü; Windows uzak sunucular
+**Performans**
+- [ ] CLI boyutu (bugün 171 MB, dil ayrıştırıcıları gerektiğinde yüklenmeli), `kor help` 36 ms, soğuk başlangıç ve boşta bellek bütçeleri
 
-**Sağlayıcılar ve maliyet**
-- [ ] Vertex ADC, Azure Entra ID, OCI imzalı kimlik
-- [ ] Katalogda LMArena ve LiveBench skorları (ikisinin de veri ucu yok)
-- [ ] `kor quota`'da proxy kotası
+**Takım sunucusu**
+- [ ] Takım kurallarının üyelere otomatik çekilmesi ve kuyruktaki görevleri çalıştıran sunucu işçisi
 
-**Web, medya ve entegrasyonlar**
-- [ ] Türk ödeme, kargo, pazaryeri ve alan adı firmaları bağdaştırıcıları; backlink araçları
-- [ ] Doğrudan medya sağlayıcıları (OpenAI Images, Imagen/Veo, Stability, Runway, Luma) ve yerel ComfyUI
-- [ ] Forge: CI durumundan düzeltme, issue → görev, sürüm notları, Bitbucket Server
-
-**Arayüz**
-- [ ] Kalan yan panel görünümlerinin sol çubuğa ve ayarlara dağıtılması
-- [ ] Chrome yan panelinde galeri medyası
-
-**Test, sürüm ve kod sağlığı**
-- [ ] CLI boyut ve başlangıç bütçeleri (bugün 68,6 MB ve 42 ms); statik musl ve Windows ARM64 derlemeleri
-- [ ] CLI yardım/hata snapshot'ları; macOS masaüstü E2E; tekrarlanabilir derleme; PGO
-- [ ] İş mantığının masaüstü köprüsünden çekirdeğe taşınması; büyük crate'lerin bölünmesi; `deny(missing_docs)`; kullanıcı ve eklenti rehberleri
+**Entegrasyonlar**
+- [ ] Aras, MNG, Sürat, PTT kargo ve diğer Türk alan adı firmaları (herkese açık API belgesi yok)
+- [ ] Katalogda LiveBench skorları (veri dosyası ve lisans yok; elle CSV ile çalışıyor)
+- [ ] Doğrudan medya sağlayıcılarının medya kataloğuna eklenmesi; ComfyUI ilerlemesinin WebSocket ile okunması
+- [ ] WASM eklentilerinin hook olarak ve ajan oturumundan çağrılması
 
 Spec referansları ve dosya yollarıyla tam liste bakımcıda tutuluyor; her sürümde burada özetleniyor.
 

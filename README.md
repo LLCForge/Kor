@@ -671,38 +671,28 @@ back-ends for OCR, accessibility and sandbox on real machines, and the router/gr
 
 ### To do
 
-53 open items in total: **33 development tasks**, 16 real-world trials and 4 decisions. The development tasks:
+35 open items in total: **12 development tasks**, 16 real-world trials and 7 decisions.
+The development tasks:
 
-**Faz 8 — team and platform (8)**
-- [ ] Kor Server: team mode on your own server (shared rules, graph and memory, task queue, central audit, Postgres, mTLS)
-- [ ] OIDC / SSO (Keycloak, Authentik, Google, GitHub) with role-based permissions
-- [ ] KaaS API (`POST /api/v1/tasks`, WebSocket, callbacks) and Kor as an OpenAI-compatible model endpoint
-- [ ] WASM plugin runtime with signed plugins, permission prompts and a catalogue (`kor plugin search/create`)
-- [ ] `kor lsp` for VS Code, Neovim, Zed and JetBrains
-- [ ] Team vault and template/hook/rule sync; peer relay through the team server; Faz 8 acceptance tests
+**Code health (one at a time)**
+- [ ] Move the remaining OS-specific code into `kor-platform`
+- [ ] Move business logic out of the desktop bridge; desktop bridges for the 9 new commands that have none
+- [ ] Split the largest crates; `deny(missing_docs)`
+- [ ] User guide and plugin authoring guide
+- [ ] Desktop strings in Fluent
+- [ ] Test coverage from 70% to 80%
 
-**Agent, languages and memory**
-- [ ] fish-style inline shell suggestions from a small local model
-- [ ] Domain-level sandbox network rules, a hard CPU cap on Linux/macOS (today: `nice` priority)
-- [ ] Virtual desktops in saved layouts; Windows remote servers
+**Performance**
+- [ ] CLI size (171 MB today; grammars should load on demand), `kor help` at 36 ms, cold-start and idle-memory budgets
 
-**Providers and cost**
-- [ ] LMArena and LiveBench scores in the catalogue (neither publishes a data endpoint)
-- [ ] Proxy quota in `kor quota`
+**Team server**
+- [ ] Members pull team rules automatically; a server-side worker for queued tasks
 
-**Web, media and integrations**
-- [ ] Turkish payment, cargo, marketplace and registrar adapters; backlink tools
-- [ ] Direct media providers (OpenAI Images, Imagen/Veo, Stability, Runway, Luma) and local ComfyUI
-- [ ] Forge: fix from CI status, issue → task, release notes, Bitbucket Server
-
-**UI**
-- [ ] Spread the remaining side-panel views over the left rail and settings
-- [ ] Gallery media in the Chrome side panel
-
-**Testing, release and code health**
-- [ ] Meet the CLI size and start-up budgets (68.6 MB and 42 ms today); static musl and Windows ARM64 builds
-- [ ] CLI help/error snapshots; macOS desktop E2E; reproducible builds; PGO
-- [ ] Move business logic out of the desktop bridge; split the largest crates; `deny(missing_docs)`; user and plugin guides
+**Integrations**
+- [ ] Aras, MNG, Sürat, PTT cargo and other Turkish registrars (no public API documentation)
+- [ ] LiveBench scores in the catalogue (no data file or licence; works from a manual CSV)
+- [ ] Direct media providers in the media catalogue; ComfyUI progress over WebSocket
+- [ ] WASM plugins as hooks and from inside an agent session
 
 The full list, with spec references and file paths, is kept by the maintainer and summarised here at every release.
 

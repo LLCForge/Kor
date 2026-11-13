@@ -191,12 +191,7 @@ pub fn write_private(path: &Path, text: &str) -> Result<(), String> {
     }
     let mut o = std::fs::OpenOptions::new();
     o.write(true).create(true).truncate(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt as _;
-        o.mode(0o600);
-    }
-    let mut f = o
+    let mut f = kor_platform::owner_only(&mut o)
         .open(path)
         .map_err(|e| format!("{}: {e}", path.display()))?;
     std::io::Write::write_all(&mut f, text.as_bytes()).map_err(|e| e.to_string())

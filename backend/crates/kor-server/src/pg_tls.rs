@@ -18,11 +18,10 @@ use tokio_postgres::tls::{ChannelBinding, MakeTlsConnect, TlsConnect};
 /// An unparsable URL, or `sslmode=disable` with a non-local host.
 pub fn check_url(url: &str) -> Result<(), String> {
     let cfg: tokio_postgres::Config = url.parse().map_err(|_| "invalid postgres URL".to_owned())?;
-    let local = cfg.get_hosts().iter().all(|h| match h {
-        Host::Tcp(n) => n == "localhost" || n == "::1" || n.starts_with("127."),
-        #[cfg(unix)]
-        Host::Unix(_) => true,
-    });
+    // A Unix socket is on this machine; only TCP hosts can be remote.
+    let local = !cfg.get_hosts().iter().any(
+        |h| matches!(h, Host::Tcp(n) if !(n == "localhost" || n == "::1" || n.starts_with("127."))),
+    );
     if cfg.get_ssl_mode() == SslMode::Disable && !local {
         return Err("sslmode=disable is only allowed for a database on this machine".into());
     }

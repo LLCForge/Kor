@@ -134,7 +134,7 @@ function ServerCard({ status, onChange }: { status: TeamStatus; onChange: (s: Te
             <dd>{status.certificate ? 'Anahtarlıkta kayıtlı' : 'Yok'}</dd>
           </dl>
           {login && (
-            <p className="ks-note" role="status">
+            <p className="ks-note" role="status" data-kor-event="kor:team/login">
               {'Tarayıcıda açın: '}<code translate="no">{login.uri}</code>{' · Kod: '}<code translate="no">{login.code}</code>
             </p>
           )}

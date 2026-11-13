@@ -206,6 +206,7 @@ async fn test(name: &str, state: &AppState) -> Res {
         public_url: None,
         approval_timeout: opts.approval_timeout,
         factory: opts.factory,
+        live: std::sync::Arc::default(),
     };
     let name = name.to_owned();
     tauri::async_runtime::spawn(async move {

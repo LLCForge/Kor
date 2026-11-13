@@ -147,6 +147,14 @@ pub fn make_executable(path: &std::path::Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// Files created through `opts` are readable by their owner only (Unix `0600`). On Windows the
+/// user's profile ACL already keeps them private.
+pub fn owner_only(opts: &mut std::fs::OpenOptions) -> &mut std::fs::OpenOptions {
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(opts, 0o600);
+    opts
+}
+
 /// Owner user and group ids of `path` on Unix (Docker sandbox `--user`); `None` on Windows.
 pub fn owner_ids(path: &std::path::Path) -> Option<(u32, u32)> {
     #[cfg(unix)]
