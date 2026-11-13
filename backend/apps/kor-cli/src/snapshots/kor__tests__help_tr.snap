@@ -2905,8 +2905,10 @@ Commands:
   kvkk      KVKK aydınlatma metni ve çerez politikası
   efatura   UBL-TR e-Fatura/e-Arşiv XML
   irsaliye  UBL-TR e-İrsaliye XML
-  payment   Ödeme entegrasyonu şablonu (iyzico, paytr)
-  market    Trendyol ve Hepsiburada sayıları
+  payment   Ödeme entegrasyonu şablonu (iyzico, paytr, param, sipay)
+  market    Trendyol, Hepsiburada ve N11 sayıları
+  cargo     Yurtiçi Kargo gönderi durumu
+  dns       Domain Name API: alan adı bilgisi, DNS kayıtları, ad sunucuları
   keywords  Türkçe anahtar kelime kökleri
   help      Print this message or the help of the given subcommand(s)
 
@@ -3093,7 +3095,7 @@ Options:
   -h, --help
           Print help
 ===== kor tr payment --help
-Ödeme entegrasyonu şablonu (iyzico, paytr)
+Ödeme entegrasyonu şablonu (iyzico, paytr, param, sipay)
 
 Usage: kor tr payment [OPTIONS] <PROVIDER>
 
@@ -3119,7 +3121,7 @@ Options:
   -h, --help
           Print help
 ===== kor tr market --help
-Trendyol ve Hepsiburada sayıları
+Trendyol, Hepsiburada ve N11 sayıları
 
 Usage: kor tr market [OPTIONS]
 
@@ -3132,6 +3134,62 @@ Options:
 
       --remote <REMOTE>
           Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor tr cargo --help
+Yurtiçi Kargo gönderi durumu
+
+Usage: kor tr cargo [OPTIONS] <KEY>
+
+Arguments:
+  <KEY>
+          Gönderinin kargo anahtarı (sizin sipariş anahtarınız)
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor tr dns --help
+Domain Name API: alan adı bilgisi, DNS kayıtları, ad sunucuları
+
+Usage: kor tr dns [OPTIONS] <DOMAIN>
+
+Arguments:
+  <DOMAIN>
+          Alan adı
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --set <SET>
+          `name TYPE value[,value]` record set to write, e.g. `@ TXT v=spf1 -all`
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --ttl <TTL>
+          --set ile yazılan kaydın TTL değeri (saniye)
+          
+          [default: 3600]
+
+      --ns <NS>
+          Name servers to set, comma separated
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -y, --yes
+          Sormadan uygula
 
   -h, --help
           Print help
@@ -3177,6 +3235,8 @@ Commands:
   competitors    Rakip sayfaları zaman içinde izle
   agents         Uzmanlaşmış SEO denetim ajan takımı, tek birleşik rapor
   opportunities  Search Console verisinden sorgu veya sayfa başına sıralama fırsat skoru
+  backlinks      Ahrefs, Semrush ya da Moz’dan backlink sayıları (kendi anahtarınızla)
+  competition    Bir anahtar kelimenin sıralanan sayfalarından SERP rekabet faktörleri
   help           Print this message or the help of the given subcommand(s)
 
 Options:
@@ -3786,6 +3846,7 @@ Commands:
   generate  Başlık, açıklama ve alt metinleri inceleme CSV'sine üret
   check     İnceleme CSV'sini kontrol et (uzunluk, piksel genişliği, yinelenme)
   apply     İncelenmiş CSV'yi WordPress'e yaz (geri alma dosyası tutulur)
+  opencart  İnceleme CSV’sinden OpenCart için SQL geri yazma (geri alma dahil)
   undo      Geri alma dosyasındaki eski değerleri geri yükle
   help      Print this message or the help of the given subcommand(s)
 
@@ -3903,6 +3964,47 @@ Options:
 
       --yes
           Onay sorma
+
+  -h, --help
+          Print help
+===== kor seo meta opencart --help
+İnceleme CSV’sinden OpenCart için SQL geri yazma (geri alma dahil)
+
+Usage: kor seo meta opencart [OPTIONS] <CSV>
+
+Arguments:
+  <CSV>
+          İnceleme CSV'si
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --prefix <PREFIX>
+          OpenCart tablo öneki
+          
+          [default: oc_]
+
+      --language <LANGUAGE>
+          OpenCart language_id
+          
+          [default: 1]
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --oc-version <OC_VERSION>
+          OpenCart ana sürümü (3 ya da 4)
+          
+          [default: 4]
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -o, --out <OUT>
+          Bu dosyaya yaz
+          
+          [default: kor-opencart]
 
   -h, --help
           Print help
@@ -4207,6 +4309,57 @@ Options:
 
       --json
           JSON yazdır
+
+  -h, --help
+          Print help
+===== kor seo backlinks --help
+Ahrefs, Semrush ya da Moz’dan backlink sayıları (kendi anahtarınızla)
+
+Usage: kor seo backlinks [OPTIONS] <DOMAINS>...
+
+Arguments:
+  <DOMAINS>...
+          Sorgulanacak alan adları
+
+Options:
+      --json
+          JSON yazdır
+
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor seo competition --help
+Bir anahtar kelimenin sıralanan sayfalarından SERP rekabet faktörleri
+
+Usage: kor seo competition [OPTIONS] --serp <SERP> <KEYWORD>
+
+Arguments:
+  <KEYWORD>
+          Hedef anahtar kelime
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --serp <SERP>
+          Şu an sıralanan, örnek alınacak sayfa (tekrarlanabilir)
+
+      --json
+          JSON yazdır
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
 
   -h, --help
           Print help
@@ -8505,6 +8658,9 @@ Commands:
   respond  İnceleme yorumlarına yanıt ve düzeltme taslağı hazırla, sonra gönder ve yanıtla
   list     Açık pull request'leri listele
   status   Geçerli dalın pull request'ini göster
+  ci       Geçerli commit'in CI kontrolleri; --fix kırık olanlar için görev başlatır
+  issue    Bir issue’yu göreve çevir
+  release  Bir etiket için sürüm notlarını yayımla
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -8645,6 +8801,92 @@ Options:
 
       --remote <REMOTE>
           Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor pr ci --help
+Geçerli commit'in CI kontrolleri; --fix kırık olanlar için görev başlatır
+
+Usage: kor pr ci [OPTIONS]
+
+Options:
+      --fix
+          Kırık kontrollerin loglarını okuyup düzelten bir görev başlat
+
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+  -y, --yes
+          Sormadan uygula
+
+      --json
+          Makinece okunur çıktı (JSON)
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor pr issue --help
+Bir issue’yu göreve çevir
+
+Usage: kor pr issue [OPTIONS] <TARGET>
+
+Arguments:
+  <TARGET>
+          PR numarası ya da adresi
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --run
+          Start the task now (otherwise the task text is printed)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+  -y, --yes
+          Sormadan uygula
+
+      --json
+          Makinece okunur çıktı (JSON)
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor pr release --help
+Bir etiket için sürüm notlarını yayımla
+
+Usage: kor pr release [OPTIONS] <TAG>
+
+Arguments:
+  <TAG>
+          Yayımlanacak etiket (yerelde var olmalı)
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --since <SINCE>
+          Önceki etiket (varsayılan: bundan önceki etiket)
+
+      --draft
+          Taslak olarak aç
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -y, --yes
+          Sormadan uygula
 
   -h, --help
           Print help

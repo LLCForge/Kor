@@ -7,11 +7,16 @@
 //!   trackers without a consent tool, VERBİS reminder, payment (iyzico, PayTR, Param, Sipay) and
 //!   cargo integrations found on the site or in its plugins;
 //! - generators: KVKK disclosure text and cookie policy, UBL-TR 1.2 e-Fatura/e-Arşiv invoices and
-//!   e-İrsaliye despatch advices ([`efatura`]), payment integration templates ([`templates`]);
-//! - marketplace adapters ([`market`]): Trendyol and Hepsiburada read-only counts.
+//!   e-İrsaliye despatch advices ([`efatura`]), payment integration templates ([`templates`]:
+//!   iyzico, PayTR, Param, Sipay);
+//! - marketplace adapters ([`market`]): Trendyol, Hepsiburada and N11 read-only counts;
+//! - cargo ([`cargo`]): Yurtiçi Kargo shipment status;
+//! - registrar ([`registrar`]): Domain Name API domain details, DNS zone and name servers.
 
+pub mod cargo;
 pub mod efatura;
 pub mod market;
+pub mod registrar;
 pub mod templates;
 
 use std::collections::BTreeMap;

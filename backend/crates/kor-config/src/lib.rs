@@ -510,6 +510,10 @@ pub struct MediaConfig {
     pub ask: bool,
     pub confirm_above: f64,
     pub defaults: BTreeMap<String, Table>,
+    /// Local `ComfyUI` server (`http://127.0.0.1:8188`); empty: not used.
+    pub comfyui_url: String,
+    /// Checkpoint for the built-in `ComfyUI` text-to-image workflow (`sd_xl_base_1.0.safetensors`).
+    pub comfyui_checkpoint: String,
 }
 
 impl Default for MediaConfig {
@@ -518,6 +522,8 @@ impl Default for MediaConfig {
             ask: true,
             confirm_above: 0.0,
             defaults: BTreeMap::new(),
+            comfyui_url: String::new(),
+            comfyui_checkpoint: String::new(),
         }
     }
 }
@@ -810,11 +816,18 @@ impl Default for Notify {
 }
 
 /// `[forge.hosts] "git.example.com" = "gitlab"`: self-hosted forges (`github`, `gitlab`, `gitea`
-/// (also Forgejo), `bitbucket`). github.com, gitlab.com, codeberg.org and bitbucket.org are known.
+/// (also Forgejo), `bitbucket`, `bitbucket-server`, `azure`). github.com, gitlab.com, codeberg.org,
+/// bitbucket.org and dev.azure.com are known.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Forge {
     pub hosts: BTreeMap<String, String>,
+    /// PEM file with extra root certificates for forges behind an internal CA (§28.7).
+    pub ca_cert: Option<PathBuf>,
+    /// PEM file with a client certificate and its private key, for forges that require mTLS.
+    pub client_cert: Option<PathBuf>,
+    /// `http://proxy.corp:3128`: proxy for forge API requests (only outside privacy/offline mode).
+    pub proxy: Option<String>,
 }
 
 /// `[vault]`: where `kor vault` keeps secrets and which commands receive them.

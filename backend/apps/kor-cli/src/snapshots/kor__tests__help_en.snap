@@ -2905,8 +2905,10 @@ Commands:
   kvkk      KVKK disclosure text and cookie policy
   efatura   UBL-TR e-invoice/e-archive XML
   irsaliye  UBL-TR e-despatch XML
-  payment   Payment integration template (iyzico, paytr)
-  market    Trendyol and Hepsiburada counts
+  payment   Payment integration template (iyzico, paytr, param, sipay)
+  market    Trendyol, Hepsiburada and N11 counts
+  cargo     Yurtiçi Kargo shipment status
+  dns       Domain Name API: domain details, DNS zone, name servers
   keywords  Turkish keyword stems
   help      Print this message or the help of the given subcommand(s)
 
@@ -3093,7 +3095,7 @@ Options:
   -h, --help
           Print help
 ===== kor tr payment --help
-Payment integration template (iyzico, paytr)
+Payment integration template (iyzico, paytr, param, sipay)
 
 Usage: kor tr payment [OPTIONS] <PROVIDER>
 
@@ -3119,7 +3121,7 @@ Options:
   -h, --help
           Print help
 ===== kor tr market --help
-Trendyol and Hepsiburada counts
+Trendyol, Hepsiburada and N11 counts
 
 Usage: kor tr market [OPTIONS]
 
@@ -3132,6 +3134,62 @@ Options:
 
       --remote <REMOTE>
           Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor tr cargo --help
+Yurtiçi Kargo shipment status
+
+Usage: kor tr cargo [OPTIONS] <KEY>
+
+Arguments:
+  <KEY>
+          Cargo key of the shipment (your own order key)
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor tr dns --help
+Domain Name API: domain details, DNS zone, name servers
+
+Usage: kor tr dns [OPTIONS] <DOMAIN>
+
+Arguments:
+  <DOMAIN>
+          Domain
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --set <SET>
+          `name TYPE value[,value]` record set to write, e.g. `@ TXT v=spf1 -all`
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --ttl <TTL>
+          TTL of the record set written with --set (seconds)
+          
+          [default: 3600]
+
+      --ns <NS>
+          Name servers to set, comma separated
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -y, --yes
+          Apply without asking
 
   -h, --help
           Print help
@@ -3177,6 +3235,8 @@ Commands:
   competitors    Watch competitor pages over time
   agents         Specialised SEO audit agent team with one consolidated report
   opportunities  Ranking opportunity score per query or page from Search Console data
+  backlinks      Backlink numbers from Ahrefs, Semrush or Moz (your own key)
+  competition    SERP competition factors of a keyword from its ranking pages
   help           Print this message or the help of the given subcommand(s)
 
 Options:
@@ -3786,6 +3846,7 @@ Commands:
   generate  Generate titles, descriptions and alt text into a review CSV
   check     Check a review CSV (length, pixel width, duplicates)
   apply     Write a reviewed CSV to WordPress (undo file kept)
+  opencart  SQL write-back (with undo) of the review CSV for OpenCart
   undo      Restore the values saved in an undo file
   help      Print this message or the help of the given subcommand(s)
 
@@ -3903,6 +3964,47 @@ Options:
 
       --yes
           Do not ask for confirmation
+
+  -h, --help
+          Print help
+===== kor seo meta opencart --help
+SQL write-back (with undo) of the review CSV for OpenCart
+
+Usage: kor seo meta opencart [OPTIONS] <CSV>
+
+Arguments:
+  <CSV>
+          Review CSV
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --prefix <PREFIX>
+          OpenCart table prefix
+          
+          [default: oc_]
+
+      --language <LANGUAGE>
+          OpenCart language_id
+          
+          [default: 1]
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --oc-version <OC_VERSION>
+          OpenCart major version (3 or 4)
+          
+          [default: 4]
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -o, --out <OUT>
+          Write to this file
+          
+          [default: kor-opencart]
 
   -h, --help
           Print help
@@ -4207,6 +4309,57 @@ Options:
 
       --json
           Print JSON
+
+  -h, --help
+          Print help
+===== kor seo backlinks --help
+Backlink numbers from Ahrefs, Semrush or Moz (your own key)
+
+Usage: kor seo backlinks [OPTIONS] <DOMAINS>...
+
+Arguments:
+  <DOMAINS>...
+          Domains to look up
+
+Options:
+      --json
+          Print JSON
+
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor seo competition --help
+SERP competition factors of a keyword from its ranking pages
+
+Usage: kor seo competition [OPTIONS] --serp <SERP> <KEYWORD>
+
+Arguments:
+  <KEYWORD>
+          Target keyword
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --serp <SERP>
+          A currently ranking page to learn from (repeatable)
+
+      --json
+          Print JSON
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
 
   -h, --help
           Print help
@@ -8505,6 +8658,9 @@ Commands:
   respond  Draft answers and fixes for review comments, then push and reply
   list     List open pull requests
   status   Show the pull request of the current branch
+  ci       CI checks of the current commit; --fix starts a task for the failing ones
+  issue    Turn an issue into a task
+  release  Publish release notes for a tag
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -8645,6 +8801,92 @@ Options:
 
       --remote <REMOTE>
           Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor pr ci --help
+CI checks of the current commit; --fix starts a task for the failing ones
+
+Usage: kor pr ci [OPTIONS]
+
+Options:
+      --fix
+          Start a task that reads the failing logs and fixes them
+
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+  -y, --yes
+          Apply without asking
+
+      --json
+          Machine-readable output (JSON)
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor pr issue --help
+Turn an issue into a task
+
+Usage: kor pr issue [OPTIONS] <TARGET>
+
+Arguments:
+  <TARGET>
+          Issue number or URL
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --run
+          Start the task now (otherwise the task text is printed)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+  -y, --yes
+          Apply without asking
+
+      --json
+          Machine-readable output (JSON)
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor pr release --help
+Publish release notes for a tag
+
+Usage: kor pr release [OPTIONS] <TAG>
+
+Arguments:
+  <TAG>
+          Tag to publish (it must exist locally)
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --since <SINCE>
+          Previous tag (default: the tag before `tag`)
+
+      --draft
+          Open as a draft
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -y, --yes
+          Apply without asking
 
   -h, --help
           Print help

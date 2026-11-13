@@ -1,5 +1,6 @@
 //! The forge REST APIs behind one client: GitHub (v3), GitLab (v4), Gitea/Forgejo (v1),
-//! Bitbucket Cloud (2.0), Azure DevOps (7.1, shapes in `azure.rs`). Response shapes are mapped to [`PrInfo`] and [`Comment`] here.
+//! Bitbucket Cloud (2.0), Bitbucket Server/Data Center (1.0, shapes in `bbs.rs`), Azure DevOps
+//! (7.1, shapes in `azure.rs`). Response shapes are mapped to [`PrInfo`] and [`Comment`] here.
 
 use std::fmt::Write as _;
 use std::path::Path;
@@ -10,7 +11,7 @@ use reqwest::Method;
 use serde::Serialize;
 use serde_json::{Value, json};
 
-use super::{ForgeError, Kind, PrRef, PrRequest, Remote, azure};
+use super::{ForgeError, Kind, PrRef, PrRequest, Remote, azure, bbs};
 
 /// Response bodies longer than this are cut in error messages.
 const MAX_ERROR_BODY: usize = 500;
@@ -73,19 +74,19 @@ impl std::fmt::Debug for Forge {
     }
 }
 
-fn s(v: &Value, ptr: &str) -> String {
+pub(super) fn s(v: &Value, ptr: &str) -> String {
     v.pointer(ptr)
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned()
 }
 
-fn n(v: &Value, ptr: &str) -> Option<u64> {
+pub(super) fn n(v: &Value, ptr: &str) -> Option<u64> {
     v.pointer(ptr).and_then(Value::as_u64)
 }
 
 /// Percent-encode one path segment (GitLab's `group%2Fproject` ids).
-fn enc(seg: &str) -> String {
+pub(super) fn enc(seg: &str) -> String {
     let mut out = String::new();
     for b in seg.bytes() {
         if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~') {
@@ -141,12 +142,13 @@ pub(crate) fn pr_from(kind: Kind, v: &Value) -> Option<PrInfo> {
             state: s(v, "/state").to_ascii_lowercase(),
             draft: v.pointer("/draft").and_then(Value::as_bool) == Some(true),
         },
+        Kind::BitbucketServer => bbs::pr_from(v)?,
         Kind::Azure => azure::pr_from(v)?,
     };
     Some(pr)
 }
 
-fn items(v: &Value) -> Vec<Value> {
+pub(super) fn items(v: &Value) -> Vec<Value> {
     match v {
         Value::Array(a) => a.clone(),
         other => other
@@ -196,11 +198,40 @@ impl Forge {
     /// # Errors
     /// `Network` when the HTTP client cannot be built.
     pub fn new(remote: Remote, token: SecretString) -> Result<Self, ForgeError> {
-        let http = kor_core::net::client_builder()
+        Self::with_config(remote, token, &kor_config::Forge::default())
+    }
+
+    /// [`Forge::new`] with `[forge]`'s private CA, client certificate (mTLS) and proxy.
+    ///
+    /// # Errors
+    /// `Network` when a PEM file cannot be read or parsed, or the client cannot be built.
+    pub fn with_config(
+        remote: Remote,
+        token: SecretString,
+        cfg: &kor_config::Forge,
+    ) -> Result<Self, ForgeError> {
+        let pem = |p: &Path| {
+            std::fs::read(p).map_err(|e| ForgeError::Network(format!("{}: {e}", p.display())))
+        };
+        let bad = |e: reqwest::Error| ForgeError::Network(e.to_string());
+        let mut b = kor_core::net::client_builder()
             .user_agent(concat!("kor/", env!("CARGO_PKG_VERSION")))
-            .timeout(Duration::from_secs(60))
-            .build()
-            .map_err(|e| ForgeError::Network(e.to_string()))?;
+            .timeout(Duration::from_secs(60));
+        if let Some(p) = &cfg.ca_cert {
+            for c in reqwest::Certificate::from_pem_bundle(&pem(p)?).map_err(bad)? {
+                b = b.add_root_certificate(c);
+            }
+        }
+        if let Some(p) = &cfg.client_cert {
+            b = b.identity(reqwest::Identity::from_pem(&pem(p)?).map_err(bad)?);
+        }
+        // Privacy/offline modes turn proxies off (the guard must see the real host).
+        if let Some(px) = cfg.proxy.as_deref().filter(|s| !s.trim().is_empty())
+            && kor_core::net::policy() == kor_core::net::Policy::Open
+        {
+            b = b.proxy(reqwest::Proxy::all(px.trim()).map_err(bad)?);
+        }
+        let http = b.build().map_err(bad)?;
         Ok(Self {
             remote,
             token,
@@ -213,17 +244,19 @@ impl Forge {
     /// # Errors
     /// See [`super::detect`] and [`super::token`].
     pub fn open(root: &Path) -> Result<Self, ForgeError> {
-        let remote = super::detect(root)?;
+        let cfg = super::configured(root);
+        let remote = Remote::parse(&super::remote_url(root)?, &cfg.hosts)?;
         let token = super::token(remote.kind, |v| std::env::var(v).ok(), &KeychainStore)?;
-        Self::new(remote, token)
+        Self::with_config(remote, token, &cfg)
     }
 
-    fn repo(&self) -> String {
+    pub(super) fn repo(&self) -> String {
         let r = &self.remote;
         match r.kind {
             Kind::Github | Kind::Gitea => format!("/repos/{}/{}", r.owner, r.repo),
             Kind::Gitlab => format!("/projects/{}", enc(&format!("{}/{}", r.owner, r.repo))),
             Kind::Bitbucket => format!("/repositories/{}/{}", r.owner, r.repo),
+            Kind::BitbucketServer => format!("/projects/{}/repos/{}", r.owner, r.repo),
             // The API base already names the repository.
             Kind::Azure => String::new(),
         }
@@ -234,18 +267,30 @@ impl Forge {
             Kind::Github | Kind::Gitea => "pulls",
             Kind::Gitlab => "merge_requests",
             Kind::Bitbucket | Kind::Azure => "pullrequests",
+            Kind::BitbucketServer => "pull-requests",
         };
         format!("{}/{coll}", self.repo())
     }
 
-    async fn send(
+    /// `path` under the API base, or an absolute URL on the same forge.
+    pub(super) async fn send(
         &self,
         method: Method,
         path: &str,
         body: Option<&Value>,
         accept: Option<&str>,
     ) -> Result<String, ForgeError> {
-        let url = if self.remote.kind == Kind::Azure {
+        let url = if path.starts_with("https://") || path.starts_with("http://") {
+            // The token goes only to the forge's own host.
+            if !path.starts_with(&format!("{}/", self.remote.web)) {
+                return Err(ForgeError::Parse(format!("URL outside the forge: {path}")));
+            }
+            if self.remote.kind == Kind::Azure {
+                azure::versioned(path)
+            } else {
+                path.to_owned()
+            }
+        } else if self.remote.kind == Kind::Azure {
             format!("{}{}", self.remote.api, azure::versioned(path))
         } else {
             format!("{}{path}", self.remote.api)
@@ -260,7 +305,7 @@ impl Forge {
             Kind::Gitlab => rb.header("PRIVATE-TOKEN", t),
             Kind::Gitea => rb.header("Authorization", format!("token {t}")),
             // `user:app-password` → Basic; an access token → Bearer.
-            Kind::Bitbucket => match t.split_once(':') {
+            Kind::Bitbucket | Kind::BitbucketServer => match t.split_once(':') {
                 Some((u, p)) => rb.basic_auth(u, Some(p)),
                 None => rb.bearer_auth(t),
             },
@@ -310,7 +355,7 @@ impl Forge {
         }
     }
 
-    async fn json(
+    pub(super) async fn json(
         &self,
         method: Method,
         path: &str,
@@ -354,6 +399,7 @@ impl Forge {
                 "source": { "branch": { "name": req.head } },
                 "destination": { "branch": { "name": req.base } },
             }),
+            Kind::BitbucketServer => bbs::create_body(req),
             Kind::Azure => azure::create_body(req),
         };
         let v = self.json(Method::POST, &self.prs(), Some(&body)).await?;
@@ -375,6 +421,7 @@ impl Forge {
             Kind::Gitlab => "?state=opened&per_page=50",
             Kind::Gitea => "?state=open&limit=50",
             Kind::Bitbucket => "?state=OPEN&pagelen=50",
+            Kind::BitbucketServer => "?state=OPEN&limit=50",
             Kind::Azure => "?searchCriteria.status=active&$top=50",
         };
         let v = self
@@ -421,7 +468,7 @@ impl Forge {
                 )
                 .await
             }
-            Kind::Gitea => {
+            Kind::Gitea | Kind::BitbucketServer => {
                 self.send(
                     Method::GET,
                     &format!("{prs}/{number}.diff"),
@@ -616,6 +663,16 @@ impl Forge {
                         }),
                 );
             }
+            Kind::BitbucketServer => {
+                let a = self
+                    .json(
+                        Method::GET,
+                        &format!("{prs}/{number}/activities?limit=100"),
+                        None,
+                    )
+                    .await?;
+                out.extend(bbs::comments(&a));
+            }
             Kind::Azure => {
                 let ts = self
                     .json(Method::GET, &format!("{prs}/{number}/threads"), None)
@@ -729,6 +786,22 @@ impl Forge {
                     folded: refused.len(),
                 })
             }
+            Kind::BitbucketServer => {
+                let path = format!("{prs}/{number}/comments");
+                let mut refused = Vec::new();
+                for x in notes {
+                    let c = bbs::comment(&x.body, Some(x));
+                    if self.json(Method::POST, &path, Some(&c)).await.is_err() {
+                        refused.push(x);
+                    }
+                }
+                let c = bbs::comment(&folded(body, &refused), None);
+                self.json(Method::POST, &path, Some(&c)).await?;
+                Ok(ReviewPosted {
+                    inline: notes.len() - refused.len(),
+                    folded: refused.len(),
+                })
+            }
             Kind::Azure => {
                 let path = format!("{prs}/{number}/threads");
                 let mut refused = Vec::new();
@@ -781,6 +854,7 @@ impl Forge {
                     "parent": { "id": c.id.parse::<u64>().unwrap_or_default() },
                 }),
             ),
+            Kind::BitbucketServer => (format!("{prs}/{number}/comments"), bbs::reply(&c.id, body)),
             Kind::Azure => (
                 format!("{prs}/{number}/threads/{}/comments", c.id),
                 azure::reply(body),

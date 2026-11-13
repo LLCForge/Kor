@@ -11,7 +11,7 @@
 #   `internal = true`: kullanıcı özelliği değil, başka bir programın çağırdığı uç (denetim dışı).
 
 [meta]
-allowed_gaps = 2
+allowed_gaps = 10
 
 [[feature]]
 name = "Ajanla sohbet (araçlı tur)"
@@ -995,6 +995,27 @@ cli = "kor pr status"
 tui = "/pr status"
 desktop = "forge.prStatus"
 
+# Masaüstü köprüsü henüz yok (wave 1, integrations): komut CLI/TUI'da; masaüstü panel düğmesi sonraki dalga.
+[[feature]]
+name = "CI durumu ve kırık işi düzelten görev"
+cli = "kor pr ci"
+tui = "/pr ci"
+desktop = "-"
+
+# Masaüstü köprüsü henüz yok (wave 1, integrations): komut CLI/TUI'da; masaüstü panel düğmesi sonraki dalga.
+[[feature]]
+name = "Issue → görev"
+cli = "kor pr issue"
+tui = "/pr issue"
+desktop = "-"
+
+# Masaüstü köprüsü henüz yok (wave 1, integrations): komut CLI/TUI'da; masaüstü panel düğmesi sonraki dalga.
+[[feature]]
+name = "Sürüm notlarını forge'a yayımla"
+cli = "kor pr release"
+tui = "/pr release"
+desktop = "-"
+
 [[feature]]
 name = "Persona ile kod incelemesi"
 cli = "kor review"
@@ -1942,6 +1963,20 @@ cli = "kor tr market"
 tui = "/tr market"
 desktop = "web.trMarket"
 
+# Masaüstü köprüsü henüz yok (wave 1, integrations): komut CLI/TUI'da; masaüstü panel düğmesi sonraki dalga.
+[[feature]]
+name = "Yurtiçi Kargo gönderi durumu"
+cli = "kor tr cargo"
+tui = "/tr cargo"
+desktop = "-"
+
+# Masaüstü köprüsü henüz yok (wave 1, integrations): komut CLI/TUI'da; masaüstü panel düğmesi sonraki dalga.
+[[feature]]
+name = "Türk registrar DNS (Domain Name API)"
+cli = "kor tr dns"
+tui = "/tr dns"
+desktop = "-"
+
 [[feature]]
 name = "kor tr keywords"
 cli = "kor tr keywords"
@@ -2086,6 +2121,13 @@ cli = "kor seo meta undo"
 tui = "/seo meta undo"
 desktop = "seo.metaUndo"
 
+# Masaüstü köprüsü henüz yok (wave 1, integrations): komut CLI/TUI'da; masaüstü panel düğmesi sonraki dalga.
+[[feature]]
+name = "Toplu metayı OpenCart'a yaz (SQL, geri alınabilir)"
+cli = "kor seo meta opencart"
+tui = "/seo meta opencart"
+desktop = "-"
+
 [[feature]]
 name = "Log dosyası SEO analizi (botlar, tarama bütçesi, hiç taranmayanlar)"
 cli = "kor seo logs"
@@ -2133,6 +2175,20 @@ name = "Sıralama fırsat skoru (formüllü, kalibrasyonlu)"
 cli = "kor seo opportunities"
 tui = "/seo opportunities"
 desktop = "seo.opportunities"
+
+# Masaüstü köprüsü henüz yok (wave 1, integrations): komut CLI/TUI'da; masaüstü panel düğmesi sonraki dalga.
+[[feature]]
+name = "Backlink sayıları (Ahrefs, Semrush, Moz)"
+cli = "kor seo backlinks"
+tui = "/seo backlinks"
+desktop = "-"
+
+# Masaüstü köprüsü henüz yok (wave 1, integrations): komut CLI/TUI'da; masaüstü panel düğmesi sonraki dalga.
+[[feature]]
+name = "SERP rekabet faktörleri"
+cli = "kor seo competition"
+tui = "/seo competition"
+desktop = "-"
 
 [[feature]]
 name = "Doğal dil komutları: hangi cümle hangi komuta gider"

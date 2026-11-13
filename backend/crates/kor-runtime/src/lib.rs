@@ -1446,6 +1446,26 @@ pub fn prepare(
             tools.push(kor_agent::media::gallery_tool());
         }
     }
+    // §20: OpenAI Images, Imagen, Veo, Stability, Runway, Luma; ComfyUI also in privacy mode.
+    let direct: Vec<_> = media::direct_clients(l, &config.media)
+        .into_iter()
+        .map(|(d, k)| {
+            if let Some(k) = k {
+                redactor.register(k);
+            }
+            d
+        })
+        .collect();
+    if let Some(d) = kor_agent::media::DirectMedia::new(
+        direct,
+        config.media.comfyui_checkpoint.clone(),
+        media::env(Some(&config.media)),
+    ) {
+        tools.extend(kor_agent::media::direct_tools(&d));
+        if !tools.iter().any(|t| t.name() == "media_gallery") {
+            tools.push(kor_agent::media::gallery_tool());
+        }
+    }
     // §28.8: configured ACP agents as a sub-agent tool (ADR 0057).
     if !config.acp.agents.is_empty() {
         tools.push(Arc::new(acp::client::AcpAgentTool {

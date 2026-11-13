@@ -141,6 +141,34 @@ impl Http {
             .headers(self.headers.clone())
     }
 
+    /// A request to an absolute URL with the auth headers, only on the base URL's own origin
+    /// (a file link the provider returned); anything else would carry the key elsewhere.
+    pub(crate) fn request_url(
+        &self,
+        method: Method,
+        url: &str,
+    ) -> Result<RequestBuilder, ProviderError> {
+        let origin = |u: &str| {
+            reqwest::Url::parse(u).ok().map(|u| {
+                (
+                    u.scheme().to_owned(),
+                    u.host_str().map(str::to_owned),
+                    u.port_or_known_default(),
+                )
+            })
+        };
+        if origin(url).is_none() || origin(url) != origin(&self.base) {
+            return Err(self.err(
+                ProviderErrorKind::InvalidRequest,
+                "file URL is not on the provider's host",
+            ));
+        }
+        Ok(self
+            .client
+            .request(method, url)
+            .headers(self.headers.clone()))
+    }
+
     /// POST a JSON body (with manifest `extra_body` merged in) and return the 2xx response.
     pub(crate) async fn post_json(
         &self,

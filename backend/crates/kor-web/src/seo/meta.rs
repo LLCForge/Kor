@@ -3,7 +3,9 @@
 //! Flow: collect pages and images from a crawl → generate a sample (default 20) → the user
 //! edits the CSV review table → generate the rest with the edited rows as style examples →
 //! deterministic checks (length, approximate pixel width, duplicates, keyword) → CSV export,
-//! or apply to WordPress after approval with an undo file written before every change.
+//! or apply to WordPress after approval with an undo file written before every change, or
+//! OpenCart write-back as a SQL script that saves the old values in a table before updating
+//! and a matching undo script ([`opencart_sql`]).
 //! Images: a vision model sees the image; otherwise OCR text, the file name and the page
 //! context stand in (spec §2 rule 4).
 
@@ -617,6 +619,177 @@ pub async fn apply(
     out
 }
 
+/// OpenCart tables whose `meta_title` / `meta_description` a page row may update, with their id
+/// column and the SEO URL key that points at them.
+const OC_TABLES: [(&str, &str); 3] = [
+    ("product", "product_id"),
+    ("category", "category_id"),
+    ("information", "information_id"),
+];
+
+/// SQL apply and undo scripts for OpenCart.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct OpencartSql {
+    pub apply: String,
+    pub undo: String,
+    pub rows: usize,
+    /// URL → reason it is not in the script.
+    pub skipped: Vec<(String, String)>,
+}
+
+fn sql_str(s: &str) -> String {
+    format!(
+        "'{}'",
+        s.replace('\\', "\\\\")
+            .replace('\'', "''")
+            .replace('\0', "")
+    )
+}
+
+/// The page a URL names: `(Some(table, id), None)` for `index.php?route=…&product_id=42`, else
+/// `(None, Some(keyword))` from the last path segment (an SEO URL keyword).
+#[allow(clippy::type_complexity)]
+fn oc_target(u: &str) -> Option<(Option<(&'static str, u64)>, Option<String>)> {
+    let url = url::Url::parse(u).ok()?;
+    for (k, v) in url.query_pairs() {
+        for (table, col) in OC_TABLES {
+            if k == col
+                && let Ok(id) = v.parse()
+            {
+                return Some((Some((table, id)), None));
+            }
+        }
+        if k == "path"
+            && let Some(id) = v.rsplit('_').next().and_then(|x| x.parse().ok())
+        {
+            return Some((Some(("category", id)), None));
+        }
+    }
+    let seg = url.path_segments()?.rev().find(|s| !s.is_empty())?;
+    let seg = percent_encoding::percent_decode_str(seg)
+        .decode_utf8()
+        .ok()?
+        .trim_end_matches(".html")
+        .to_owned();
+    (!seg.is_empty() && seg != "index.php").then_some((None, Some(seg)))
+}
+
+/// Write-back of reviewed page rows to an OpenCart database (`version` 3 or 4, table `prefix`
+/// such as `oc_`, one `language_id`). The apply script first copies the current values into
+/// `<prefix>kor_meta_undo` under `run`; the undo script restores them. Images are skipped:
+/// OpenCart stores no per-image alt text.
+///
+/// # Errors
+/// An invalid prefix or version.
+#[allow(clippy::too_many_lines)]
+pub fn opencart_sql(
+    rows: &[Row],
+    prefix: &str,
+    language_id: u32,
+    version: u8,
+    run: &str,
+) -> Result<OpencartSql, String> {
+    if prefix.len() > 20
+        || !prefix
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+    {
+        return Err(format!("invalid table prefix `{prefix}`"));
+    }
+    if version != 3 && version != 4 {
+        return Err("OpenCart version must be 3 or 4".into());
+    }
+    let p = prefix;
+    let run_q = sql_str(run);
+    let mut out = OpencartSql::default();
+    let _ = write!(
+        out.apply,
+        "-- Kor meta write-back ({run}), OpenCart {version}, language_id {language_id}.\n\
+         -- Run on a backup first. Undo: the matching undo script.\nSTART TRANSACTION;\n\
+         CREATE TABLE IF NOT EXISTS `{p}kor_meta_undo` (run VARCHAR(40) NOT NULL, tbl VARCHAR(20) NOT NULL, \
+         id INT NOT NULL, language_id INT NOT NULL, meta_title VARCHAR(255) NOT NULL, meta_description TEXT NOT NULL);\n"
+    );
+    let _ = writeln!(
+        out.undo,
+        "-- Undo of Kor meta write-back ({run}).\nSTART TRANSACTION;"
+    );
+    for (table, col) in OC_TABLES {
+        let _ = writeln!(
+            out.undo,
+            "UPDATE `{p}{table}_description` d JOIN `{p}kor_meta_undo` u ON u.run = {run_q} AND u.tbl = '{table}' \
+             AND u.id = d.{col} AND u.language_id = d.language_id SET d.meta_title = u.meta_title, d.meta_description = u.meta_description;"
+        );
+    }
+    let _ = writeln!(
+        out.undo,
+        "DELETE FROM `{p}kor_meta_undo` WHERE run = {run_q};\nCOMMIT;"
+    );
+    for r in rows.iter().filter(|r| r.done()) {
+        if r.kind == "image" {
+            out.skipped
+                .push((r.url.clone(), "OpenCart has no per-image alt text".into()));
+            continue;
+        }
+        let Some((by_id, by_keyword)) = oc_target(&r.url) else {
+            out.skipped.push((
+                r.url.clone(),
+                "no product, category or page in the URL".into(),
+            ));
+            continue;
+        };
+        let set = format!(
+            "d.meta_title = {}, d.meta_description = {}",
+            sql_str(&r.title),
+            sql_str(&r.description)
+        );
+        let _ = writeln!(out.apply, "-- {}", r.url.replace('\n', " "));
+        let targets: Vec<(&str, &str, String)> = match (by_id, &by_keyword) {
+            (Some((table, id)), _) => {
+                let col = OC_TABLES
+                    .iter()
+                    .find(|(t, _)| *t == table)
+                    .map_or("product_id", |(_, c)| *c);
+                vec![(table, col, format!("d.{col} = {id}"))]
+            }
+            (None, Some(kw)) => OC_TABLES
+                .iter()
+                .map(|(table, col)| {
+                    (
+                        *table,
+                        *col,
+                        format!(
+                            "d.{col} IN (SELECT {sel} FROM `{p}seo_url` s0 WHERE s0.keyword = {kw} AND s0.language_id = {language_id}{cond})",
+                            sel = if version == 3 {
+                                format!("CAST(SUBSTRING(s0.query, {}) AS UNSIGNED)", col.len() + 2)
+                            } else {
+                                "CAST(s0.`value` AS UNSIGNED)".to_owned()
+                            },
+                            kw = sql_str(kw),
+                            cond = if version == 3 {
+                                format!(" AND s0.query LIKE '{col}=%'")
+                            } else {
+                                format!(" AND s0.`key` = '{col}'")
+                            },
+                        ),
+                    )
+                })
+                .collect(),
+            (None, None) => Vec::new(),
+        };
+        for (table, col, cond) in targets {
+            let _ = writeln!(
+                out.apply,
+                "INSERT INTO `{p}kor_meta_undo` SELECT {run_q}, '{table}', d.{col}, d.language_id, d.meta_title, d.meta_description \
+                 FROM `{p}{table}_description` d WHERE d.language_id = {language_id} AND {cond};\n\
+                 UPDATE `{p}{table}_description` d SET {set} WHERE d.language_id = {language_id} AND {cond};"
+            );
+        }
+        out.rows += 1;
+    }
+    out.apply.push_str("COMMIT;\n");
+    Ok(out)
+}
+
 /// Restore every `before` from an undo file (last change first).
 pub async fn undo(path: &Path, wp: &Wp) -> Result<usize, String> {
     let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
@@ -640,6 +813,53 @@ mod tests {
     use super::*;
     use wiremock::matchers::{method, path, query_param};
     use wiremock::{Mock, MockServer, ResponseTemplate};
+
+    #[test]
+    fn opencart_scripts() {
+        let row = |url: &str, title: &str| Row {
+            kind: "page".into(),
+            url: url.into(),
+            title: title.into(),
+            description: "Açıklama".into(),
+            ..Row::default()
+        };
+        let rows = [
+            row(
+                "https://shop.example/index.php?route=product/product&product_id=42",
+                "Ürün",
+            ),
+            row(
+                "https://shop.example/kis-botu",
+                "Kış botu'); DROP TABLE x; --",
+            ),
+            row(
+                "https://shop.example/index.php?route=product/category&path=20_27",
+                "Botlar",
+            ),
+            Row {
+                kind: "image".into(),
+                url: "https://shop.example/a.jpg".into(),
+                alt: "x".into(),
+                ..Row::default()
+            },
+        ];
+        let s = opencart_sql(&rows, "oc_", 1, 3, "20261113").unwrap();
+        assert_eq!((s.rows, s.skipped.len()), (3, 1));
+        assert!(s.apply.contains("d.product_id = 42"));
+        assert!(s.apply.contains("d.category_id = 27"));
+        assert!(s.apply.contains("s0.keyword = 'kis-botu'"));
+        // Quotes are doubled, so the value stays one SQL string.
+        assert!(s.apply.contains("'Kış botu''); DROP TABLE x; --'"));
+        assert!(
+            s.apply.find("INSERT INTO `oc_kor_meta_undo`")
+                < s.apply.find("UPDATE `oc_product_description`")
+        );
+        assert!(s.undo.contains("u.run = '20261113'"));
+        let v4 = opencart_sql(&rows[1..2], "oc_", 1, 4, "r").unwrap();
+        assert!(v4.apply.contains("s0.`key` = 'product_id'"));
+        assert!(opencart_sql(&rows, "oc`;", 1, 3, "r").is_err());
+        assert!(opencart_sql(&rows, "oc_", 1, 2, "r").is_err());
+    }
 
     #[test]
     fn csv_round_trip_and_formula_guard() {

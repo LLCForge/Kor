@@ -4,6 +4,7 @@
 mod adapters;
 pub mod catalog;
 pub mod custom;
+pub mod direct;
 pub mod extras;
 pub mod fal;
 pub mod gbnf;
