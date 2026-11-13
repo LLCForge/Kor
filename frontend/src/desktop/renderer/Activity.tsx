@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react'
-import { memo, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { trackedMemo } from './perfmon/tracked.tsx'
 import type { Approval } from '../../core/agent.ts'
 import type { FileDecisions } from '../ipc-review.ts' // [review]
 import { activityLabel, formatDuration, liveGroupLabel, summarizeTools } from './activity.ts'
@@ -45,7 +46,7 @@ function LiveCube({ size = 18 }: { size?: number }) {
  * Bitince: "2 dosya okundu, 1 dosya düzenlendi  +25 −6 ▸" — tıklayınca çerçeveli araç listesi açılır.
  * Çalışırken: "✻ Okunuyor dosya.ts  12sn ▾" ve liste açık. Alt ajanlar her zaman görünen kartlar olarak altta durur.
  */
-export const ActivityGroup = memo(function ActivityGroup({ tools, allItems, onApprove, liveSince = null }: ActivityGroupProps) {
+export const ActivityGroup = trackedMemo('ActivityGroup', function ActivityGroup({ tools, allItems, onApprove, liveSince = null }: ActivityGroupProps) {
   const live = liveSince !== null
   // null: kullanıcı dokunmadı → canlıyken açık, bitince kapalı
   const [expanded, setExpanded] = useState<boolean | null>(null)

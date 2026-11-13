@@ -38,7 +38,6 @@ kor-i18n.workspace = true
 kor-memory.workspace = true
 kor-platform.workspace = true
 kor-providers.workspace = true
-kor-proxy.workspace = true
 kor-sandbox.workspace = true
 kor-secrets.workspace = true
 kor-tools.workspace = true
@@ -60,6 +59,16 @@ chrono.workspace = true
 mimalloc = { version = "0.1", default-features = false }
 # `kor mcp run|serve` speak MCP on stdin/stdout.
 tokio = { workspace = true, features = ["io-std"] }
+
+[features]
+default = ["proxy"]
+# `kor proxy` and the gateway lines of `kor quota`. kor-proxy's TLS client (wreq → BoringSSL) is not
+# built for static musl or Windows ARM64; there build.rs leaves the `kor_proxy` cfg off and
+# `kor proxy` says it is not part of the build.
+proxy = ["dep:kor-proxy"]
+
+[target.'cfg(not(any(target_env = "musl", all(windows, target_arch = "aarch64"))))'.dependencies]
+kor-proxy = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true

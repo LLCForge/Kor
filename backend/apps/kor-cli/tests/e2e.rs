@@ -172,22 +172,10 @@ fn cli_session(env: &IsolatedEnv, steps: &[&Step], out: &mut String) {
     // The hint line ends the banner; the `✶ ` prompt follows it.
     out.push_str(&expect_tty(&mut p, "/exit quits", "REPL start"));
     out.push_str(&expect_tty(&mut p, "✶ ", "first prompt"));
-    for st in steps {
+    for (i, st) in steps.iter().enumerate() {
         if let Some(prompt) = &st.prompt {
             // `\r` is Enter in raw mode; a Unix PTY passes `\n` through as Ctrl+J.
             p.send(format!("{prompt}\r")).expect("send prompt");
-            // The turn ends at the next prompt, or stops at an approval card first.
-            let next = steps.iter().skip_while(|s| !std::ptr::eq(**s, *st)).nth(1);
-            if next.is_some_and(|n| n.approve.is_some()) {
-                out.push_str(&expect_tty(
-                    &mut p,
-                    // The renderer may move the cursor over a blank cell instead of printing it.
-                    r"\[n\](\s|\x1b\[[0-9;?]*[A-Za-z])*(no|reject all)",
-                    "approval card",
-                ));
-            } else {
-                out.push_str(&expect_tty(&mut p, "✶ ", "turn end"));
-            }
         } else if let Some(a) = &st.approve {
             let key = match a.as_str() {
                 "always" => "a",
@@ -195,7 +183,24 @@ fn cli_session(env: &IsolatedEnv, steps: &[&Step], out: &mut String) {
                 _ => "y",
             };
             p.send(format!("{key}\r")).expect("send approval");
-            out.push_str(&expect_tty(&mut p, "✶ ", "turn end after approval"));
+        } else if let Some(c) = &st.choose {
+            // Enter takes the recommended (default) option.
+            let key = if c == "default" { "" } else { c.as_str() };
+            p.send(format!("{key}\r")).expect("send choice");
+        }
+        // The turn ends at the next prompt, or stops at an approval or choice card first.
+        let next = steps.get(i + 1);
+        if next.is_some_and(|n| n.approve.is_some()) {
+            out.push_str(&expect_tty(
+                &mut p,
+                // The renderer may move the cursor over a blank cell instead of printing it.
+                r"\[n\](\s|\x1b\[[0-9;?]*[A-Za-z])*(no|reject all)",
+                "approval card",
+            ));
+        } else if next.is_some_and(|n| n.choose.is_some()) {
+            out.push_str(&expect_tty(&mut p, "Enter = recommended", "choice card"));
+        } else {
+            out.push_str(&expect_tty(&mut p, "✶ ", "turn end"));
         }
     }
     p.send("/exit\r").expect("exit");
@@ -289,12 +294,13 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
     );
     for (i, st) in s.steps.iter().enumerate() {
         let next_is_approval = s.steps.get(i + 1).is_some_and(|n| n.approve.is_some());
+        let next_is_choice = s.steps.get(i + 1).is_some_and(|n| n.choose.is_some());
         if let Some(prompt) = &st.prompt {
             p.send(prompt).expect("type prompt");
             p.send("\r").expect("submit");
             // "Idle" can still be in the output from before the prompt: see the turn start first
             // (a turn too fast to be drawn as running just goes on to the "Idle" wait).
-            if !next_is_approval {
+            if !next_is_approval && !next_is_choice {
                 p.set_expect_timeout(Some(Duration::from_secs(15)));
                 if let Ok(found) = p.expect(Regex(r"Working on|Running tool")) {
                     out.push_str(&text(&found));
@@ -308,6 +314,12 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
                 _ => "a",
             })
             .expect("answer");
+        } else if let Some(c) = &st.choose {
+            // A digit selects; Enter answers with the selection (the default until then).
+            if c != "default" {
+                p.send(c).expect("select");
+            }
+            p.send("\r").expect("answer the choice");
         } else if let Some(cli) = &st.command {
             let mut line = tui_command(cli);
             for raw in &st.args {
@@ -336,6 +348,8 @@ fn run_tui(s: &Scenario, rt: &tokio::runtime::Runtime) -> Outcome {
         }
         let until = if next_is_approval {
             Regex(r"\[d\](\s|\x1b\[[0-9;?]*[A-Za-z])*deny")
+        } else if next_is_choice {
+            Regex(r"\[d\](\s|\x1b\[[0-9;?]*[A-Za-z])*recommended")
         } else {
             Regex("Idle")
         };

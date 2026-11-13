@@ -10,9 +10,9 @@ ci = "github"
 # The installers to generate for each app
 installers = ["shell", "powershell"]
 # Target platforms to build apps for (Rust target-triple syntax)
-# musl and Windows ARM64 are left out for now: screen capture links PipeWire/Wayland dynamically
-# (no static musl build) and BoringSSL (kor-proxy) has no tested Windows ARM64 build here.
-targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+# The static musl and Windows ARM64 CLIs leave out screen capture (musl: no PipeWire/Wayland) and
+# `kor proxy` (BoringSSL); both say "not available in this build" (kor-cli build.rs, kor-computer).
+targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc"]
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
@@ -30,6 +30,8 @@ x86_64-unknown-linux-gnu = "ubuntu-24.04"
 aarch64-unknown-linux-gnu = "ubuntu-24.04-arm"
 # Apple Silicon runners sat in GitHub's queue for hours; the Intel runner cross-compiles arm64.
 aarch64-apple-darwin = "macos-15-intel"
+# Native ARM64 Windows runner: the build runs (and its PGO training run) on the target itself.
+aarch64-pc-windows-msvc = "windows-11-arm"
 
 # System libraries the Linux build links (screen capture: Wayland, GBM/DRM, PipeWire via bindgen; D-Bus).
 [dist.dependencies.apt]

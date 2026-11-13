@@ -94,7 +94,14 @@ pub fn quota(ctx: &Ctx) -> anyhow::Result<bool> {
     for line in kor_runtime::quota::lines(l, &report) {
         println!("{line}");
     }
-    // The local gateway is on this machine, so privacy mode allows asking it.
+    #[cfg(kor_proxy)]
+    proxy_quota(l, &rt);
+    Ok(true)
+}
+
+/// The local gateway's accounts (it is on this machine, so privacy mode allows asking it).
+#[cfg(kor_proxy)]
+fn proxy_quota(l: &kor_i18n::Localizer, rt: &tokio::runtime::Runtime) {
     if let Ok(Some(key)) = kor_proxy::access_key(&kor_secrets::KeychainStore, false) {
         let port = kor_proxy::default_config_path()
             .and_then(|p| kor_proxy::config::load(&p).ok())
@@ -125,5 +132,4 @@ pub fn quota(ctx: &Ctx) -> anyhow::Result<bool> {
             }
         }
     }
-    Ok(true)
 }

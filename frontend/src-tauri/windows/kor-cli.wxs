@@ -13,8 +13,11 @@
     </DirectoryRef>
     <CustomAction Id="KorPostInstall" Directory="INSTALLDIR" ExeCommand="&quot;[INSTALLDIR]kor.exe&quot; install-hooks post-install --system" Execute="deferred" Impersonate="no" Return="ignore" />
     <CustomAction Id="KorPreUninstall" Directory="INSTALLDIR" ExeCommand="&quot;[INSTALLDIR]kor.exe&quot; install-hooks pre-uninstall --system" Execute="deferred" Impersonate="no" Return="ignore" />
+    <!-- §25.4: the uninstalling user's context-menu entries (HKCU), so it runs as that user. -->
+    <CustomAction Id="KorPreUninstallUser" Directory="INSTALLDIR" ExeCommand="&quot;[INSTALLDIR]kor.exe&quot; install-hooks pre-uninstall" Execute="deferred" Impersonate="yes" Return="ignore" />
     <InstallExecuteSequence>
       <Custom Action="KorPostInstall" Before="InstallFinalize">NOT REMOVE</Custom>
+      <Custom Action="KorPreUninstallUser" Before="KorPreUninstall">REMOVE~="ALL"</Custom>
       <Custom Action="KorPreUninstall" Before="RemoveFiles">REMOVE~="ALL"</Custom>
     </InstallExecuteSequence>
   </Fragment>

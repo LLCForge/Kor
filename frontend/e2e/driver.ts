@@ -9,6 +9,8 @@ export interface Driver {
    *  `eval`, so code is never built from strings inside the page. */
   run<T, A extends unknown[]>(fn: (...args: A) => T | Promise<T>, ...args: A): Promise<T>
   click(selector: string): Promise<void>
+  /** A real right click (secondary button) on the element's centre. */
+  contextClick(selector: string): Promise<void>
   fill(selector: string, text: string): Promise<void>
   press(selector: string, key: 'Enter' | 'Escape'): Promise<void>
   waitFor(selector: string, timeoutMs?: number): Promise<void>
@@ -37,6 +39,7 @@ export function cdpDriver(first: Page, close: () => Promise<void>, find?: () => 
     run: async <T, A extends unknown[]>(fn: (...args: A) => T | Promise<T>, ...args: A) =>
       (await page.evaluate(`(${fn.toString()})(...${JSON.stringify(args)})`)) as T,
     click: (s) => page.locator(s).first().click(),
+    contextClick: (s) => page.locator(s).first().click({ button: 'right' }),
     fill: (s, t) => page.locator(s).first().fill(t),
     press: (s, k) => page.locator(s).first().press(k),
     waitFor: (s, t = 60_000) => page.locator(s).first().waitFor({ timeout: t }),
@@ -94,6 +97,12 @@ export async function webdriverDriver(application: string, port = 4444): Promise
         await call('POST', `${sid}/execute/sync`, { script: 'document.querySelector(arguments[0]).click()', args: [s] })
       }
     },
+    contextClick: async (s) => {
+      const origin = { 'element-6066-11e4-a52e-4f735466cecf': await find(s) }
+      const actions = [{ type: 'pointerMove', origin, x: 0, y: 0 }, { type: 'pointerDown', button: 2 }, { type: 'pointerUp', button: 2 }]
+      await call('POST', `${sid}/actions`, { actions: [{ type: 'pointer', id: 'mouse', parameters: { pointerType: 'mouse' }, actions }] })
+      await call('DELETE', `${sid}/actions`)
+    },
     fill: async (s, t) => {
       const id = await find(s)
       await call('POST', `${sid}/element/${id}/clear`, {})
@@ -104,7 +113,12 @@ export async function webdriverDriver(application: string, port = 4444): Promise
     text: async (s) => (await call('GET', `${sid}/element/${await find(s)}/text`)) as string,
     reload: async () => { await call('POST', `${sid}/refresh`, {}) },
     keys: async (chord) => {
-      const code: Record<string, string> = { Control: '\uE009', Shift: '\uE008', Alt: '\uE00A', Enter: '\uE007', Escape: '\uE00C', Tab: '\uE004' }
+      // W3C key codes; Playwright's names for the printable keys (`Equal`) map to the character.
+      const code: Record<string, string> = {
+        Control: '\uE009', Shift: '\uE008', Alt: '\uE00A', Meta: '\uE03D', Enter: '\uE007', Escape: '\uE00C', Tab: '\uE004',
+        Backspace: '\uE003', Delete: '\uE017', ArrowLeft: '\uE012', ArrowRight: '\uE014',
+        F5: '\uE035', F11: '\uE03B', F12: '\uE03C', Equal: '=', Minus: '-', Digit0: '0',
+      }
       const parts = chord.split('+').map((k) => code[k] ?? k)
       const actions = [...parts.map((value) => ({ type: 'keyDown', value })), ...parts.reverse().map((value) => ({ type: 'keyUp', value }))]
       await call('POST', `${sid}/actions`, { actions: [{ type: 'key', id: 'kbd', actions }] })

@@ -37,7 +37,7 @@ pub fn secret_labels(content: &str) -> Vec<&'static str> {
 pub use param_card::{ParamAnswer, ParamCard, ParamField};
 pub use tools::browser::{html_screenshot, html_to_pdf, lab_vitals};
 pub use tools::chrome;
-pub use tools::ocr::image_text;
+pub use tools::ocr::{OCR_FAKE_ENV, image_text};
 pub use tools::review::{Proposal, review_risk, write_reviewed};
 pub use tools::shell::Shell;
 

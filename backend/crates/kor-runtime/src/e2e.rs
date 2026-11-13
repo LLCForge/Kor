@@ -48,10 +48,35 @@ pub struct Project {
     pub config: String,
     /// `git init` and one commit of the files (multi-agent worktrees, undo).
     pub git: bool,
+    /// The mock also serves the media provider (§20.4): a `venice` manifest pointing at it, a fake
+    /// key, privacy mode off for this run, and every other host behind a closed loopback proxy.
+    pub media: bool,
 }
 
 /// `${KOR}` in project files and command arguments: the `kor` binary under test.
 pub const KOR_PLACEHOLDER: &str = "${KOR}";
+/// A project file whose whole content is `${PNG}` is written as [`PNG`] (a pasted screenshot).
+pub const PNG_PLACEHOLDER: &str = "${PNG}";
+/// `${SAVED}` in a scripted tool input: the gallery id of the last `saved:` file the request carries
+/// (a generation's output used as the next one's reference, §20.3).
+pub const SAVED_PLACEHOLDER: &str = "${SAVED}";
+/// The 1×1 PNG every mock image generation returns.
+pub const PNG: &[u8] = &[
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+    0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0xda, 0x63, 0x64, 0x60, 0xf8, 0x5f,
+    0x0f, 0x00, 0x02, 0x87, 0x01, 0x80, 0xeb, 0x47, 0xba, 0x92, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45,
+    0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+];
+/// The bytes every mock video returns (an MP4 `ftyp` box; nothing decodes it).
+pub const VIDEO: &[u8] = b"\x00\x00\x00\x10ftypisom\x00\x00\x02\x00";
+/// Media models of the mock: an image model sized by aspect ratio, an image-to-video model.
+pub const IMAGE_MODEL: &str = "kor-mock-image";
+pub const VIDEO_MODEL: &str = "kor-mock-video";
+/// The fake media key a `media: true` run gets (only the loopback mock ever sees it).
+pub const MEDIA_KEY: &str = "kor-e2e-fake-media-key";
+/// What OCR reads from any image in an isolated run (no OCR engine needed on any OS).
+pub const OCR_TEXT: &str = "KOR E2E OCR";
 
 /// One provider reply.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -98,6 +123,9 @@ pub struct Step {
     /// Answer to the next approval card: `yes`, `no`, `always`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub approve: Option<String>,
+    /// Answer to the next choice card (a media parameter card, §20.2): `default` or a 1-based option.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub choose: Option<String>,
     /// A `parity.toml` feature name; each surface runs its own command for it.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub command: Option<String>,
@@ -125,6 +153,11 @@ pub struct Expect {
     pub output: Vec<String>,
     /// Models the provider was asked for, in order (provider / model switching).
     pub models: Vec<String>,
+    /// Texts some request to the mock carried, as its JSON (chat bodies and media calls).
+    pub sent: Vec<String>,
+    /// The project's media gallery, oldest first: objects whose fields must match each item's
+    /// sidecar; `parent` is the index of the parent item in this list.
+    pub gallery: Vec<Value>,
 }
 
 /// Errors loading or checking scenarios.
@@ -191,6 +224,7 @@ impl Scenario {
             let set = [
                 st.prompt.is_some(),
                 st.approve.is_some(),
+                st.choose.is_some(),
                 st.command.is_some(),
             ]
             .iter()
@@ -198,13 +232,19 @@ impl Scenario {
             .count();
             if set != 1 {
                 return bad(format!(
-                    "step {i}: exactly one of prompt / approve / command"
+                    "step {i}: exactly one of prompt / approve / choose / command"
                 ));
             }
             if let Some(a) = &st.approve
                 && !matches!(a.as_str(), "yes" | "no" | "always")
             {
                 return bad(format!("step {i}: approve is yes, no or always"));
+            }
+            if let Some(c) = &st.choose
+                && c != "default"
+                && !matches!(c.parse::<u8>(), Ok(1..=9))
+            {
+                return bad(format!("step {i}: choose is default or 1-9"));
             }
         }
         for s in &self.surfaces {
@@ -272,7 +312,7 @@ impl MockServer {
         Ok(Self { url, script })
     }
 
-    /// Chat request bodies received so far.
+    /// Chat request bodies received so far, and media calls as `{ "media": <endpoint>, "body": … }`.
     pub fn requests(&self) -> Vec<Value> {
         self.script
             .lock()
@@ -302,6 +342,10 @@ async fn serve(mut sock: TcpStream, script: &Mutex<Script>) -> std::io::Result<(
             return Ok(());
         };
         let first = head.lines().next().unwrap_or_default().to_owned();
+        if let Some((ctype, b)) = media(script, &first, &body) {
+            write_response(&mut sock, 200, ctype, &b).await?;
+            continue;
+        }
         if first.starts_with("GET ") && first.contains("/models") {
             let b = json!({ "object": "list", "data": [{ "id": MODEL, "object": "model", "owned_by": PROVIDER }] }).to_string();
             write_response(&mut sock, 200, "application/json", b.as_bytes()).await?;
@@ -347,6 +391,55 @@ async fn serve(mut sock: TcpStream, script: &Mutex<Script>) -> std::io::Result<(
     }
 }
 
+/// The Venice-compatible media endpoints (`models?type=`, `image/generate`, `video/*`): a fixed
+/// answer each, the request kept as `{ "media": <path>, "body": … }`. `None`: not a media call.
+fn media(script: &Mutex<Script>, first: &str, body: &[u8]) -> Option<(&'static str, Vec<u8>)> {
+    let path = first.split_whitespace().nth(1)?;
+    let endpoint = path.rsplit_once("/v1/").map_or(path, |(_, e)| e);
+    let json = |v: Value| Some(("application/json", v.to_string().into_bytes()));
+    let req: Value = serde_json::from_slice(body).unwrap_or(Value::Null);
+    let answer = match endpoint {
+        "models?type=image" => json(json!({ "data": [{ "id": IMAGE_MODEL, "model_spec": {
+            "constraints": { "aspectRatios": ["1:1", "16:9"] },
+            "pricing": { "generation": { "usd": 0.01 } } } }] })),
+        "models?type=video" => json(json!({ "data": [{ "id": VIDEO_MODEL, "model_spec": {
+            "constraints": { "model_type": "image-to-video", "durations": ["5s"],
+                             "resolutions": ["720p"], "aspect_ratios": ["16:9"] } } }] })),
+        "image/generate" => {
+            use base64::Engine as _;
+            let n = req["variants"].as_u64().unwrap_or(1).clamp(1, 4);
+            let png = base64::engine::general_purpose::STANDARD.encode(PNG);
+            json(json!({ "images": vec![png; usize::try_from(n).unwrap_or(1)] }))
+        }
+        "video/quote" => json(json!({ "quote": 0.05 })),
+        "video/queue" => json(json!({ "queue_id": "kor-mock-queue" })),
+        "video/retrieve" => Some(("video/mp4", VIDEO.to_vec())),
+        "video/complete" => json(json!({})),
+        _ => return None,
+    };
+    script
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .requests
+        .push(json!({ "media": endpoint, "body": req }));
+    answer
+}
+
+/// The gallery id (file name) of the last `saved: <path>` line in a request's texts.
+fn last_saved(v: &Value) -> Option<String> {
+    match v {
+        Value::String(s) => s
+            .lines()
+            .rev()
+            .find_map(|l| l.trim().strip_prefix("saved: "))
+            .and_then(|p| p.rsplit(['/', '\\']).next())
+            .map(str::to_owned),
+        Value::Array(a) => a.iter().rev().find_map(last_saved),
+        Value::Object(o) => o.values().rev().find_map(last_saved),
+        _ => None,
+    }
+}
+
 fn pick(script: &Mutex<Script>, req: &Value, raw: &str) -> Option<Reply> {
     let mut s = script.lock().unwrap_or_else(PoisonError::into_inner);
     s.requests.push(req.clone());
@@ -360,7 +453,14 @@ fn pick(script: &Mutex<Script>, req: &Value, raw: &str) -> Option<Reply> {
         })
         .or_else(|| (0..s.replies.len()).find(|&i| !s.used[i] && s.replies[i].when.is_none()))?;
     s.used[idx] = true;
-    Some(s.replies[idx].clone())
+    let mut reply = s.replies[idx].clone();
+    if let Some(t) = reply.tool.as_mut()
+        && let Some(id) = last_saved(req)
+    {
+        let text = t.input.to_string().replace(SAVED_PLACEHOLDER, &id);
+        t.input = serde_json::from_str(&text).unwrap_or_else(|_| t.input.clone());
+    }
+    Some(reply)
 }
 
 async fn read_request(sock: &mut TcpStream) -> std::io::Result<Option<(String, Vec<u8>)>> {
@@ -546,11 +646,19 @@ pub fn isolated_env_with(
              [privacy]\ntier = \"local\"\nretention = \"Never leaves this machine.\"\ntraining_on_data = false\n"
         ),
     )?;
+    let media = scenario.project.media;
+    if media {
+        // Overrides the built-in `venice` manifest: the media tools talk to this mock only.
+        std::fs::write(
+            config.join("providers").join("venice.toml"),
+            media_manifest(base_url),
+        )?;
+    }
     std::fs::write(
         config.join("config.toml"),
         format!(
-            "[agent]\nmodel = \"{PROVIDER}/{MODEL}\"\nverify = \"off\"\n\n[intent]\nenabled = false\n\n[privacy]\nmode = true\n\n[update]\nauto = false\n\n{}\n",
-            scenario.project.config
+            "[agent]\nmodel = \"{PROVIDER}/{MODEL}\"\nverify = \"off\"\n\n[intent]\nenabled = false\n\n[privacy]\nmode = {}\n\n[update]\nauto = false\n\n{}\n",
+            !media, scenario.project.config
         ),
     )?;
     let kor_path = kor.map_or_else(
@@ -562,7 +670,11 @@ pub fn isolated_env_with(
         if let Some(parent) = p.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(p, content.replace(KOR_PLACEHOLDER, &kor_path))?;
+        if content == PNG_PLACEHOLDER {
+            std::fs::write(p, PNG)?;
+        } else {
+            std::fs::write(p, content.replace(KOR_PLACEHOLDER, &kor_path))?;
+        }
     }
     if scenario.project.git {
         git(&project, &["init", "-q", "-b", "main"])?;
@@ -587,14 +699,18 @@ pub fn isolated_env_with(
     let trace = root.join(format!("trace-{surface}.ndjson"));
     let _ = std::fs::remove_file(&trace);
     let s = |p: &Path| p.display().to_string();
-    let vars = BTreeMap::from([
+    let mut vars = BTreeMap::from([
         ("KOR_CONFIG_DIR".to_owned(), s(&config)),
         ("KOR_HOME".to_owned(), s(&home)),
         ("KOR_CACHE_DIR".to_owned(), s(&cache)),
         ("CLAUDE_CONFIG_DIR".to_owned(), s(&claude)),
         ("CODEX_HOME".to_owned(), s(&codex)),
         (kor_core::ipc_trace::ENV.to_owned(), s(&trace)),
+        (kor_tools::OCR_FAKE_ENV.to_owned(), OCR_TEXT.to_owned()),
     ]);
+    if media {
+        vars.extend(media_vars());
+    }
     Ok(IsolatedEnv {
         root: root.to_owned(),
         project,
@@ -602,6 +718,28 @@ pub fn isolated_env_with(
         trace,
         vars,
     })
+}
+
+/// Variables of a `media: true` run: the fake key, and since privacy mode is off, the proxy
+/// variables that send anything but loopback to a closed port (not `KOR_OFFLINE`, which would
+/// turn privacy mode back on).
+fn media_vars() -> impl Iterator<Item = (String, String)> {
+    crate::OFFLINE_COMMAND_ENV
+        .iter()
+        .filter(|(k, _)| *k != "KOR_OFFLINE")
+        .map(|(k, v)| ((*k).to_owned(), (*v).to_owned()))
+        .chain([("VENICE_API_KEY".to_owned(), MEDIA_KEY.to_owned())])
+}
+
+/// The `venice` manifest of a `media: true` run: the mock's loopback URL, the key from
+/// `VENICE_API_KEY` (set to [`MEDIA_KEY`] by the isolated env).
+fn media_manifest(base_url: &str) -> String {
+    format!(
+        "id = \"venice\"\nname = \"Kor mock media (E2E)\"\ncategory = \"local\"\nadapter = \"openai_compat\"\n\
+         base_url = \"{base_url}\"\nauth = {{ kind = \"bearer\", env = \"VENICE_API_KEY\" }}\nmodels_endpoint = \"/models\"\n\
+         tool_calling = true\nverified = false\ndocs = \"https://kor.dev/docs/e2e\"\n\n\
+         [privacy]\ntier = \"local\"\nretention = \"Never leaves this machine.\"\ntraining_on_data = false\n"
+    )
 }
 
 fn git(dir: &Path, args: &[&str]) -> std::io::Result<()> {
@@ -653,13 +791,34 @@ fn event_matches(want: &Value, got: &Value) -> bool {
     }
 }
 
+/// The gallery sidecars, oldest first, with `parent` as the parent's index in that list (ids carry
+/// the time, so a scenario cannot name them).
+fn gallery(project: &Path) -> Vec<Value> {
+    let mut items = kor_agent::gallery::list(project);
+    items.reverse();
+    let ids: Vec<String> = items.iter().map(|i| i.id.clone()).collect();
+    items
+        .iter()
+        .map(|i| {
+            let mut v = serde_json::to_value(i).unwrap_or_default();
+            v["parent"] = i
+                .parent
+                .as_ref()
+                .and_then(|p| ids.iter().position(|x| x == p))
+                .map_or(Value::Null, Value::from);
+            v
+        })
+        .collect()
+}
+
 /// Compare a finished run with the scenario: the traced core events, schema violations in the trace,
 /// the project files, the cost ledger, the error and the surface's own output text.
 pub fn check(scenario: &Scenario, env: &IsolatedEnv, surface: &str, output: &str) -> Outcome {
     check_with(scenario, env, surface, output, &[])
 }
 
-/// [`check`] plus the chat requests the mock received (for `expect.models`).
+/// [`check`] plus the requests the mock received ([`MockServer::requests`], for `expect.models`
+/// and `expect.sent`).
 pub fn check_with(
     scenario: &Scenario,
     env: &IsolatedEnv,
@@ -734,6 +893,23 @@ pub fn check_with(
     for text in &scenario.expect.output {
         if !output.contains(text.as_str()) {
             problems.push(format!("output lacks {text:?}"));
+        }
+    }
+    let sent: Vec<String> = requests.iter().map(Value::to_string).collect();
+    for text in &scenario.expect.sent {
+        if !sent.iter().any(|r| r.contains(text.as_str())) {
+            problems.push(format!("no request to the mock carried {text:?}"));
+        }
+    }
+    if !scenario.expect.gallery.is_empty() {
+        let got = gallery(&env.project);
+        let want = &scenario.expect.gallery;
+        if want.len() != got.len() || !want.iter().zip(&got).all(|(w, g)| event_matches(w, g)) {
+            problems.push(format!(
+                "gallery: want {} got {}",
+                Value::Array(want.clone()),
+                Value::Array(got)
+            ));
         }
     }
     Outcome {
@@ -893,6 +1069,130 @@ expect:
             problems: vec![],
         };
         assert_eq!(compare(&[o, other]).len(), 1);
+    }
+
+    #[tokio::test]
+    #[allow(clippy::too_many_lines)] // one flow: mock, isolated env and checker in order
+    async fn mock_serves_media_and_fills_the_saved_reference() {
+        let s: Scenario = Scenario::parse(
+            r#"
+name: media
+title: media
+project: { media: true, files: { "shot.png": "${PNG}" } }
+mock:
+  - tool: { name: generate_video, input: { image: "${SAVED}", prompt: "p" } }
+steps: [{ prompt: "x" }, { choose: default }, { approve: "yes" }]
+expect: { sent: ['"variants":2'], gallery: [{ kind: image, parent: ~ }] }
+"#,
+        )
+        .unwrap();
+        let mut bad = s.clone();
+        bad.steps[1].choose = Some("first".into());
+        assert!(bad.validate().is_err());
+        let mock = MockServer::start(s.mock.clone()).await.unwrap();
+        let client = reqwest::Client::new();
+        let get = |q: &str| client.get(format!("{}/models?type={q}", mock.url)).send();
+        let images: Value = get("image")
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap()
+            .parse()
+            .unwrap();
+        let m = kor_providers::media::parse_model(&images["data"][0]).unwrap();
+        assert_eq!((m.id.as_str(), m.price_usd), (IMAGE_MODEL, Some(0.01)));
+        let videos: Value = get("video")
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap()
+            .parse()
+            .unwrap();
+        let m = kor_providers::media::parse_model(&videos["data"][0]).unwrap();
+        assert_eq!(m.model_type, "image-to-video");
+        let post = |p: &str, body: Value| {
+            client
+                .post(format!("{}/{p}", mock.url))
+                .body(body.to_string())
+                .send()
+        };
+        let r: Value = post("image/generate", json!({ "variants": 2 }))
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap()
+            .parse()
+            .unwrap();
+        assert_eq!(r["images"].as_array().map(Vec::len), Some(2));
+        let video = post("video/retrieve", json!({ "queue_id": "q" }))
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+        assert_eq!(&video[..], VIDEO);
+        // The chat reply's `${SAVED}` becomes the file the last tool result saved.
+        let chat = json!({ "messages": [
+            { "role": "tool", "content": "Generated.\nsaved: C:\\p\\kor-media\\old.png\n" },
+            { "role": "tool", "content": "saved: /p/kor-media/fox-abc.png\n" } ] });
+        let r: Value = post("chat/completions", chat)
+            .await
+            .unwrap()
+            .text()
+            .await
+            .unwrap()
+            .parse()
+            .unwrap();
+        let args = r["choices"][0]["message"]["tool_calls"][0]["function"]["arguments"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        assert!(args.contains(r#""image":"fox-abc.png""#), "{args}");
+        let reqs = mock.requests();
+        assert_eq!(reqs[0]["media"], "models?type=image");
+        assert_eq!(reqs[2]["body"]["variants"], 2);
+        assert!(reqs.iter().all(|r| r.get("model").is_none()), "not models");
+
+        // The isolated env points `venice` at the mock with a fake key; privacy mode is off.
+        let dir = tempfile::tempdir().unwrap();
+        let env = isolated_env(dir.path(), &s, &mock.url, "cli").unwrap();
+        let manifest =
+            std::fs::read_to_string(dir.path().join("config/providers/venice.toml")).unwrap();
+        let m = kor_providers::ProviderManifest::parse(&manifest, "venice.toml").unwrap();
+        assert_eq!(m.key_env(), "VENICE_API_KEY");
+        assert_eq!(env.vars["VENICE_API_KEY"], MEDIA_KEY);
+        assert_eq!(env.vars["HTTPS_PROXY"], "http://127.0.0.1:9");
+        assert!(
+            !env.vars.contains_key("KOR_OFFLINE"),
+            "privacy mode stays off"
+        );
+        let config = std::fs::read_to_string(dir.path().join("config/config.toml")).unwrap();
+        assert!(config.contains("[privacy]\nmode = false"), "{config}");
+        assert_eq!(std::fs::read(env.project.join("shot.png")).unwrap(), PNG);
+        // The gallery check: parent as an index, oldest first.
+        let media = env.project.join(kor_agent::media::MEDIA_DIR);
+        std::fs::create_dir_all(&media).unwrap();
+        std::fs::write(media.join("fox.png"), PNG).unwrap();
+        let o = check_with(&s, &env, "cli", "", &reqs);
+        assert!(
+            !o.problems
+                .iter()
+                .any(|p| p.starts_with("gallery") || p.starts_with("no request")),
+            "{:?}",
+            o.problems
+        );
+        let mut missing = s;
+        missing.expect.sent = vec!["never sent".into()];
+        missing
+            .expect
+            .gallery
+            .push(json!({ "kind": "video", "parent": 0 }));
+        let o = check_with(&missing, &env, "cli", "", &reqs);
+        assert!(o.problems.iter().any(|p| p.starts_with("gallery")));
+        assert!(o.problems.iter().any(|p| p.starts_with("no request")));
     }
 
     #[test]

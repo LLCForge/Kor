@@ -128,8 +128,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: macos-latest, target: x86_64-apple-darwin }
-          - { os: macos-latest, target: aarch64-apple-darwin }
+          - { os: macos-latest, target: x86_64-apple-darwin, args: --workspace }
+          - { os: macos-latest, target: aarch64-apple-darwin, args: --workspace }
+          # Static Linux CLI and Windows ARM64 (§32, dist targets): kor-cli only. Its build.rs leaves
+          # out `kor proxy` (BoringSSL) there and kor-computer has no screen capture on musl (PipeWire).
+          - { os: ubuntu-latest, target: x86_64-unknown-linux-musl, args: -p kor-cli, smoke: true }
+          - { os: windows-11-arm, target: aarch64-pc-windows-msvc, args: -p kor-cli, smoke: true }
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -147,7 +151,24 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
-      - run: cargo build --locked --release --target ${{ matrix.target }}
+          key: ${{ matrix.target }}
+      - if: endsWith(matrix.target, '-musl')
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      # ring and aws-lc assemble their ARM64 Windows code with clang.
+      - if: matrix.target == 'aarch64-pc-windows-msvc'
+        shell: bash
+        run: command -v clang || choco install -y llvm
+      - run: cargo build --locked --release --target ${{ matrix.target }} ${{ matrix.args }}
+      # The build runs natively; the left-out features say so instead of failing.
+      - if: matrix.smoke
+        shell: bash
+        run: |
+          kor=target/${{ matrix.target }}/release/kor
+          [ -x "$kor.exe" ] && kor="$kor.exe"
+          "$kor" --version
+          if [[ "${{ matrix.target }}" == *-musl ]]; then file "$kor" | grep -Eq "statically linked|static-pie linked"; fi
+          out=$("$kor" --lang en proxy status 2>&1) && { echo "kor proxy should be absent: $out"; exit 1; }
+          echo "$out" | grep -q "not available in this build"
 
   desktop:
     name: desktop (${{ matrix.os }})
@@ -184,7 +205,8 @@ jobs:
         run: npm run typecheck
       - working-directory: frontend
         # parity.test.ts + kor-cmd.test.ts (ADR 0031) are in renderer/; panel tests live one level down.
-        run: node --test src/desktop/renderer/*.test.ts src/desktop/renderer/i18n/*.test.ts src/desktop/renderer/panels/*/*.test.ts src/desktop/renderer/review/*.test.ts
+        # perfmon/: budgets maths and the §32.2 unnecessary re-render counter.
+        run: node --test src/desktop/renderer/*.test.ts src/desktop/renderer/i18n/*.test.ts src/desktop/renderer/panels/*/*.test.ts src/desktop/renderer/review/*.test.ts src/desktop/renderer/perfmon/*.test.ts
       - working-directory: frontend
         # ADR 0053: theme.json single source + no hand-copied hex, raw hex/px only in legacy files,
         # WebView lockdown policy, kor-ui components.
@@ -434,6 +456,11 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test -c e2e/playwright.config.ts --project brand --update-snapshots=missing
+      # §16.4 macOS: WKWebView cannot be automated; the brand visuals in WebKit are the closest engine.
+      - if: runner.os == 'macOS'
+        run: npx playwright install webkit
+      - if: runner.os == 'macOS'
+        run: npx playwright test -c e2e/playwright.config.ts --project brand-webkit --update-snapshots=missing
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -505,6 +532,16 @@ jobs:
       - if: runner.os == 'Windows'
         working-directory: frontend
         run: npx playwright test -c e2e/playwright.config.ts --project audit
+      - if: runner.os == 'Windows'
+        working-directory: frontend
+        run: npm run build:extension && npx playwright install chromium
+      # §16.4 fourth surface: the side panel paired with the real desktop app (Windows: Credential
+      # Manager holds the pairing; Linux runners have no keychain service).
+      - if: runner.os == 'Windows'
+        working-directory: frontend
+        env:
+          KOR_E2E_SIDEPANEL: "1"
+        run: npx playwright test -c e2e/playwright.config.ts --project sidepanel
       # WebKitGTK's bubblewrap sandbox needs unprivileged user namespaces (blocked by AppArmor on 24.04).
       - if: runner.os == 'Linux'
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0

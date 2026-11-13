@@ -267,12 +267,19 @@ async fn tesseract(
     Ok(format_tsv(&langs, &tsv))
 }
 
+/// Set by the E2E isolated environment (ADR 0061): OCR answers with this text instead of running an
+/// engine, so a pasted image reads the same on every OS and nothing is downloaded.
+pub const OCR_FAKE_ENV: &str = "KOR_E2E_OCR_TEXT";
+
 /// Text lines of an image file with the OS's OCR engine.
 pub(crate) async fn ocr_file(
     path: &Path,
     language: Option<&str>,
     cancel: &CancellationToken,
 ) -> Result<String, String> {
+    if let Some(text) = std::env::var_os(OCR_FAKE_ENV) {
+        return Ok(text.to_string_lossy().into_owned());
+    }
     let path_text = path.to_string_lossy();
     let env = [
         ("KOR_OCR_PATH", path_text.as_ref()),

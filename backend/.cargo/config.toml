@@ -1,0 +1,4 @@
+# §22.3 reproducible builds: no link timestamp in Windows binaries (scripts/repro_check.py passes the
+# same flag; a RUSTFLAGS environment variable replaces this table).
+[target.'cfg(all(windows, target_env = "msvc"))']
+rustflags = ["-C", "link-arg=/Brepro"]
