@@ -2047,10 +2047,7 @@ mod tests {
     /// The start-up shortcuts (§32.1) print exactly what the full tree prints.
     #[test]
     fn version_line_and_pruned_help_match_the_full_tree() {
-        assert_eq!(
-            Cli::command().render_version().trim_end(),
-            VERSION_LINE
-        );
+        assert_eq!(Cli::command().render_version().trim_end(), VERSION_LINE);
         let help = |c: &clap::Command, path: &[&str]| {
             let mut c = c.clone().term_width(100).max_term_width(100);
             c.build();
