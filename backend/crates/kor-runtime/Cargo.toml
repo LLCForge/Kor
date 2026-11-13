@@ -45,6 +45,8 @@ kor-graph.workspace = true
 flate2 = "1"
 serde_yaml.workspace = true
 tokio-util.workspace = true
+# Team server relay route for peers (§31.1, backend/crates/kor-server/TEAM-SERVER.md).
+tokio-tungstenite.workspace = true
 # `kor daemon` (ADR 0039): webhook listener, HMAC, log_match, SMTP over TLS, trigger edits.
 base64.workspace = true
 bytes.workspace = true
@@ -83,6 +85,8 @@ qrcode = { version = "0.14", default-features = false }
 futures.workspace = true
 tempfile.workspace = true
 wiremock.workspace = true
+# The peer relay test runs a real team server in-process.
+kor-server.workspace = true
 
 [lints]
 workspace = true

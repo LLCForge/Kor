@@ -15,6 +15,8 @@
 //! - **Handoff** ([`standby`]): a local session mirrors its checkpoint to a peer under a lease;
 //!   when the laptop closes (no renewal), the peer continues it from that checkpoint.
 //! - **Memory** ([`merge`]): knowledge records sync both ways with a three-way merge.
+//! - **Relay** ([`relay`]): without a direct, Tailscale or SSH route, the Noise session goes
+//!   through the team server (§11.1), which forwards only ciphertext.
 //! - **Permissions** ([`policy`]): per peer, which directories it may use, whether it may write
 //!   there, which commands and extra tools it may run; read-only by default. Both ends audit.
 
@@ -32,6 +34,7 @@ pub mod merge;
 pub mod noise;
 pub mod pair;
 pub mod policy;
+pub mod relay;
 pub mod server;
 pub mod snapshot;
 pub mod standby;
@@ -344,6 +347,31 @@ pub struct Node {
     /// Kor home of the knowledge base (`knowledge.sqlite`); `None` = no memory sync.
     pub knowledge_home: Option<PathBuf>,
     pub spawn: SpawnWorker,
+    /// The team server relay, the last route to a peer and a way to be reached ([`with_team_relay`]).
+    pub relay: Option<Relay>,
+}
+
+/// The team server (`[team] server`) and this member's credentials from the keychain.
+#[derive(Clone, Debug)]
+pub struct Relay {
+    pub server: String,
+    pub material: Arc<kor_agent::team_client::Material>,
+}
+
+/// Add the team server relay to `node` when `[team] server` is set and this machine joined the
+/// team (a token in the keychain). Privacy and offline mode still apply to the connection.
+pub fn with_team_relay(mut node: Node, cfg: &kor_config::Config) -> Node {
+    let server = cfg.team.server.trim();
+    if server.starts_with("https://")
+        && let Ok(m) = kor_agent::team_client::material(&kor_secrets::KeychainStore)
+        && m.token.is_some()
+    {
+        node.relay = Some(Relay {
+            server: server.to_owned(),
+            material: Arc::new(m),
+        });
+    }
+    node
 }
 
 impl std::fmt::Debug for Node {
@@ -405,6 +433,7 @@ pub fn local_node(store: &dyn SecretStore) -> Result<Node, String> {
         sessions,
         knowledge_home: crate::kor_home(),
         spawn: Arc::new(move |peer: &str, id: &str| spawn_worker(&spawn_dir, peer, id)),
+        relay: None,
     })
 }
 

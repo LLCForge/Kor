@@ -72,6 +72,7 @@ mod rules_cmd;
 mod sandbox_cmd;
 mod screenshot_cmd;
 mod seo_cmd;
+mod server_cmd;
 mod sessions_cmd;
 mod shell_cmd;
 mod status_cmd;
@@ -228,6 +229,11 @@ enum Cmd {
     Peer {
         #[command(subcommand)]
         command: peer_cmd::PeerCmd,
+    },
+    /// Self-hosted team server: init, members, status, start; join and sign in (§11.1).
+    Server {
+        #[command(subcommand)]
+        command: server_cmd::ServerCmd,
     },
     /// Agent Client Protocol: serve editors, run ACP agents (§28.8).
     Acp(acp_cmd::AcpArgs),
@@ -762,6 +768,7 @@ fn localized_command(l: &Localizer) -> clap::Command {
         .mut_subcommand("intents", |c| intent_cmd::localize(c, l))
         .mut_subcommand("tool", |c| tool_cmd::localize(c, l))
         .mut_subcommand("peer", |c| peer_cmd::localize(c, l))
+        .mut_subcommand("server", |c| server_cmd::localize(c, l))
         .mut_subcommand("acp", |c| acp_cmd::localize(c, l))
         .mut_subcommand("chrome", |c| chrome_cmd::localize(c, l))
         .mut_subcommand("computer", |c| computer_cmd::localize(c, l))
@@ -1339,6 +1346,7 @@ fn run_cmd(ctx: &Ctx, cmd: Cmd) -> anyhow::Result<bool> {
         Cmd::Intents { command } => intent_cmd::run(ctx, &command),
         Cmd::Tool { command } => tool_cmd::run(ctx, &command),
         Cmd::Peer { command } => peer_cmd::run(ctx, command),
+        Cmd::Server { command } => server_cmd::run(ctx, command),
         Cmd::Acp(a) => acp_cmd::run(ctx, a),
         Cmd::Chrome { command } => chrome_cmd::run(ctx, command),
         Cmd::Computer { command } => computer_cmd::run(ctx, command),
@@ -1447,6 +1455,7 @@ pub(crate) fn run_slash(ctx: &Ctx, line: &str) -> Option<bool> {
     let cli = Cli::try_parse_from(argv).ok()?;
     let cmd = cli.command?;
     if matches!(&cmd, Cmd::Peer { command } if peer_cmd::blocks_tui(command))
+        || matches!(&cmd, Cmd::Server { command } if server_cmd::blocks_tui(command))
         || matches!(&cmd, Cmd::Acp(a) if acp_cmd::serves_stdio(a))
     {
         return None;

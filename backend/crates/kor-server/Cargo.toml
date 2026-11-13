@@ -31,9 +31,9 @@ rustls-platform-verifier = "0.7"
 time = { version = "0.3", default-features = false, features = ["std"] }
 tokio-tungstenite.workspace = true
 toml.workspace = true
-# Team CA, server and member certificates for mTLS (new dependency, docs/team-server.md).
+# Team CA, server and member certificates for mTLS (new dependency, backend/crates/kor-server/TEAM-SERVER.md).
 rcgen = { version = "0.14", default-features = false, features = ["aws_lc_rs", "pem"] }
-# Postgres storage (`db = "postgres://…"`; TLS through the rustls above, `pg_tls.rs`). New dependency, docs/team-server.md.
+# Postgres storage (`db = "postgres://…"`; TLS through the rustls above, `pg_tls.rs`). New dependency, backend/crates/kor-server/TEAM-SERVER.md.
 tokio-postgres = { version = "0.7", default-features = false, features = ["runtime"] }
 
 [dev-dependencies]

@@ -211,7 +211,8 @@ fn fail(l: &Localizer, e: impl std::fmt::Display) -> bool {
     false
 }
 
-/// This machine's node: the key from the configured secret store (keychain or vault file).
+/// This machine's node: the key from the configured secret store (keychain or vault file), and
+/// the team server relay when this machine joined a team (`kor server join`).
 fn node(ctx: &Ctx) -> Result<Node, String> {
     let cfg = ctx
         .config
@@ -219,7 +220,11 @@ fn node(ctx: &Ctx) -> Result<Node, String> {
         .map(|c| c.config.vault.clone())
         .unwrap_or_default();
     let store = kor_runtime::secure::vault_store(&cfg, None).map_err(|e| e.to_string())?;
-    peer::local_node(store.as_ref())
+    let n = peer::local_node(store.as_ref())?;
+    Ok(match &ctx.config {
+        Ok(c) => peer::with_team_relay(n, &c.config),
+        Err(_) => n,
+    })
 }
 
 fn entry(node: &Node, name: &str) -> Result<PeerEntry, String> {
@@ -318,6 +323,19 @@ pub fn run(ctx: &Ctx, cmd: PeerCmd) -> anyhow::Result<bool> {
                     "{}",
                     l.t_args("peer-serving", &args!("addr" => addr.clone(), "fingerprint" => node.identity.fingerprint()))
                 );
+                // Also reachable through the team server, and remote browser extensions reach
+                // this machine's Kor bridge the same way (§31.1, §18.4).
+                if let Some(r) = node.relay.clone() {
+                    let name = node.book().map(|b| b.name).unwrap_or_default();
+                    eprintln!("{}", l.t_args("peer-relay-on", &args!("server" => r.server.clone(), "name" => name.clone())));
+                    tokio::spawn(peer::relay::serve(node.clone(), r.server.clone(), r.material.clone()));
+                    tokio::spawn(peer::relay::serve_extension(
+                        r.server,
+                        r.material,
+                        name,
+                        peer::relay::LOCAL_BRIDGE.to_owned(),
+                    ));
+                }
                 Ok(peer::server::listen(node.clone(), lst).await.map_or_else(|e| fail(l, e), |()| true))
             })
         }

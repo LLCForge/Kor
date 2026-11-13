@@ -71,6 +71,7 @@ fn node(dir: &Path, name: &str) -> Node {
             });
             Ok(())
         }),
+        relay: None,
     }
 }
 
@@ -325,4 +326,77 @@ async fn two_peers_pair_delegate_hand_off_and_merge() {
     let merged = merge::local_records(b.knowledge_home.as_deref().unwrap()).unwrap();
     let shared = merged.iter().find(|r| r.task == "shared").unwrap();
     assert!(shared.summary.contains("SERVER") && shared.summary.contains("LAPTOP"));
+}
+
+fn material(e: &kor_server::store::Enrollment) -> super::Relay {
+    use kor_secrets::SecretString;
+    super::Relay {
+        server: e.server.clone(),
+        material: Arc::new(kor_agent::team_client::Material {
+            ca: Some(e.ca.clone()),
+            cert: Some(e.cert.clone()),
+            key: Some(SecretString::from(e.key.clone())),
+            token: Some(SecretString::from(e.token.clone())),
+        }),
+    }
+}
+
+/// §31.1: two paired machines with no direct, Tailscale or SSH route reach each other through
+/// the team server, which forwards only the Noise ciphertext.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn peers_without_a_route_meet_through_the_team_server() {
+    let (da, db) = (tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap());
+    let (mut a, mut b) = (node(da.path(), "server"), node(db.path(), "laptop"));
+    let addr = start(&a).await;
+    let code = pair::create(&a.dir, vec![addr]).unwrap();
+    pair::join(&b, &code, None).await.unwrap();
+    // Forget every direct route.
+    let mut bb = Book::load(&b.dir).unwrap();
+    bb.peers[0].addrs.clear();
+    bb.save(&b.dir).unwrap();
+    let srv = bb.peers[0].clone();
+    assert!(
+        client::status(&b, &srv).await.is_err(),
+        "no route without the relay"
+    );
+
+    // An in-process team server; each machine joined as its own member.
+    let sd = tempfile::tempdir().unwrap();
+    let (_, admin) = kor_server::init(sd.path(), "acme", "localhost", "home@example.com", None)
+        .await
+        .unwrap();
+    let app = kor_server::http::App::open(sd.path()).await.unwrap();
+    let cfg = app.cfg.clone();
+    let lay = app.layout.clone();
+    let laptop = app
+        .store
+        .add_member(
+            &cfg,
+            &lay,
+            "laptop@example.com",
+            kor_server::Role::Member,
+            "home@example.com",
+        )
+        .await
+        .unwrap();
+    let running = kor_server::http::start(app, "127.0.0.1:0".parse().unwrap())
+        .await
+        .unwrap();
+    let url = format!("https://localhost:{}", running.addr.port());
+    let mut ra = material(&admin);
+    ra.server.clone_from(&url);
+    let mut rb = material(&laptop);
+    rb.server.clone_from(&url);
+    a.relay = Some(ra.clone());
+    b.relay = Some(rb);
+    tokio::spawn(super::relay::serve(
+        Arc::new(a.clone()),
+        ra.server,
+        ra.material,
+    ));
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    let load = client::status(&b, &srv).await.unwrap();
+    assert_eq!(load.name, "server");
+    running.stop();
 }

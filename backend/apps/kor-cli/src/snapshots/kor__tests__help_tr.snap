@@ -33,6 +33,7 @@ Commands:
   intents             Doğal dil komut yönlendirme: hangi cümle hangi komutu çalıştırır
   tool                Bu bilgisayardaki komut satırı araçları ve tipli araç tanımlarınız
   peer                Kor-to-Kor köprüsü: makineleri eşleştir, görev devret, hafızayı eşitle
+  server              Kendi sunucunda takım sunucusu: kur, üye ekle, çalıştır; takıma katıl ve oturum aç
   acp                 Agent Client Protocol: editörler (Zed …) Kor'u ajan olarak kullanır; başka ACP ajanları alt-ajan olur
   chrome              Kor tarayıcı eklentisi: eşleştirme, kurulum, alan adı listeleri, form profilleri
   computer            Masaüstü denetimi: açma/kapama ve uygulama bazlı izin katmanları
@@ -4826,6 +4827,208 @@ Options:
 
       --background
           Arka planda başlat ve dön
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor server --help
+Kendi sunucunda takım sunucusu: kur, üye ekle, çalıştır; takıma katıl ve oturum aç
+
+Usage: kor server [OPTIONS] <COMMAND>
+
+Commands:
+  init        Burada takım sunucusu oluştur: ayarlar, sertifika otoritesi, sunucu sertifikası ve ilk yönetici
+  add-member  Üye ekle ya da rolünü değiştir; paketini (sertifika, anahtar, belirteç) yazar
+  status      Buradaki takım sunucusu ve bu makinenin takım bağlantısı
+  start       Takım sunucusunu çalıştır (istemci sertifikalı HTTPS)
+  join        Yöneticinin verdiği paketle takıma katıl (işletim sistemi anahtarlığında saklanır)
+  login       Takım sunucusuna kimlik sağlayıcısı üzerinden oturum aç (cihaz kodu)
+  help        Print this message or the help of the given subcommand(s)
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor server init --help
+Burada takım sunucusu oluştur: ayarlar, sertifika otoritesi, sunucu sertifikası ve ilk yönetici
+
+Usage: kor server init [OPTIONS] --domain <DOMAIN> --admin <ADMIN>
+
+Options:
+      --domain <DOMAIN>
+          Üyelerin kullandığı alan adı (sunucu sertifikasına girer)
+
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --admin <ADMIN>
+          İlk yöneticinin e-postası
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+      --team <TEAM>
+          Takım adı
+          
+          [default: team]
+
+      --db <DB>
+          Gömülü SQLite yerine postgres://…?sslmode=require
+
+      --dir <DIR>
+          Sunucu klasörü (varsayılan: <kor home>/server)
+          
+          [env: KOR_SERVER_DIR=]
+
+      --json
+          JSON olarak yaz
+
+  -h, --help
+          Print help
+===== kor server add-member --help
+Üye ekle ya da rolünü değiştir; paketini (sertifika, anahtar, belirteç) yazar
+
+Usage: kor server add-member [OPTIONS] <EMAIL>
+
+Arguments:
+  <EMAIL>
+          Üyenin e-posta adresi
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --role <ROLE>
+          admin, member (dev de olur) ya da viewer
+          
+          [default: member]
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remove
+          Üyeyi çıkar: sertifikaları ve belirteçleri hemen geçersiz olur
+
+      --dir <DIR>
+          Sunucu klasörü (varsayılan: <kor home>/server)
+          
+          [env: KOR_SERVER_DIR=]
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+      --json
+          JSON olarak yaz
+
+  -h, --help
+          Print help
+===== kor server status --help
+Buradaki takım sunucusu ve bu makinenin takım bağlantısı
+
+Usage: kor server status [OPTIONS]
+
+Options:
+      --dir <DIR>
+          Sunucu klasörü (varsayılan: <kor home>/server)
+          
+          [env: KOR_SERVER_DIR=]
+
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --json
+          JSON olarak yaz
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor server start --help
+Takım sunucusunu çalıştır (istemci sertifikalı HTTPS)
+
+Usage: kor server start [OPTIONS]
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --listen <LISTEN>
+          Dinlenecek host:port (varsayılan server.toml'dan)
+
+      --background
+          Arka planda başlat ve dön
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --dir <DIR>
+          Sunucu klasörü (varsayılan: <kor home>/server)
+          
+          [env: KOR_SERVER_DIR=]
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor server join --help
+Yöneticinin verdiği paketle takıma katıl (işletim sistemi anahtarlığında saklanır)
+
+Usage: kor server join [OPTIONS] <BUNDLE>
+
+Arguments:
+  <BUNDLE>
+          kor server add-member'ın yazdığı paket dosyası
+
+Options:
+      --json
+          JSON olarak yaz
+
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor server login --help
+Takım sunucusuna kimlik sağlayıcısı üzerinden oturum aç (cihaz kodu)
+
+Usage: kor server login [OPTIONS]
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --provider <PROVIDER>
+          Kimlik sağlayıcı adı (varsayılan: sunucunun sunduğu ilk sağlayıcı)
+
+      --json
+          JSON olarak yaz
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
 
       --remote <REMOTE>
           Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği

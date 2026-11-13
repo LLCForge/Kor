@@ -10,7 +10,7 @@
 //! client certificate from the team CA (mTLS) and/or a bearer token: a member token from
 //! `add-member`, or a session token exchanged for an OIDC ID token (Keycloak, Authentik, Google)
 //! or a GitHub access token. Unknown identities are refused; nothing is open by default.
-//! See `docs/team-server.md`.
+//! See `backend/crates/kor-server/TEAM-SERVER.md`.
 
 use std::path::{Path, PathBuf};
 

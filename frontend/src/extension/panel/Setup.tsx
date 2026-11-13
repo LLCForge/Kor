@@ -11,6 +11,7 @@ export function Setup({ status }: { status: Status }) {
   const [debuggerOn, setDebuggerOn] = useState(false)
   const [domains, setDomains] = useState<{ allow: string[]; deny: string[] } | null>(null)
   const [msg, setMsg] = useState('')
+  const [remote, setRemote] = useState({ server: '', name: '', token: '' })
 
   useEffect(() => {
     void call<boolean>('debugger').then(setDebuggerOn, () => setDebuggerOn(false))
@@ -21,13 +22,20 @@ export function Setup({ status }: { status: Status }) {
     setMsg('')
     void call('pair', { code }).then(() => setCode(''), (e: Error) => setMsg(e.message))
   }
+  const saveRemote = () => {
+    setMsg('')
+    void call('remote', remote).then(() => {
+      setRemote((r) => ({ ...r, token: '' }))
+      setMsg(t('Uzak bağlantı kaydedildi.'))
+    }, (e: Error) => setMsg(e.message))
+  }
   const launch = () => void call('launch').then(() => setMsg(t('Kor başlatılıyor…')), (e: Error) => setMsg(e.message))
   const toggleDebugger = (on: boolean) => {
     // İzin isteği kullanıcı hareketiyle, eklenti sayfasından yapılmalı.
     const p = ext().permissions
     void (on ? p.request({ permissions: ['debugger'] }) : Promise.resolve(false)).then(setDebuggerOn, () => setDebuggerOn(false))
   }
-  const mode = status.mode === 'native' ? t('yerel ana bilgisayar') : status.mode === 'ws' ? t('yerel WebSocket') : t('bağlantı yok')
+  const mode = status.mode === 'native' ? t('yerel ana bilgisayar') : status.mode === 'ws' ? t('yerel WebSocket') : status.mode === 'remote' ? t('takım sunucusu üzerinden') : t('bağlantı yok')
 
   return (
     <section className="setup" aria-label={t('Kurulum')}>
@@ -50,6 +58,20 @@ export function Setup({ status }: { status: Status }) {
             {t('Eşleştir')}
           </button>
         </div>
+      ) : null}
+      {!status.paired ? (
+        <details>
+          <summary>{t('Başka bir makinedeki Kor (takım sunucusu)')}</summary>
+          <div className="row">
+            <input type="url" aria-label={t('Takım sunucusu')} placeholder="https://kor.example.com" autoComplete="off" spellCheck={false} value={remote.server} onChange={(e) => setRemote({ ...remote, server: e.target.value })} />
+            <input type="text" aria-label={t('Makine adı')} placeholder={t('Makine adı')} autoComplete="off" spellCheck={false} value={remote.name} onChange={(e) => setRemote({ ...remote, name: e.target.value })} />
+            <input type="password" aria-label={t('Üye belirteci')} placeholder={t('Üye belirteci')} autoComplete="off" value={remote.token} onChange={(e) => setRemote({ ...remote, token: e.target.value })} />
+            <button type="button" onClick={saveRemote}>
+              {t('Kaydet')}
+            </button>
+          </div>
+          <p className="note">{t('O makinede kor peer serve çalışmalı; sunucu yalnızca iletileri aktarır, eşleştirme yine bu koddan yapılır.')}</p>
+        </details>
       ) : null}
       {!status.core && status.canLaunch ? (
         <button type="button" onClick={launch}>

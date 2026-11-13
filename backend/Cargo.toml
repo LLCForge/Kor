@@ -29,6 +29,7 @@ kor-memory = { path = "crates/kor-memory", version = "0.2.2" }
 kor-web = { path = "crates/kor-web", version = "0.0.4" }
 kor-computer = { path = "crates/kor-computer", version = "0.0.4", default-features = false }
 kor-health = { path = "crates/kor-health", version = "0.0.3" }
+kor-server = { path = "crates/kor-server", version = "0.0.1" }
 
 anyhow = "1"
 async-trait = "0.1"

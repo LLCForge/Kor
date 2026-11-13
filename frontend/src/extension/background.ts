@@ -6,7 +6,7 @@
 // - Seçili metin için sağ tık "Kor: bunu uygula" (§27.11) ve hosting paneli bağlamı (§29.2) burada.
 // Sayfa içeriği yalnızca veridir; burada hiçbir sayfa metni komut olarak yorumlanmaz.
 import { ext, sessionStore, type Port, type Tab, type WebRequestDetails } from './ext.ts'
-import { Transport, HOST_NAME, type Channel, type ChannelEvents, type Status } from './transport.ts'
+import { Transport, HOST_NAME, remoteUrl, type Channel, type ChannelEvents, type Remote, type Status } from './transport.ts'
 import { Groups, type Task } from './tabs.ts'
 import { refusal, parseDomains, type Domains } from './policy.ts'
 
@@ -17,6 +17,8 @@ const panels = new Set<Port>()
 let domains: Domains = { allow: [], deny: [] }
 const watched = new Set<number>()
 const KEY = 'kor.key'
+/** Takım sunucusu üzerinden uzak Kor (§18.4): `{ server, name, token }`. */
+const REMOTE = 'kor.remote'
 
 function toPanels(m: Record<string, unknown>): void {
   for (const p of panels) {
@@ -42,10 +44,10 @@ const connectors = {
       return null
     }
   },
-  ws(url: string, ev: ChannelEvents): Channel | null {
+  ws(url: string, ev: ChannelEvents, protocols?: string[]): Channel | null {
     let ws: WebSocket
     try {
-      ws = new WebSocket(url)
+      ws = protocols ? new WebSocket(url, protocols) : new WebSocket(url)
     } catch {
       return null
     }
@@ -70,10 +72,22 @@ const keys = {
   set: (k: string) => e.storage.local.set({ [KEY]: k }),
 }
 
-const transport = new Transport(connectors, keys, onCore, (s: Status) => {
-  void e.action?.setBadgeText({ text: s.paired ? 'ON' : '' })
-  toPanels({ kind: 'status', status: s })
-})
+async function remote(): Promise<Remote | null> {
+  const v = (await e.storage.local.get(REMOTE))[REMOTE] as Partial<Remote> | undefined
+  if (!v || typeof v.server !== 'string' || typeof v.name !== 'string' || typeof v.token !== 'string') return null
+  return { server: v.server, name: v.name, token: v.token }
+}
+
+const transport = new Transport(
+  connectors,
+  keys,
+  onCore,
+  (s: Status) => {
+    void e.action?.setBadgeText({ text: s.paired ? 'ON' : '' })
+    toPanels({ kind: 'status', status: s })
+  },
+  remote,
+)
 
 // Çekirdeğe giden yan panel istekleri: rid → yanıt bekleyen.
 const waiters = new Map<number, (r: unknown) => void>()
@@ -448,6 +462,18 @@ async function panelOp(op: string, m: Record<string, unknown>): Promise<unknown>
     case 'pair':
       await transport.pair(String(m.code ?? ''))
       return transport.status
+    case 'remote': {
+      // Boş sunucu uzak yolu kapatır; geçersiz ayar kaydedilmez.
+      const r = { server: String(m.server ?? '').trim(), name: String(m.name ?? '').trim(), token: String(m.token ?? '').trim() }
+      if (!r.server) {
+        await e.storage.local.set({ [REMOTE]: null })
+        return null
+      }
+      if (!remoteUrl(r)) throw new Error('Geçersiz uzak bağlantı: https sunucu adresi, makine adı ve üye belirteci gerekli')
+      await e.storage.local.set({ [REMOTE]: r })
+      await transport.poke()
+      return transport.status
+    }
     case 'launch':
       if (!transport.launch()) throw new Error('Kor\'u başlatmak için yerel ana bilgisayar gerekli: kor chrome install')
       return null

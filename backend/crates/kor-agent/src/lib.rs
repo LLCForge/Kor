@@ -47,6 +47,7 @@ mod skill;
 pub mod status;
 pub mod subagent;
 pub mod summarize;
+pub mod team_client;
 pub mod team_sync;
 pub mod toolcall;
 pub mod verify;

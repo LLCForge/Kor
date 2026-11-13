@@ -18,9 +18,9 @@ fn endpoint(server: &str) -> String {
     format!("{}{PATH}", server.trim_end_matches('/'))
 }
 
+/// Trusts the team CA and presents this member's certificate (mTLS) once `kor server join` ran.
 fn client() -> Result<reqwest::Client, String> {
-    kor_core::net::client_builder()
-        .timeout(Duration::from_secs(30))
+    crate::team_client::builder(Duration::from_secs(30))?
         .build()
         .map_err(|e| e.to_string())
 }

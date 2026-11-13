@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { refusal, parseDomains, hostOf } from './policy.ts'
 import { sensitive, hasPhrase, words } from './fields.ts'
-import { Transport, type Channel, type ChannelEvents, type Status } from './transport.ts'
+import { Transport, remoteUrl, type Channel, type ChannelEvents, type Status } from './transport.ts'
 import { Groups } from './tabs.ts'
 import { manifest, messages, CHROME_KEY } from './manifest.ts'
 import { reduce, empty, answered, fromTranscript } from './panel/events.ts'
@@ -220,4 +220,40 @@ test('every panel string has English and French', () => {
     }
   }
   assert.deepEqual(missing, [])
+})
+
+test('without a local Kor the transport reaches a remote machine through the team server', async () => {
+  const urls: Array<{ url: string; protocols?: string[] }> = []
+  const chans: FakeChannel[] = []
+  const store = { key: 'r'.repeat(64) }
+  const remote = { server: 'https://kor.example.com:8443', name: 'home-pc', token: 'kmt_abcdefghijkl' }
+  const t = new Transport(
+    {
+      native: () => null,
+      ws: (url, ev, protocols) => {
+        urls.push({ url, protocols })
+        const c = new FakeChannel(ev)
+        chans.push(c)
+        return c
+      },
+    },
+    { get: async () => store.key, set: async (k) => void (store.key = k) },
+    () => {},
+    () => {},
+    async () => remote,
+  )
+  await t.connect()
+  assert.equal(urls[0].url, 'ws://127.0.0.1:49201')
+  chans[0].ev.closed()
+  await t.poke()
+  assert.equal(urls[1].url, 'wss://kor.example.com:8443/api/v1/relay/dial/ext:home-pc')
+  assert.deepEqual(urls[1].protocols, ['kor-relay', 'bearer.kmt_abcdefghijkl'])
+  assert.deepEqual(JSON.parse(chans[1].sent[0]), { type: 'pair', key: 'r'.repeat(64) })
+  chans[1].ev.message(JSON.stringify({ type: 'paired', key: 'r'.repeat(64) }))
+  assert.equal(t.status.mode, 'remote')
+  assert.equal(t.status.paired, true)
+  // Only https servers, plain names and tokens.
+  assert.equal(remoteUrl({ ...remote, server: 'http://kor.example.com' }), null)
+  assert.equal(remoteUrl({ ...remote, name: 'a/b' }), null)
+  assert.equal(remoteUrl({ ...remote, token: 'x y' }), null)
 })
