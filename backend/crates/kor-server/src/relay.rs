@@ -35,6 +35,7 @@ pub fn valid_name(n: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || matches!(b, b':' | b'.' | b'_' | b'-'))
 }
 
+/// WebSocket limits for relayed connections.
 pub fn ws_config() -> WebSocketConfig {
     WebSocketConfig::default()
         .max_message_size(Some(MAX_MESSAGE))

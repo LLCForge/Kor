@@ -21,10 +21,13 @@ const DAY: time::Duration = time::Duration::days(1);
 /// A certificate and its private key, both PEM.
 #[derive(Clone)]
 pub struct Issued {
+    /// Certificate, PEM.
     pub cert_pem: String,
+    /// Private key, PEM.
     pub key_pem: String,
     /// SHA-256 of the certificate's DER, hex.
     pub fingerprint: String,
+    /// When the certificate expires (Unix ms).
     pub expires_ms: i64,
 }
 

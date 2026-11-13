@@ -20,7 +20,9 @@ pub struct OidcProvider {
     pub client_id: String,
     /// Overrides discovery (`<issuer>/.well-known/openid-configuration`).
     pub jwks_uri: String,
+    /// Device authorization endpoint (overrides discovery).
     pub device_endpoint: String,
+    /// Token endpoint (overrides discovery).
     pub token_endpoint: String,
     /// `github`: API base (`https://api.github.com`, or GitHub Enterprise's `/api/v3`).
     pub api: String,
@@ -36,6 +38,7 @@ pub struct ServerConfig {
     pub team: String,
     /// Public host name members use; in the server certificate.
     pub domain: String,
+    /// Address to listen on (`host:port`).
     pub listen: String,
     /// `sqlite:<file>` (relative to the server directory) or `postgres://…?sslmode=require`.
     pub db: String,
@@ -50,6 +53,7 @@ pub struct ServerConfig {
     pub allow_private_callbacks: bool,
     /// Largest request body in bytes.
     pub max_body: usize,
+    /// Single sign-on providers.
     #[serde(rename = "oidc")]
     pub providers: Vec<OidcProvider>,
 }
@@ -174,6 +178,7 @@ impl ServerConfig {
         Ok(())
     }
 
+    /// The provider called `name`.
     pub fn provider(&self, name: &str) -> Option<&OidcProvider> {
         self.providers.iter().find(|p| p.name == name)
     }

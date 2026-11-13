@@ -47,8 +47,11 @@ const BURST: f64 = 200.0;
 
 /// The running server's shared state.
 pub struct App {
+    /// Server configuration.
     pub cfg: ServerConfig,
+    /// Storage.
     pub store: Store,
+    /// Files of the server directory.
     pub layout: Layout,
     verifier: auth::Verifier,
     hub: relay::Hub,
@@ -109,12 +112,15 @@ impl App {
 /// A started server.
 #[derive(Debug)]
 pub struct Running {
+    /// Address the server listens on.
     pub addr: SocketAddr,
     stop: tokio::sync::watch::Sender<bool>,
+    /// The server task.
     pub task: tokio::task::JoinHandle<()>,
 }
 
 impl Running {
+    /// Ask the server to stop.
     pub fn stop(&self) {
         let _ = self.stop.send(true);
     }

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0 OR MIT
 # System libraries the Linux build links (the same list as [dist.dependencies.apt] in
 # backend/dist-workspace.toml): screen capture (Wayland, GBM/DRM, PipeWire via bindgen) and D-Bus.
 set -euo pipefail

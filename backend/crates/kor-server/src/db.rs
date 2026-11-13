@@ -10,12 +10,16 @@ use std::sync::{Arc, Mutex, PoisonError};
 /// One bound value or one column.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Val {
+    /// An integer.
     Int(i64),
+    /// Text.
     Text(String),
+    /// SQL NULL.
     Null,
 }
 
 impl Val {
+    /// The text, if this is text.
     pub fn text(&self) -> Option<&str> {
         match self {
             Self::Text(s) => Some(s),
@@ -23,6 +27,7 @@ impl Val {
         }
     }
 
+    /// The integer, if this is one.
     pub fn int(&self) -> Option<i64> {
         match self {
             Self::Int(i) => Some(*i),
@@ -78,6 +83,7 @@ impl rusqlite::ToSql for Val {
     }
 }
 
+/// One result row.
 pub type Row = Vec<Val>;
 
 /// The schema; idempotent, run at every start.
@@ -149,6 +155,7 @@ impl Db {
         Ok(db)
     }
 
+    /// `sqlite` or `postgres`.
     pub fn engine(&self) -> &'static str {
         match &*self.0 {
             Engine::Sqlite(_) => "sqlite",

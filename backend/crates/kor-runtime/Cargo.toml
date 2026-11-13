@@ -45,7 +45,7 @@ kor-graph.workspace = true
 flate2 = "1"
 serde_yaml.workspace = true
 tokio-util.workspace = true
-# Team server relay route for peers (§31.1, backend/crates/kor-server/TEAM-SERVER.md).
+# Team server relay route for peers (§31.1, backend/crates/kor-server/README.md).
 tokio-tungstenite.workspace = true
 # `kor daemon` (ADR 0039): webhook listener, HMAC, log_match, SMTP over TLS, trigger edits.
 base64.workspace = true

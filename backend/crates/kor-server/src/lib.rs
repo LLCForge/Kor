@@ -10,7 +10,8 @@
 //! client certificate from the team CA (mTLS) and/or a bearer token: a member token from
 //! `add-member`, or a session token exchanged for an OIDC ID token (Keycloak, Authentik, Google)
 //! or a GitHub access token. Unknown identities are refused; nothing is open by default.
-//! See `backend/crates/kor-server/TEAM-SERVER.md`.
+//! See `backend/crates/kor-server/README.md`.
+#![warn(missing_docs)]
 
 use std::path::{Path, PathBuf};
 
@@ -64,33 +65,42 @@ pub(crate) fn random_token(prefix: &str) -> Result<String, String> {
 /// Files of an initialised server directory.
 #[derive(Debug, Clone)]
 pub struct Layout {
+    /// The server directory.
     pub dir: PathBuf,
 }
 
 impl Layout {
+    /// The layout of `dir`.
     pub fn new(dir: &Path) -> Self {
         Self {
             dir: dir.to_path_buf(),
         }
     }
+    /// `server.toml`.
     pub fn config(&self) -> PathBuf {
         self.dir.join("server.toml")
     }
+    /// Team CA certificate.
     pub fn ca_cert(&self) -> PathBuf {
         self.dir.join("ca.pem")
     }
+    /// Team CA private key.
     pub fn ca_key(&self) -> PathBuf {
         self.dir.join("ca.key")
     }
+    /// Server certificate.
     pub fn server_cert(&self) -> PathBuf {
         self.dir.join("server.pem")
     }
+    /// Server private key.
     pub fn server_key(&self) -> PathBuf {
         self.dir.join("server.key")
     }
+    /// Vault encryption key.
     pub fn vault_key(&self) -> PathBuf {
         self.dir.join("vault.key")
     }
+    /// Folder of member bundles.
     pub fn members(&self) -> PathBuf {
         self.dir.join("members")
     }

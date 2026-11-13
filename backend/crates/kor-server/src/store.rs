@@ -16,11 +16,14 @@ const B64: base64::engine::GeneralPurpose = base64::engine::general_purpose::STA
 /// A failure with the HTTP status it maps to; the message is safe to show the caller.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error {
+    /// HTTP status code.
     pub status: u16,
+    /// Message for the caller.
     pub message: String,
 }
 
 impl Error {
+    /// An error with this status and message.
     pub fn new(status: u16, message: impl Into<String>) -> Self {
         Self {
             status,
@@ -41,6 +44,7 @@ impl std::fmt::Display for Error {
     }
 }
 
+/// Result with the server's [`Error`].
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// What a member may do. Ordered: each role includes the ones below it.
@@ -66,6 +70,7 @@ impl Role {
         }
     }
 
+    /// The role's name as stored and shown.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Admin => "admin",
@@ -120,14 +125,22 @@ pub fn normalize_email(e: &str) -> Result<String> {
 /// What `add-member` hands to the new member (also written as a bundle file).
 #[derive(Clone, Serialize)]
 pub struct Enrollment {
+    /// Member's e-mail address.
     pub email: String,
+    /// Member's role.
     pub role: Role,
     /// `https://<domain>:<port>`.
+    /// Server URL the member connects to.
     pub server: String,
+    /// Team CA certificate, PEM.
     pub ca: String,
+    /// Member's client certificate, PEM.
     pub cert: String,
+    /// Member's client key, PEM.
     pub key: String,
+    /// Bearer token for the member.
     pub token: String,
+    /// When the token expires (Unix ms).
     pub expires_ms: i64,
     /// Where the bundle file was written (not part of the bundle).
     #[serde(skip)]
@@ -148,11 +161,17 @@ impl std::fmt::Debug for Enrollment {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Doc {
+    /// Namespace (`rules`, `templates`, `memory`, …).
     pub ns: String,
+    /// Key inside the namespace.
     pub key: String,
+    /// Document text.
     pub body: String,
+    /// Version, raised on every write.
     pub version: i64,
+    /// Who wrote the current version.
     pub updated_by: String,
+    /// When it was written (Unix ms).
     pub updated_ms: i64,
 }
 
@@ -160,17 +179,28 @@ pub struct Doc {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Task {
+    /// Task id.
     pub id: String,
     /// `queued`, `running`, `done`, `failed`.
+    /// `queued`, `running`, `done` or `failed`.
     pub state: String,
+    /// What to do.
     pub prompt: String,
+    /// Repository the task runs on.
     pub repo: String,
+    /// Callback URL notified at the end.
     pub callback: String,
+    /// Who queued it.
     pub created_by: String,
+    /// Member that claimed it.
     pub worker: String,
+    /// Result text.
     pub result: String,
+    /// When it was queued (Unix ms).
     pub created_ms: i64,
+    /// Last change (Unix ms).
     pub updated_ms: i64,
+    /// Per-task callback signing secret.
     #[serde(skip)]
     pub secret: String,
 }
@@ -179,13 +209,21 @@ pub struct Task {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuditEntry {
+    /// Sequence number.
     pub seq: i64,
+    /// Time (Unix ms).
     pub ts_ms: i64,
+    /// Who did it.
     pub actor: String,
+    /// What was done.
     pub action: String,
+    /// What it was done to.
     pub target: String,
+    /// Details.
     pub detail: String,
+    /// Hash of the previous entry.
     pub prev: String,
+    /// Hash of this entry, chained to `prev`.
     pub hash: String,
 }
 
@@ -193,18 +231,27 @@ pub struct AuditEntry {
 #[derive(Debug, Clone, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Counts {
+    /// Members with the admin role.
     pub admins: i64,
+    /// Members with the member role.
     pub members: i64,
+    /// Members with the viewer role.
     pub viewers: i64,
+    /// Shared documents.
     pub docs: i64,
+    /// Queued tasks.
     pub queued: i64,
+    /// Running tasks.
     pub running: i64,
+    /// Vault secrets.
     pub vault: i64,
+    /// Audit entries.
     pub audit: i64,
 }
 
 /// The server's storage.
 pub struct Store {
+    /// The database.
     pub db: Db,
     vault: LessSafeKey,
     /// Serialises audit appends so the chain has no forks.
