@@ -3,7 +3,8 @@
 //! (per user) passes `--path` to put `kor` on the user PATH (`kor_platform::cli_path`, the same
 //! reversible record the desktop's consent flow uses); the MSI sets the machine PATH itself and
 //! passes `--system`. Both register the Chrome native messaging host for the extension ids in
-//! `branding.toml`. `pre-uninstall` undoes exactly that.
+//! `branding.toml`. `pre-uninstall` undoes exactly that and, in a user's context (no `--system`),
+//! also removes the context-menu entries that user's Kor added (§25.4).
 
 use clap::{Args, Subcommand};
 use kor_i18n::args;
@@ -72,6 +73,15 @@ pub fn run(ctx: &Ctx, cmd: &HookCmd) -> anyhow::Result<bool> {
     };
     if let Err(e) = r {
         fail("native messaging host", &e);
+    }
+    // §25.4: uninstalling leaves no "Open with Kor" entries behind. They belong to the user who
+    // installed them (the app's consent flow / `kor integrate install`), so this runs in that user's
+    // context: NSIS per user, the MSI's impersonated action. Nothing recorded → nothing to do.
+    if !install
+        && !a.system
+        && let Err(e) = kor_platform::shell_integration::uninstall()
+    {
+        fail("context menu", &e);
     }
     Ok(ok)
 }
