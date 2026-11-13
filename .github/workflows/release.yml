@@ -195,6 +195,31 @@ jobs:
       - name: Install dependencies
         run: |
           ${{ matrix.packages_install }}
+      # ring and aws-lc assemble their ARM64 Windows code with clang.
+      - if: contains(join(matrix.targets, ','), 'aarch64-pc-windows-msvc')
+        shell: bash
+        run: command -v clang || choco install -y llvm
+      # §32.2 PGO: an instrumented build trained on the bench workload, merged with the toolchain's
+      # llvm-profdata; dist's build below then uses the profile. A target the runner cannot execute,
+      # or any failure here, builds without PGO (with a warning) rather than blocking the release.
+      - name: PGO profile
+        shell: bash
+        run: |
+          rustup component add llvm-tools
+          py=$(command -v python3 || command -v python)
+          prof="$PWD/target/pgo/merged.profdata"
+          if "$py" ../scripts/pgo.py profile --target "${{ join(matrix.targets, ' ') }}" --out "$prof"; then
+            echo "RUSTFLAGS=$("$py" ../scripts/pgo.py rustflags "$prof")" >> "$GITHUB_ENV"
+          else
+            echo "::warning::no PGO for ${{ join(matrix.targets, ' ') }}"
+          fi
+      # The profile is an input of the PGO build: kept so the binary can be rebuilt byte for byte
+      # (scripts/repro_check.py checks the build itself; the training run's counts vary by machine).
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pgo-profile-${{ join(matrix.targets, '_') }}
+          path: backend/target/pgo/merged.profdata
+          if-no-files-found: ignore
       - name: Build artifacts
         run: |
           # Actually do builds and make zips and whatnot
@@ -344,8 +369,11 @@ jobs:
         run: |
           mkdir -p src-tauri/binaries
           ext=""; [ "$RUNNER_OS" = Windows ] && ext=.exe
+          # §32.2: PGO-built like the dist binaries (scripts/pgo.py falls back to a plain build).
+          (cd ../backend && rustup component add llvm-tools)
+          py=$(command -v python3 || command -v python)
           for t in ${{ matrix.cli-targets }}; do
-            (cd ../backend && cargo build --locked --release -p kor-cli --target "$t")
+            "$py" ../scripts/pgo.py build --target "$t"
           done
           if [ "$RUNNER_OS" = macOS ]; then
             lipo -create -output src-tauri/binaries/kor-universal-apple-darwin \
@@ -489,6 +517,9 @@ jobs:
           if [ -f "$RUNNER_TEMP/tauri.os.json" ]; then os_cfg=(--config "$RUNNER_TEMP/tauri.os.json"); fi
           npx tauri build --target "${{ matrix.target }}" --bundles "${{ matrix.bundles }}" \
             --config src-tauri/tauri.release.conf.json --config "$RUNNER_TEMP/tauri.ci.json" "${os_cfg[@]}"
+      # §21.3: the release desktop binary carries no WebView devtools code.
+      - name: No devtools in the release binary
+        run: node scripts/devtools-scan.ts "src-tauri/target/${{ matrix.target }}/release/kor-desktop${{ runner.os == 'Windows' && '.exe' || '' }}"
       - name: Collect, GPG-sign (Linux) and mark unsigned
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
@@ -542,6 +573,45 @@ jobs:
         with:
           name: desktop-${{ matrix.name }}
           path: ${{ runner.temp }}/desktop/*
+
+  # §22.3: anyone can check that a binary comes from the source. The CLI is built twice from the
+  # committed tree in two different directories at different times (SOURCE_DATE_EPOCH = commit time,
+  # registry paths remapped, /Brepro on Windows) and the two binaries must be byte-identical
+  # (scripts/repro_check.py). Runs on PRs too; publishing waits for it.
+  reproducible:
+    name: reproducible build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    defaults:
+      run:
+        shell: bash
+        working-directory: .
+    steps:
+      - if: runner.os == 'Windows'
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@1.94.0
+      - if: runner.os == 'Linux'
+        run: bash scripts/ci-linux-deps.sh
+      - if: runner.os == 'Windows'
+        uses: ilammy/setup-nasm@v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/repro_check.py selftest
+      - run: python scripts/repro_check.py build --work "$RUNNER_TEMP/repro"
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: reproducible-${{ matrix.os }}
+          path: ${{ runner.temp }}/repro/*-kor*
+          if-no-files-found: ignore
 
   # §17.2: a release waits for the CI run of its own commit. The end-to-end jobs (CLI, TUI, desktop,
   # brand visuals) and the UI audit inside the desktop job must pass; their HTML report and the
@@ -597,8 +667,9 @@ jobs:
       - build-local-artifacts
       - build-global-artifacts
       - desktop
-    # Only run if we're "publishing", and only if plan, local, global and desktop didn't fail (skipped is fine)
-    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && needs.gate.result == 'success' && needs.desktop.result == 'success' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
+      - reproducible
+    # Only run if we're "publishing", and only if plan, local, global, desktop and the reproducibility check didn't fail (skipped is fine)
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.publishing == 'true' && needs.gate.result == 'success' && needs.desktop.result == 'success' && needs.reproducible.result == 'success' && (needs.build-global-artifacts.result == 'skipped' || needs.build-global-artifacts.result == 'success') && (needs.build-local-artifacts.result == 'skipped' || needs.build-local-artifacts.result == 'success') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: "ubuntu-24.04"  # minisign is packaged from 24.04 on
