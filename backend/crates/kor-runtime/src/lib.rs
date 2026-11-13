@@ -62,6 +62,8 @@ pub mod peer;
 pub mod autointegrate;
 pub mod batch;
 pub mod korfolder;
+// `kor lsp` (§12.3): Language Server for editors.
+pub mod lsp;
 pub mod media;
 pub mod osint;
 pub mod perf;

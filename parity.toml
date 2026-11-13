@@ -11,7 +11,7 @@
 #   `internal = true`: kullanıcı özelliği değil, başka bir programın çağırdığı uç (denetim dışı).
 
 [meta]
-allowed_gaps = 1
+allowed_gaps = 2
 
 [[feature]]
 name = "Ajanla sohbet (araçlı tur)"
@@ -2287,6 +2287,20 @@ desktop = "acp.setup"
 name = "kor acp"
 cli = "kor acp"
 internal = true
+
+# Editörün başlattığı stdin/stdout dil sunucusu (§12.3); kullanıcı doğrudan çağırmaz.
+[[feature]]
+name = "kor lsp"
+cli = "kor lsp"
+internal = true
+
+# KaaS API anahtarları (§11.2). Masaüstünde anahtar ekranı henüz yok: anahtar tek sefer gösterilir ve
+# sunucu yöneticisinin terminal işi; masaüstü köprüsü ikinci dalgada.
+[[feature]]
+name = "KaaS API anahtarları (listele, oluştur, iptal et)"
+cli = "kor daemon key"
+tui = "/daemon key"
+desktop = "-"
 
 [[feature]]
 name = "kor chrome pair"

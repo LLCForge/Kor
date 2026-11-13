@@ -1426,6 +1426,14 @@ fr = ["retirer le démon du démarrage", "désinstaller le démarrage du démon"
 eta_s = 2
 
 [[intent]]
+command = "kor daemon key"
+run = "confirm"
+tr = ["kaas api anahtarlarını listele", "api anahtarlarımı göster", "kor api anahtarları neler"]
+en = ["list kaas api keys", "show my kor api keys", "which api keys can call kor"]
+fr = ["lister les clés d'api kaas", "afficher mes clés d'api kor"]
+eta_s = 1
+
+[[intent]]
 command = "kor triggers list"
 run = "confirm"
 tr = ["tetikleyicileri listele", "hangi tetikleyiciler var", "trigger listesi"]
@@ -3201,6 +3209,14 @@ eta_s = 1
 
 [[intent]]
 command = "kor acp serve"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
+command = "kor lsp"
 run = "never"
 tr = []
 en = []

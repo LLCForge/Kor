@@ -1,0 +1,22 @@
+{
+  "name": "kor-lsp",
+  "displayName": "Kor",
+  "description": "Minimal VS Code client for `kor lsp`: Kor diagnostics, hover from the project graph, fix/explain code actions and tasks.",
+  "version": "0.0.1",
+  "publisher": "llcforge",
+  "license": "Apache-2.0 OR MIT",
+  "private": true,
+  "engines": { "vscode": "^1.85.0" },
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [{ "command": "kor.runTaskPrompt", "title": "Kor: Run a task" }],
+    "configuration": {
+      "title": "Kor",
+      "properties": {
+        "kor.path": { "type": "string", "default": "kor", "description": "The kor executable." }
+      }
+    }
+  },
+  "dependencies": { "vscode-languageclient": "9.0.1" }
+}

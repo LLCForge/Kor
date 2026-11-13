@@ -130,12 +130,70 @@ pub trait Handler: Send + Sync {
     async fn notification(&self, rpc: Arc<Rpc>, method: &str, params: Value);
 }
 
+/// How messages are delimited on the stream.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Framing {
+    /// One JSON value per line (ACP).
+    Lines,
+    /// `Content-Length: <n>` header, blank line, `<n>` bytes (Language Server Protocol).
+    Headers,
+}
+
 /// A connection over `reader`/`writer`. Returns the [`Rpc`] for calls from this side and a
 /// future that runs until the other side closes its end.
 pub fn connect<R, W>(
     reader: R,
     writer: W,
     handler: Arc<dyn Handler>,
+) -> (Arc<Rpc>, impl std::future::Future<Output = ()> + Send)
+where
+    R: AsyncRead + Unpin + Send + 'static,
+    W: AsyncWrite + Unpin + Send + 'static,
+{
+    connect_framed(reader, writer, handler, Framing::Lines)
+}
+
+/// Read one LSP message body; `None` at end of input. A message over [`MAX_LINE`] or without
+/// `Content-Length` is an error (the stream cannot be resynchronized).
+async fn read_framed<R: AsyncRead + Unpin>(
+    r: &mut BufReader<R>,
+) -> std::io::Result<Option<String>> {
+    use tokio::io::AsyncReadExt as _;
+    let mut len: Option<usize> = None;
+    loop {
+        let mut line = String::new();
+        if r.read_line(&mut line).await? == 0 {
+            return Ok(None);
+        }
+        let line = line.trim_end();
+        if line.is_empty() {
+            break;
+        }
+        if line.len() > 1024 {
+            return Err(std::io::Error::other("header too long"));
+        }
+        if let Some((k, v)) = line.split_once(':')
+            && k.trim().eq_ignore_ascii_case("content-length")
+        {
+            len = v.trim().parse().ok();
+        }
+    }
+    let len = len
+        .filter(|n| *n <= MAX_LINE)
+        .ok_or_else(|| std::io::Error::other("missing or too large Content-Length"))?;
+    let mut body = vec![0u8; len];
+    r.read_exact(&mut body).await?;
+    String::from_utf8(body)
+        .map(Some)
+        .map_err(|_| std::io::Error::other("body is not UTF-8"))
+}
+
+/// [`connect`] with an explicit [`Framing`].
+pub fn connect_framed<R, W>(
+    reader: R,
+    writer: W,
+    handler: Arc<dyn Handler>,
+    framing: Framing,
 ) -> (Arc<Rpc>, impl std::future::Future<Output = ()> + Send)
 where
     R: AsyncRead + Unpin + Send + 'static,
@@ -152,16 +210,36 @@ where
         let mut writer = writer;
         let write = tokio::spawn(async move {
             while let Some(v) = out_rx.recv().await {
-                let mut line = v.to_string();
-                line.push('\n');
-                if writer.write_all(line.as_bytes()).await.is_err() || writer.flush().await.is_err()
+                let body = v.to_string();
+                let msg = match framing {
+                    Framing::Lines => format!("{body}\n"),
+                    Framing::Headers => format!("Content-Length: {}\r\n\r\n{body}", body.len()),
+                };
+                if writer.write_all(msg.as_bytes()).await.is_err() || writer.flush().await.is_err()
                 {
                     break;
                 }
             }
         });
-        let mut lines = BufReader::new(reader).lines();
-        while let Ok(Some(line)) = lines.next_line().await {
+        let mut reader = BufReader::new(reader);
+        loop {
+            let line = match framing {
+                Framing::Lines => {
+                    let mut line = String::new();
+                    match reader.read_line(&mut line).await {
+                        Ok(0) | Err(_) => break,
+                        Ok(_) => line,
+                    }
+                }
+                Framing::Headers => match read_framed(&mut reader).await {
+                    Ok(Some(b)) => b,
+                    Ok(None) => break,
+                    Err(e) => {
+                        r.answer(&Value::Null, Err(RpcError::new(PARSE_ERROR, e.to_string())));
+                        break;
+                    }
+                },
+            };
             if line.trim().is_empty() {
                 continue;
             }
