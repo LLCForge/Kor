@@ -1118,6 +1118,8 @@
   "Görsel bilgileri": "Informations sur l'image",
   "Görsel ekleri henüz ajana iletilemiyor; görselleri kaldırıp tekrar gönder.": "Les images jointes ne peuvent pas encore être envoyées à l'agent ; retirez-les et renvoyez.",
   "Görsel girdi": "Entrée d'image",
+  "LMArena puanı (lmarena.ai)": "Score LMArena (lmarena.ai)",
+  "LiveBench ortalaması (livebench.ai)": "Moyenne LiveBench (livebench.ai)",
   "Görsel okunamadı:": "Impossible de lire l'image :",
   "Görsel varsayılanı": "Image par défaut",
   "Görünüm": "Affichage",

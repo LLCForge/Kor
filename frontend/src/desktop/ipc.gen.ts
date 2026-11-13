@@ -4631,6 +4631,8 @@ export interface CatalogEntry__providers {
   tool_calling: boolean | null
   vision: boolean | null
   hf_leaderboard_avg: number | null
+  lmarena_rating: number | null
+  livebench_avg: number | null
   license: string | null
   updated_at: string | null
   /** CI'ın bu modelin AA verisini son aldığı an (AA düştüğünde eski değer taşınır) */

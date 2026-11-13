@@ -42,6 +42,7 @@ pub mod schema;
 pub mod semantic;
 pub mod session;
 pub mod shadow;
+pub mod shell_suggest;
 pub mod shellint;
 mod skill;
 pub mod status;

@@ -47,6 +47,16 @@ function Row({ m, maxI, maxC }: { m: CatalogEntry; maxI: number; maxC: number })
             <span className="sr-only">Görsel girdi</span>
           </span>
         )}
+        {m.lmarena_rating !== null && (
+          <span title="LMArena puanı (lmarena.ai)">
+            <span translate="no">Arena {Math.round(m.lmarena_rating)}</span>
+          </span>
+        )}
+        {m.livebench_avg !== null && (
+          <span title="LiveBench ortalaması (livebench.ai)">
+            <span translate="no">LiveBench {m.livebench_avg.toFixed(1)}</span>
+          </span>
+        )}
         {m.license && (
           <span className="badge neutral" translate="no">
             {m.license}

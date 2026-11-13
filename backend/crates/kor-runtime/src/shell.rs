@@ -7,6 +7,9 @@ use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use std::time::Duration;
+
+use kor_agent::shell_suggest as suggest_core;
 use kor_agent::shellint::{self, Failure, ShellKind};
 
 /// Why an install/uninstall plan could not be made.
@@ -69,12 +72,25 @@ pub struct Plan {
 pub fn plan_install(k: ShellKind) -> Result<Plan, ShellError> {
     let record = record_path().ok_or(ShellError::NoHome)?;
     let rc = rc_for(k).ok_or(ShellError::RcUnknown(k))?;
-    install_plan(k, rc, record)
+    install_plan(k, rc, record, user_shell_config().suggest)
 }
 
-fn install_plan(k: ShellKind, rc: PathBuf, record: PathBuf) -> Result<Plan, ShellError> {
+/// `[shell]` of the user's configuration (defaults when it cannot be read).
+fn user_shell_config() -> kor_config::ShellConfig {
+    let cwd = std::env::current_dir().unwrap_or_default();
+    kor_config::load(&kor_config::Paths::discover(&cwd), std::env::vars(), &[])
+        .map(|l| l.config.shell)
+        .unwrap_or_default()
+}
+
+fn install_plan(
+    k: ShellKind,
+    rc: PathBuf,
+    record: PathBuf,
+    suggest: bool,
+) -> Result<Plan, ShellError> {
     let old = read_rc(&rc).map_err(|e| ShellError::Io(rc.clone(), e))?;
-    let block = shellint::snippet(k, &record);
+    let block = shellint::snippet(k, &record, suggest);
     let new = shellint::with_block(&old, &block);
     Ok(Plan {
         new: (new != old).then_some(new),
@@ -198,6 +214,62 @@ fn save_failure_to(path: &Path, command: &[String], exit: i32, cwd: &Path, outpu
         .and_then(|()| std::fs::write(path, shellint::render(&f)));
 }
 
+/// `kor shell suggest` (§15.4): the rest of `line` from history and the project in `cwd`, else
+/// from `[shell] suggest_model` within `suggest_budget_ms`. `None` when suggestions are off or
+/// nothing fits. Privacy mode keeps a model that is not on this computer out.
+pub async fn suggest(
+    l: &kor_i18n::Localizer,
+    k: ShellKind,
+    line: &str,
+    history: Option<&Path>,
+    cwd: &Path,
+) -> Option<String> {
+    let loaded = kor_config::load(&kor_config::Paths::discover(cwd), std::env::vars(), &[]).ok()?;
+    let cfg = &loaded.config.shell;
+    if !cfg.suggest {
+        return None;
+    }
+    let history = history.map(Path::to_path_buf).or_else(|| {
+        let home = dirs::home_dir()?;
+        Some(suggest_core::default_history(k, &home, |v| {
+            std::env::var(v).ok()
+        }))
+    });
+    let ctx = suggest_core::Context {
+        shell: k.name().to_owned(),
+        os: std::env::consts::OS.to_owned(),
+        line: line.to_owned(),
+        history: history.map_or_else(Vec::new, |h| suggest_core::read_history(k, &h)),
+        project: suggest_core::project_commands(cwd),
+    };
+    let model = cfg
+        .suggest_model
+        .as_deref()
+        .map(str::trim)
+        .filter(|m| !m.is_empty())
+        .and_then(|m| crate::oneshot_provider(l, &loaded, Some(m)).ok())
+        .map(|(p, m)| (crate::is_local_provider(p.manifest()), p, m))
+        .filter(|(local, _, _)| *local || !crate::privacy_mode())
+        .map(|(local, p, m)| {
+            let ask = move |prompt: String| async move {
+                kor_agent::gitflow::ask(&p, &m, prompt, 64)
+                    .await
+                    .map_err(|e| e.to_string())
+            };
+            (ask, local)
+        });
+    suggest_core::suggest(
+        &ctx,
+        model,
+        SUGGEST_PAUSE,
+        Duration::from_millis(cfg.suggest_budget_ms),
+    )
+    .await
+}
+
+/// Wait before asking the model; the shell kills this process when another key comes first.
+const SUGGEST_PAUSE: Duration = Duration::from_millis(120);
+
 /// Why a suggested fix could not run.
 #[derive(Debug)]
 pub enum RunError {
@@ -249,13 +321,18 @@ mod tests {
             .join("home")
             .join("shell")
             .join("last-failure.txt");
-        let p = install_plan(ShellKind::Bash, rc.clone(), record.clone()).unwrap();
+        let p = install_plan(ShellKind::Bash, rc.clone(), record.clone(), false).unwrap();
         assert!(p.new.is_some() && p.block.contains(shellint::BEGIN));
         apply(&p).unwrap();
         assert!(record.parent().unwrap().is_dir());
         assert!(shellint::has_block(&read_rc(&rc).unwrap()));
-        let again = install_plan(ShellKind::Bash, rc.clone(), record).unwrap();
+        let again = install_plan(ShellKind::Bash, rc.clone(), record.clone(), false).unwrap();
         assert!(again.new.is_none());
+        let on = install_plan(ShellKind::Bash, rc.clone(), record, true).unwrap();
+        assert!(
+            on.block.contains("kor shell suggest"),
+            "suggest refreshes the block"
+        );
         let u = uninstall_plan(rc.clone()).unwrap();
         apply(&u).unwrap();
         assert_eq!(read_rc(&rc).unwrap(), "");

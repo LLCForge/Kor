@@ -553,6 +553,11 @@ tui = "/shell capture"
 desktop = "shell.capture"
 
 [[feature]]
+name = "Satır içi komut önerisi (kabuk entegrasyonunun çağırdığı uç)"
+cli = "kor shell suggest"
+internal = true
+
+[[feature]]
 name = "Son hatayı düzelt (önerilen komut onayla çalışır)"
 cli = "kor fix"
 tui = "/fix"

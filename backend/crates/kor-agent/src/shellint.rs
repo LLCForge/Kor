@@ -141,8 +141,9 @@ fn ps_quote(p: &Path) -> String {
     format!("'{}'", p.to_string_lossy().replace('\'', "''"))
 }
 
-/// The whole block (markers included) that records failures into `record`.
-pub fn snippet(kind: ShellKind, record: &Path) -> String {
+/// The whole block (markers included) that records failures into `record`, with the inline
+/// suggestion code when `suggest` (`[shell] suggest`).
+pub fn snippet(kind: ShellKind, record: &Path, suggest: bool) -> String {
     let body = match kind {
         ShellKind::Bash => format!(
             r#"__kor_last_status() {{
@@ -215,7 +216,12 @@ function global:prompt {{
             f = ps_quote(record)
         ),
     };
-    format!("{BEGIN}\n{body}{END}\n")
+    let extra = if suggest {
+        crate::shell_suggest::snippet(kind)
+    } else {
+        ""
+    };
+    format!("{BEGIN}\n{body}{extra}{END}\n")
 }
 
 fn block_range(rc: &str) -> Option<(usize, usize)> {
@@ -442,21 +448,30 @@ mod tests {
     fn snippets_have_markers_and_quote_the_record_path() {
         let p = Path::new("/home/a b/it's/last-failure.txt");
         for k in ShellKind::ALL {
-            let s = snippet(k, p);
+            let s = snippet(k, p, false);
             assert!(s.starts_with(BEGIN) && s.trim_end().ends_with(END), "{k:?}");
             assert!(s.contains(MAGIC), "{k:?}");
         }
-        assert!(snippet(ShellKind::Bash, p).contains(r"'/home/a b/it'\''s/last-failure.txt'"));
-        assert!(snippet(ShellKind::Zsh, p).contains("add-zsh-hook precmd __kor_precmd"));
-        assert!(snippet(ShellKind::Fish, p).contains(r"'/home/a b/it\'s/last-failure.txt'"));
-        let ps = snippet(ShellKind::PowerShell, Path::new(r"C:\Users\o'n\kor\f.txt"));
+        assert!(
+            snippet(ShellKind::Bash, p, false).contains(r"'/home/a b/it'\''s/last-failure.txt'")
+        );
+        assert!(snippet(ShellKind::Zsh, p, false).contains("add-zsh-hook precmd __kor_precmd"));
+        assert!(snippet(ShellKind::Fish, p, false).contains(r"'/home/a b/it\'s/last-failure.txt'"));
+        let ps = snippet(
+            ShellKind::PowerShell,
+            Path::new(r"C:\Users\o'n\kor\f.txt"),
+            false,
+        );
         assert!(ps.contains(r"-LiteralPath 'C:\Users\o''n\kor\f.txt'"));
-        assert!(snippet(ShellKind::Bash, Path::new(r"C:\x\f")).contains("'C:/x/f'"));
+        assert!(snippet(ShellKind::Bash, Path::new(r"C:\x\f"), false).contains("'C:/x/f'"));
+        let on = snippet(ShellKind::Zsh, p, true);
+        assert!(on.contains("kor shell suggest") && on.trim_end().ends_with(END));
+        assert!(!snippet(ShellKind::Zsh, p, false).contains("kor shell suggest"));
     }
 
     #[test]
     fn block_install_is_idempotent_and_removable() {
-        let block = snippet(ShellKind::Bash, Path::new("/f"));
+        let block = snippet(ShellKind::Bash, Path::new("/f"), false);
         let rc = "export A=1";
         let once = with_block(rc, &block);
         assert!(once.starts_with("export A=1\n\n# >>>"));
@@ -466,7 +481,7 @@ mod tests {
         let crlf = with_block("a\r\n", &block);
         assert!(crlf.contains("\r\n# >>> kor") && !crlf.replace("\r\n", "").contains('\n'));
         assert_eq!(without_block(&crlf).unwrap(), "a\r\n\r\n");
-        let updated = with_block(&once, &snippet(ShellKind::Bash, Path::new("/g")));
+        let updated = with_block(&once, &snippet(ShellKind::Bash, Path::new("/g"), false));
         assert!(updated.contains("'/g'") && !updated.contains("'/f'"));
         assert_eq!(with_block("", &block), block);
     }

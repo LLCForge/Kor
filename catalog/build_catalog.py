@@ -8,10 +8,15 @@ Standard library only. Sources, in order:
      uses; apps never call AA): intelligence/coding/math index, median speed and time to first token.
      When AA fails or the key is missing, AA values from --previous (the last published catalog)
      are carried forward with their old `aa_fetched` time.
+  4. Open LLM Leaderboard and LMArena (Hugging Face datasets-server, no key); LiveBench from a
+     maintainer-supplied CSV (--livebench-csv), since LiveBench publishes no score file and no data
+     licence: header `model,global_average` (case-insensitive, extra columns ignored), one model
+     per row; models match by normalised name. The workflow passes catalog/livebench.csv if present.
 
 Every value records its source in the model's `source` map. A value no source gives stays null.
 
   python3 catalog/build_catalog.py --out catalog.json [--previous old/catalog.json]
+      [--livebench-csv catalog/livebench.csv]
   python3 catalog/build_catalog.py --self-test
 """
 
@@ -29,11 +34,18 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/models"
 HF_URL = "https://huggingface.co/api/models/"
 AA_URL = "https://artificialanalysis.ai/api/v2/language/models/free"
 # §4.4: the Open LLM Leaderboard's rows through the Hugging Face datasets-server (public, no key).
-# LMArena and LiveBench publish no machine-readable endpoint (checked); they are not included.
 HF_LB_URL = "https://datasets-server.huggingface.co/rows?dataset=open-llm-leaderboard/contents&config=default&split=train"
 HF_LB_SRC = "open-llm-leaderboard"
 HF_LB_PAGE = 100
 HF_LB_MAX_PAGES = 80
+# LMArena's own leaderboard dataset (CC BY 4.0, public), style-controlled text arena, latest
+# publication, through the same datasets-server, filtered to the "overall" category rows.
+ARENA_URL = "https://datasets-server.huggingface.co/filter?dataset=lmarena-ai/leaderboard-dataset&config=text_style_control&split=latest&where=%22category%22%3D%27overall%27"
+ARENA_SRC = "lmarena"
+ARENA_MAX_PAGES = 20
+# LiveBench publishes no score file and no data licence (checked Nov 2026): a maintainer-supplied
+# CSV (`model,global_average`) is read when --livebench-csv is given. See docs/model-catalog.md.
+LIVEBENCH_SRC = "livebench"
 USER_AGENT = "kor-model-catalog (+https://github.com/LLCForge/Kor)"
 MAX_BYTES = 32 * 1024 * 1024
 HF_MAX_LOOKUPS = 400
@@ -47,7 +59,8 @@ AA_FIELDS = [
 FIELDS = [
     "model_id", "provider", "aa_intelligence_index", "aa_coding_index", "aa_math_index",
     "speed_tps", "ttft_ms", "input_price_per_m", "output_price_per_m", "context", "tool_calling",
-    "vision", "license", "hf_leaderboard_avg", "updated_at", "aa_fetched", "source",
+    "vision", "license", "hf_leaderboard_avg", "lmarena_rating", "livebench_avg", "updated_at",
+    "aa_fetched", "source",
 ]
 
 
@@ -173,6 +186,70 @@ def num(v):
     return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
 
 
+def name_key(name):
+    """Leaderboard display name to a `norm` key: "GPT-4o (High)" -> "gpt4o"."""
+    # shortcut: exact normalised-name match only; variants a board names differently stay unmatched.
+    return norm(re.sub(r"\([^)]*\)", "", name))
+
+
+def fetch_lmarena():
+    """`name_key` -> LMArena overall rating (best of its variants)."""
+    scores = {}
+    for page in range(ARENA_MAX_PAGES):
+        url = f"{ARENA_URL}&offset={page * HF_LB_PAGE}&length={HF_LB_PAGE}"
+        for attempt in range(3):
+            # The /filter endpoint answers 500 now and then while its index warms up.
+            try:
+                doc = get_json(url)
+                break
+            except urllib.error.HTTPError as e:
+                if e.code < 500 or attempt == 2:
+                    raise
+        rows = doc.get("rows") or []
+        for r in rows:
+            row = r.get("row") or {}
+            name, rating = row.get("model_name"), num(row.get("rating"))
+            if row.get("category") == "overall" and isinstance(name, str) and rating is not None:
+                key = name_key(name)
+                scores[key] = max(rating, scores.get(key, rating))
+        if len(rows) < HF_LB_PAGE:
+            break
+    return scores
+
+
+def read_livebench(path):
+    """`name_key` -> LiveBench global average from a CSV with `model` and `global_average`."""
+    import csv
+    scores = {}
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        for row in csv.DictReader(f):
+            row = {(k or "").strip().lower().replace(" ", "_"): (v or "").strip() for k, v in row.items()}
+            try:
+                avg = float(row.get("global_average", ""))
+            except ValueError:
+                continue
+            if row.get("model"):
+                key = name_key(row["model"])
+                scores[key] = max(avg, scores.get(key, avg))
+    return scores
+
+
+def merge_by_name(models, scores, prev, field, src, digits):
+    """Scores by normalised model name; `scores is None` (fetch failed) carries last catalog's."""
+    old = {m.get("model_id"): m for m in (prev or {}).get("models") or []}
+    n = 0
+    for m in models:
+        if scores is None:
+            o = old.get(m["model_id"]) or {}
+            value = num(o.get(field))
+        else:
+            value = scores.get(norm(m["model_id"]))
+        if value is not None:
+            put(m, field, round(value, digits), src)
+            n += 1
+    return n
+
+
 def merge_aa(models, rows, now, label=AA_SRC):
     by_id = {m["model_id"]: m for m in models}
     by_norm = {}
@@ -238,7 +315,7 @@ def fetch_aa(key):
     return rows
 
 
-def build(prev=None):
+def build(prev=None, livebench_csv=None):
     now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
     models = from_openrouter(get_json(OPENROUTER_URL), now)
     add_licenses(models)
@@ -249,6 +326,22 @@ def build(prev=None):
         lb = None
     n = merge_hf_leaderboard(models, lb, prev)
     print(f"open-llm-leaderboard: {n} models", file=sys.stderr)
+    try:
+        arena = fetch_lmarena()
+    except (urllib.error.URLError, ValueError, OSError) as e:
+        print(f"lmarena: {type(e).__name__}: {e}", file=sys.stderr)
+        arena = None
+    n = merge_by_name(models, arena, prev, "lmarena_rating", ARENA_SRC, 1)
+    print(f"lmarena: {n} models", file=sys.stderr)
+    live = {}
+    if livebench_csv:
+        try:
+            live = read_livebench(livebench_csv)
+        except (OSError, ValueError) as e:
+            print(f"livebench: {type(e).__name__}: {e}", file=sys.stderr)
+            live = None
+    n = merge_by_name(models, live, prev, "livebench_avg", LIVEBENCH_SRC, 2)
+    print(f"livebench: {n} models", file=sys.stderr)
     for m in models:
         m.pop("_hf", None)
     key = os.environ.get("AA_API_KEY", "").strip()
@@ -269,7 +362,7 @@ def build(prev=None):
     return {
         "schema": 1,
         "generated_at": now,
-        "attribution": "Data: Artificial Analysis https://artificialanalysis.ai/ ; prices: https://openrouter.ai/ ; Open LLM Leaderboard https://huggingface.co/open-llm-leaderboard",
+        "attribution": "Data: Artificial Analysis https://artificialanalysis.ai/ ; prices: https://openrouter.ai/ ; Open LLM Leaderboard https://huggingface.co/open-llm-leaderboard ; LMArena https://lmarena.ai/ (CC BY 4.0, lmarena-ai/leaderboard-dataset)" + (" ; LiveBench https://livebench.ai/" if livebench_csv else ""),
         "models": models,
     }
 
@@ -361,6 +454,14 @@ def self_test_build():
                 raise urllib.error.URLError("datasets-server down")
             return {"rows": [{"row": {"fullname": "meta-llama/Meta-Llama-3-8B", "Average \u2b06\ufe0f": 13.4123}},
                              {"row": {"fullname": "other/model", "Average \u2b06\ufe0f": 50}}]}
+        if url.startswith(ARENA_URL):
+            if aa_down[0]:
+                raise urllib.error.URLError("datasets-server down")
+            return {"rows": [
+                {"row": {"model_name": "Claude 3.5 Sonnet (20241022)", "rating": 1268.6612, "category": "overall"}},
+                {"row": {"model_name": "Claude 3.5 Sonnet", "rating": 1301.0, "category": "coding"}},
+                {"row": {"model_name": "Llama 3 8B", "rating": 1150.04, "category": "overall"}},
+                {"row": {"model_name": "Llama 3 8B", "rating": None, "category": "overall"}}]}
         if url.startswith(AA_URL):
             assert (headers or {}).get("x-api-key") == key and key not in url
             if aa_down[0]:
@@ -368,10 +469,19 @@ def self_test_build():
             return aa_pages[int(url.rsplit("=", 1)[1])]
         raise AssertionError(url)
 
+    import tempfile
+    tmp = tempfile.TemporaryDirectory()
+    live_csv = os.path.join(tmp.name, "livebench.csv")
+    with open(live_csv, "w", encoding="utf-8") as f:
+        f.write("﻿Model,Global Average,Coding\nclaude-3-5-sonnet,58.1234,60\nbroken,n/a,1\n")
     real, old_env = get_json, os.environ.get("AA_API_KEY")
     get_json, os.environ["AA_API_KEY"] = fake, key
     try:
-        day1 = json.loads(dump(build()))
+        day1 = json.loads(dump(build(None, live_csv)))
+        cs = {m["model_id"]: m for m in day1["models"]}["anthropic/claude-3.5-sonnet"]
+        assert cs["lmarena_rating"] == 1268.7 and cs["source"]["lmarena_rating"] == ARENA_SRC
+        assert cs["livebench_avg"] == 58.12 and cs["source"]["livebench_avg"] == LIVEBENCH_SRC
+        assert "lmarena.ai" in day1["attribution"] and "livebench.ai" in day1["attribution"]
         assert sum(u.startswith(AA_URL) for u in seen) == 2
         a = {m["model_id"]: m for m in day1["models"]}
         c = a["anthropic/claude-3.5-sonnet"]
@@ -394,6 +504,10 @@ def self_test_build():
         assert c2["source"]["input_price_per_m"] == "openrouter"
         assert b["aa-only"]["aa_intelligence_index"] == 20 and b["aa-only"]["provider"] == "Acme"
         assert b["meta-llama/llama-3-8b"]["hf_leaderboard_avg"] == 13.41, "carried forward"
+        assert b["meta-llama/llama-3-8b"]["lmarena_rating"] == 1150.0, "arena carried forward"
+        assert c2["lmarena_rating"] == 1268.7
+        assert c2["livebench_avg"] is None and "livebench.ai" not in day2["attribution"], "no CSV, no LiveBench"
+        assert merge_by_name([empty("x/y", "x", "t")], None, None, "lmarena_rating", ARENA_SRC, 1) == 0
         # No previous catalog either: AA fields stay empty, the keyless data still ships.
         assert build(None)["models"][0]["aa_intelligence_index"] is None
         try:
@@ -402,6 +516,7 @@ def self_test_build():
         except SystemExit:
             pass
     finally:
+        tmp.cleanup()
         get_json = real
         if old_env is None:
             os.environ.pop("AA_API_KEY", None)
@@ -413,12 +528,13 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="catalog.json")
     ap.add_argument("--previous", help="last published catalog.json, for AA carry-forward")
+    ap.add_argument("--livebench-csv", help="maintainer-supplied LiveBench scores (model,global_average)")
     ap.add_argument("--self-test", action="store_true")
     a = ap.parse_args()
     if a.self_test:
         self_test()
         return
-    cat = build(load_prev(a.previous))
+    cat = build(load_prev(a.previous), a.livebench_csv)
     text = dump(cat)
     with open(a.out, "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
