@@ -34,6 +34,7 @@ Commands:
   tool                Command-line tools on this computer and your typed tool definitions
   peer                Kor-to-Kor bridge: pair machines, delegate tasks, sync memory
   acp                 Agent Client Protocol: editors (Zed …) use Kor as their agent; other ACP agents run as sub-agents
+  lsp                 Language server for editors (LSP on stdin/stdout): Kor diagnostics, explanations, code graph, tasks
   chrome              Kor browser extension: pairing, install, domain lists, form profiles
   computer            Desktop control: on/off and per-app permission tiers
   system              This machine's profile and health
@@ -4934,6 +4935,23 @@ Options:
 
   -h, --help
           Print help
+===== kor lsp --help
+Language server for editors (LSP on stdin/stdout): Kor diagnostics, explanations, code graph, tasks
+
+Usage: kor lsp [OPTIONS]
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
 ===== kor chrome --help
 Kor browser extension: pairing, install, domain lists, form profiles
 
@@ -8690,6 +8708,7 @@ Commands:
   run        Run the daemon in this terminal
   install    Start the daemon at login (systemd user unit, launchd agent or Task Scheduler)
   uninstall  Remove the login entry
+  key        KaaS API keys: list, create (--create), revoke (--revoke)
   help       Print this message or the help of the given subcommand(s)
 
 Options:
@@ -8840,6 +8859,32 @@ Options:
 
       --remote <REMOTE>
           Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor daemon key --help
+KaaS API keys: list, create (--create), revoke (--revoke)
+
+Usage: kor daemon key [OPTIONS]
+
+Options:
+      --create <CREATE>
+          Create a new key with this name (the key is shown only once)
+
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --project <PROJECT>
+          Default project of the key's tasks and chats
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+      --revoke <REVOKE>
+          Revoke the key with this id
 
   -h, --help
           Print help

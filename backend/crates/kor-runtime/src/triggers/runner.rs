@@ -103,6 +103,128 @@ pub struct Env {
     pub public_url: Option<String>,
     pub approval_timeout: Duration,
     pub factory: Arc<dyn AgentFactory>,
+    /// Cancel tokens and event streams of queued and running jobs (`KaaS` cancel / WebSocket).
+    pub live: Arc<Live>,
+}
+
+/// One queued or running job: what cancels it and where its events go.
+#[derive(Debug, Clone)]
+pub struct Run {
+    pub cancel: CancellationToken,
+    pub events: tokio::sync::broadcast::Sender<serde_json::Value>,
+}
+
+/// Jobs that can still be cancelled or watched, by id.
+#[derive(Debug, Default)]
+pub struct Live {
+    runs: Mutex<std::collections::HashMap<String, Run>>,
+}
+
+impl Live {
+    fn map(&self) -> std::sync::MutexGuard<'_, std::collections::HashMap<String, Run>> {
+        self.runs
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+    }
+
+    /// The job's entry, created on first use.
+    pub fn open(&self, id: &str) -> Run {
+        self.map()
+            .entry(id.to_owned())
+            .or_insert_with(|| Run {
+                cancel: CancellationToken::new(),
+                events: tokio::sync::broadcast::channel(256).0,
+            })
+            .clone()
+    }
+
+    pub fn get(&self, id: &str) -> Option<Run> {
+        self.map().get(id).cloned()
+    }
+
+    pub fn close(&self, id: &str) {
+        self.map().remove(id);
+    }
+}
+
+/// The agent event a remote watcher sees; `None` for internal ones (status ticks, context).
+pub fn event_json(ev: &AgentEvent) -> Option<serde_json::Value> {
+    use serde_json::json;
+    Some(match ev {
+        AgentEvent::Text(t) => json!({ "type": "text", "text": t }),
+        AgentEvent::ToolStart { name, summary, .. } => {
+            json!({ "type": "tool_start", "name": name, "summary": summary })
+        }
+        AgentEvent::ToolEnd { name, is_error, .. } => {
+            json!({ "type": "tool_end", "name": name, "is_error": is_error })
+        }
+        AgentEvent::Usage(u) => {
+            json!({ "type": "usage", "input_tokens": u.input, "output_tokens": u.output })
+        }
+        AgentEvent::Notice(n) => json!({ "type": "notice", "text": n }),
+        _ => return None,
+    })
+}
+
+/// One prompt to a fresh agent in `dir` outside the job queue (`KaaS` chat completions, `kor lsp`):
+/// earlier turns in `history`, extra client instructions appended to the system prompt. The
+/// answer text and token use, or why not.
+///
+/// # Errors
+/// The agent cannot be built, the provider fails, or the run is cancelled.
+#[allow(clippy::too_many_arguments)] // one call site per surface; a struct would only rename them
+pub async fn one_shot(
+    l: &Localizer,
+    factory: &dyn AgentFactory,
+    dir: &Path,
+    t: &Trigger,
+    id: &str,
+    history: Vec<kor_core::Message>,
+    system: &str,
+    prompt: String,
+    approver: &dyn Approver,
+    events: &tokio::sync::mpsc::UnboundedSender<AgentEvent>,
+    cancel: CancellationToken,
+) -> Result<(String, kor_core::Usage), String> {
+    let mut built = factory.build(dir, dir, t, id).await?;
+    if !system.trim().is_empty() {
+        built.agent.system.push_str("\n\n");
+        built.agent.system.push_str(system.trim());
+    }
+    built.agent.messages.extend(history);
+    let stop = built.agent.send(prompt, events, approver, cancel).await;
+    if let Some(p) = &built.transcript {
+        let _ = kor_agent::session::save(p, &built.agent.messages);
+    }
+    match stop.map_err(|e| crate::provider_error(l, &e))? {
+        StopReason::Cancelled => Err(l.t("trigger-cancelled")),
+        StopReason::Blocked(why) => Err(why),
+        StopReason::Done(_) | StopReason::MaxTurns | StopReason::Budget => {
+            Ok((last_text(&built.agent), built.agent.usage))
+        }
+    }
+}
+
+/// A trigger definition for a run that no `[[triggers]]` entry describes (`KaaS`, `kor lsp`).
+pub fn adhoc(name: &str, task: &str, model: &str, approval: Approval) -> Trigger {
+    Trigger {
+        event: kor_config::TriggerEvent::Webhook,
+        task: task.to_owned(),
+        name: name.to_owned(),
+        enabled: true,
+        branch: String::new(),
+        schedule: String::new(),
+        path: String::new(),
+        secret: String::new(),
+        source: String::new(),
+        pattern: String::new(),
+        debounce_secs: 0,
+        model: model.to_owned(),
+        budget_usd: 0.0,
+        root: String::new(),
+        approval,
+        pr: false,
+    }
 }
 
 impl std::fmt::Debug for Env {
@@ -314,7 +436,7 @@ fn prompt(fire: &Fire) -> String {
     p
 }
 
-fn last_text(agent: &Agent) -> String {
+pub(crate) fn last_text(agent: &Agent) -> String {
     agent
         .messages
         .iter()
@@ -469,13 +591,20 @@ async fn publish(
 #[allow(clippy::too_many_lines)] // one linear run; every step updates the stored job
 pub async fn run(env: &Env, fire: &Fire, job: Job) -> Job {
     let l = &env.l;
+    let live = env.live.open(&job.id);
     let shared = Mutex::new(job);
     let update = |f: &dyn Fn(&mut Job)| {
         let mut j = shared
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
+        let before = j.status;
         f(&mut j);
         let _ = save_job(&env.dir, &j);
+        if j.status != before {
+            let _ = live
+                .events
+                .send(serde_json::json!({ "type": "status", "status": j.status }));
+        }
         j.clone()
     };
     let job = update(&|j| {
@@ -487,6 +616,9 @@ pub async fn run(env: &Env, fire: &Fire, job: Job) -> Job {
         serde_json::json!({ "job": job.id, "trigger": job.trigger, "event": job.event, "detail": clip(&job.detail, 200) }),
     );
     let result = async {
+        if live.cancel.is_cancelled() {
+            return Err(l.t("trigger-cancelled"));
+        }
         let wt = worktree(env, &job)?;
         update(&|j| j.worktree.clone_from(&wt));
         let dir = wt.clone().unwrap_or_else(|| job.root.clone());
@@ -495,16 +627,20 @@ pub async fn run(env: &Env, fire: &Fire, job: Job) -> Job {
             .build(&dir, &job.root, &fire.def.trigger, &job.id)
             .await?;
         update(&|j| j.transcript.clone_from(&built.transcript));
-        let cancel = CancellationToken::new();
+        let cancel = live.cancel.clone();
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         let budget = fire.def.trigger.budget_usd;
         let cost = built.cost.clone();
         let watch_cancel = cancel.clone();
         let over = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let over_w = over.clone();
+        let watchers = live.events.clone();
         // Per-trigger budget: stop the run once this session's spend reaches it.
         let watcher = tokio::spawn(async move {
             while let Some(ev) = rx.recv().await {
+                if let Some(v) = event_json(&ev) {
+                    let _ = watchers.send(v);
+                }
                 if let (AgentEvent::Usage(_), Some(c)) = (&ev, &cost)
                     && budget > 0.0
                     && c.session_rows().iter().map(|r| r.usd).sum::<f64>() >= budget
@@ -582,6 +718,7 @@ pub async fn run(env: &Env, fire: &Fire, job: Job) -> Job {
             }
         }
     });
+    env.live.close(&job.id);
     kor_agent::audit::record(
         "trigger.done",
         serde_json::json!({ "job": job.id, "trigger": job.trigger, "ok": result.is_ok(), "cost_usd": job.cost_usd, "pr": job.pr_url }),

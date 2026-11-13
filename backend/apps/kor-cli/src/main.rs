@@ -231,6 +231,12 @@ enum Cmd {
     },
     /// Agent Client Protocol: serve editors, run ACP agents (§28.8).
     Acp(acp_cmd::AcpArgs),
+    /// Language server for editors on stdin/stdout (§12.3).
+    Lsp {
+        /// Accepted for editors that pass it (`vscode-languageclient`); stdio is the only transport.
+        #[arg(long, hide = true)]
+        stdio: bool,
+    },
     /// Kor browser extension: pair, install, domains, form profiles.
     Chrome {
         #[command(subcommand)]
@@ -763,6 +769,7 @@ fn localized_command(l: &Localizer) -> clap::Command {
         .mut_subcommand("tool", |c| tool_cmd::localize(c, l))
         .mut_subcommand("peer", |c| peer_cmd::localize(c, l))
         .mut_subcommand("acp", |c| acp_cmd::localize(c, l))
+        .mut_subcommand("lsp", |c| c.about(l.t("cmd-lsp")))
         .mut_subcommand("chrome", |c| chrome_cmd::localize(c, l))
         .mut_subcommand("computer", |c| computer_cmd::localize(c, l))
         .mut_subcommand("system", |c| system_cmd::localize(c, l))
@@ -1340,6 +1347,14 @@ fn run_cmd(ctx: &Ctx, cmd: Cmd) -> anyhow::Result<bool> {
         Cmd::Tool { command } => tool_cmd::run(ctx, &command),
         Cmd::Peer { command } => peer_cmd::run(ctx, command),
         Cmd::Acp(a) => acp_cmd::run(ctx, a),
+        Cmd::Lsp { .. } => {
+            if let Ok(c) = ctx.config.as_ref() {
+                kor_runtime::apply_network_policy(&ctx.l, &c.config);
+            }
+            providers::runtime()?
+                .block_on(kor_runtime::lsp::serve_stdio(Localizer::new(ctx.l.lang())));
+            Ok(true)
+        }
         Cmd::Chrome { command } => chrome_cmd::run(ctx, command),
         Cmd::Computer { command } => computer_cmd::run(ctx, command),
         Cmd::System { command } => system_cmd::run(ctx, command),
@@ -1448,6 +1463,7 @@ pub(crate) fn run_slash(ctx: &Ctx, line: &str) -> Option<bool> {
     let cmd = cli.command?;
     if matches!(&cmd, Cmd::Peer { command } if peer_cmd::blocks_tui(command))
         || matches!(&cmd, Cmd::Acp(a) if acp_cmd::serves_stdio(a))
+        || matches!(&cmd, Cmd::Lsp { .. })
     {
         return None;
     }

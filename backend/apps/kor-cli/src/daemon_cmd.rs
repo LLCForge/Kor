@@ -37,6 +37,15 @@ pub enum DaemonCmd {
     Install,
     /// Remove the login entry.
     Uninstall,
+    /// `KaaS` API keys: list them, `--create <name>` or `--revoke <id>`.
+    Key {
+        #[arg(long, conflicts_with = "revoke")]
+        create: Option<String>,
+        #[arg(long, requires = "create")]
+        project: Option<std::path::PathBuf>,
+        #[arg(long)]
+        revoke: Option<String>,
+    },
 }
 
 pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
@@ -52,6 +61,12 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
         .mut_subcommand("run", |s| addr(s.about(l.t("cmd-daemon-run"))))
         .mut_subcommand("install", |s| s.about(l.t("cmd-daemon-install")))
         .mut_subcommand("uninstall", |s| s.about(l.t("cmd-daemon-uninstall")))
+        .mut_subcommand("key", |s| {
+            s.about(l.t("cmd-daemon-key"))
+                .mut_arg("create", |a| a.help(l.t("arg-daemon-key-create")))
+                .mut_arg("project", |a| a.help(l.t("arg-daemon-key-project")))
+                .mut_arg("revoke", |a| a.help(l.t("arg-daemon-key-revoke")))
+        })
 }
 
 fn dir() -> anyhow::Result<std::path::PathBuf> {
@@ -190,7 +205,60 @@ pub fn run(ctx: &Ctx, cmd: DaemonCmd) -> anyhow::Result<bool> {
             println!("{}", l.t("daemon-uninstalled"));
             Ok(true)
         }
+        DaemonCmd::Key {
+            create,
+            project,
+            revoke,
+        } => key(
+            l,
+            &dir,
+            create.as_deref(),
+            project.as_deref(),
+            revoke.as_deref(),
+        ),
     }
+}
+
+fn key(
+    l: &Localizer,
+    dir: &std::path::Path,
+    create: Option<&str>,
+    project: Option<&std::path::Path>,
+    revoke: Option<&str>,
+) -> anyhow::Result<bool> {
+    use daemon::kaas;
+    if let Some(name) = create {
+        let (k, secret) = kaas::create_key(dir, name, project).map_err(|e| anyhow::anyhow!(e))?;
+        eprintln!(
+            "{}",
+            l.t_args("daemon-key-created", &args!("id" => k.id, "name" => k.name))
+        );
+        // The key goes to stdout alone so `kor daemon key --create ci > key.txt` captures it.
+        println!("{secret}");
+        return Ok(true);
+    }
+    if let Some(id) = revoke {
+        let ok = kaas::revoke_key(dir, id).map_err(|e| anyhow::anyhow!(e))?;
+        let msg = if ok {
+            "daemon-key-revoked"
+        } else {
+            "daemon-key-unknown"
+        };
+        println!("{}", l.t_args(msg, &args!("id" => id.to_owned())));
+        return Ok(ok);
+    }
+    let keys = kaas::list_keys(dir);
+    if keys.is_empty() {
+        println!("{}", l.t("daemon-key-none"));
+    }
+    for k in keys {
+        let project = k
+            .project
+            .map(|p| p.display().to_string())
+            .unwrap_or_default();
+        println!("{:<10} {:<24} {project}", k.id, k.name);
+    }
+    Ok(true)
 }
 
 fn follow_log(path: &std::path::Path) {
@@ -246,7 +314,18 @@ mod tests {
                 follow: true
             }
         ));
-        for c in ["stop", "status", "run", "install", "uninstall"] {
+        assert!(matches!(
+            T::try_parse_from(["kor", "key", "--create", "ci", "--project", "."])
+                .unwrap()
+                .cmd,
+            DaemonCmd::Key {
+                create: Some(_),
+                project: Some(_),
+                revoke: None
+            }
+        ));
+        assert!(T::try_parse_from(["kor", "key", "--create", "a", "--revoke", "b"]).is_err());
+        for c in ["stop", "status", "run", "install", "uninstall", "key"] {
             T::try_parse_from(["kor", c]).unwrap();
         }
         let l = Localizer::new(kor_i18n::Lang::En);

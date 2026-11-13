@@ -129,6 +129,7 @@ pub fn run(ctx: &Ctx, cmd: TriggersCmd) -> anyhow::Result<bool> {
                 public_url: None,
                 approval_timeout: opts.approval_timeout,
                 factory: opts.factory,
+                live: std::sync::Arc::default(),
             };
             let all = defs(l, &dir);
             let job = rt

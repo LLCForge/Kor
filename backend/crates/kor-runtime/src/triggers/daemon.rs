@@ -30,6 +30,9 @@ use super::runner::{AgentFactory, Env, Fire};
 use super::webhook::{Push, same_repo};
 use super::{Defined, Job, Status, active, hook, logwatch, notify, runner, webhook};
 
+#[path = "kaas.rs"]
+pub mod kaas;
+
 const MAX_BODY: usize = 1024 * 1024;
 const MAX_QUEUED: usize = 100;
 const MAX_CONNECTIONS: usize = 64;
@@ -270,6 +273,7 @@ struct Shared {
     stop: watch::Sender<bool>,
     cron: Mutex<Vec<Value>>,
     watchers: Mutex<Vec<tokio::task::JoinHandle<()>>>,
+    kaas: kaas::Kaas,
 }
 
 /// A started daemon.
@@ -345,6 +349,7 @@ pub async fn start(o: Options) -> Result<Running, String> {
         public_url: o.public_url.clone(),
         approval_timeout: o.approval_timeout,
         factory: o.factory,
+        live: Arc::default(),
     });
     let shared = Arc::new(Shared {
         env,
@@ -357,6 +362,7 @@ pub async fn start(o: Options) -> Result<Running, String> {
         stop: stop.clone(),
         cron: Mutex::new(load_cron(&o.dir)),
         watchers: Mutex::new(Vec::new()),
+        kaas: kaas::Kaas::default(),
     });
     recover(&shared);
     sync_cron(&shared);
@@ -424,8 +430,15 @@ fn recover(s: &Arc<Shared>) {
                         base: j.base.clone(),
                         sha: j.sha.clone(),
                     };
+                    s.env.live.open(&j.id);
                     s.queued.fetch_add(1, Ordering::SeqCst);
                     let _ = s.queue.send((fire, j));
+                } else {
+                    // A KaaS task (or a removed trigger): its task text is gone with the process.
+                    j.status = Status::Failed;
+                    j.error = Some(l.t("trigger-interrupted"));
+                    j.finished = Some(super::now_ms());
+                    let _ = super::save_job(&s.env.dir, &j);
                 }
             }
             Status::Done | Status::Failed => {}
@@ -435,11 +448,16 @@ fn recover(s: &Arc<Shared>) {
 
 /// Queue a run of `fire`; the job id, or why not.
 fn enqueue(s: &Shared, fire: Fire) -> Result<Job, String> {
+    let job = runner::new_job(&fire)?;
+    enqueue_job(s, fire, job)
+}
+
+fn enqueue_job(s: &Shared, fire: Fire, job: Job) -> Result<Job, String> {
     if s.queued.load(Ordering::SeqCst) >= MAX_QUEUED {
         return Err(s.env.l.t("daemon-queue-full"));
     }
-    let job = runner::new_job(&fire)?;
     super::save_job(&s.env.dir, &job)?;
+    s.env.live.open(&job.id);
     log(&format!(
         "queued {} for trigger {} ({})",
         job.id, job.trigger, job.detail
@@ -455,6 +473,7 @@ async fn worker(s: Arc<Shared>, mut rx: mpsc::UnboundedReceiver<(Fire, Job)>) {
     while let Some((fire, job)) = rx.recv().await {
         let done = runner::run(&s.env, &fire, job).await;
         s.queued.fetch_sub(1, Ordering::SeqCst);
+        kaas::finished(&s, &done);
         log(&format!(
             "job {} {:?}{}",
             done.id,
@@ -816,10 +835,11 @@ async fn poll_answers(s: Arc<Shared>, mut stop: watch::Receiver<bool>) {
 // HTTP
 // ---------------------------------------------------------------------------------------------
 
-type Resp = Response<Full<Bytes>>;
+type Body = http_body_util::combinators::UnsyncBoxBody<Bytes, Infallible>;
+type Resp = Response<Body>;
 
 fn resp(status: u16, ctype: &'static str, body: impl Into<Bytes>) -> Resp {
-    let mut r = Response::new(Full::new(body.into()));
+    let mut r = Response::new(Full::new(body.into()).boxed_unsync());
     *r.status_mut() = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
     let h = r.headers_mut();
     h.insert(CONTENT_TYPE, HeaderValue::from_static(ctype));
@@ -871,6 +891,7 @@ async fn serve(s: Arc<Shared>, listener: TcpListener, mut stop: watch::Receiver<
                         .timer(TokioTimer::new())
                         .header_read_timeout(Duration::from_secs(15))
                         .serve_connection(TokioIo::new(stream), svc)
+                        .with_upgrades()
                         .await;
                     drop(permit);
                 });
@@ -886,9 +907,12 @@ fn query(q: Option<&str>, key: &str) -> Option<String> {
     })
 }
 
-async fn handle(s: &Shared, req: Request<Incoming>) -> Resp {
+async fn handle(s: &Arc<Shared>, req: Request<Incoming>) -> Resp {
     let method = req.method().clone();
     let path = req.uri().path().to_owned();
+    if path.starts_with("/api/v1/") || path.starts_with("/v1/") {
+        return kaas::handle(s, req).await;
+    }
     let q = req.uri().query().map(str::to_owned);
     let headers = req.headers().clone();
     let header = |n: &str| {

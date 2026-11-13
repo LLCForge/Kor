@@ -89,6 +89,9 @@ pub fn validate(l: &Localizer, t: &Trigger) -> Vec<String> {
                 || t.path == "/push"
                 || t.path.starts_with("/control")
                 || t.path.starts_with("/approve")
+                // KaaS API routes (`daemon::kaas`).
+                || t.path.starts_with("/api/")
+                || t.path.starts_with("/v1/")
                 || !t
                     .path
                     .bytes()
@@ -454,6 +457,9 @@ pub struct Job {
     pub approvals: u32,
     pub summary: String,
     pub error: Option<String>,
+    /// `KaaS` task: id of the API key that created it (only that key may read or cancel it).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
 }
 
 fn jobs_dir(dir: &Path) -> PathBuf {

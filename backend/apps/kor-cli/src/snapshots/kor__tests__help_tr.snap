@@ -34,6 +34,7 @@ Commands:
   tool                Bu bilgisayardaki komut satırı araçları ve tipli araç tanımlarınız
   peer                Kor-to-Kor köprüsü: makineleri eşleştir, görev devret, hafızayı eşitle
   acp                 Agent Client Protocol: editörler (Zed …) Kor'u ajan olarak kullanır; başka ACP ajanları alt-ajan olur
+  lsp                 Editörler için dil sunucusu (LSP, stdin/stdout): Kor tanıları, açıklama, kod grafı, görev çalıştırma
   chrome              Kor tarayıcı eklentisi: eşleştirme, kurulum, alan adı listeleri, form profilleri
   computer            Masaüstü denetimi: açma/kapama ve uygulama bazlı izin katmanları
   system              Bu makinenin profili ve sağlığı
@@ -4934,6 +4935,23 @@ Options:
 
   -h, --help
           Print help
+===== kor lsp --help
+Editörler için dil sunucusu (LSP, stdin/stdout): Kor tanıları, açıklama, kod grafı, görev çalıştırma
+
+Usage: kor lsp [OPTIONS]
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
 ===== kor chrome --help
 Kor tarayıcı eklentisi: eşleştirme, kurulum, alan adı listeleri, form profilleri
 
@@ -8690,6 +8708,7 @@ Commands:
   run        Daemon'u bu terminalde çalıştır
   install    Daemon'u oturum açılışında başlat (systemd kullanıcı birimi, launchd ya da Görev Zamanlayıcı)
   uninstall  Oturum açılışı kaydını kaldır
+  key        KaaS API anahtarları: listele, oluştur (--create), iptal et (--revoke)
   help       Print this message or the help of the given subcommand(s)
 
 Options:
@@ -8840,6 +8859,32 @@ Options:
 
       --remote <REMOTE>
           Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor daemon key --help
+KaaS API anahtarları: listele, oluştur (--create), iptal et (--revoke)
+
+Usage: kor daemon key [OPTIONS]
+
+Options:
+      --create <CREATE>
+          Bu adla yeni bir anahtar oluştur (anahtar yalnızca bir kez gösterilir)
+
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --project <PROJECT>
+          Anahtarın görevlerinin ve sohbetlerinin varsayılan projesi
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+      --revoke <REVOKE>
+          Bu kimlikteki anahtarı iptal et
 
   -h, --help
           Print help
