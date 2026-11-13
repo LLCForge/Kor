@@ -38,8 +38,10 @@ kor *args:
 test:
     cargo test --manifest-path backend/Cargo.toml --workspace --locked
     cargo test --manifest-path frontend/src-tauri/Cargo.toml --locked
-    node --test frontend/src/desktop/renderer/*.test.ts frontend/src/desktop/renderer/i18n/*.test.ts frontend/src/desktop/renderer/panels/*/*.test.ts frontend/src/desktop/renderer/review/*.test.ts frontend/scripts/*.test.ts frontend/src/desktop/renderer/kor-ui/*.test.ts
+    node --test frontend/src/desktop/renderer/*.test.ts frontend/src/desktop/renderer/i18n/*.test.ts frontend/src/desktop/renderer/panels/*/*.test.ts frontend/src/desktop/renderer/review/*.test.ts frontend/src/desktop/renderer/perfmon/*.test.ts frontend/scripts/*.test.ts frontend/src/desktop/renderer/kor-ui/*.test.ts
     {{python}} scripts/desktop_release.py selftest
+    {{python}} scripts/repro_check.py selftest
+    {{python}} scripts/pgo.py selftest
 
 # Lints as CI runs them: versions, clippy (warnings are errors), strict TypeScript, design rules.
 lint:
