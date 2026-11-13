@@ -382,8 +382,130 @@ fn split_csv(line: &str, delim: char) -> Vec<String> {
     out
 }
 
+// ---------------------------------------------------------------------------------------------
+// SERP competition factors (spec §29.16): how hard the current top results are to beat.
+// ---------------------------------------------------------------------------------------------
+
+pub const COMPETITION_FORMULA: &str = "difficulty = 100 × (0.35 × authority + 0.25 × title_match + 0.25 × depth + 0.15 × (1 − ugc)); authority = mean source authority / 100 (0.5 when no backlink source answered), title_match = share of titles containing every keyword word, depth = min(1, mean words / 2500), ugc = share of forum / Q&A results; adjusted score = score × (1 − difficulty / 200)";
+
+/// Forum and Q&A hosts: a SERP full of them is easier to enter.
+const UGC: &[&str] = &[
+    "reddit.com",
+    "quora.com",
+    "eksisozluk.com",
+    "donanimhaber.com",
+    "technopat.net",
+    "sikayetvar.com",
+    "stackoverflow.com",
+    "kizlarsoruyor.com",
+    "r10.net",
+    "medium.com",
+];
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct Competition {
+    pub keyword: String,
+    pub results: usize,
+    /// 0–1 each.
+    pub authority: f64,
+    pub authority_known: bool,
+    pub title_match: f64,
+    pub depth: f64,
+    pub ugc: f64,
+    /// 0–100.
+    pub difficulty: f64,
+}
+
+fn host(u: &str) -> String {
+    url::Url::parse(u)
+        .ok()
+        .and_then(|x| {
+            x.host_str()
+                .map(|h| h.trim_start_matches("www.").to_owned())
+        })
+        .unwrap_or_default()
+}
+
+/// Competition of a keyword's top results; `authority` maps a domain to its 0–100 authority from
+/// a backlink source (empty when none is connected).
+#[allow(clippy::implicit_hasher, clippy::cast_precision_loss)]
+pub fn competition(
+    keyword: &str,
+    pages: &[super::content::SerpPage],
+    authority: &std::collections::HashMap<String, f64>,
+) -> Competition {
+    let lower = crate::site::tr::lower_tr;
+    let words: Vec<String> = lower(keyword)
+        .split_whitespace()
+        .filter(|w| w.chars().count() > 2)
+        .map(str::to_owned)
+        .collect();
+    let n = pages.len().max(1) as f64;
+    let share = |f: &dyn Fn(&super::content::SerpPage) -> bool| {
+        pages.iter().filter(|p| f(p)).count() as f64 / n
+    };
+    let title_match = share(&|p| {
+        let t = lower(&p.title);
+        !words.is_empty() && words.iter().all(|w| t.contains(w.as_str()))
+    });
+    let ugc = share(&|p| {
+        let h = host(&p.url);
+        UGC.iter().any(|u| h == *u || h.ends_with(&format!(".{u}")))
+    });
+    let depth = (pages.iter().map(|p| p.word_count as f64).sum::<f64>() / n / 2500.0).min(1.0);
+    let known: Vec<f64> = pages
+        .iter()
+        .filter_map(|p| authority.get(&host(&p.url)).copied())
+        .collect();
+    let authority_known = !known.is_empty();
+    let auth = if authority_known {
+        (known.iter().sum::<f64>() / known.len() as f64 / 100.0).clamp(0.0, 1.0)
+    } else {
+        0.5
+    };
+    let difficulty = 100.0 * (0.35 * auth + 0.25 * title_match + 0.25 * depth + 0.15 * (1.0 - ugc));
+    Competition {
+        keyword: keyword.to_owned(),
+        results: pages.len(),
+        authority: auth,
+        authority_known,
+        title_match,
+        depth,
+        ugc,
+        difficulty: (difficulty * 10.0).round() / 10.0,
+    }
+}
+
+/// An opportunity score lowered by its keyword's competition (halved at difficulty 100).
+pub fn adjusted(score: f64, c: &Competition) -> f64 {
+    score * (1.0 - c.difficulty / 200.0)
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn competition_factors() {
+        use super::super::content::SerpPage;
+        let p = |u: &str, t: &str, w: usize| SerpPage {
+            url: u.into(),
+            title: t.into(),
+            headings: Vec::new(),
+            word_count: w,
+        };
+        let pages = [
+            p("https://www.buyuk.com/a", "Kargo Takip Nasıl Yapılır", 3000),
+            p("https://www.reddit.com/r/x", "kargo sorusu", 200),
+        ];
+        let mut auth = std::collections::HashMap::new();
+        let c = super::competition("kargo takip", &pages, &auth);
+        assert!((c.title_match - 0.5).abs() < 1e-9 && (c.ugc - 0.5).abs() < 1e-9);
+        assert!(!c.authority_known && (c.authority - 0.5).abs() < 1e-9);
+        auth.insert("buyuk.com".to_owned(), 80.0);
+        let c2 = super::competition("kargo takip", &pages, &auth);
+        assert!(c2.authority_known && c2.difficulty > c.difficulty);
+        assert!(super::adjusted(10.0, &c2) < 10.0);
+    }
+
     use super::*;
 
     #[test]

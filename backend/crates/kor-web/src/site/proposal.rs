@@ -43,7 +43,8 @@ pub struct Efatura {
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Market {
-    /// Trendyol seller id / Hepsiburada merchant id.
+    /// Trendyol seller id / Hepsiburada merchant id / Domain Name API reseller id; `test` for
+    /// Yurtiçi's test service. Unused for N11.
     pub id: String,
     /// Vault names: API key/user and secret/password.
     pub key: String,
@@ -77,6 +78,11 @@ pub struct Business {
     pub efatura: Efatura,
     pub trendyol: Market,
     pub hepsiburada: Market,
+    pub n11: Market,
+    /// Yurtiçi Kargo web service user (`key`) and password (`secret`).
+    pub yurtici: Market,
+    /// Domain Name API: reseller id (`id`) and API key (`key`).
+    pub dna: Market,
 }
 
 impl Default for Business {
@@ -102,6 +108,9 @@ impl Default for Business {
             efatura: Efatura::default(),
             trendyol: Market::default(),
             hepsiburada: Market::default(),
+            n11: Market::default(),
+            yurtici: Market::default(),
+            dna: Market::default(),
         }
     }
 }
@@ -135,7 +144,10 @@ name = \"\"\nowner = \"\"\nemail = \"\"\nphone = \"\"\naddress = \"\"\ncity = \"
 tax_office = \"\"\ntax_id = \"\"\niban = \"\"\nhourly_rate = 0\nvat = 20\nhours_per_day = 6\nrevisions = 2\n\
 payment_plan = [40, 30, 30]\naccent = \"#c96442\"\n\n\
 # [[packages]]\n# name = \"Kurumsal site\"\n# price = 25000\n# hours = 30\n# includes = [\"5 sayfa\", \"İletişim formu\", \"Temel SEO\"]\n\n\
-# [efatura]   # özel entegratör (UBL-TR gönderimi)\n# url = \"\"\n# secret = \"EFATURA_TOKEN\"   # kor vault add EFATURA_TOKEN\n# series = \"KOR\"\n";
+# [efatura]   # özel entegratör (UBL-TR gönderimi)\n# url = \"\"\n# secret = \"EFATURA_TOKEN\"   # kor vault add EFATURA_TOKEN\n# series = \"KOR\"\n\n\
+# [n11]   # kor tr market\n# key = \"N11_APP_KEY\"\n# secret = \"N11_APP_SECRET\"\n\n\
+# [yurtici]   # kor tr cargo; id = \"test\" test servisini kullanır\n# key = \"YURTICI_USER\"\n# secret = \"YURTICI_PASSWORD\"\n\n\
+# [dna]   # kor tr dns (Domain Name API)\n# id = \"<bayi kimliği>\"\n# key = \"DNA_API_KEY\"\n";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Item {

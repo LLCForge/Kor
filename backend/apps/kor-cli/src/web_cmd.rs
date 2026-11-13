@@ -8,7 +8,7 @@
 //! - `kor redirects build|export|check|slugs` (§29.11);
 //! - `kor proposal init|new|revise|templates` (§29.12);
 //! - `kor client add|list|log|ticket|check|report` (§29.13);
-//! - `kor tr check|slug|kdv|kvkk|efatura|irsaliye|payment|market|keywords` (§29.14).
+//! - `kor tr check|slug|kdv|kvkk|efatura|irsaliye|payment|market|cargo|dns|keywords` (§29.14).
 
 #![allow(clippy::doc_markdown, clippy::many_single_char_names)] // product names; `l`, `t`, `p`… as in the other *_cmd files
 
@@ -1785,14 +1785,30 @@ pub enum TrCmd {
         #[arg(long)]
         send: bool,
     },
-    /// Payment integration templates: iyzico, paytr.
+    /// Payment integration templates: iyzico, paytr, param, sipay.
     Payment {
         provider: String,
         #[arg(long, default_value = ".")]
         out: PathBuf,
     },
-    /// Product/order counts from Trendyol and Hepsiburada (credentials in business.toml + vault).
+    /// Product/order counts from Trendyol, Hepsiburada and N11 (credentials in business.toml + vault).
     Market,
+    /// Yurtiçi Kargo shipment status by cargo key.
+    Cargo { key: String },
+    /// Domain Name API: domain details and DNS zone; --set / --ns change them after a yes.
+    Dns {
+        domain: String,
+        /// `name TYPE value[,value]` record set to write, e.g. `@ TXT v=spf1 -all`.
+        #[arg(long)]
+        set: Option<String>,
+        #[arg(long, default_value_t = 3600)]
+        ttl: u64,
+        /// Name servers to set, comma separated.
+        #[arg(long, value_delimiter = ',')]
+        ns: Vec<String>,
+        #[arg(long, short)]
+        yes: bool,
+    },
     /// Most frequent Turkish keyword stems of a file or page.
     Keywords {
         source: String,
@@ -1804,7 +1820,8 @@ pub enum TrCmd {
 pub fn localize_tr(c: clap::Command, l: &Localizer) -> clap::Command {
     let mut c = c.about(l.t("cmd-tr"));
     for s in [
-        "check", "slug", "kdv", "kvkk", "efatura", "irsaliye", "payment", "market", "keywords",
+        "check", "slug", "kdv", "kvkk", "efatura", "irsaliye", "payment", "market", "cargo", "dns",
+        "keywords",
     ] {
         let key = format!("cmd-tr-{s}");
         c = c.mut_subcommand(s, |x| x.about(l.t(&key)));
@@ -1836,6 +1853,96 @@ fn send_ubl(ctx: &Ctx, xml: &str) -> Result<String, String> {
         token.expose_secret(),
         xml,
     ))
+}
+
+/// `kor tr dns`: show details and zone, or change one record set / the name servers after a yes.
+fn dns(
+    ctx: &Ctx,
+    rt: &tokio::runtime::Runtime,
+    domain: &str,
+    set: Option<&str>,
+    ttl: u64,
+    ns: &[String],
+    yes: bool,
+) -> bool {
+    let l = &ctx.l;
+    let Ok(b) = web::base() else { return false };
+    let biz = proposal::business(&b).unwrap_or_default();
+    if biz.dna.id.is_empty() || biz.dna.key.is_empty() {
+        println!("{}", l.t("tr-dns-none"));
+        return false;
+    }
+    let st = store(ctx);
+    let key = match web::secret(st.as_deref(), &biz.dna.key) {
+        Ok(k) => k,
+        Err(e) => return fail(l, e),
+    };
+    let http = match web::http::Http::new() {
+        Ok(h) => h,
+        Err(e) => return fail(l, e),
+    };
+    let d = tr::registrar::Dna {
+        http: &http,
+        base: tr::registrar::DNA,
+        reseller: &biz.dna.id,
+        key: key.expose_secret(),
+    };
+    let change = |what: String| {
+        crate::shell_cmd::confirm(
+            l,
+            &l.t_args(
+                "tr-dns-confirm",
+                &args!("change" => what, "domain" => domain.to_owned()),
+            ),
+            yes,
+        )
+    };
+    if let Some(spec) = set {
+        let mut parts = spec.splitn(3, ' ');
+        let (Some(name), Some(kind), Some(values)) = (parts.next(), parts.next(), parts.next())
+        else {
+            return fail(l, format!("--set \"name TYPE value\", not `{spec}`"));
+        };
+        let values: Vec<String> = values.split(',').map(|v| v.trim().to_owned()).collect();
+        if !change(format!("{name} {kind} {}", values.join(", "))) {
+            return false;
+        }
+        return match rt.block_on(d.set_records(domain, name, kind, &values, ttl)) {
+            Ok(()) => {
+                println!("{}", l.t("tr-dns-done"));
+                true
+            }
+            Err(e) => fail(l, e),
+        };
+    }
+    if !ns.is_empty() {
+        if !change(format!("NS {}", ns.join(", "))) {
+            return false;
+        }
+        return match rt.block_on(d.set_name_servers(domain, ns)) {
+            Ok(()) => {
+                println!("{}", l.t("tr-dns-done"));
+                true
+            }
+            Err(e) => fail(l, e),
+        };
+    }
+    match rt.block_on(async { Ok::<_, String>((d.info(domain).await?, d.zone(domain).await?)) }) {
+        Ok((i, zone)) => {
+            println!(
+                "{}  {}  {}  NS: {}",
+                i.domain,
+                i.status,
+                i.expiration,
+                i.name_servers.join(", ")
+            );
+            for r in zone {
+                println!("{:<24} {:<6} {:>6}  {}", r.name, r.kind, r.ttl, r.content);
+            }
+            true
+        }
+        Err(e) => fail(l, e),
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -2052,11 +2159,55 @@ pub fn tr_run(ctx: &Ctx, cmd: TrCmd) -> anyhow::Result<bool> {
                     }
                 }
             }
+            if !biz.n11.key.is_empty() {
+                any = true;
+                match get(&biz.n11.key)
+                    .and_then(|k| Ok((k, get(&biz.n11.secret)?)))
+                    .and_then(|(k, s)| rt.block_on(tr::market::n11(&http, tr::market::N11, &k, &s)))
+                {
+                    Ok(c) => println!("{}: {:?} / {:?}", c.market, c.products, c.orders),
+                    Err(e) => {
+                        fail(l, e);
+                    }
+                }
+            }
             if !any {
                 println!("{}", l.t("tr-market-none"));
             }
             any
         }
+        TrCmd::Cargo { key } => {
+            let Ok(b) = web::base() else { return Ok(false) };
+            let biz = proposal::business(&b).unwrap_or_default();
+            if biz.yurtici.key.is_empty() {
+                println!("{}", l.t("tr-cargo-none"));
+                return Ok(false);
+            }
+            let st = store(ctx);
+            let get = |n: &str| web::secret(st.as_deref(), n).map(|s| s.expose_secret().to_owned());
+            let endpoint = if biz.yurtici.id == "test" {
+                tr::cargo::YURTICI_TEST
+            } else {
+                tr::cargo::YURTICI
+            };
+            match web::http::Http::new()
+                .and_then(|h| Ok((h, get(&biz.yurtici.key)?, get(&biz.yurtici.secret)?)))
+                .and_then(|(h, u, p)| rt.block_on(tr::cargo::yurtici(&h, endpoint, &u, &p, &key)))
+            {
+                Ok(s) => {
+                    println!("{}  {}  {}  {}", s.key, s.status, s.tracking, s.message);
+                    true
+                }
+                Err(e) => fail(l, e),
+            }
+        }
+        TrCmd::Dns {
+            domain,
+            set,
+            ttl,
+            ns,
+            yes,
+        } => dns(ctx, &rt, &domain, set.as_deref(), ttl, &ns, yes),
         TrCmd::Keywords { source, top } => {
             let text = if source.starts_with("http") {
                 match web::http::Http::new().and_then(|h| rt.block_on(h.follow(&source))) {

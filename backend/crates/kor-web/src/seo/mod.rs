@@ -16,6 +16,7 @@
 
 pub mod agents;
 pub mod audit;
+pub mod backlinks;
 pub mod bing;
 pub mod competitors;
 pub mod content;

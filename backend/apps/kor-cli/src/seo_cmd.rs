@@ -13,7 +13,8 @@ use kor_i18n::{Localizer, args};
 use kor_runtime::analysis::{Format, Report, render};
 use kor_secrets::SecretStore;
 use kor_web::seo::{
-    agents, audit, bing, competitors, content, google, logs, meta, model, notify, opportunity, wp,
+    agents, audit, backlinks, bing, competitors, content, google, logs, meta, model, notify,
+    opportunity, wp,
 };
 
 use crate::Ctx;
@@ -214,6 +215,18 @@ pub enum MetaSub {
         #[arg(long)]
         yes: bool,
     },
+    /// `OpenCart` write-back: SQL apply and undo scripts from the review CSV.
+    Opencart {
+        csv: PathBuf,
+        #[arg(long, default_value = "oc_")]
+        prefix: String,
+        #[arg(long, default_value_t = 1)]
+        language: u32,
+        #[arg(long, default_value_t = 4)]
+        oc_version: u8,
+        #[arg(short, long, default_value = "kor-opencart")]
+        out: PathBuf,
+    },
     Undo {
         file: PathBuf,
         #[arg(long)]
@@ -346,6 +359,140 @@ pub enum SeoSub {
         #[arg(long)]
         json: bool,
     },
+    Backlinks {
+        #[arg(required = true)]
+        domains: Vec<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    Competition {
+        keyword: String,
+        #[arg(long = "serp", required = true)]
+        serp: Vec<String>,
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+/// Backlink numbers of `domain` from every connected source (keys in the vault or environment).
+async fn backlinks_for(
+    st: Option<&dyn SecretStore>,
+    http: &kor_web::site::http::Http,
+    domain: &str,
+) -> (Vec<backlinks::Backlinks>, Vec<String>, bool) {
+    let get = |n: &str| {
+        kor_web::site::secret(st, n)
+            .ok()
+            .map(|s| kor_secrets::ExposeSecret::expose_secret(&s).to_owned())
+    };
+    let (mut out, mut errors, mut any) = (Vec::new(), Vec::new(), false);
+    let mut take = |r: Result<backlinks::Backlinks, String>| match r {
+        Ok(b) => out.push(b),
+        Err(e) => errors.push(e),
+    };
+    if let Some(k) = get("AHREFS_API_KEY") {
+        any = true;
+        let date = chrono::Utc::now().format("%Y-%m-%d").to_string();
+        take(backlinks::ahrefs(http, backlinks::AHREFS, &k, domain, &date).await);
+    }
+    if let Some(k) = get("SEMRUSH_API_KEY") {
+        any = true;
+        take(backlinks::semrush(http, backlinks::SEMRUSH, &k, domain).await);
+    }
+    if let (Some(id), Some(s)) = (get("MOZ_ACCESS_ID"), get("MOZ_SECRET_KEY")) {
+        any = true;
+        take(backlinks::moz(http, backlinks::MOZ, &id, &s, domain).await);
+    }
+    (out, errors, any)
+}
+
+async fn backlinks_cmd(ctx: &Ctx, domains: &[String], json: bool) -> bool {
+    let l = &ctx.l;
+    let st = store(ctx).ok();
+    let http = match kor_web::site::http::Http::new() {
+        Ok(h) => h,
+        Err(e) => return fail(l, e),
+    };
+    let mut all = Vec::new();
+    let mut ok = true;
+    for d in domains {
+        let (rows, errors, any) = backlinks_for(st.as_deref(), &http, d).await;
+        if !any {
+            return fail(l, l.t("seo-backlinks-none"));
+        }
+        for e in errors {
+            ok = false;
+            eprintln!("{}", l.t_args("seo-error", &args!("error" => e)));
+        }
+        all.extend(rows);
+    }
+    if json {
+        println!("{}", serde_json::to_string_pretty(&all).unwrap_or_default());
+    } else {
+        let n = |v: Option<u64>| v.map_or_else(|| "-".to_owned(), |x| x.to_string());
+        for b in &all {
+            println!(
+                "{:<28} {:<8} {:>6} {:>12} {:>10}",
+                b.domain,
+                b.source,
+                b.authority
+                    .map_or_else(|| "-".to_owned(), |a| format!("{a:.0}")),
+                n(b.backlinks),
+                n(b.ref_domains)
+            );
+        }
+    }
+    ok
+}
+
+async fn competition_cmd(ctx: &Ctx, keyword: &str, serp: &[String], json: bool) -> bool {
+    let l = &ctx.l;
+    let pages = content::serp_pages(serp, &user_agent()).await;
+    if pages.is_empty() {
+        return fail(l, l.t("seo-competition-no-pages"));
+    }
+    // Authority per ranking domain from the first backlink source that answers.
+    let mut auth = HashMap::new();
+    let st = store(ctx).ok();
+    if let Ok(http) = kor_web::site::http::Http::new() {
+        for p in &pages {
+            let Ok(d) = backlinks::domain_of(&p.url) else {
+                continue;
+            };
+            if auth.contains_key(&d) {
+                continue;
+            }
+            let (rows, _, any) = backlinks_for(st.as_deref(), &http, &d).await;
+            if !any {
+                break;
+            }
+            if let Some(a) = rows.iter().find_map(|b| b.authority) {
+                auth.insert(d, a);
+            }
+        }
+    }
+    let c = opportunity::competition(keyword, &pages, &auth);
+    if json {
+        println!("{}", serde_json::to_string_pretty(&c).unwrap_or_default());
+        return true;
+    }
+    println!(
+        "{}",
+        l.t_args(
+            "seo-competition",
+            &args!(
+                "keyword" => keyword.to_owned(),
+                "difficulty" => format!("{:.1}", c.difficulty),
+                "n" => c.results,
+                "authority" => if c.authority_known { format!("{:.2}", c.authority) } else { "?".to_owned() },
+                "title" => format!("{:.2}", c.title_match),
+                "depth" => format!("{:.2}", c.depth),
+                "ugc" => format!("{:.2}", c.ugc)
+            )
+        )
+    );
+    println!("{}", opportunity::COMPETITION_FORMULA);
+    true
 }
 
 /// Localize the whole tree: `cmd-seo[-sub…]` for every command, `arg-seo-<id>` for every arg.
@@ -550,6 +697,12 @@ pub fn run(ctx: &Ctx, a: SeoArgs) -> anyhow::Result<bool> {
                 json,
             )),
         },
+        SeoSub::Backlinks { domains, json } => rt.block_on(backlinks_cmd(ctx, &domains, json)),
+        SeoSub::Competition {
+            keyword,
+            serp,
+            json,
+        } => rt.block_on(competition_cmd(ctx, &keyword, &serp, json)),
     })
 }
 
@@ -1430,6 +1583,48 @@ async fn meta_cmd(ctx: &Ctx, root: &Path, c: MetaSub) -> bool {
             }
             println!("{}", l.t_args("seo-meta-applied", &args!("n" => a.changed.len(), "skipped" => a.skipped.len(), "undo" => kor_tools::display_path(&undo))));
             a.skipped.is_empty()
+        }
+        MetaSub::Opencart {
+            csv,
+            prefix,
+            language,
+            oc_version,
+            out,
+        } => {
+            let rows = match std::fs::read_to_string(&csv)
+                .map_err(|e| e.to_string())
+                .and_then(|t| meta::from_csv(&t))
+            {
+                Ok(r) => r,
+                Err(e) => return fail(l, e),
+            };
+            let run = chrono::Utc::now().format("%Y%m%dT%H%M%S").to_string();
+            let s = match meta::opencart_sql(&rows, &prefix, language, oc_version, &run) {
+                Ok(s) => s,
+                Err(e) => return fail(l, e),
+            };
+            let apply = out.with_extension("apply.sql");
+            let undo = out.with_extension("undo.sql");
+            if let Err(e) =
+                std::fs::write(&apply, &s.apply).and_then(|()| std::fs::write(&undo, &s.undo))
+            {
+                return fail(l, e);
+            }
+            for (u, why) in &s.skipped {
+                println!("  {u}: {why}");
+            }
+            println!(
+                "{}",
+                l.t_args(
+                    "seo-meta-opencart",
+                    &args!(
+                        "n" => s.rows,
+                        "apply" => kor_tools::display_path(&apply),
+                        "undo" => kor_tools::display_path(&undo)
+                    )
+                )
+            );
+            true
         }
         MetaSub::Undo {
             file,
