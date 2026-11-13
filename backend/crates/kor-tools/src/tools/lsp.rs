@@ -193,6 +193,16 @@ mod tests {
 
     #[tokio::test]
     async fn fake_server_answers_hover() {
+        // Windows PowerShell, else PowerShell 7 (`pwsh`, on the CI's Linux and macOS runners).
+        let Some(shell) = ["powershell", "pwsh"].into_iter().find(|s| {
+            std::process::Command::new(s)
+                .args(["-NoProfile", "-Command", "exit 0"])
+                .output()
+                .is_ok_and(|o| o.status.success())
+        }) else {
+            eprintln!("skipped: no PowerShell");
+            return;
+        };
         let dir = tempfile::tempdir().unwrap();
         let script = dir.path().join("fake.ps1");
         std::fs::write(
@@ -242,7 +252,7 @@ while ($msg = Read-Msg) {
         .unwrap();
         let cfg = json!({
             "fake": {
-                "command": "powershell",
+                "command": shell,
                 "args": ["-NoProfile", "-File", script],
                 "extensionToLanguage": { ".rs": "rust" }
             }

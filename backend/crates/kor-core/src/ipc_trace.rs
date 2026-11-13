@@ -227,6 +227,18 @@ pub fn normalize(records: &[Value], surface: Surface) -> Vec<Value> {
         if ty == "tool" && last_is("confirm") {
             continue;
         }
+        // The desktop sends text in frames, so its approval card can be traced before the text that
+        // came before it: the confirm goes where the tool starts.
+        if ty == "tool"
+            && let Some(i) = out.iter().rposition(|l| l["type"] != "text")
+            && out[i]["type"] == "confirm"
+            && out[i]["name"] == item["name"]
+            && i + 1 < out.len()
+        {
+            let confirm = out.remove(i);
+            out.push(confirm);
+            continue;
+        }
         if ty == "confirm" && last_is("tool") {
             out.pop();
         }
@@ -357,5 +369,30 @@ mod tests {
             "status ticks fold into one"
         );
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn confirm_traced_before_its_text_goes_where_the_tool_starts() {
+        let rec = |p: Value| json!({ "surface": "desktop", "kind": "event", "name": "kor:event", "payload": p });
+        let recs = [
+            rec(json!({ "type": "status" })),
+            rec(json!({ "type": "confirm", "name": "Write", "files": [{ "path": "plan.md" }] })),
+            rec(json!({ "type": "text", "delta": "plan.md yazacağım." })),
+            rec(json!({ "type": "tool", "name": "Write" })),
+            rec(json!({ "type": "toolResult" })),
+        ];
+        let types: Vec<Value> = normalize(&recs, Surface::Desktop)
+            .iter()
+            .map(|e| e["type"].clone())
+            .collect();
+        assert_eq!(
+            types,
+            [
+                json!("status"),
+                json!("text"),
+                json!("confirm"),
+                json!("toolResult")
+            ]
+        );
     }
 }

@@ -182,9 +182,18 @@ mod tests {
             dir.path().join("src/extra.rs"),
             "pub fn added_by_watcher() {}\n",
         )?;
-        let deadline = Instant::now() + Duration::from_secs(20);
+        let deadline = Instant::now() + Duration::from_secs(30);
         let mut seen = false;
+        let mut rewrite = Instant::now() + Duration::from_secs(5);
         while Instant::now() < deadline && !seen {
+            // macOS FSEvents can miss a write made right after the stream starts: write it again.
+            if Instant::now() > rewrite {
+                std::fs::write(
+                    dir.path().join("src/extra.rs"),
+                    "pub fn added_by_watcher() {}\n\n",
+                )?;
+                rewrite = Instant::now() + Duration::from_secs(5);
+            }
             if let Ok(Ok(_)) = rx.recv_timeout(Duration::from_millis(500)) {
                 seen = handle
                     .graph()
