@@ -112,8 +112,18 @@ async fn tasks_events_callback_and_chat_completions() {
     .await;
     assert_eq!(s, 404, "only the key's project or a watched one");
     let big = format!(r#"{{"task":"{}"}}"#, "a".repeat(2 * 1024 * 1024));
-    let (s, _) = call(&c, post.clone(), &tasks, Some(&key), Some(big)).await;
-    assert_eq!(s, 413);
+    // The server answers 413 without reading the body; the client may see that or the reset.
+    let sent = c
+        .post(&tasks)
+        .header("authorization", format!("Bearer {key}"))
+        .header("content-type", "application/json")
+        .body(big)
+        .send()
+        .await;
+    match sent {
+        Ok(res) => assert_eq!(res.status().as_u16(), 413),
+        Err(err) => assert!(err.is_request(), "{err}"),
+    }
 
     // A task with a callback.
     let hooks = MockServer::start().await;
