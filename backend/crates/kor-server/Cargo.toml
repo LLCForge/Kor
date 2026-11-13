@@ -1,0 +1,47 @@
+[package]
+name = "kor-server"
+description = "Self-hosted Kor team server: shared rules, graph, memory, task queue, audit, vault, OIDC, mTLS, peer relay (spec §11.1)"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+# JWT signatures (RS256/ES256), HMAC callbacks, vault AEAD, random tokens: already in the tree through rustls.
+aws-lc-rs = { version = "1", default-features = false, features = ["aws-lc-sys"] }
+base64.workspace = true
+bytes.workspace = true
+futures.workspace = true
+http-body-util.workspace = true
+hyper = { workspace = true, features = ["server", "http1"] }
+hyper-util.workspace = true
+kor-core.workspace = true
+reqwest.workspace = true
+rusqlite.workspace = true
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "std"] }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+subtle.workspace = true
+tokio.workspace = true
+tokio-rustls = { version = "0.26", default-features = false }
+rustls-platform-verifier = "0.7"
+time = { version = "0.3", default-features = false, features = ["std"] }
+tokio-tungstenite.workspace = true
+toml.workspace = true
+# Team CA, server and member certificates for mTLS (new dependency, docs/team-server.md).
+rcgen = { version = "0.14", default-features = false, features = ["aws_lc_rs", "pem"] }
+# Postgres storage (`db = "postgres://…"`; TLS through the rustls above, `pg_tls.rs`). New dependency, docs/team-server.md.
+tokio-postgres = { version = "0.7", default-features = false, features = ["runtime"] }
+
+[dev-dependencies]
+# RSA test keys with their public components (mock OIDC provider).
+aws-lc-rs = { version = "1", default-features = false, features = ["aws-lc-sys", "ring-io"] }
+reqwest = { workspace = true, features = ["json"] }
+tempfile.workspace = true
+wiremock.workspace = true
+
+[lints]
+workspace = true
