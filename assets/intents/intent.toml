@@ -739,6 +739,14 @@ params = [{ name = "command", kind = "text", required = true }]
 eta_s = 10
 
 [[intent]]
+command = "kor shell suggest"
+run = "never"
+tr = []
+en = []
+fr = []
+eta_s = 1
+
+[[intent]]
 command = "kor fix"
 run = "confirm"
 tr = ["son hatayı düzelt", "son komutun hatasını düzelt", "son başarısız komutu düzelt", "terminaldeki son hatayı düzelt", "az önce patlayan komutu düzelt"]

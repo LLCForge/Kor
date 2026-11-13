@@ -32,6 +32,17 @@ pub enum ShellCmd {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
         command: Vec<String>,
     },
+    /// The rest of a command line being typed (`[shell] suggest`); called by the shell integration.
+    #[command(hide = true)]
+    Suggest {
+        #[arg(long)]
+        shell: Option<String>,
+        /// The shell's history file.
+        #[arg(long)]
+        history: Option<std::path::PathBuf>,
+        #[arg(allow_hyphen_values = true, default_value = "")]
+        line: String,
+    },
 }
 
 fn err(l: &Localizer, e: impl std::fmt::Display) -> bool {
@@ -80,6 +91,11 @@ pub fn run(ctx: &Ctx, cmd: ShellCmd) -> bool {
         ShellCmd::Uninstall { shell, yes } => uninstall(l, shell.as_deref(), yes),
         ShellCmd::Status => status(l),
         ShellCmd::Capture { command } => capture(l, &command),
+        ShellCmd::Suggest {
+            shell,
+            history,
+            line,
+        } => suggest(l, shell.as_deref(), history.as_deref(), &line),
     }
 }
 
@@ -218,6 +234,26 @@ fn capture(l: &Localizer, command: &[String]) -> bool {
         core::record_failure(command, code, &cwd, output);
     }
     code == 0
+}
+
+/// Prints the suggestion (nothing when there is none); quiet on errors, the shell is mid-typing.
+fn suggest(
+    l: &Localizer,
+    shell: Option<&str>,
+    history: Option<&std::path::Path>,
+    line: &str,
+) -> bool {
+    let Some(k) = core::kind(shell) else {
+        return false;
+    };
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let Ok(rt) = crate::providers::runtime() else {
+        return false;
+    };
+    if let Some(s) = rt.block_on(core::suggest(l, k, line, history, &cwd)) {
+        println!("{s}");
+    }
+    true
 }
 
 /// `kor fix` (`explain_only = false`) and `kor why`.

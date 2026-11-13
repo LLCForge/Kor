@@ -230,11 +230,31 @@ pub struct DesktopConfig {
 /// `terminal`, `iterm`, `gnome-terminal`, `konsole`, `kitty`, `alacritty`, `wezterm`…; unset = the
 /// platform default); `context_menu.extended` adds "Projeyi açıkla / Hata bul / Bu dosyayı test et"
 /// (re-run `kor integrate install` or toggle it in the desktop settings).
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// `suggest` (§15.4, off by default) adds inline command suggestions to the `kor shell install`
+/// block (re-run it after changing): shell history and project commands first, then
+/// `suggest_model` (`provider/model`, e.g. `ollama/qwen2.5-coder:1.5b`; unset = no model) within
+/// `suggest_budget_ms`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ShellConfig {
     pub terminal: Option<String>,
     pub context_menu: ContextMenuConfig,
+    pub suggest: bool,
+    pub suggest_model: Option<String>,
+    pub suggest_budget_ms: u64,
+}
+
+impl Default for ShellConfig {
+    fn default() -> Self {
+        Self {
+            terminal: None,
+            context_menu: ContextMenuConfig::default(),
+            suggest: false,
+            suggest_model: None,
+            suggest_budget_ms: 800,
+        }
+    }
 }
 
 /// `[integrations]` (ADR 0052, user decision 11 Nov 2026): the desktop's first run installs the
