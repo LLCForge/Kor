@@ -252,6 +252,113 @@ pub fn sh_quote(s: &str) -> String {
     format!("'{}'", s.replace('\'', r"'\''"))
 }
 
+/// A `PowerShell` string literal (`'…'`, inner quotes doubled; nothing inside is expanded).
+pub fn ps_quote(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "''"))
+}
+
+/// The command line that runs `PowerShell` `script` on a Windows `OpenSSH` server whatever its
+/// default shell is (`cmd.exe` or `PowerShell`): `powershell -EncodedCommand <base64 UTF-16LE>`,
+/// so neither shell re-parses the script. `cmd.exe` takes at most 8191 characters per line, so a
+/// script stays under about 3000 characters.
+pub fn powershell_command(script: &str) -> String {
+    use base64::Engine as _;
+    let utf16: Vec<u8> = script.encode_utf16().flat_map(u16::to_le_bytes).collect();
+    format!(
+        "powershell -NoLogo -NoProfile -NonInteractive -EncodedCommand {}",
+        base64::engine::general_purpose::STANDARD.encode(utf16)
+    )
+}
+
+/// The script inside a [`powershell_command`] line (tests and logs).
+pub fn powershell_script(command: &str) -> Option<String> {
+    use base64::Engine as _;
+    let b64 = command.rsplit_once("-EncodedCommand ")?.1.trim();
+    let bytes = base64::engine::general_purpose::STANDARD.decode(b64).ok()?;
+    let units: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes([c[0], c[1]]))
+        .collect();
+    String::from_utf16(&units).ok()
+}
+
+/// Operating system family of a remote machine: which shell language Kor speaks to it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RemoteOs {
+    /// Linux, macOS, BSD: POSIX `sh`.
+    Posix,
+    /// Windows `OpenSSH` server: `PowerShell` through [`powershell_command`].
+    Windows,
+}
+
+/// `uname -s` answers on Linux/macOS/BSD. A Windows server prints nothing for it (`cmd.exe` or
+/// `PowerShell` as the login shell) or names an MSYS/Cygwin shell; those are asked through
+/// `PowerShell`.
+///
+/// # Errors
+/// When SSH itself fails.
+pub async fn detect_os(sh: &dyn Shell) -> Result<RemoteOs, String> {
+    let out = sh.run("uname -s", None, Duration::from_secs(30)).await?;
+    let first = out
+        .text()
+        .lines()
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_uppercase();
+    let msys = ["MINGW", "MSYS", "CYGWIN"]
+        .iter()
+        .any(|p| first.starts_with(p));
+    if !first.is_empty() && !msys {
+        return Ok(RemoteOs::Posix);
+    }
+    let ps = sh
+        .run(
+            &powershell_command("[Environment]::OSVersion.Platform"),
+            None,
+            Duration::from_secs(30),
+        )
+        .await?;
+    Ok(if ps.text().contains("Win32NT") {
+        RemoteOs::Windows
+    } else {
+        RemoteOs::Posix
+    })
+}
+
+/// A path typed for a Windows server, the way Windows writes it: `/c/work/app` and
+/// `C:/work/app` become `C:\work\app`; other `/` become `\`.
+pub fn windows_path(p: &str) -> String {
+    let b = p.as_bytes();
+    let drive = b.len() >= 2
+        && b[0] == b'/'
+        && b[1].is_ascii_alphabetic()
+        && b.get(2).is_none_or(|c| *c == b'/');
+    let s = if drive {
+        format!("{}:{}", char::from(b[1]).to_ascii_uppercase(), &p[2..])
+    } else {
+        p.to_owned()
+    };
+    let s = s.replace('/', "\\");
+    if s.len() == 2 && s.ends_with(':') {
+        s + "\\"
+    } else {
+        s
+    }
+}
+
+/// [`windows_path`] as a `PowerShell` expression; `~\…` is under the user's profile folder.
+pub fn ps_path(p: &str) -> String {
+    let w = windows_path(p);
+    match w.strip_prefix('~') {
+        Some(rest) => format!(
+            "(Join-Path $env:USERPROFILE {})",
+            ps_quote(rest.trim_start_matches('\\'))
+        ),
+        None => ps_quote(&w),
+    }
+}
+
 fn valid_remote_path(p: &str) -> Result<(), String> {
     if p.is_empty() || p.len() > 4096 || p.contains('\0') || p.contains('\n') {
         return Err("invalid remote path".into());
@@ -1065,6 +1172,55 @@ file = "data/app.db"
         assert_eq!(sh_quote("a b"), "'a b'");
         assert_eq!(sh_quote("it's; rm -rf /"), r"'it'\''s; rm -rf /'");
         assert!(valid_remote_path("x\ny").is_err());
+        assert_eq!(ps_quote("it's $env:X"), "'it''s $env:X'");
+    }
+
+    #[test]
+    fn powershell_commands_and_windows_paths() {
+        let script = "'çağ'; $env:PROCESSOR_ARCHITECTURE \"x\"";
+        let line = powershell_command(script);
+        assert!(line.starts_with("powershell -NoLogo -NoProfile -NonInteractive -EncodedCommand "));
+        assert!(!line.contains('$') && !line.contains('\'') && !line.contains('"'));
+        assert_eq!(powershell_script(&line).as_deref(), Some(script));
+        assert_eq!(powershell_script("uname -s"), None);
+
+        assert_eq!(windows_path("/c/work/app"), r"C:\work\app");
+        assert_eq!(windows_path("/d"), r"D:\");
+        assert_eq!(windows_path("C:/work/app"), r"C:\work\app");
+        assert_eq!(windows_path(r"c:\x y"), r"c:\x y");
+        assert_eq!(windows_path("/srv/app"), r"\srv\app");
+        assert_eq!(windows_path("rel/dir"), r"rel\dir");
+        assert_eq!(ps_path("~/proj"), "(Join-Path $env:USERPROFILE 'proj')");
+        assert_eq!(ps_path("/c/it's"), r"'C:\it''s'");
+    }
+
+    #[tokio::test]
+    async fn windows_servers_are_recognised() {
+        use discover::tests::{Recorded, out};
+        let linux = Recorded {
+            replies: vec![("uname -s", out("Linux\n"))],
+            seen: std::sync::Mutex::default(),
+        };
+        assert_eq!(detect_os(&linux).await.unwrap(), RemoteOs::Posix);
+        // cmd.exe: nothing on stdout for `uname`; PowerShell answers.
+        let win = Recorded {
+            replies: vec![("-EncodedCommand", out("Win32NT\r\n"))],
+            seen: std::sync::Mutex::default(),
+        };
+        assert_eq!(detect_os(&win).await.unwrap(), RemoteOs::Windows);
+        let git_bash = Recorded {
+            replies: vec![
+                ("uname -s", out("MINGW64_NT-10.0-20348\n")),
+                ("-EncodedCommand", out("Win32NT\n")),
+            ],
+            seen: std::sync::Mutex::default(),
+        };
+        assert_eq!(detect_os(&git_bash).await.unwrap(), RemoteOs::Windows);
+        let nothing = Recorded {
+            replies: Vec::new(),
+            seen: std::sync::Mutex::default(),
+        };
+        assert_eq!(detect_os(&nothing).await.unwrap(), RemoteOs::Posix);
     }
 
     #[test]

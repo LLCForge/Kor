@@ -4,6 +4,14 @@
 //! under `sudo -n` — only when the caller's `ask` answers yes for that step; `sudo` never prompts
 //! for a password (batch SSH has no terminal), so a password-protected sudo is reported, not tried.
 //!
+//! Windows servers (`OpenSSH` for Windows, found by [`super::detect_os`]) get the same scan in
+//! `PowerShell` ([`WINDOWS_STEPS`], each sent as [`super::powershell_command`]): OS and hardware
+//! from CIM, running services (`Win32_Service`), Docker, listening ports
+//! (`Get-NetTCPConnection`), scheduled tasks outside `\Microsoft\`, disks and memory, tool
+//! versions and `.env` file paths. Their output is printed in the shapes the POSIX parsers read,
+//! so one pipeline builds the snapshot. There is no sudo on Windows: a step that needs an
+//! administrator shows what the login can see. IIS sites are not read yet.
+//!
 //! The result is a [`kor_graph::InfraSnapshot`] plus its Markdown (`<kor home>/infra/<host>.md`).
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
@@ -14,7 +22,7 @@ use std::time::Duration;
 use kor_graph::infra::{Disk, InfraSnapshot, Memory, Port, Schedule, Service, ToolVersion, VHost};
 use serde::{Deserialize, Serialize};
 
-use super::{Output, Shell, sh_quote};
+use super::{Output, RemoteOs, Shell, powershell_command, sh_quote};
 
 /// One scan step: a fixed read-only command.
 #[derive(Debug, Clone, Copy)]
@@ -110,6 +118,78 @@ pub const STEPS: &[Step] = &[
     },
 ];
 
+const WIN_OS_CMD: &str = r#"$o=Get-CimInstance Win32_OperatingSystem;$c=Get-CimInstance Win32_Processor|Select-Object -First 1;"kernel=Windows $($o.Version)";"arch=$env:PROCESSOR_ARCHITECTURE";"hostname=$env:COMPUTERNAME";"cpu_model=$($c.Name)";"cpu_threads=$env:NUMBER_OF_PROCESSORS";"cpu_cores=$($c.NumberOfCores)";'login_shell=powershell';"PRETTY_NAME=$($o.Caption)";'NAME=Windows';"VERSION_ID=$($o.Version)";foreach($p in 'winget','choco','scoop'){if(Get-Command $p -ErrorAction SilentlyContinue){"pm=$p"}};Get-NetIPAddress -ErrorAction SilentlyContinue|Where-Object{$_.InterfaceAlias -notlike 'Loopback*'}|ForEach-Object{"netif=$($_.InterfaceAlias -replace '\s','_') $($_.IPAddress)/$($_.PrefixLength)"}"#;
+
+/// In the `systemctl show` shape `parse_systemd` reads.
+const WIN_SERVICES_CMD: &str = r#"Get-CimInstance Win32_Service -Filter "State='Running'"|Select-Object -First 300|ForEach-Object{"== $($_.Name)";"MainPID=$($_.ProcessId)";"ExecStart=$($_.PathName)"}"#;
+
+const WIN_DOCKER_CMD: &str = r"if(Get-Command docker -ErrorAction SilentlyContinue){docker ps --no-trunc --format '{{json .}}'}";
+
+/// In the `netstat -tlnp` shape `parse_ports` reads.
+const WIN_PORTS_CMD: &str = r#"Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue|ForEach-Object{$n=(Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue).ProcessName;"tcp 0 0 $($_.LocalAddress):$($_.LocalPort) * LISTEN $($_.OwningProcess)/$n"}"#;
+
+/// `task<TAB>when<TAB>what` lines (`parse_tasks`).
+const WIN_TASKS_CMD: &str = r#"Get-ScheduledTask -ErrorAction SilentlyContinue|Where-Object{$_.State -ne 'Disabled' -and $_.TaskPath -notlike '\Microsoft\*'}|Select-Object -First 200|ForEach-Object{$i=$_|Get-ScheduledTaskInfo -ErrorAction SilentlyContinue;$w=if($i -and $i.NextRunTime){'next '+$i.NextRunTime.ToString('s')}else{'on trigger'};$a=($_.Actions|ForEach-Object{"$($_.Execute) $($_.Arguments)".Trim()}) -join '; ';"task`t$w`t$($_.TaskPath)$($_.TaskName): $a"}"#;
+
+/// In the `df -hP` / `free -m` shapes `parse_resources` reads (sizes in MiB).
+const WIN_RESOURCES_CMD: &str = r#"Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=3'|ForEach-Object{$s=[math]::Round($_.Size/1MB);$f=[math]::Round($_.FreeSpace/1MB);$u=$s-$f;$p=if($s){[math]::Round(100*$u/$s)}else{0};"$($_.DeviceID) ${s}M ${u}M ${f}M $p% $($_.DeviceID)\"};'== free';$o=Get-CimInstance Win32_OperatingSystem;$t=[math]::Round($o.TotalVisibleMemorySize/1KB);$a=[math]::Round($o.FreePhysicalMemory/1KB);"Mem: $t $($t-$a) 0 0 0 $a";$pf=@(Get-CimInstance Win32_PageFileUsage -ErrorAction SilentlyContinue);"Swap: $([int]($pf|Measure-Object AllocatedBaseSize -Sum).Sum) $([int]($pf|Measure-Object CurrentUsage -Sum).Sum)""#;
+
+const WIN_LANG_CMD: &str = r#"foreach($c in @('python','--version'),@('node','--version'),@('go','version'),@('rustc','--version'),@('java','-version'),@('php','--version'),@('ruby','--version'),@('dotnet','--version'),@('deno','--version'),@('bun','--version'),@('docker','--version'),@('psql','--version'),@('mysql','--version')){if(Get-Command $c[0] -CommandType Application -ErrorAction SilentlyContinue){$v=& $c[0] $c[1] 2>&1|Select-Object -First 1;"$($c[0])`t$v"}}"#;
+
+const WIN_ENV_CMD: &str = r"$r=@('C:\inetpub','C:\srv','C:\apps','C:\www','C:\Users')|Where-Object{Test-Path -LiteralPath $_};if($r){Get-ChildItem -LiteralPath $r -Recurse -Depth 5 -Force -File -ErrorAction SilentlyContinue -Include '.env','.env.*','*.env'|Where-Object{$_.FullName -notmatch '\\(node_modules|\.git)\\'}|Select-Object -First 300 -ExpandProperty FullName}";
+
+/// The scan for Windows servers (`PowerShell`, read-only, no sudo).
+pub const WINDOWS_STEPS: &[Step] = &[
+    Step {
+        id: "os",
+        cmd: WIN_OS_CMD,
+        sudo: false,
+        timeout_secs: 60,
+    },
+    Step {
+        id: "services",
+        cmd: WIN_SERVICES_CMD,
+        sudo: false,
+        timeout_secs: 60,
+    },
+    Step {
+        id: "docker",
+        cmd: WIN_DOCKER_CMD,
+        sudo: false,
+        timeout_secs: 60,
+    },
+    Step {
+        id: "ports",
+        cmd: WIN_PORTS_CMD,
+        sudo: false,
+        timeout_secs: 60,
+    },
+    Step {
+        id: "tasks",
+        cmd: WIN_TASKS_CMD,
+        sudo: false,
+        timeout_secs: 60,
+    },
+    Step {
+        id: "resources",
+        cmd: WIN_RESOURCES_CMD,
+        sudo: false,
+        timeout_secs: 60,
+    },
+    Step {
+        id: "languages",
+        cmd: WIN_LANG_CMD,
+        sudo: false,
+        timeout_secs: 60,
+    },
+    Step {
+        id: "envfiles",
+        cmd: WIN_ENV_CMD,
+        sudo: false,
+        timeout_secs: 120,
+    },
+];
+
 /// A step that could see more with `sudo`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SudoOffer {
@@ -173,6 +253,7 @@ fn lacks_permission(step: &str, out: &Output) -> Option<String> {
 ///
 /// # Errors
 /// When the first step (OS) cannot run at all: SSH connection, host key or login failure.
+#[allow(clippy::too_many_lines)] // the step loop, then one parser per step
 pub async fn discover(
     sh: &dyn Shell,
     address: &str,
@@ -180,13 +261,19 @@ pub async fn discover(
     now: u64,
     ask: &AskSudo<'_>,
 ) -> Result<Discovery, String> {
+    let windows = super::detect_os(sh).await? == RemoteOs::Windows;
     let mut outs: HashMap<&'static str, String> = HashMap::new();
     let mut notes = Vec::new();
     let mut offered = Vec::new();
     let mut used = Vec::new();
-    for step in STEPS {
+    for step in if windows { WINDOWS_STEPS } else { STEPS } {
         let timeout = Duration::from_secs(step.timeout_secs);
-        let out = match sh.run(step.cmd, None, timeout).await {
+        let cmd = if windows {
+            powershell_command(step.cmd)
+        } else {
+            step.cmd.to_owned()
+        };
+        let out = match sh.run(&cmd, None, timeout).await {
             Ok(o) => o,
             Err(e) if step.id == "os" => return Err(e),
             Err(e) => {
@@ -242,6 +329,12 @@ pub async fn discover(
     };
     parse_os(get("os"), &mut snap);
     let (mut services, pids) = parse_systemd(get("systemd"));
+    let (win_services, win_pids) = parse_systemd(get("services"));
+    services.extend(win_services.into_iter().map(|s| Service {
+        kind: "windows-service".into(),
+        ..s
+    }));
+    let pids: HashMap<u32, String> = pids.into_iter().chain(win_pids).collect();
     services.extend(parse_docker(get("docker")));
     services.extend(parse_proxmox(get("proxmox")));
     let ports = parse_ports(get("ports"));
@@ -259,12 +352,13 @@ pub async fn discover(
     link_vhosts(&mut snap.vhosts, &mut services, &snap.ports);
     snap.services = services;
     snap.schedules = parse_cron(get("cron"));
+    snap.schedules.extend(parse_tasks(get("tasks")));
     (snap.disks, snap.memory) = parse_resources(get("resources"));
     snap.languages = parse_languages(get("languages"));
     snap.env_files = get("envfiles")
         .lines()
         .map(str::trim)
-        .filter(|l| l.starts_with('/') && !l.contains(": "))
+        .filter(|l| (l.starts_with('/') || is_windows_absolute(l)) && !l.contains(": "))
         .map(str::to_owned)
         .collect();
     let system = profile(get("os"), &snap);
@@ -274,6 +368,27 @@ pub async fn discover(
         sudo_offered: offered,
         sudo_used: used,
     })
+}
+
+/// `C:\…`.
+fn is_windows_absolute(p: &str) -> bool {
+    let b = p.as_bytes();
+    b.len() > 2 && b[0].is_ascii_alphabetic() && b[1] == b':' && b[2] == b'\\'
+}
+
+/// Windows scheduled tasks: `task<TAB>when<TAB>what`.
+fn parse_tasks(text: &str) -> Vec<Schedule> {
+    text.lines()
+        .filter_map(|l| {
+            let mut f = l.trim_end_matches('\r').splitn(3, '\t');
+            (f.next()? == "task").then_some(())?;
+            Some(Schedule {
+                kind: "task".into(),
+                when: f.next()?.to_owned(),
+                what: f.next()?.chars().take(300).collect(),
+            })
+        })
+        .collect()
 }
 
 /// `79G`, `796M`, `1.1T` (`df -h`) → MiB.
@@ -343,8 +458,7 @@ fn profile(os_text: &str, snap: &InfraSnapshot) -> kor_health::system::Profile {
                 .map_or_else(|| snap.os.clone(), |d| d.name.clone()),
             version: distro
                 .as_ref()
-                .map(|d| d.version.clone())
-                .unwrap_or_default(),
+                .map_or_else(|| field("VERSION_ID"), |d| d.version.clone()),
             long_name: snap.os.clone(),
             kernel: snap.kernel.clone(),
             arch: snap.arch.clone(),
@@ -1415,6 +1529,113 @@ pub(crate) mod tests {
             discover(&Down, "x", "x", 0, &|_: &SudoOffer| false)
                 .await
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn windows_steps_are_read_only_and_fit_a_cmd_line() {
+        for s in WINDOWS_STEPS {
+            assert!(!s.sudo, "{}", s.id);
+            assert!(
+                powershell_command(s.cmd).len() < 8000,
+                "{} is too long for cmd.exe",
+                s.id
+            );
+            for bad in [
+                "Remove-",
+                "Set-",
+                "Stop-",
+                "Restart-",
+                "New-",
+                "Start-",
+                "Out-File",
+                "Invoke-",
+                "Disable-",
+                "Enable-",
+                "Unregister-",
+                "Register-",
+                "Set-Content",
+            ] {
+                assert!(!s.cmd.contains(bad), "{bad} in {}", s.id);
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn windows_server_scan_from_recorded_outputs() {
+        const WIN_OS: &str = "kernel=Windows 10.0.20348\r\narch=AMD64\r\nhostname=WIN-APP1\r\ncpu_model=Intel(R) Xeon(R) Gold 6248R\r\ncpu_threads=8\r\ncpu_cores=4\r\nlogin_shell=powershell\r\nPRETTY_NAME=Microsoft Windows Server 2022 Standard\r\nNAME=Windows\r\nVERSION_ID=10.0.20348\r\npm=winget\r\nnetif=Ethernet_2 10.0.0.9/24\r\n";
+        const WIN_SVC: &str = "== W3SVC\r\nMainPID=2210\r\nExecStart=C:\\Windows\\system32\\svchost.exe -k iissvcs\r\n== ShopApi\r\nMainPID=3100\r\nExecStart=\"C:\\srv\\shop\\api.exe\" --port 5000\r\n";
+        const WIN_PORTS: &str = "tcp 0 0 0.0.0.0:80 * LISTEN 4/System\r\ntcp 0 0 0.0.0.0:5000 * LISTEN 3100/api\r\ntcp 0 0 :::5000 * LISTEN 3100/api\r\n";
+        const WIN_TASKS: &str =
+            "task\tnext 2026-11-14T03:00:00\t\\Kor\\backup: C:\\srv\\backup.cmd\r\n";
+        const WIN_RES: &str = "C: 102400M 40960M 61440M 40% C:\\\r\n== free\r\nMem: 16384 8192 0 0 0 8192\r\nSwap: 2048 100\r\n";
+        const WIN_LANGS: &str = "node\tv22.11.0\r\ndotnet\t8.0.404\r\n";
+        const WIN_ENVS: &str = "C:\\srv\\shop\\.env\r\n";
+        let script = |frag: &str| {
+            WINDOWS_STEPS
+                .iter()
+                .find(|s| s.cmd.contains(frag))
+                .map(|s| powershell_command(s.cmd))
+                .expect("step")
+        };
+        // The fake matches the encoded command line of each step.
+        let lines: Vec<(String, &str)> = vec![
+            (script("Win32_OperatingSystem;$c"), WIN_OS),
+            (script("Win32_Service"), WIN_SVC),
+            (script("Get-NetTCPConnection"), WIN_PORTS),
+            (script("Get-ScheduledTask"), WIN_TASKS),
+            (script("Win32_LogicalDisk"), WIN_RES),
+            (script("'python','--version'"), WIN_LANGS),
+            (script("C:\\inetpub"), WIN_ENVS),
+            (
+                powershell_command("[Environment]::OSVersion.Platform"),
+                "Win32NT\r\n",
+            ),
+        ];
+        let replies: Vec<(&'static str, Output)> = lines
+            .into_iter()
+            .map(|(cmd, o)| (&*Box::leak(cmd.into_boxed_str()), out(o)))
+            .collect();
+        let sh = Recorded {
+            replies,
+            seen: Mutex::new(Vec::new()),
+        };
+        let d = discover(&sh, "admin@win-app1", "win-app1", 0, &|_: &SudoOffer| true)
+            .await
+            .expect("scan");
+        let s = &d.snapshot;
+        assert_eq!(s.os, "Microsoft Windows Server 2022 Standard");
+        assert_eq!(s.hostname, "WIN-APP1");
+        let api = s
+            .services
+            .iter()
+            .find(|x| x.name == "ShopApi")
+            .expect("service");
+        assert_eq!(api.kind, "windows-service");
+        assert_eq!(api.ports, [5000]);
+        assert!(
+            api.detail.contains(r"C:\srv\shop\api.exe"),
+            "{}",
+            api.detail
+        );
+        assert_eq!(s.ports.len(), 3);
+        assert_eq!(s.schedules.len(), 1);
+        assert_eq!(s.schedules[0].kind, "task");
+        assert!(s.schedules[0].what.starts_with(r"\Kor\backup"));
+        assert_eq!(s.disks[0].mount, r"C:\");
+        assert_eq!(s.memory.as_ref().map(|m| m.total_mb), Some(16384));
+        assert_eq!(s.env_files, [r"C:\srv\shop\.env"]);
+        assert!(d.sudo_used.is_empty() && d.sudo_offered.is_empty());
+        assert_eq!(d.system.os.family, "windows");
+        assert_eq!(d.system.os.version, "10.0.20348");
+        assert_eq!(d.system.cpu.threads, 8);
+        assert_eq!(d.system.network[0].name, "Ethernet_2");
+        assert!(d.system.toolchains.contains_key("dotnet"));
+        // Everything went through PowerShell after the one `uname -s` probe.
+        let seen = sh.seen.lock().expect("lock");
+        assert!(
+            seen[1..].iter().all(|c| c.starts_with("powershell ")),
+            "{seen:?}"
         );
     }
 
