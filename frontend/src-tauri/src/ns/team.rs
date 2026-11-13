@@ -1,12 +1,16 @@
-//! `team.*`: Takım paneli için ince köprü (§11, §12.3). Takım sunucusu (`kor server`) Faz 8'de
-//! gelir; bugün yalnızca sunucu adresi (`[team] server`), erişim belirteci (işletim sistemi
-//! anahtarlığı) ve adresin yanıt verip vermediği vardır. `kor_agent::team_sync` de
-//! `KOR_TEAM_MEMORY_URL` ortam değişkenini okur; ayarlıysa durumda gösterilir.
-//! Sözleşme: `frontend/src/desktop/ipc-team.ts`.
+//! `team.*`: Takım paneli için ince köprü (§11, §12.3). Takım sunucusu `kor server` (kor-server
+//! crate'i); burada üye tarafı: sunucu adresi (`[team] server`), erişim belirteci ve mTLS
+//! sertifikası (işletim sistemi anahtarlığı, `kor_agent::team_client`) ve SSO oturumu.
+//! `kor_agent::team_sync` de `KOR_TEAM_MEMORY_URL` ortam değişkenini okur; ayarlıysa durumda
+//! gösterilir. Sözleşme: `frontend/src/desktop/ipc-team.ts`.
 //!
-//! - `team.status()` → `{ server, source: 'config'|'env'|null, token, privacy }`.
-//! - `team.connect(url, token?)` → `status`. Adres doğrulanır; belirteç anahtarlığa yazılır.
-//! - `team.disconnect()` → `status`. Adres ve belirteç silinir.
+//! - `team.status()` → `{ server, source: 'config'|'env'|null, token, certificate, privacy }`.
+//! - `team.connect(url, token?, bundlePath?)` → `status`. Adres doğrulanır; belirteç anahtarlığa
+//!   yazılır. `bundlePath` (`kor server add-member` paketi) verilirse sertifika, anahtar ve
+//!   belirteç ondan alınır, adres de paketteki olur (`kor server join`).
+//! - `team.login(provider?)` → `{ verificationUri, userCode }`; kullanıcı onaylayınca
+//!   `kor:team/login` `{ email, role }` ya da `{ error }` (`kor server login`).
+//! - `team.disconnect()` → `status`. Adres, belirteç ve sertifika silinir.
 //! - `team.check()` → `{ reachable, status?, error? }`. Adrese tek bir GET; gizlilik modunda
 //!   yalnızca bu bilgisayardaki adreslere izin verilir.
 
@@ -30,7 +34,7 @@ pub async fn call(
     _ns: &str,
     name: &str,
     args: &[Value],
-    _app: &AppHandle,
+    app: &AppHandle,
     state: &AppState,
 ) -> Option<Res> {
     let root = match root(state) {
@@ -39,10 +43,12 @@ pub async fn call(
     };
     Some(match name {
         "status" => status(&root),
-        "connect" => match s(args, 0, "team.connect") {
-            Ok(url) => connect(&root, url, opt_s(args, 1)),
-            Err(e) => Err(e),
+        "connect" => match (opt_s(args, 2), s(args, 0, "team.connect")) {
+            (Some(bundle), _) => join(&root, bundle),
+            (None, Ok(url)) => connect(&root, url, opt_s(args, 1)),
+            (None, Err(e)) => Err(e),
         },
+        "login" => login(&root, opt_s(args, 0).map(str::to_owned), app.clone()).await,
         "disconnect" => disconnect(&root),
         "check" => check(&root).await,
         _ => return None,
@@ -92,10 +98,15 @@ fn status(root: &Path) -> Res {
         .get(TOKEN_ACCOUNT)
         .map_err(|e| format!("İşletim sistemi anahtarlığı: {e}"))?
         .is_some();
+    let certificate = KeychainStore
+        .get(kor_agent::team_client::CERT)
+        .map_err(|e| format!("İşletim sistemi anahtarlığı: {e}"))?
+        .is_some();
     Ok(json!({
         "server": server,
         "source": source,
         "token": token,
+        "certificate": certificate,
         "privacy": loaded.config.privacy.mode,
     }))
 }
@@ -123,10 +134,76 @@ fn connect(root: &Path, url: &str, token: Option<&str>) -> Res {
 
 fn disconnect(root: &Path) -> Res {
     set_server(root, "")?;
-    KeychainStore
-        .delete(TOKEN_ACCOUNT)
+    kor_agent::team_client::forget(&KeychainStore)
         .map_err(|e| format!("İşletim sistemi anahtarlığı: {e}"))?;
     status(root)
+}
+
+/// `kor server join`: paketteki sertifika, anahtar ve belirteç anahtarlığa; adres ayara.
+fn join(root: &Path, bundle: &str) -> Res {
+    let text = std::fs::read_to_string(bundle).map_err(|e| format!("{bundle}: {e}"))?;
+    if text.len() > 64 * 1024 {
+        return Err("Paket dosyası çok büyük.".into());
+    }
+    let b = kor_agent::team_client::import(&KeychainStore, &text)?;
+    set_server(
+        root,
+        parse_server(&b.server)?.as_str().trim_end_matches('/'),
+    )?;
+    status(root)
+}
+
+/// `kor server login`: cihaz kodunu döndürür, onay arka planda beklenir.
+async fn login(root: &Path, provider: Option<String>, app: AppHandle) -> Res {
+    use kor_agent::team_client as tc;
+    use tauri::Emitter as _;
+    let st = status(root)?;
+    let server = st["server"]
+        .as_str()
+        .ok_or("Bağlı takım sunucusu yok.")?
+        .to_owned();
+    let u = parse_server(&server)?;
+    if st["privacy"].as_bool() == Some(true) && !is_loopback(&u) {
+        return Err("Gizlilik modu açık: yalnızca bu bilgisayardaki sunuculara bağlanılır.".into());
+    }
+    let team = tc::builder(std::time::Duration::from_secs(20))?
+        .build()
+        .map_err(|e| e.to_string())?;
+    let list = tc::providers(&team, &server).await?;
+    let p = list
+        .into_iter()
+        .find(|p| provider.as_deref().is_none_or(|n| n == p.name))
+        .ok_or("Takım sunucusunda böyle bir kimlik sağlayıcı yok.")?;
+    let idp = kor_core::net::client_builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let d = tc::device_start(&idp, &p).await?;
+    let out = json!({
+        "verificationUri": d.verification_uri_complete.clone().unwrap_or_else(|| d.verification_uri.clone()),
+        "userCode": d.user_code,
+    });
+    tauri::async_runtime::spawn(async move {
+        let deadline =
+            std::time::Instant::now() + std::time::Duration::from_secs(d.expires_in.min(1800));
+        let wait = std::time::Duration::from_secs(d.interval.clamp(1, 30));
+        let result = loop {
+            tokio::time::sleep(wait).await;
+            match tc::device_poll(&idp, &p, &d).await {
+                Ok(Some(tok)) => {
+                    break tc::exchange(&team, &KeychainStore, &server, &p, &tok)
+                        .await
+                        .map(|(email, role)| json!({ "email": email, "role": role }));
+                }
+                Ok(None) if std::time::Instant::now() < deadline => {}
+                Ok(None) => break Err("Oturum açma kodunun süresi doldu.".to_owned()),
+                Err(e) => break Err(e),
+            }
+        };
+        let payload = result.unwrap_or_else(|e| json!({ "error": e }));
+        let _ = app.emit("kor:team/login", payload);
+    });
+    Ok(out)
 }
 
 async fn check(root: &Path) -> Res {
@@ -138,9 +215,8 @@ async fn check(root: &Path) -> Res {
     if st["privacy"].as_bool() == Some(true) && !is_loopback(&u) {
         return Err("Gizlilik modu açık: yalnızca bu bilgisayardaki sunuculara bağlanılır.".into());
     }
-    let client = kor_core::net::client_builder()
-        .timeout(std::time::Duration::from_secs(5))
-        .redirect(reqwest::redirect::Policy::none())
+    // Ekip CA'sına güvenir ve üye sertifikasını sunar (mTLS), `kor server join` sonrası.
+    let client = kor_agent::team_client::builder(std::time::Duration::from_secs(5))?
         .build()
         .map_err(|e| e.to_string())?;
     Ok(match client.get(u).send().await {
