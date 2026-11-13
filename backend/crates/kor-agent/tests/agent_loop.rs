@@ -280,6 +280,21 @@ async fn max_turns_and_cancellation_stop_the_loop() {
         StopReason::MaxTurns
     );
 
+    // 0 = no limit: the loop keeps going until the model finishes on its own.
+    let (mut a, _) = agent(
+        dir.path(),
+        PermissionMode::Default,
+        vec![looping(), looping(), looping(), say("done")],
+    );
+    a.max_turns = 0;
+    assert!(matches!(
+        a.send("go".into(), &tx, &approver, CancellationToken::new())
+            .await
+            .unwrap(),
+        StopReason::Done(_)
+    ));
+    assert_eq!(results(&a).len(), 3);
+
     let (mut a, _) = agent(dir.path(), PermissionMode::Default, vec![looping()]);
     let cancel = CancellationToken::new();
     cancel.cancel();

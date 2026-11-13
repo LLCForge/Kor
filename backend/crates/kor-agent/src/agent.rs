@@ -201,6 +201,7 @@ pub struct Agent {
     pub system: String,
     pub messages: Vec<Message>,
     pub usage: Usage,
+    /// Model round-trips per user message; 0 = no limit (the loop runs until the model is done).
     pub max_turns: u32,
     pub max_tokens: Option<u32>,
     /// Reasoning effort for the main loop's calls (`agent.reasoning`); `None` = provider default.
@@ -477,7 +478,12 @@ impl Agent {
         let all_specs: Vec<_> = self.tools.iter().map(|t| t.spec()).collect();
         let mut stop_hook_active = false;
 
-        for _ in 0..self.max_turns {
+        let mut turn = 0u32;
+        loop {
+            if self.max_turns != 0 && turn >= self.max_turns {
+                break;
+            }
+            turn = turn.saturating_add(1);
             if let Some(stop) = self.budget_gate(events, approver).await {
                 return Ok(stop);
             }

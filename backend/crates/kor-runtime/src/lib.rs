@@ -1623,7 +1623,7 @@ pub fn prepare(
         system,
         messages,
         usage: Usage::default(),
-        max_turns: config.agent.max_turns.max(1),
+        max_turns: config.agent.max_turns,
         max_tokens: (config.agent.max_tokens > 0).then_some(config.agent.max_tokens),
         reasoning: config.agent.reasoning.map(kor_core::Reasoning::effort),
         redactor,

@@ -495,7 +495,7 @@ language = "auto"              # auto, tr, en, fr
 
 [agent]
 model = "venice/deepseek-v4-1-flash-uncensored"
-max_turns = 50
+max_turns = 0                  # 0 = no limit
 tool_mode = "auto"             # native tools when supported, text protocol otherwise
 verify = "auto"                # run the project's own checker after edits
 rules_check = true

@@ -96,6 +96,7 @@ pub struct Settings {
     pub budget_usd: f64,
     pub budget_per_agent_usd: f64,
     pub test_command: String,
+    /// Tool-loop turns per sub-agent; 0 = no limit.
     pub max_turns: u32,
 }
 
@@ -114,7 +115,7 @@ impl Settings {
             budget_usd: c.budget_usd.max(0.0),
             budget_per_agent_usd: c.budget_per_agent_usd.max(0.0),
             test_command: c.test_command.trim().to_owned(),
-            max_turns: c.max_turns.max(1),
+            max_turns: c.max_turns,
         }
     }
 

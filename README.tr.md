@@ -496,7 +496,7 @@ language = "auto"              # auto, tr, en, fr
 
 [agent]
 model = "venice/deepseek-v4-1-flash-uncensored"
-max_turns = 50
+max_turns = 0                  # 0 = sınırsız
 tool_mode = "auto"             # destekleniyorsa yerel araçlar, yoksa metin protokolü
 verify = "auto"                # düzenlemelerden sonra projenin kendi denetleyicisini çalıştır
 rules_check = true

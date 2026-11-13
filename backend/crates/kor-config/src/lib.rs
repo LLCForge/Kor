@@ -639,7 +639,7 @@ pub struct Orchestrator {
     /// Run (sandboxed) in each sub-agent's worktree before review and on the merged branch;
     /// empty = no tests.
     pub test_command: String,
-    /// Tool-loop turns per sub-agent.
+    /// Tool-loop turns per sub-agent; 0 = no limit.
     pub max_turns: u32,
 }
 
@@ -654,7 +654,7 @@ impl Default for Orchestrator {
             budget_usd: 0.0,
             budget_per_agent_usd: 0.0,
             test_command: String::new(),
-            max_turns: 40,
+            max_turns: 0,
         }
     }
 }
@@ -1372,7 +1372,7 @@ pub struct Agent {
     pub reply_language: LangPref,
     /// Default model as `provider/model`; empty means "ask on the command line".
     pub model: String,
-    /// Model round-trips allowed for one user message.
+    /// Model round-trips allowed for one user message; 0 = no limit.
     pub max_turns: u32,
     /// Output token cap per model call; 0 lets the adapter decide.
     pub max_tokens: u32,
@@ -1424,7 +1424,7 @@ impl Default for Agent {
             // Empty here; `load` puts [`DEFAULT_MODEL`] into its default layer. A `Config::default()`
             // built in code (tests, embedders) never reaches a paid provider on its own.
             model: String::new(),
-            max_turns: 50,
+            max_turns: 0,
             max_tokens: 0,
             tool_mode: ToolCalling::Auto,
             verify: VerifyMode::Auto,
