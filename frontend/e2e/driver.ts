@@ -93,7 +93,7 @@ export async function webdriverDriver(application: string, port = 4444): Promise
         await call('POST', `${sid}/element/${await find(s)}/click`, {})
       } catch (e) {
         // A toast or a closing panel can sit over the button for a moment: the element's own click.
-        if (!String(e).includes('click intercepted')) throw e
+        if (!/click intercepted|not interactable/.test(String(e))) throw e
         await call('POST', `${sid}/execute/sync`, { script: 'document.querySelector(arguments[0]).click()', args: [s] })
       }
     },

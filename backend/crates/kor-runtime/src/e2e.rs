@@ -451,12 +451,12 @@ fn last_saved(v: &Value) -> Option<String> {
     }
 }
 
-/// Name of the most recently modified file in `dir`.
+/// Name of the most recently modified media file in `dir` (not a `.kor.json` sidecar).
 fn newest_file(dir: &Path) -> Option<String> {
     std::fs::read_dir(dir)
         .ok()?
         .filter_map(Result::ok)
-        .filter(|e| e.path().is_file())
+        .filter(|e| e.path().is_file() && !e.file_name().to_string_lossy().ends_with(".json"))
         .max_by_key(|e| e.metadata().and_then(|m| m.modified()).ok())
         .map(|e| e.file_name().to_string_lossy().into_owned())
 }
