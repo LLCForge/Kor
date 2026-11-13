@@ -301,8 +301,9 @@ fn sandbox(root: &Path) -> Res {
         "network": {
             "on": s.network,
             "allow": s.options.allow,
-            "filter": if e.filter == kor_sandbox::Filter::Ports { "ports" } else { "none" },
+            "filter": e.filter.as_str(),
         },
+        "overlay": s.options.overlay,
         "limits": {
             "memoryMb": s.options.memory_mb,
             "memoryEnforced": e.memory,

@@ -11112,9 +11112,10 @@
             "filter": {
               "enum": [
                 "none",
-                "ports"
+                "domains",
+                "proxy"
               ],
-              "description": "`ports`: portlar uygulanır; `none`: ağ ya hep ya hiç"
+              "description": "`domains`: sunucu adları uygulanır (komut yalnızca süzen vekile ulaşır); `proxy`: vekil değişkenlerini kullanan programlar süzülür; `none`: ağ ya hep ya hiç"
             }
           },
           "required": [
@@ -11145,6 +11146,10 @@
             "cpuPercent",
             "cpuEnforced"
           ]
+        },
+        "overlay": {
+          "type": "boolean",
+          "description": "Yazmalar atılan bir katmana gider; proje değişmez"
         },
         "image": {
           "type": "string"
@@ -11191,6 +11196,7 @@
         "files",
         "network",
         "limits",
+        "overlay",
         "image",
         "docker",
         "notes"

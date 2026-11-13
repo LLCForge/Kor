@@ -2170,10 +2170,12 @@ export interface SandboxStatus__security {
     on: boolean
     /** `host:port`; boşsa ağ açıkken her yer */
     allow: string[]
-    /** `ports`: portlar uygulanır; `none`: ağ ya hep ya hiç */
-    filter: 'none' | 'ports'
+    /** `domains`: sunucu adları uygulanır (komut yalnızca süzen vekile ulaşır); `proxy`: vekil değişkenlerini kullanan programlar süzülür; `none`: ağ ya hep ya hiç */
+    filter: 'none' | 'domains' | 'proxy'
   }
   limits: { memoryMb: number; memoryEnforced: boolean; cpuPercent: number; cpuEnforced: boolean }
+  /** Yazmalar atılan bir katmana gider; proje değişmez */
+  overlay: boolean
   image: string
   docker: { installed: boolean; daemon: boolean; imagePresent: boolean } | null
   /** Yerelleştirilmiş uyarılar (geçersiz girdi, süzülemeyen izin listesi, eksik imaj) */

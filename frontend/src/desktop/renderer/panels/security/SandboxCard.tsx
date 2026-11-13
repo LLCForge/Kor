@@ -33,7 +33,12 @@ type DeniedEntry = AuditEntry & { backend?: string; kind?: string; path?: string
 function networkText(s: SandboxStatus): string {
   if (!s.network.on) return 'Kapalı'
   if (s.network.allow.length === 0) return 'Açık (her yer)'
-  const how = s.network.filter === 'ports' ? 'portlar uygulanır' : 'bu arka uç sunucu süzemez: ağın tamamı açılır'
+  const how =
+    s.network.filter === 'domains'
+      ? "sunucu adları uygulanır: komut yalnızca Kor'un süzen vekiline ulaşır"
+      : s.network.filter === 'proxy'
+        ? 'vekil ayarını kullanan programlar süzülür; doğrudan bağlananlar süzülmez'
+        : 'bu arka uç sunucu süzemez: ağın tamamı açılır'
   return `İzin listesi (${how})`
 }
 
@@ -226,6 +231,8 @@ export function SandboxCard() {
             <dd>{limitText(data.limits.memoryMb, ' MiB', data.limits.memoryEnforced)}</dd>
             <dt>CPU</dt>
             <dd>{limitText(data.limits.cpuPercent, '%', data.limits.cpuEnforced, true)}</dd>
+            <dt>Proje dosyaları</dt>
+            <dd>{data.overlay ? 'Katman: yazılanlar atılır, proje değişmez' : 'Okuma-yazma'}</dd>
             {data.docker && (
               <>
                 <dt>Docker imajı</dt>
@@ -245,6 +252,10 @@ export function SandboxCard() {
               <option key={p.id} value={p.id}>{p.label}</option>
             ))}
           </select>
+          <label className="ks-check">
+            <input type="checkbox" checked={data.overlay} disabled={busy} onChange={(e) => void set('sandbox.overlay', String(e.target.checked))} data-kor-cmd="core.configSet" />
+            Katman: komutlar projeyi değiştirmesin (yazılanlar atılır)
+          </label>
           {data.mode === 'on' && !data.enforcing && (
             <p className="ks-warn" role="alert">Bu makinede sandbox arka ucu bulunamadı. Kor komutları sessizce sandbox'sız çalıştırmaz: her komuttan önce onay ister.</p>
           )}

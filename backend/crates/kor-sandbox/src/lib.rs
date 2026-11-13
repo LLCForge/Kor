@@ -1,12 +1,26 @@
 //! Wrap a command so the OS confines it: writes only inside the project (and temp),
 //! no network unless allowed, memory/CPU capped where the backend can (ADR 0008, ADR 0033).
 //!
-//! - Linux: `bubblewrap` (`bwrap`) when installed.
-//! - macOS: Seatbelt via `/usr/bin/sandbox-exec`.
+//! - Linux: `bubblewrap` (`bwrap`) when installed. With a systemd user manager and the `cpu`
+//!   controller delegated (cgroup v2), the command runs in a transient scope
+//!   (`systemd-run --user --scope -p CPUQuota= -p MemoryMax=`): a hard CPU cap and a memory cap for
+//!   the whole process tree. Without it the CPU share falls back to a `nice` priority.
+//! - macOS: Seatbelt via `/usr/bin/sandbox-exec`. macOS has no per-process CPU quota without root:
+//!   the share becomes a `taskpolicy` quality-of-service clamp (`utility`/`background`) plus `nice`, which yields
+//!   to other work but is not a hard cap (`RLIMIT_CPU` limits total CPU seconds, not a rate).
 //! - Windows: `AppContainer` + job object (`kor_platform::appcontainer`, ADR 0008): only the
 //!   project and a private temp folder are reachable, memory and CPU are capped.
 //! - Any OS: Docker (`[sandbox] backend = "docker"`, or when no native backend exists and the
 //!   `docker` CLI is installed). The project is bind-mounted read-write; the rest is read-only.
+//!
+//! Network allowlists name hosts (`registry.npmjs.org:443`, `*.github.com:443`): the command is
+//! pointed at a local filtering proxy ([`proxy`]) that resolves and connects outside the sandbox.
+//! Seatbelt lets the command reach nothing but that proxy (enforced); bubblewrap keeps the network
+//! shared, so only programs that honour `HTTPS_PROXY` are filtered; `AppContainer` (loopback
+//! isolation) and Docker cannot reach a host proxy, so their allowlist opens the whole network.
+//!
+//! `[sandbox] overlay = true` keeps the project unchanged: writes land in a throwaway layer
+//! ([`overlay`]).
 //!
 //! Commands start through [`spawn`], which picks the mechanism for the kind. What each backend
 //! really enforces is reported by [`enforcement`]; blocks it leaves in a command's output are
@@ -14,6 +28,8 @@
 
 mod denial;
 mod docker;
+pub mod overlay;
+pub mod proxy;
 
 use kor_platform::NoWindow as _;
 use std::ffi::{OsStr, OsString};
@@ -68,6 +84,8 @@ pub struct Options {
     /// `host:port` the command may reach when [`Policy::network`] is on; empty = everything.
     /// Only some backends can filter (see [`Enforcement::filter`]).
     pub allow: Vec<String>,
+    /// Writes to the project go to a throwaway layer ([`overlay`]).
+    pub overlay: bool,
     /// Memory cap in MiB; 0 = none.
     pub memory_mb: u32,
     /// CPU cap in percent of the machine; 0 or ≥ 100 = none.
@@ -80,6 +98,7 @@ impl Default for Options {
     fn default() -> Self {
         Self {
             allow: Vec::new(),
+            overlay: false,
             memory_mb: 8 * 1024,
             cpu_percent: 90,
             image: DEFAULT_IMAGE.into(),
@@ -149,8 +168,21 @@ fn on_path(name: &str) -> Option<PathBuf> {
 pub enum Filter {
     /// All or nothing: an allowlist turns the whole network on.
     None,
-    /// Ports are enforced; any host except `localhost` matches.
-    Ports,
+    /// Host names are enforced: the command can reach only the filtering proxy (and allowed
+    /// `localhost` ports).
+    Domains,
+    /// Host names are filtered for programs that use the proxy variables; others reach any host.
+    Proxy,
+}
+
+impl Filter {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "none",
+            Self::Domains => "domains",
+            Self::Proxy => "proxy",
+        }
+    }
 }
 
 /// What a backend really enforces.
@@ -182,17 +214,17 @@ pub fn enforcement(kind: SandboxKind) -> Enforcement {
             memory: false,
             cpu: false,
         },
-        // RLIMIT_DATA per process (no cgroups without root); CPU share only as `nice` priority.
-        SandboxKind::Bubblewrap => all(Filter::None, true, false),
-        // macOS ignores address-space rlimits; the profile can filter ports.
-        SandboxKind::Seatbelt => all(Filter::Ports, false, false),
+        // RLIMIT_DATA per process, plus a cgroup scope (hard CPU cap) where systemd delegates one.
+        SandboxKind::Bubblewrap => all(Filter::Proxy, true, cpu_scope_available()),
+        // macOS ignores address-space rlimits and has no CPU quota; only the proxy is reachable.
+        SandboxKind::Seatbelt => all(Filter::Domains, false, false),
         // Job object for the whole tree; capabilities are all or nothing.
         SandboxKind::AppContainer | SandboxKind::Docker => all(Filter::None, true, true),
     }
 }
 
-/// `nice -n N` for a CPU share below 100% on Linux/macOS: without root there are no cgroups, so
-/// the share becomes a lower scheduling priority (the smaller the share, the nicer), not a hard cap.
+/// `nice -n N` for a CPU share below 100% where no hard cap is available: the share becomes a
+/// lower scheduling priority (the smaller the share, the nicer), not a hard cap.
 fn nice(cpu_percent: u8) -> Vec<OsString> {
     let n = match cpu_percent {
         0 | 100.. => return Vec::new(),
@@ -203,11 +235,100 @@ fn nice(cpu_percent: u8) -> Vec<OsString> {
     ["nice", "-n", n].map(OsString::from).to_vec()
 }
 
+const TASKPOLICY: &str = "/usr/sbin/taskpolicy";
+
+/// macOS quality-of-service clamp for a small CPU share (`taskpolicy -c`): the scheduler runs the command on
+/// efficiency cores and behind interactive work. Not a quota.
+fn taskpolicy(cpu_percent: u8) -> Vec<OsString> {
+    let clamp = match cpu_percent {
+        1..=25 => "background",
+        26..=50 => "utility",
+        _ => return Vec::new(),
+    };
+    [TASKPOLICY, "-c", clamp].map(OsString::from).to_vec()
+}
+
+/// A systemd user manager on cgroup v2 with the `cpu` controller delegated to it: then
+/// `systemd-run --user --scope -p CPUQuota=` is a hard cap.
+fn cpu_scope_available() -> bool {
+    static V: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *V.get_or_init(|| {
+        if kor_platform::os() != Os::Linux || on_path("systemd-run").is_none() {
+            return false;
+        }
+        let Some(run) = std::env::var_os("XDG_RUNTIME_DIR").map(PathBuf::from) else {
+            return false;
+        };
+        let Some((uid, _)) = kor_platform::owner_ids(&run) else {
+            return false;
+        };
+        let reachable = run.join("bus").exists() || run.join("systemd/private").exists();
+        let delegated = std::fs::read_to_string(format!(
+            "/sys/fs/cgroup/user.slice/user-{uid}.slice/user@{uid}.service/cgroup.controllers"
+        ))
+        .is_ok_and(|c| c.split_whitespace().any(|w| w == "cpu"));
+        reachable && delegated
+    })
+}
+
+/// `systemd-run --user --scope …` arguments for a CPU share of the whole machine and a memory cap
+/// of the whole tree; empty without a CPU share. `CPUQuota` counts one CPU as 100%.
+fn cpu_scope(cpu_percent: u8, memory_mb: u32, cpus: usize) -> Vec<OsString> {
+    if !(1..100).contains(&cpu_percent) {
+        return Vec::new();
+    }
+    let quota = usize::from(cpu_percent).saturating_mul(cpus.max(1));
+    let mut a: Vec<OsString> = ["--user", "--scope", "--quiet", "--collect", "-p"]
+        .map(OsString::from)
+        .to_vec();
+    a.push(format!("CPUQuota={quota}%").into());
+    if memory_mb > 0 {
+        a.extend(["-p".into(), format!("MemoryMax={memory_mb}M").into()]);
+    }
+    a.push("--".into());
+    a
+}
+
+/// What this machine adds to a wrapped command (detected; tests set it by hand).
+#[derive(Debug, Clone, Copy, Default)]
+#[allow(clippy::struct_excessive_bools)] // independent host facts
+struct Host {
+    /// Port of the filtering proxy started for this command.
+    proxy: Option<u16>,
+    /// bubblewrap can mount the project as an overlay.
+    tmp_overlay: bool,
+    /// Hard CPU cap through a systemd scope.
+    cpu_scope: bool,
+    taskpolicy: bool,
+}
+
+impl Host {
+    fn detect(kind: SandboxKind, proxy: Option<u16>) -> Self {
+        Self {
+            proxy,
+            tmp_overlay: kind == SandboxKind::Bubblewrap && overlay::bwrap_has_overlay(),
+            cpu_scope: kind == SandboxKind::Bubblewrap && cpu_scope_available(),
+            taskpolicy: kind == SandboxKind::Seatbelt && Path::new(TASKPOLICY).is_file(),
+        }
+    }
+}
+
 /// Program and arguments that run `program args` under `kind` with `policy` (kinds that work by
 /// wrapping the command line; `AppContainer` and Docker start through [`spawn`] instead).
+/// Without the proxy [`spawn`] starts, a Seatbelt allowlist reaches only its `localhost` entries.
 pub fn wrap(
     kind: SandboxKind,
     policy: &Policy,
+    program: &OsStr,
+    args: &[OsString],
+) -> Result<(OsString, Vec<OsString>), String> {
+    wrap_with(kind, policy, Host::detect(kind, None), program, args)
+}
+
+fn wrap_with(
+    kind: SandboxKind,
+    policy: &Policy,
+    host: Host,
     program: &OsStr,
     args: &[OsString],
 ) -> Result<(OsString, Vec<OsString>), String> {
@@ -233,7 +354,16 @@ pub fn wrap(
             .iter()
             .map(OsString::from)
             .collect();
-            a.extend([OsString::from("--bind"), root.into(), root.into()]);
+            if policy.options.overlay && host.tmp_overlay {
+                a.extend([
+                    OsString::from("--overlay-src"),
+                    root.into(),
+                    "--tmp-overlay".into(),
+                    root.into(),
+                ]);
+            } else {
+                a.extend([OsString::from("--bind"), root.into(), root.into()]);
+            }
             if !policy.network {
                 a.push("--unshare-net".into());
             }
@@ -253,12 +383,31 @@ pub fn wrap(
                     .map(OsString::from),
                 );
             }
-            a.extend(nice(policy.options.cpu_percent));
+            let o = &policy.options;
+            let cpus = std::thread::available_parallelism().map_or(1, std::num::NonZero::get);
+            let mut scope = if host.cpu_scope {
+                cpu_scope(o.cpu_percent, o.memory_mb, cpus)
+            } else {
+                Vec::new()
+            };
+            if scope.is_empty() {
+                a.extend(nice(o.cpu_percent));
+                a.extend(tail);
+                return Ok(("bwrap".into(), a));
+            }
             a.extend(tail);
-            Ok(("bwrap".into(), a))
+            scope.push("bwrap".into());
+            scope.extend(a);
+            Ok(("systemd-run".into(), scope))
         }
         SandboxKind::Seatbelt => {
-            let mut a = vec![OsString::from("-p"), seatbelt_profile(policy)?.into()];
+            let mut a = vec![
+                OsString::from("-p"),
+                seatbelt_profile(policy, host.proxy)?.into(),
+            ];
+            if host.taskpolicy {
+                a.extend(taskpolicy(policy.options.cpu_percent));
+            }
             a.extend(nice(policy.options.cpu_percent));
             a.extend(tail);
             Ok((SANDBOX_EXEC.into(), a))
@@ -293,9 +442,13 @@ fn with_powershell_prelude(program: &OsStr, args: &mut [OsString]) {
     }
 }
 
-/// A started command.
+/// A started command (with the filtering proxy and overlay copy it needs while it runs).
 #[derive(Debug)]
-pub struct Child(Inner);
+pub struct Child {
+    inner: Inner,
+    proxy: Option<proxy::Proxy>,
+    scratch: Option<overlay::Scratch>,
+}
 
 #[derive(Debug)]
 enum Inner {
@@ -352,7 +505,7 @@ impl Child {
         self,
         on_line: &(dyn Fn(&str) + Sync),
     ) -> io::Result<Output> {
-        match self.0 {
+        let out = match self.inner {
             Inner::Process(c) => Box::pin(stream_process(c, on_line)).await,
             Inner::Container(c) => c.wait_with_output().await,
             Inner::Docker(c, mut guard) => {
@@ -360,12 +513,14 @@ impl Child {
                 guard.finished();
                 out
             }
-        }
+        };
+        drop(self.scratch);
+        with_blocked(out, self.proxy.as_ref())
     }
 
     /// Wait for exit and collect stdout/stderr. Dropping the future kills the command.
     pub async fn wait_with_output(self) -> io::Result<Output> {
-        match self.0 {
+        let out = match self.inner {
             Inner::Process(c) => c.wait_with_output().await,
             Inner::Container(c) => c.wait_with_output().await,
             Inner::Docker(c, mut guard) => {
@@ -373,8 +528,27 @@ impl Child {
                 guard.finished();
                 out
             }
-        }
+        };
+        drop(self.scratch);
+        with_blocked(out, self.proxy.as_ref())
     }
+}
+
+/// Hosts the proxy refused, as lines in stderr ([`denials`] finds them): many programs print only
+/// "403" or nothing for a refused tunnel.
+fn with_blocked(out: io::Result<Output>, proxy: Option<&proxy::Proxy>) -> io::Result<Output> {
+    let mut out = out?;
+    for h in proxy
+        .map(proxy::Proxy::blocked)
+        .unwrap_or_default()
+        .iter()
+        .take(5)
+    {
+        out.stderr.extend_from_slice(
+            format!("\nkor sandbox: {h} is not in sandbox.network\n").as_bytes(),
+        );
+    }
+    Ok(out)
 }
 
 /// Start `cmd` (program, arguments, working directory and environment changes are taken from
@@ -386,9 +560,41 @@ pub fn spawn(
 ) -> io::Result<Child> {
     let cmd = cmd.as_std();
     let args: Vec<OsString> = cmd.get_args().map(OsStr::to_owned).collect();
-    let cwd = cmd.get_current_dir().unwrap_or(&policy.root);
+    let mut cwd = cmd.get_current_dir().unwrap_or(&policy.root).to_path_buf();
+    // Overlay without kernel support: the command works on a temp copy of the project.
+    let mut scratch = None;
+    let copied;
+    let mut policy = policy;
+    if kind.is_enforcing()
+        && policy.options.overlay
+        && !(kind == SandboxKind::Bubblewrap && overlay::bwrap_has_overlay())
+    {
+        let s = overlay::Scratch::copy_of(&policy.root)?;
+        cwd = s.map(&policy.root, &cwd);
+        copied = Policy {
+            root: s.root.clone(),
+            ..policy.clone()
+        };
+        policy = &copied;
+        scratch = Some(s);
+    }
+    let cwd = cwd.as_path();
+    let proxy = match enforcement(kind).filter {
+        Filter::Domains | Filter::Proxy if policy.network && !policy.options.allow.is_empty() => {
+            Some(proxy::Proxy::start(policy.options.allow.clone())?)
+        }
+        _ => None,
+    };
+    let child = |inner| Child {
+        inner,
+        proxy: None,
+        scratch: None,
+    };
     if kind == SandboxKind::Docker {
-        return docker::spawn(policy, cmd, &args, cwd).map(|(c, g)| Child(Inner::Docker(c, g)));
+        return docker::spawn(policy, cmd, &args, cwd).map(|(c, g)| Child {
+            scratch,
+            ..child(Inner::Docker(c, g))
+        });
     }
     if kind == SandboxKind::AppContainer {
         let mut args = args;
@@ -411,9 +617,14 @@ pub fn spawn(
             memory_bytes: u64::from(o.memory_mb) << 20,
             cpu_percent: o.cpu_percent,
         })
-        .map(|c| Child(Inner::Container(c)));
+        .map(|c| Child {
+            scratch,
+            ..child(Inner::Container(c))
+        });
     }
-    let (program, args) = wrap(kind, policy, cmd.get_program(), &args).map_err(io::Error::other)?;
+    let host = Host::detect(kind, proxy.as_ref().map(|p| p.port));
+    let (program, args) =
+        wrap_with(kind, policy, host, cmd.get_program(), &args).map_err(io::Error::other)?;
     let mut c = tokio::process::Command::new(program);
     c.no_window();
     c.args(args)
@@ -428,7 +639,19 @@ pub fn spawn(
             None => c.env_remove(k),
         };
     }
-    c.spawn().map(|c| Child(Inner::Process(c)))
+    if let Some(p) = &proxy {
+        for (k, v) in p.env() {
+            c.env(k, v);
+        }
+        // Everything goes through the proxy, `localhost` too (it checks the list).
+        c.env_remove("NO_PROXY").env_remove("no_proxy");
+    }
+    let inner = Inner::Process(c.spawn()?);
+    Ok(Child {
+        inner,
+        proxy,
+        scratch,
+    })
 }
 
 /// `host:port` with a numeric port (or `*`), or `*` alone. Rejects anything that could break out
@@ -448,7 +671,7 @@ pub fn valid_allow(entry: &str) -> bool {
     host_ok && (port == "*" || port.parse::<u16>().is_ok_and(|p| p > 0))
 }
 
-fn seatbelt_profile(policy: &Policy) -> Result<String, String> {
+fn seatbelt_profile(policy: &Policy, proxy: Option<u16>) -> Result<String, String> {
     let root = policy
         .root
         .to_str()
@@ -461,21 +684,22 @@ fn seatbelt_profile(policy: &Policy) -> Result<String, String> {
     if !policy.network {
         net.push_str("(deny network*)\n");
     } else if !policy.options.allow.is_empty() {
-        // Seatbelt matches `*` or `localhost` as the host, so other hosts are filtered by port.
+        // Seatbelt can match only `*` or `localhost` as the host: host names go through the
+        // filtering proxy, the only other address the command may reach.
         net.push_str(
             "(deny network*)\n(allow network-outbound (literal \"/private/var/run/mDNSResponder\")",
         );
+        if let Some(port) = proxy {
+            let _ = write!(net, " (remote ip \"localhost:{port}\")");
+        }
         for entry in &policy.options.allow {
             if !valid_allow(entry) {
                 return Err(format!("invalid network allowlist entry: {entry}"));
             }
             let (host, port) = entry.rsplit_once(':').unwrap_or(("*", "*"));
-            let host = if matches!(host, "localhost" | "127.0.0.1" | "[::1]") {
-                "localhost"
-            } else {
-                "*"
-            };
-            let _ = write!(net, " (remote ip \"{host}:{port}\")");
+            if matches!(host, "localhost" | "127.0.0.1" | "[::1]") {
+                let _ = write!(net, " (remote ip \"localhost:{port}\")");
+            }
         }
         net.push_str(")\n");
     }
@@ -604,11 +828,24 @@ mod tests {
         assert_eq!(strs(&a), ["-c", "ls"]);
     }
 
+    fn bwrap(policy: &Policy, host: Host) -> (OsString, Vec<String>) {
+        let (p, a) = wrap_with(
+            SandboxKind::Bubblewrap,
+            policy,
+            host,
+            "sh".as_ref(),
+            &["-c".into(), "ls".into()],
+        )
+        .unwrap();
+        (p, strs(&a))
+    }
+
     #[test]
     fn bubblewrap_binds_root_drops_network_and_caps_memory() {
-        let (p, a) = wrap(
+        let (p, a) = wrap_with(
             SandboxKind::Bubblewrap,
             &policy(false),
+            Host::default(),
             "sh".as_ref(),
             &["-c".into(), "ls".into()],
         )
@@ -632,14 +869,98 @@ mod tests {
         let mut open = policy(true);
         open.options.memory_mb = 0;
         open.options.cpu_percent = 0;
-        let (_, a) = wrap(SandboxKind::Bubblewrap, &open, "sh".as_ref(), &[]).unwrap();
+        let (_, a) = wrap_with(
+            SandboxKind::Bubblewrap,
+            &open,
+            Host::default(),
+            "sh".as_ref(),
+            &[],
+        )
+        .unwrap();
         let a = strs(&a);
         assert!(!a.contains(&"--unshare-net".into()));
         assert_eq!(&a[a.len() - 2..], ["--", "sh"]);
     }
 
     #[test]
-    fn seatbelt_profile_limits_writes_filters_ports_and_rejects_injection() {
+    fn bubblewrap_hard_cpu_cap_runs_in_a_systemd_scope() {
+        let scoped = Host {
+            cpu_scope: true,
+            ..Host::default()
+        };
+        let (p, a) = bwrap(&policy(false), scoped);
+        assert_eq!(p, "systemd-run");
+        assert_eq!(&a[..5], ["--user", "--scope", "--quiet", "--collect", "-p"]);
+        assert!(
+            a[5].starts_with("CPUQuota=") && a.contains(&"MemoryMax=8192M".into()),
+            "{a:?}"
+        );
+        let at = a.iter().position(|s| s == "bwrap").unwrap();
+        assert_eq!(a[at - 1], "--");
+        assert!(!a.contains(&"nice".into()), "the scope replaces nice");
+        assert_eq!(&a[a.len() - 3..], ["sh", "-c", "ls"]);
+
+        // No CPU share: no scope, even when systemd is there.
+        let mut free = policy(false);
+        free.options.cpu_percent = 100;
+        assert_eq!(bwrap(&free, scoped).0, "bwrap");
+
+        assert_eq!(
+            strs(&cpu_scope(50, 0, 8)),
+            [
+                "--user",
+                "--scope",
+                "--quiet",
+                "--collect",
+                "-p",
+                "CPUQuota=400%",
+                "--"
+            ]
+        );
+        assert!(cpu_scope(0, 1024, 8).is_empty() && cpu_scope(100, 1024, 8).is_empty());
+        assert_eq!(strs(&cpu_scope(30, 0, 0))[5], "CPUQuota=30%");
+    }
+
+    #[test]
+    fn bubblewrap_overlay_mounts_the_project_copy_on_write() {
+        let mut p = policy(false);
+        p.options.overlay = true;
+        let with = Host {
+            tmp_overlay: true,
+            ..Host::default()
+        };
+        let (_, a) = bwrap(&p, with);
+        assert!(
+            a.windows(4)
+                .any(|w| w == ["--overlay-src", "/work/proj", "--tmp-overlay", "/work/proj"]),
+            "{a:?}"
+        );
+        assert!(!a.contains(&"--bind".into()));
+        // Overlay off, or an old bubblewrap (spawn copies the project instead): a plain bind.
+        assert!(bwrap(&policy(false), with).1.contains(&"--bind".into()));
+        assert!(bwrap(&p, Host::default()).1.contains(&"--bind".into()));
+    }
+
+    #[test]
+    fn macos_cpu_share_is_a_qos_clamp() {
+        assert_eq!(strs(&taskpolicy(20)), [TASKPOLICY, "-c", "background"]);
+        assert_eq!(strs(&taskpolicy(50))[2], "utility");
+        assert!(taskpolicy(90).is_empty() && taskpolicy(0).is_empty());
+        let mut p = policy(false);
+        p.options.cpu_percent = 40;
+        let host = Host {
+            taskpolicy: true,
+            ..Host::default()
+        };
+        let (_, a) = wrap_with(SandboxKind::Seatbelt, &p, host, "sh".as_ref(), &[]).unwrap();
+        assert_eq!(
+            &strs(&a)[2..],
+            [TASKPOLICY, "-c", "utility", "nice", "-n", "10", "sh"]
+        );
+    }
+
+    #[test]
+    fn seatbelt_profile_limits_writes_reaches_only_the_proxy_and_rejects_injection() {
         let (p, a) = wrap(SandboxKind::Seatbelt, &policy(false), "sh".as_ref(), &[]).unwrap();
         assert_eq!(p, SANDBOX_EXEC);
         let profile = a[1].to_string_lossy().into_owned();
@@ -649,14 +970,28 @@ mod tests {
 
         let mut allow = policy(true);
         allow.options.allow = vec!["registry.npmjs.org:443".into(), "localhost:5432".into()];
-        let (_, a) = wrap(SandboxKind::Seatbelt, &allow, "sh".as_ref(), &[]).unwrap();
+        let proxied = Host {
+            proxy: Some(41_000),
+            ..Host::default()
+        };
+        let (_, a) = wrap_with(SandboxKind::Seatbelt, &allow, proxied, "sh".as_ref(), &[]).unwrap();
         let profile = a[1].to_string_lossy().into_owned();
-        assert!(profile.contains("(remote ip \"*:443\")"), "{profile}");
+        assert!(
+            !profile.contains("*:443"),
+            "hosts go through the proxy: {profile}"
+        );
+        assert!(
+            profile.contains("(remote ip \"localhost:41000\")"),
+            "{profile}"
+        );
         assert!(
             profile.contains("(remote ip \"localhost:5432\")"),
             "{profile}"
         );
         assert!(profile.contains("(deny network*)"));
+        // Without the proxy only the localhost entry is reachable.
+        let (_, a) = wrap(SandboxKind::Seatbelt, &allow, "sh".as_ref(), &[]).unwrap();
+        assert!(!a[1].to_string_lossy().contains("41000"));
 
         allow.options.allow = vec!["x\") (allow default) (\":1".into()];
         assert!(wrap(SandboxKind::Seatbelt, &allow, "sh".as_ref(), &[]).is_err());
@@ -694,9 +1029,12 @@ mod tests {
     #[test]
     fn enforcement_is_honest_per_backend() {
         assert!(!enforcement(SandboxKind::None).files);
-        assert!(!enforcement(SandboxKind::Bubblewrap).cpu);
+        assert_eq!(enforcement(SandboxKind::Bubblewrap).filter, Filter::Proxy);
         assert!(!enforcement(SandboxKind::Seatbelt).memory);
-        assert_eq!(enforcement(SandboxKind::Seatbelt).filter, Filter::Ports);
+        assert!(!enforcement(SandboxKind::Seatbelt).cpu);
+        assert_eq!(enforcement(SandboxKind::Seatbelt).filter, Filter::Domains);
+        assert_eq!(enforcement(SandboxKind::AppContainer).filter, Filter::None);
+        assert_eq!(Filter::Domains.as_str(), "domains");
         let d = enforcement(SandboxKind::Docker);
         assert!(d.files && d.network_off && d.memory && d.cpu && d.filter == Filter::None);
     }
@@ -755,6 +1093,40 @@ mod tests {
                 "{kind:?}: {text}"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn overlay_keeps_the_project_unchanged() {
+        if native() != SandboxKind::AppContainer {
+            return; // bubblewrap/Seatbelt overlay arguments are covered above
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path().canonicalize().unwrap();
+        std::fs::write(root.join("a.txt"), "before").unwrap();
+        let mut c = tokio::process::Command::new("powershell");
+        c.args([
+            "-NoProfile",
+            "-Command",
+            "[IO.File]::WriteAllText((Join-Path (Get-Location).ProviderPath 'a.txt'), 'after'); Get-Content a.txt",
+        ])
+        .current_dir(&root);
+        let mut p = Policy::new(root.clone());
+        p.options.overlay = true;
+        let out = spawn(SandboxKind::AppContainer, &p, &c)
+            .unwrap()
+            .wait_with_output()
+            .await
+            .unwrap();
+        let text = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            text.contains("after"),
+            "{text}{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(
+            std::fs::read_to_string(root.join("a.txt")).unwrap(),
+            "before"
+        );
     }
 
     #[tokio::test]

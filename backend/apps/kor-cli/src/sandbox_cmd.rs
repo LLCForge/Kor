@@ -93,7 +93,8 @@ fn status(l: &Localizer, st: &kor_runtime::sandbox::Status) {
     } else {
         let hosts = s.options.allow.join(", ");
         let how = match e.filter {
-            Filter::Ports => l.t("sandbox-status-net-ports"),
+            Filter::Domains => l.t("sandbox-status-net-domains"),
+            Filter::Proxy => l.t_args("sandbox-status-net-proxy", &args!("backend" => backend)),
             Filter::None => l.t_args("sandbox-net-wide", &args!("backend" => backend)),
         };
         format!(
@@ -128,6 +129,12 @@ fn status(l: &Localizer, st: &kor_runtime::sandbox::Status) {
             &args!("pct" => o.cpu_percent, "state" => cpu)
         )
     );
+    let overlay = if o.overlay {
+        "sandbox-status-overlay-on"
+    } else {
+        "sandbox-status-overlay-off"
+    };
+    println!("  {}", l.t(overlay));
     if let Some(d) = st.docker {
         let key = if !d.daemon {
             "sandbox-docker-nodaemon"
