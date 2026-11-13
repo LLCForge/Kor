@@ -49,12 +49,16 @@ pub fn setup(l: &Localizer, cfg: &kor_config::Sandbox, offline: bool) -> Setup {
     if allow.iter().any(|a| a == "*") {
         allow.clear();
     }
-    if network
-        && !allow.is_empty()
-        && kind.is_enforcing()
-        && kor_sandbox::enforcement(kind).filter == Filter::None
-    {
-        notes.push(l.t_args("sandbox-net-wide", &args!("backend" => kind.as_str())));
+    if network && !allow.is_empty() && kind.is_enforcing() {
+        match kor_sandbox::enforcement(kind).filter {
+            Filter::None => {
+                notes.push(l.t_args("sandbox-net-wide", &args!("backend" => kind.as_str())));
+            }
+            Filter::Proxy => {
+                notes.push(l.t_args("sandbox-net-proxy", &args!("backend" => kind.as_str())));
+            }
+            Filter::Domains => {}
+        }
     }
     let mut image = cfg.image.trim().to_owned();
     if !kor_sandbox::valid_image(&image) {
@@ -74,6 +78,7 @@ pub fn setup(l: &Localizer, cfg: &kor_config::Sandbox, offline: bool) -> Setup {
         network,
         options: Options {
             allow,
+            overlay: cfg.overlay,
             memory_mb: cfg.memory_mb,
             cpu_percent: cfg.cpu_percent,
             image,
@@ -156,6 +161,12 @@ mod tests {
 
         let off = setup(&l(), &kor_config::Sandbox::default(), false);
         assert!(!off.network, "no network by default");
+        assert!(!off.options.overlay);
+        let overlay = kor_config::Sandbox {
+            overlay: true,
+            ..kor_config::Sandbox::default()
+        };
+        assert!(setup(&l(), &overlay, false).options.overlay);
         assert_eq!((off.options.memory_mb, off.options.cpu_percent), (8192, 90));
     }
 }

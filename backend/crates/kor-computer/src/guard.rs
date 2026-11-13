@@ -5,6 +5,12 @@
 //! pointer position. After each action the guard remembers when it ended and where the pointer
 //! was; before the next one, input newer than that (plus a short grace for injected events still
 //! being delivered) or a moved pointer means a human took over.
+//!
+//! The same check runs inside an action, between its low-level events (each typed chunk, drag
+//! step, scroll tick, repeated key): [`Guard::check_step`] with a shorter grace, so a long
+//! `type` or `drag` stops at the next event, not only before the next action. The OS reports
+//! injected and real input alike, so a key the user presses while Kor is injecting an event is
+//! seen only if it lands after that event; pointer movement is always seen.
 
 use std::fmt::Debug;
 use std::sync::OnceLock;
@@ -14,6 +20,10 @@ use serde::Serialize;
 
 /// Injected input can be delivered a little after the call that sent it returns.
 pub const GRACE_MS: u64 = 250;
+/// The same between two events of one action: they are sent synchronously, one at a time.
+pub const STEP_GRACE_MS: u64 = 25;
+/// Pause between the chunks of a long action, so input in between can be told from Kor's own.
+pub const STEP_PAUSE_MS: u64 = 75;
 /// Pointer movement below this (pixels on either axis) is jitter, not the user.
 const CURSOR_SLACK: i32 = 3;
 
@@ -94,6 +104,16 @@ impl Guard {
     /// Before an action: `Err` when the user took over since Kor's last action (and from then on,
     /// until [`Guard::approved`]).
     pub fn check(&mut self) -> Result<(), Interruption> {
+        self.check_with(GRACE_MS)
+    }
+
+    /// Between two low-level events of one action (after [`Guard::done`] for the previous one):
+    /// `Err` when the user took over in between.
+    pub fn check_step(&mut self) -> Result<(), Interruption> {
+        self.check_with(STEP_GRACE_MS)
+    }
+
+    fn check_with(&mut self, grace: u64) -> Result<(), Interruption> {
         if let Some(p) = self.paused {
             return Err(p);
         }
@@ -110,7 +130,7 @@ impl Guard {
         let touched = self
             .watcher
             .idle_ms()
-            .is_some_and(|idle| idle.saturating_add(GRACE_MS) < since);
+            .is_some_and(|idle| idle.saturating_add(grace) < since);
         let hit = if moved {
             Some(Interruption::Mouse)
         } else if touched {
@@ -224,6 +244,30 @@ mod tests {
         f.move_mouse(40);
         assert_eq!(g.check(), Err(Interruption::Mouse));
         assert!(g.watching());
+    }
+
+    #[test]
+    fn steps_inside_an_action_catch_the_user_between_events() {
+        let f = Fake::default();
+        f.advance(10_000);
+        let mut g = Guard::new(Box::new(f.clone()));
+        g.done();
+        // Kor types a chunk; its own input lands right away.
+        f.key();
+        f.advance(STEP_PAUSE_MS);
+        assert!(g.check_step().is_ok(), "Kor's own chunk");
+        g.done();
+        // The user presses a key during the pause after the next chunk.
+        f.key();
+        f.advance(40);
+        f.key();
+        f.advance(STEP_PAUSE_MS - 40);
+        assert_eq!(g.check_step(), Err(Interruption::Input));
+        g.approved();
+        g.done();
+        // Moving the pointer is seen at once, even without a pause.
+        f.move_mouse(30);
+        assert_eq!(g.check_step(), Err(Interruption::Mouse));
     }
 
     #[test]

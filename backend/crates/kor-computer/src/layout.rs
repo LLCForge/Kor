@@ -5,6 +5,10 @@
 //! never off-screen. A layout can be linked to a project (`.kor/layout.json`) so opening the
 //! project brings its arrangement back.
 //!
+//! Each window also records its virtual desktop (Windows GUID, Linux workspace number; macOS
+//! Spaces have no public API, so none) and a restore puts it back there where the OS allows
+//! (`kor_platform::vdesktop`: Windows lets only an app move its own windows between desktops).
+//!
 //! This module is pure: windows come in and moves go out; `kor-tools` lists and moves the real
 //! windows with the per-OS window tools (Win32 `SetWindowPos`, macOS Accessibility, X11 EWMH).
 
@@ -46,6 +50,8 @@ pub struct Window {
     pub h: i32,
     /// `normal`, `maximized`, `minimized`.
     pub state: String,
+    /// Virtual desktop / workspace; empty when unknown.
+    pub desktop: String,
 }
 
 /// One window in a saved layout; the rectangle is relative to its monitor, in 1/10000ths.
@@ -60,6 +66,8 @@ pub struct Saved {
     pub rw: i32,
     pub rh: i32,
     pub state: String,
+    /// Virtual desktop / workspace it was on; empty when unknown (older layouts, macOS).
+    pub desktop: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -83,6 +91,8 @@ pub struct Move {
     pub w: i32,
     pub h: i32,
     pub state: String,
+    /// Desktop to move it to; empty when it stays where it is (unknown, or already there).
+    pub desktop: String,
 }
 
 /// What a restore will do.
@@ -140,6 +150,7 @@ pub fn capture(name: &str, monitors: &[Monitor], windows: &[Window], saved_at: u
                 } else {
                     "normal".into()
                 },
+                desktop: w.desktop.clone(),
             })
         })
         .collect();
@@ -198,6 +209,11 @@ pub fn plan(layout: &Layout, monitors: &[Monitor], windows: &[Window]) -> Plan {
             w: ww,
             h: hh,
             state: s.state.clone(),
+            desktop: if s.desktop == w.desktop {
+                String::new()
+            } else {
+                s.desktop.clone()
+            },
         });
     }
     out
@@ -331,7 +347,35 @@ mod tests {
             w,
             h,
             state: "normal".into(),
+            desktop: String::new(),
         }
+    }
+
+    #[test]
+    fn windows_go_back_to_their_virtual_desktop() {
+        let mons = [mon("D1", 0, 1920, 1080, true)];
+        let mut a = win(1, "Code.exe", "kor", 0, 0, 900, 900);
+        a.desktop = "{AAAA}".into();
+        let mut b = win(2, "chrome.exe", "docs", 0, 0, 900, 900);
+        b.desktop = "{BBBB}".into();
+        let l = capture("two", &mons, &[a.clone(), b.clone()], 1);
+        assert_eq!(l.windows[0].desktop, "{AAAA}");
+        // Code is still on its desktop, chrome moved to A: only chrome is sent back.
+        b.desktop = "{AAAA}".into();
+        let p = plan(&l, &mons, &[a, b]);
+        let by = |h| {
+            p.moves
+                .iter()
+                .find(|m| m.hwnd == h)
+                .unwrap()
+                .desktop
+                .clone()
+        };
+        assert_eq!(by(1), "");
+        assert_eq!(by(2), "{BBBB}");
+        // Layouts saved before desktops were recorded still load.
+        let old: Saved = serde_json::from_str(r#"{"process":"code","title":"t"}"#).unwrap();
+        assert!(old.desktop.is_empty());
     }
 
     #[test]

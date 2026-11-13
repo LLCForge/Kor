@@ -11,7 +11,8 @@
 //! - [`keys`] and (feature `live`) [`live`]: screen capture and input;
 //! - [`layout`]: saved window arrangements across monitors (`kor layout`).
 //!
-//! A desktop tool calls [`begin`] before it acts and [`Ticket::finish`] after.
+//! A desktop tool calls [`begin`] before it acts, [`step`] between the low-level events of a
+//! long action (typing, dragging, scrolling) and [`Ticket::finish`] after.
 
 pub mod guard;
 pub mod indicator;
@@ -84,6 +85,39 @@ pub fn pause_message(i: Interruption) -> String {
     )
 }
 
+/// Text the model gets when the user interrupted in the middle of an action.
+pub fn stopped_message(i: Interruption) -> String {
+    let what = match i {
+        Interruption::Mouse => "moved the mouse",
+        Interruption::Input => "pressed a key or used the mouse",
+    };
+    format!(
+        "Stopped mid-action: the user {what} while Kor controlled the desktop (human first). Part of the action may have been done (take a screenshot to see what). Ask the user whether to continue; the next desktop action needs their approval."
+    )
+}
+
+/// Between two low-level events of the running action: `Err` (audited, the indicator shows the
+/// pause) when the user took over since the previous event; the caller sends nothing more.
+pub fn step(tool: &str) -> Result<(), String> {
+    let r = with_guard(|g| {
+        let r = g.check_step();
+        if r.is_ok() {
+            g.done();
+        }
+        r
+    });
+    let Err(i) = r else { return Ok(()) };
+    audit(json!({"tool": tool, "decision": "stopped", "by": i.key()}));
+    indicator::emit(Activity {
+        active: false,
+        tool: tool.to_owned(),
+        app: None,
+        paused: Some(i),
+        at: indicator::now_ms(),
+    });
+    Err(stopped_message(i))
+}
+
 /// One action in progress.
 #[derive(Debug)]
 #[must_use = "call finish() after the action"]
@@ -134,6 +168,8 @@ pub fn begin(
         });
         return Err(pause_message(i));
     }
+    // Input before this moment is not the user's interruption of this action ([`step`]).
+    with_guard(Guard::done);
     indicator::emit(Activity {
         active: true,
         tool: tool.to_owned(),
@@ -225,12 +261,29 @@ mod tests {
             .unwrap()
             .finish(false);
 
+        // Mid-action: the steps of a long action go on until the user moves the mouse.
+        let t = begin("type", Action::Type, Some("mspaint".into()), false).unwrap();
+        f.advance(guard::STEP_PAUSE_MS);
+        assert!(step("type").is_ok());
+        f.move_mouse(50);
+        let err = step("type").unwrap_err();
+        assert!(err.starts_with("Stopped mid-action"), "{err}");
+        assert!(step("type").is_err(), "stays stopped");
+        t.finish(false);
+        assert!(paused().is_some());
+        approved();
+
         let log = log.lock().unwrap();
         let decisions: Vec<&str> = log
             .iter()
             .map(|v| v["decision"].as_str().unwrap())
             .collect();
-        assert_eq!(decisions, ["refused", "refused", "run", "paused", "run"]);
+        assert_eq!(
+            decisions,
+            [
+                "refused", "refused", "run", "paused", "run", "stopped", "stopped", "run"
+            ]
+        );
         assert_eq!(log[2]["app"], "mspaint");
         assert_eq!(log[4]["ok"], false);
         let seen = seen.lock().unwrap();

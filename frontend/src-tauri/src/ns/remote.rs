@@ -166,7 +166,7 @@ async fn connect(args: &[Value], app: &AppHandle) -> Res {
     let e = kor_runtime::remote::ensure(&kor_agent::remote::SshShell::new(&h), &src)
         .await
         .map_err(|e| format!("Uzak Kor kurulamadı: {e}"))?;
-    let mut client = Client::connect(&h, project.as_deref()).await?;
+    let mut client = Client::connect(&h, project.as_deref(), e.info.windows).await?;
     let hello = client.hello.clone();
     let (tx, mut rx) = mpsc::unbounded_channel::<Command>();
     lock(conns()).insert(target.clone(), Conn { tx, task: None });

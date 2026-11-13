@@ -101,6 +101,8 @@ pub fn denials(kind: SandboxKind, policy: &Policy, output: &str) -> Vec<Denial> 
                 }
                 p => (DenialKind::File, p),
             }
+        } else if let Some(h) = proxy_blocked(line) {
+            (DenialKind::Network, Some(h))
         } else if !policy.network && has(NETWORK) {
             (DenialKind::Network, host(line))
         } else {
@@ -192,6 +194,14 @@ fn inside(path: &str, policy: &Policy) -> bool {
     let root = norm(&policy.root.to_string_lossy());
     let p = norm(path);
     p == root || p.starts_with(&format!("{root}/"))
+}
+
+/// `host:port` from the filtering proxy's note (`kor sandbox: example.com:443 is not in
+/// sandbox.network`), written by `Child` after the command ends.
+fn proxy_blocked(line: &str) -> Option<String> {
+    let rest = line.trim().strip_prefix("kor sandbox: ")?;
+    let host = rest.strip_suffix(" is not in sandbox.network")?;
+    (!host.is_empty() && !host.contains(' ')).then(|| host.to_owned())
 }
 
 /// A host named in a network error (`Could not resolve host: example.com`), if any.
@@ -300,6 +310,15 @@ mod tests {
         assert!(d.iter().all(|d| d.kind == DenialKind::Network));
         assert!(denials(SandboxKind::Docker, &policy("/p", true), out).is_empty());
         assert!(denials(SandboxKind::None, &policy("/p", false), out).is_empty());
+    }
+
+    #[test]
+    fn proxy_refusals_count_with_the_network_on() {
+        let out = "curl: (56) CONNECT tunnel failed, response 403\n\nkor sandbox: example.com:443 is not in sandbox.network\n";
+        let d = denials(SandboxKind::Seatbelt, &policy("/p", true), out);
+        assert_eq!(d.len(), 1, "{d:?}");
+        assert_eq!(d[0].target.as_deref(), Some("example.com:443"));
+        assert_eq!(d[0].kind, DenialKind::Network);
     }
 
     #[test]

@@ -12,6 +12,12 @@
 //!   `<kor home>/remote/tasks/<id>/events.jsonl` and reading commands from `inbox.jsonl`;
 //!   `remote-serve` only relays. Reattach replays the log (`kor --remote … attach <task>`). The
 //!   task id is also the agent session id, so the transcript is checkpointed after every turn.
+//! - **Windows servers** (`OpenSSH` for Windows): found by `kor_agent::remote::detect_os`; every
+//!   command is `PowerShell` sent as `-EncodedCommand` (works whether the server's default shell
+//!   is `cmd.exe` or `PowerShell`), the binary lives in `%USERPROFILE%\.kor\bin\kor.exe`, hashes
+//!   come from `Get-FileHash`, and `--project` is translated (`/c/work/app` → `C:\work\app`).
+//!   Task workers try to break away from the SSH session's job so a task outlives the
+//!   connection; a server whose job forbids that ends the task with the session.
 
 use std::collections::{HashMap, VecDeque};
 use std::io::{BufRead as _, Seek as _, Write as _};
@@ -21,7 +27,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use kor_agent::remote::wire::{self, Command, MAX_FRAME, PROTOCOL};
-use kor_agent::remote::{Shell, SshHost};
+use kor_agent::remote::{Shell, SshHost, powershell_command};
 use kor_agent::{AgentEvent, Approver, PermissionReply, PermissionRequest, Review, StopReason};
 use kor_providers::CancellationToken;
 use serde::{Deserialize, Serialize};
@@ -32,6 +38,8 @@ use tokio::sync::{mpsc, oneshot};
 
 /// The remote binary, for the remote POSIX shell.
 pub const REMOTE_BIN: &str = "\"$HOME/.kor/bin/kor\"";
+/// The remote binary on a Windows server, as a `PowerShell` expression.
+pub const REMOTE_BIN_PS: &str = r"(Join-Path $env:USERPROFILE '.kor\bin\kor.exe')";
 const MAX_BINARY: usize = 256 * 1024 * 1024;
 const POLL: Duration = Duration::from_millis(100);
 
@@ -65,25 +73,46 @@ pub struct RemoteInfo {
     pub target: Option<&'static str>,
     /// Version of `~/.kor/bin/kor`, if installed.
     pub version: Option<String>,
+    /// A Windows server: commands are `PowerShell`.
+    pub windows: bool,
 }
 
-/// Release target for `uname -s` / `uname -m` (Windows servers are not supported: no POSIX sh).
+/// Release target for `uname -s` / `uname -m` (Windows: `Windows` and
+/// `PROCESSOR_ARCHITECTURE`).
 pub fn remote_target(os: &str, arch: &str) -> Option<&'static str> {
     Some(match (os.trim(), arch.trim()) {
         ("Linux", "x86_64" | "amd64") => "x86_64-unknown-linux-musl",
         ("Linux", "aarch64" | "arm64") => "aarch64-unknown-linux-gnu",
         ("Darwin", "x86_64") => "x86_64-apple-darwin",
         ("Darwin", "arm64" | "aarch64") => "aarch64-apple-darwin",
+        ("Windows", "AMD64" | "x86_64") => "x86_64-pc-windows-msvc",
+        ("Windows", "ARM64") => "aarch64-pc-windows-msvc",
         _ => return None,
     })
 }
 
-/// `uname` and the installed version.
+/// File name of the `kor` binary for `target` in a release (`.exe` for Windows).
+pub fn release_file(target: &str) -> String {
+    if target.contains("windows") {
+        format!("kor-{target}.exe")
+    } else {
+        format!("kor-{target}")
+    }
+}
+
+/// `uname` (or, on Windows, `PROCESSOR_ARCHITECTURE`) and the installed version.
 ///
 /// # Errors
 /// When SSH fails.
 pub async fn probe(sh: &dyn Shell) -> Result<RemoteInfo, String> {
-    let cmd = format!("uname -s; uname -m; {REMOTE_BIN} --version 2>/dev/null || true");
+    let windows = kor_agent::remote::detect_os(sh).await? == kor_agent::remote::RemoteOs::Windows;
+    let cmd = if windows {
+        powershell_command(&format!(
+            "'Windows'; $env:PROCESSOR_ARCHITECTURE; $b = {REMOTE_BIN_PS}; if (Test-Path -LiteralPath $b) {{ & $b --version 2>$null }}"
+        ))
+    } else {
+        format!("uname -s; uname -m; {REMOTE_BIN} --version 2>/dev/null || true")
+    };
     let out = sh.run(&cmd, None, Duration::from_secs(30)).await?;
     let text = out.text();
     let mut lines = text.lines();
@@ -101,7 +130,33 @@ pub async fn probe(sh: &dyn Shell) -> Result<RemoteInfo, String> {
         os,
         arch,
         version,
+        windows,
     })
+}
+
+/// The shell commands [`ensure`] runs: stage from stdin and print the SHA-256, remove the staged
+/// file, move it into place.
+fn install_commands(windows: bool) -> [String; 3] {
+    if !windows {
+        return [
+            r#"d="$HOME/.kor/bin"; mkdir -p "$d" && cat > "$d/kor.new" && chmod 755 "$d/kor.new" && { sha256sum "$d/kor.new" 2>/dev/null || shasum -a 256 "$d/kor.new"; }"#.to_owned(),
+            r#"rm -f "$HOME/.kor/bin/kor.new""#.to_owned(),
+            r#"mv -f "$HOME/.kor/bin/kor.new" "$HOME/.kor/bin/kor""#.to_owned(),
+        ];
+    }
+    let new = r"(Join-Path $env:USERPROFILE '.kor\bin\kor.exe.new')";
+    [
+        powershell_command(&format!(
+            "$ErrorActionPreference = 'Stop'; $null = New-Item -ItemType Directory -Force -Path (Join-Path $env:USERPROFILE '.kor\\bin'); $p = {new}; $f = [IO.File]::Create($p); try {{ [Console]::OpenStandardInput().CopyTo($f) }} finally {{ $f.Close() }}; (Get-FileHash -Algorithm SHA256 -LiteralPath $p).Hash.ToLowerInvariant()"
+        )),
+        powershell_command(&format!(
+            "Remove-Item -Force -ErrorAction SilentlyContinue -LiteralPath {new}"
+        )),
+        // A running kor.exe (an older task worker) locks the file: the move fails and says so.
+        powershell_command(&format!(
+            "$ErrorActionPreference = 'Stop'; Move-Item -Force -LiteralPath {new} -Destination {REMOTE_BIN_PS}"
+        )),
+    ]
 }
 
 /// Where a verified `kor` binary for a target comes from.
@@ -150,7 +205,7 @@ impl BinarySource {
         {
             return std::fs::read(p).map_err(|e| format!("{}: {e}", p.display()));
         }
-        let name = format!("kor-{target}");
+        let name = release_file(target);
         let cached = self
             .cache
             .as_ref()
@@ -240,8 +295,8 @@ pub async fn ensure(sh: &dyn Shell, src: &BinarySource) -> Result<Ensured, Strin
         .ok_or_else(|| format!("no Kor build for {} {}", info.os, info.arch))?;
     let data = src.binary(target).await?;
     let want = sha256_hex(&data);
-    let up = r#"d="$HOME/.kor/bin"; mkdir -p "$d" && cat > "$d/kor.new" && chmod 755 "$d/kor.new" && { sha256sum "$d/kor.new" 2>/dev/null || shasum -a 256 "$d/kor.new"; }"#;
-    let out = sh.run(up, Some(&data), Duration::from_secs(1800)).await?;
+    let [up, rm, mv] = install_commands(info.windows);
+    let out = sh.run(&up, Some(&data), Duration::from_secs(1800)).await?;
     let got = out
         .text()
         .split_whitespace()
@@ -249,25 +304,13 @@ pub async fn ensure(sh: &dyn Shell, src: &BinarySource) -> Result<Ensured, Strin
         .unwrap_or_default()
         .to_owned();
     if !out.ok() || got != want {
-        let _ = sh
-            .run(
-                r#"rm -f "$HOME/.kor/bin/kor.new""#,
-                None,
-                Duration::from_secs(30),
-            )
-            .await;
+        let _ = sh.run(&rm, None, Duration::from_secs(30)).await;
         return Err(format!(
             "upload check failed (sha256 {got} != {want}) {}",
             out.error()
         ));
     }
-    let mv = sh
-        .run(
-            r#"mv -f "$HOME/.kor/bin/kor.new" "$HOME/.kor/bin/kor""#,
-            None,
-            Duration::from_secs(30),
-        )
-        .await?;
+    let mv = sh.run(&mv, None, Duration::from_secs(30)).await?;
     if !mv.ok() {
         return Err(mv.error());
     }
@@ -785,14 +828,14 @@ pub fn spawn_worker(store: &TaskStore, id: &str, project: &Path) -> Result<(), S
     let log =
         std::fs::File::create(store.task_dir(id).join("worker.log")).map_err(|e| e.to_string())?;
     let err = log.try_clone().map_err(|e| e.to_string())?;
-    std::process::Command::new(exe)
-        .args(["remote-serve", "--worker", id, "--project"])
+    let mut cmd = std::process::Command::new(exe);
+    cmd.args(["remote-serve", "--worker", id, "--project"])
         .arg(project)
         .stdin(std::process::Stdio::null())
         .stdout(log)
         .stderr(err)
-        .detach()
-        .spawn()
+        .detach();
+    kor_platform::spawn_outliving(&mut cmd)
         .map(|_| ())
         .map_err(|e| format!("could not start the task worker: {e}"))
 }
@@ -989,6 +1032,27 @@ async fn handle<W: AsyncWrite + Unpin>(
 // Client (local side)
 // ---------------------------------------------------------------------------------------------
 
+/// The remote command line that starts `kor remote-serve`.
+fn serve_command(project: Option<&str>, windows: bool) -> Result<String, String> {
+    if project.is_some_and(|p| p.contains(['\n', '\r', '\0'])) {
+        return Err("invalid project path".into());
+    }
+    if windows {
+        let mut s = format!("& {REMOTE_BIN_PS} remote-serve");
+        if let Some(p) = project {
+            s.push_str(" --project ");
+            s.push_str(&kor_agent::remote::ps_path(p));
+        }
+        return Ok(powershell_command(&s));
+    }
+    let mut remote = format!("{REMOTE_BIN} remote-serve");
+    if let Some(p) = project {
+        remote.push_str(" --project ");
+        remote.push_str(&kor_agent::remote::sh_quote(p));
+    }
+    Ok(remote)
+}
+
 /// A connection to `kor remote-serve`.
 pub struct Client {
     _child: Option<tokio::process::Child>,
@@ -1023,19 +1087,17 @@ impl Client {
         Ok(c)
     }
 
-    /// `ssh … "$HOME/.kor/bin/kor" remote-serve [--project <dir>]`.
+    /// `ssh … "$HOME/.kor/bin/kor" remote-serve [--project <dir>]` (on a Windows server, the same
+    /// through `PowerShell`).
     ///
     /// # Errors
     /// When ssh cannot start or the remote does not greet.
-    pub async fn connect(h: &SshHost, project: Option<&str>) -> Result<Self, String> {
-        let mut remote = format!("{REMOTE_BIN} remote-serve");
-        if let Some(p) = project {
-            if p.contains(['\n', '\0']) {
-                return Err("invalid project path".into());
-            }
-            remote.push_str(" --project ");
-            remote.push_str(&kor_agent::remote::sh_quote(p));
-        }
+    pub async fn connect(
+        h: &SshHost,
+        project: Option<&str>,
+        windows: bool,
+    ) -> Result<Self, String> {
+        let remote = serve_command(project, windows)?;
         let mut child = kor_agent::remote::ssh_command(h, &remote)
             .spawn()
             .map_err(|e| format!("could not start ssh ({e}); install the OpenSSH client"))?;
@@ -1152,9 +1214,112 @@ mod tests {
             .to_string();
         let d = dir.join(version);
         std::fs::create_dir_all(&d).expect("mkdir");
-        std::fs::write(d.join(format!("kor-{target}")), data).expect("bin");
-        std::fs::write(d.join(format!("kor-{target}.minisig")), sig).expect("sig");
+        let name = release_file(target);
+        std::fs::write(d.join(&name), data).expect("bin");
+        std::fs::write(d.join(format!("{name}.minisig")), sig).expect("sig");
         kp.pk.to_base64()
+    }
+
+    /// A Windows `OpenSSH` server: `uname` is unknown, everything else is encoded `PowerShell`.
+    struct FakeWindows {
+        dir: PathBuf,
+        seen: Mutex<Vec<String>>,
+    }
+
+    #[async_trait]
+    impl Shell for FakeWindows {
+        async fn run(
+            &self,
+            cmd: &str,
+            stdin: Option<&[u8]>,
+            _: Duration,
+        ) -> Result<Output, String> {
+            let reply = |code: i32, s: String| Output {
+                code: Some(code),
+                stdout: s.into_bytes(),
+                stderr: Vec::new(),
+            };
+            if cmd == "uname -s" {
+                return Ok(Output {
+                    code: Some(1),
+                    stdout: Vec::new(),
+                    stderr: b"'uname' is not recognized as an internal or external command"
+                        .to_vec(),
+                });
+            }
+            let script = kor_agent::remote::powershell_script(cmd)
+                .ok_or_else(|| format!("not PowerShell: {cmd}"))?;
+            lock(&self.seen).push(script.clone());
+            let (bin, new) = (self.dir.join("kor.exe"), self.dir.join("kor.exe.new"));
+            if script.contains("OSVersion.Platform") {
+                return Ok(reply(0, "Win32NT\r\n".into()));
+            }
+            if script.starts_with("'Windows'") {
+                let v = std::fs::read_to_string(&bin)
+                    .map(|v| format!("kor {v}\r\n"))
+                    .unwrap_or_default();
+                return Ok(reply(0, format!("Windows\r\nAMD64\r\n{v}")));
+            }
+            if script.contains("OpenStandardInput") {
+                std::fs::write(&new, stdin.unwrap_or_default()).map_err(|e| e.to_string())?;
+                let data = stdin.unwrap_or_default();
+                return Ok(reply(0, format!("{}\r\n", sha256_hex(data))));
+            }
+            if script.contains("Move-Item") {
+                std::fs::rename(&new, &bin).map_err(|e| e.to_string())?;
+                return Ok(reply(0, String::new()));
+            }
+            Err(format!("unexpected script {script}"))
+        }
+    }
+
+    #[tokio::test]
+    async fn install_on_a_windows_server_through_powershell() {
+        let t = tempfile::tempdir().expect("tmp");
+        let remote = FakeWindows {
+            dir: t.path().join("remote"),
+            seen: Mutex::default(),
+        };
+        std::fs::create_dir_all(&remote.dir).expect("mkdir");
+        let cache = t.path().join("cache");
+        let target = "x86_64-pc-windows-msvc";
+        let key = signed_cache(&cache, "1.2.0", target, b"1.2.0");
+        assert!(
+            cache
+                .join("1.2.0")
+                .join("kor-x86_64-pc-windows-msvc.exe")
+                .is_file()
+        );
+        let e = ensure(&remote, &source(&cache, Some(key), "1.2.0"))
+            .await
+            .expect("install");
+        assert!(e.info.windows);
+        assert_eq!(e.info.target, Some(target));
+        assert_eq!(e.replaced.as_deref(), Some(""));
+        assert_eq!(e.info.version.as_deref(), Some("1.2.0"));
+        let seen = lock(&remote.seen);
+        assert!(seen.iter().any(|s| s.contains("Get-FileHash")));
+        assert_eq!(
+            remote_target("Windows", "ARM64"),
+            Some("aarch64-pc-windows-msvc")
+        );
+    }
+
+    #[test]
+    fn serve_command_per_os() {
+        assert_eq!(
+            serve_command(Some("/srv/it's"), false).unwrap(),
+            r#""$HOME/.kor/bin/kor" remote-serve --project '/srv/it'\''s'"#
+        );
+        let w = serve_command(Some("/c/work/app"), true).unwrap();
+        assert_eq!(
+            kor_agent::remote::powershell_script(&w).as_deref(),
+            Some(
+                r"& (Join-Path $env:USERPROFILE '.kor\bin\kor.exe') remote-serve --project 'C:\work\app'"
+            )
+        );
+        assert!(serve_command(Some("a\nb"), true).is_err());
+        assert!(serve_command(None, true).is_ok());
     }
 
     fn source(cache: &Path, key: Option<String>, version: &str) -> BinarySource {

@@ -956,7 +956,10 @@ pub struct Sandbox {
     /// `auto`: the OS's own backend, else Docker when installed; `native`; `docker`.
     pub backend: SandboxBackend,
     /// What confined commands may reach, as `host:port` (`*` = everything); empty = no network.
+    /// Host names (`registry.npmjs.org:443`, `*.github.com:443`) go through Kor's filtering proxy.
     pub network: Vec<String>,
+    /// Confined commands write to a throwaway layer over the project; the project never changes.
+    pub overlay: bool,
     /// Memory cap in MiB for a command; 0 = none.
     pub memory_mb: u32,
     /// CPU cap in percent of the machine; 0 or 100 = none.
@@ -973,6 +976,7 @@ impl Default for Sandbox {
             mode: SandboxMode::Off,
             backend: SandboxBackend::Auto,
             network: Vec::new(),
+            overlay: false,
             memory_mb: 8 * 1024,
             cpu_percent: 90,
             image: "alpine:3.20".into(),

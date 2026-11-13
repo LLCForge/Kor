@@ -65,7 +65,7 @@ pub fn run(ctx: &Ctx, target: &str, project: Option<&str>, mode: Mode) -> anyhow
     rt.block_on(async {
         eprintln!("{}", l.t_args("remote-checking", &args!("host" => shown.clone())));
         let src = BinarySource::standard(crate::update::VERSION, std::env::current_exe().ok());
-        match rm::ensure(&kor_agent::remote::SshShell::new(&h), &src).await {
+        let windows = match rm::ensure(&kor_agent::remote::SshShell::new(&h), &src).await {
             Ok(e) => {
                 if let Some(old) = e.replaced {
                     let key = if old.is_empty() { "remote-installed" } else { "remote-updated" };
@@ -74,10 +74,11 @@ pub fn run(ctx: &Ctx, target: &str, project: Option<&str>, mode: Mode) -> anyhow
                         l.t_args(key, &args!("version" => src.version.clone(), "old" => old, "target" => e.info.target.unwrap_or_default()))
                     );
                 }
+                e.info.windows
             }
             Err(e) => return Ok(fail(l, l.t_args("remote-install-failed", &args!("error" => e)))),
-        }
-        let mut c = match Client::connect(&h, project).await {
+        };
+        let mut c = match Client::connect(&h, project, windows).await {
             Ok(c) => c,
             Err(e) => return Ok(fail(l, e)),
         };

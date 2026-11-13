@@ -1,10 +1,12 @@
 //! `kor layout save|restore` on the real desktop (§27.7, ADR 0059): monitors from screen capture,
-//! windows from the per-OS window scripts ([`WindowControl`]), the matching and placement math
-//! from `kor_computer::layout`. Shared by the CLI and the desktop app.
+//! windows from the per-OS window scripts ([`WindowControl`]), each window's virtual desktop from
+//! `kor_platform::vdesktop`, the matching and placement math from `kor_computer::layout`. Shared
+//! by the CLI and the desktop app.
 
 use std::path::Path;
 
 use kor_computer::layout::{self, Layout, Monitor, Plan, Store, Window};
+use kor_platform::vdesktop::{self, WindowRef};
 use serde_json::Value;
 
 use crate::WindowControl;
@@ -46,7 +48,40 @@ fn window(v: &Value) -> Option<Window> {
         w: i("w"),
         h: i("h"),
         state: v["state"].as_str().unwrap_or("normal").to_owned(),
+        desktop: String::new(),
     })
+}
+
+/// The owning process of a window handle: Linux handles are `pid * 1000 + index` (see the
+/// desktop tools); elsewhere it is not needed.
+fn pid_of(hwnd: i64) -> u32 {
+    if kor_platform::os() == kor_platform::Os::Linux {
+        u32::try_from(hwnd / 1000).unwrap_or(0)
+    } else {
+        0
+    }
+}
+
+fn window_ref(hwnd: i64, title: &str) -> WindowRef<'_> {
+    WindowRef {
+        hwnd,
+        pid: pid_of(hwnd),
+        title,
+    }
+}
+
+/// The windows the scripts list, each with its virtual desktop.
+async fn listed(wc: &WindowControl) -> Result<Vec<Window>, String> {
+    let mut windows: Vec<Window> = wc.list().await?.iter().filter_map(window).collect();
+    let refs: Vec<WindowRef<'_>> = windows
+        .iter()
+        .map(|w| window_ref(w.hwnd, &w.title))
+        .collect();
+    let desktops = vdesktop::desktops_of(&refs);
+    for (w, d) in windows.iter_mut().zip(desktops) {
+        w.desktop = d.unwrap_or_default();
+    }
+    Ok(windows)
 }
 
 fn now() -> u64 {
@@ -68,7 +103,7 @@ pub async fn save(
         ));
     }
     let wc = WindowControl::new(root)?;
-    let windows: Vec<Window> = wc.list().await?.iter().filter_map(window).collect();
+    let windows = listed(&wc).await?;
     let mons = monitors();
     if mons.is_empty() {
         return Err("no monitor found (screen capture is unavailable)".into());
@@ -81,8 +116,8 @@ pub async fn save(
     Ok(l)
 }
 
-/// Bring layout `name` back. `dry_run` only plans. Windows that fail to move are reported in
-/// `missing` with the reason.
+/// Bring layout `name` back (position, state, then virtual desktop). `dry_run` only plans.
+/// Windows that fail to move are reported in `missing` with the reason.
 pub async fn restore(
     store: &Store,
     name: &str,
@@ -91,12 +126,16 @@ pub async fn restore(
 ) -> Result<Plan, String> {
     let l = store.load(name)?;
     let wc = WindowControl::new(root)?;
-    let windows: Vec<Window> = wc.list().await?.iter().filter_map(window).collect();
+    let windows = listed(&wc).await?;
     let mut plan = layout::plan(&l, &monitors(), &windows);
     if !dry_run {
         let mut failed = Vec::new();
         for m in &plan.moves {
             if let Err(e) = wc.place(m.hwnd, (m.x, m.y, m.w, m.h), &m.state).await {
+                failed.push(format!("{} — {}: {e}", m.process, m.title));
+            } else if !m.desktop.is_empty()
+                && let Err(e) = vdesktop::move_window(window_ref(m.hwnd, &m.title), &m.desktop)
+            {
                 failed.push(format!("{} — {}: {e}", m.process, m.title));
             }
         }
@@ -119,5 +158,11 @@ mod tests {
             (42, -8, 900, "maximized")
         );
         assert!(window(&json!({"title": "no handle"})).is_none());
+        let expected = if kor_platform::os() == kor_platform::Os::Linux {
+            4242
+        } else {
+            0
+        };
+        assert_eq!(pid_of(4_242_003), expected);
     }
 }
