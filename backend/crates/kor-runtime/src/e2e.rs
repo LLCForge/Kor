@@ -275,6 +275,8 @@ struct Script {
     replies: Vec<Reply>,
     used: Vec<bool>,
     requests: Vec<Value>,
+    /// The project's gallery folder, for `${SAVED}` when the conversation names no file there.
+    media_dir: Option<PathBuf>,
 }
 
 /// An `OpenAI`-compatible chat server on loopback that answers from a scenario's script.
@@ -298,6 +300,7 @@ impl MockServer {
             replies,
             used,
             requests: Vec::new(),
+            media_dir: None,
         }));
         let s = Arc::clone(&script);
         tokio::spawn(async move {
@@ -310,6 +313,14 @@ impl MockServer {
             }
         });
         Ok(Self { url, script })
+    }
+
+    /// The project's gallery folder: `${SAVED}` falls back to its newest file.
+    pub fn set_media_dir(&self, dir: PathBuf) {
+        self.script
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .media_dir = Some(dir);
     }
 
     /// Chat request bodies received so far, and media calls as `{ "media": <endpoint>, "body": … }`.
@@ -440,6 +451,16 @@ fn last_saved(v: &Value) -> Option<String> {
     }
 }
 
+/// Name of the most recently modified file in `dir`.
+fn newest_file(dir: &Path) -> Option<String> {
+    std::fs::read_dir(dir)
+        .ok()?
+        .filter_map(Result::ok)
+        .filter(|e| e.path().is_file())
+        .max_by_key(|e| e.metadata().and_then(|m| m.modified()).ok())
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+}
+
 fn pick(script: &Mutex<Script>, req: &Value, raw: &str) -> Option<Reply> {
     let mut s = script.lock().unwrap_or_else(PoisonError::into_inner);
     s.requests.push(req.clone());
@@ -459,7 +480,11 @@ fn pick(script: &Mutex<Script>, req: &Value, raw: &str) -> Option<Reply> {
     {
         // Only the conversation: tool descriptions and the system prompt are not tool results.
         let msgs = req.get("messages").unwrap_or(req);
-        if let Some(id) = last_saved(msgs) {
+        let in_dir = |id: &String| s.media_dir.as_ref().is_none_or(|d| d.join(id).is_file());
+        if let Some(id) = last_saved(msgs)
+            .filter(in_dir)
+            .or_else(|| s.media_dir.as_deref().and_then(newest_file))
+        {
             let text = t.input.to_string().replace(SAVED_PLACEHOLDER, &id);
             t.input = serde_json::from_str(&text).unwrap_or_else(|_| t.input.clone());
         } else {

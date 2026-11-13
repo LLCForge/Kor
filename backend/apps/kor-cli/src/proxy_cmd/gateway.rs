@@ -203,6 +203,7 @@ fn serve(
     };
     if background {
         // Lives on its own thread and runtime until this process exits.
+        // kor-lint: allow(unbounded_channel) one message: the started gateway's address or its error
         let (tx, rx) = std::sync::mpsc::channel();
         let rt = crate::providers::runtime()?;
         std::thread::spawn(move || {

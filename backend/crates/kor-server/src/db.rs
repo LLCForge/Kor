@@ -129,6 +129,7 @@ impl Db {
             } else {
                 let p = base.join(rest);
                 if let Some(d) = p.parent() {
+                    // kor-lint: allow(blocking_in_async) once at server start, before any request
                     std::fs::create_dir_all(d).map_err(|e| e.to_string())?;
                 }
                 rusqlite::Connection::open(p)

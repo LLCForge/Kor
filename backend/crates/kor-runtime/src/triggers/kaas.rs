@@ -701,6 +701,7 @@ async fn chat(s: &Arc<Shared>, key: &ApiKey, project_header: Option<&str>, body:
     let created = crate::triggers::now_ms() / 1000;
     let t = runner::adhoc("chat", "", &inner, Approval::Deny);
     let cancel = CancellationToken::new();
+    // kor-lint: allow(unbounded_channel) `Agent::send` takes an unbounded sender; drained at once
     let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<AgentEvent>();
     let s2 = s.clone();
     let id2 = id.clone();

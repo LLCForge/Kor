@@ -355,6 +355,7 @@ impl Server {
             "window/showMessage",
             json!({ "type": 3, "message": self.l.t_args("lsp-working", &args!("task" => clip(&prompt, 80))) }),
         );
+        // kor-lint: allow(unbounded_channel) `Agent::send` takes an unbounded sender; drained at once
         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
         let log = rpc.clone();
         let fwd = tokio::spawn(async move {

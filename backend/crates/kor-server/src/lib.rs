@@ -132,11 +132,14 @@ pub async fn init(
         cfg.db = db.to_owned();
     }
     cfg.validate()?;
+    // kor-lint: allow(blocking_in_async) `kor server init`: a one-shot command writing a few small files
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     let ca = pki::create_ca(&cfg.team)?;
     let server = pki::issue_server(&cfg.team, &ca.key_pem, &cfg.domain)?;
+    // kor-lint: allow(blocking_in_async) same one-shot init
     std::fs::write(l.ca_cert(), &ca.cert_pem).map_err(|e| e.to_string())?;
     pki::write_private(&l.ca_key(), &ca.key_pem)?;
+    // kor-lint: allow(blocking_in_async) same one-shot init
     std::fs::write(
         l.server_cert(),
         format!("{}{}", server.cert_pem, ca.cert_pem),

@@ -50,6 +50,7 @@ fn setup(rt: &tokio::runtime::Runtime, s: &Scenario, surface: &str) -> Env {
         .expect("mock provider");
     let env = e2e::isolated_env_with(dir.path(), s, &mock.url, surface, Some(Path::new(KOR)))
         .expect("isolated env");
+    mock.set_media_dir(env.project.join("kor-media"));
     Env {
         env,
         mock,

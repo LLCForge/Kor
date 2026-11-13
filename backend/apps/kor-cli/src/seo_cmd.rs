@@ -1591,7 +1591,8 @@ async fn meta_cmd(ctx: &Ctx, root: &Path, c: MetaSub) -> bool {
             oc_version,
             out,
         } => {
-            let rows = match std::fs::read_to_string(&csv)
+            let rows = match tokio::fs::read_to_string(&csv)
+                .await
                 .map_err(|e| e.to_string())
                 .and_then(|t| meta::from_csv(&t))
             {
@@ -1605,9 +1606,11 @@ async fn meta_cmd(ctx: &Ctx, root: &Path, c: MetaSub) -> bool {
             };
             let apply = out.with_extension("apply.sql");
             let undo = out.with_extension("undo.sql");
-            if let Err(e) =
-                std::fs::write(&apply, &s.apply).and_then(|()| std::fs::write(&undo, &s.undo))
-            {
+            let written = match tokio::fs::write(&apply, &s.apply).await {
+                Ok(()) => tokio::fs::write(&undo, &s.undo).await,
+                Err(e) => Err(e),
+            };
+            if let Err(e) = written {
                 return fail(l, e);
             }
             for (u, why) in &s.skipped {

@@ -295,6 +295,7 @@ impl Store {
         let db = Db::open(&cfg.db, dir).await?;
         let hexkey = match std::env::var("KOR_SERVER_VAULT_KEY") {
             Ok(k) if !k.trim().is_empty() => k,
+            // kor-lint: allow(blocking_in_async) a 64-byte key file, read once at server start
             _ => std::fs::read_to_string(Layout::new(dir).vault_key())
                 .map_err(|e| format!("vault key: {e}"))?,
         };
@@ -425,9 +426,12 @@ impl Store {
         by: &str,
     ) -> Result<Enrollment> {
         let email = normalize_email(email)?;
-        let ca_key =
-            std::fs::read_to_string(layout.ca_key()).map_err(|e| format!("CA key: {e}"))?;
-        let ca = std::fs::read_to_string(layout.ca_cert()).map_err(|e| format!("CA: {e}"))?;
+        let ca_key = tokio::fs::read_to_string(layout.ca_key())
+            .await
+            .map_err(|e| format!("CA key: {e}"))?;
+        let ca = tokio::fs::read_to_string(layout.ca_cert())
+            .await
+            .map_err(|e| format!("CA: {e}"))?;
         let cert = pki::issue_client(&cfg.team, &ca_key, &email, i64::from(cfg.member_days))?;
         let now = now_ms();
         self.db

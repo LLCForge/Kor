@@ -100,13 +100,18 @@ pub async fn call(
                 Some(e) => e,
                 None => return Some(Err(crate::kor_cli::MISSING.to_owned())),
             };
-            let r = std::process::Command::new(exe)
-                .args(["server", "start", "--background"])
-                .no_window()
-                .stdin(std::process::Stdio::null())
-                .stdout(std::process::Stdio::null())
-                .stderr(std::process::Stdio::null())
-                .status();
+            let r = tokio::task::spawn_blocking(move || {
+                std::process::Command::new(exe)
+                    .args(["server", "start", "--background"])
+                    .no_window()
+                    .stdin(std::process::Stdio::null())
+                    .stdout(std::process::Stdio::null())
+                    .stderr(std::process::Stdio::null())
+                    .status()
+            })
+            .await
+            .map_err(std::io::Error::other)
+            .and_then(|r| r);
             match r {
                 Ok(st) if st.success() => Ok(json!({ "started": true })),
                 Ok(_) => Err("Takım sunucusu başlatılamadı (kor server status)".into()),
