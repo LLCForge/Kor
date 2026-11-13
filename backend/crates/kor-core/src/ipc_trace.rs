@@ -244,6 +244,27 @@ pub fn normalize(records: &[Value], surface: Surface) -> Vec<Value> {
         }
         out.push(item);
     }
+    // The agent waits on an approval, so text traced after a confirm (and before the call's result)
+    // was written before it: the approval reaches the trace sooner than the buffered text.
+    let mut i = 0;
+    while i + 1 < out.len() {
+        if out[i]["type"] == "confirm" && out[i + 1]["type"] == "text" {
+            let text = out.remove(i + 1);
+            match i.checked_sub(1).filter(|&p| out[p]["type"] == "text") {
+                Some(p) => {
+                    let joined = format!(
+                        "{}{}",
+                        out[p]["text"].as_str().unwrap_or_default(),
+                        text["text"].as_str().unwrap_or_default()
+                    );
+                    out[p]["text"] = json!(joined);
+                }
+                None => out.insert(i, text),
+            }
+        } else {
+            i += 1;
+        }
+    }
     if status {
         out.insert(0, json!({ "type": "status" }));
     }
@@ -394,5 +415,16 @@ mod tests {
                 json!("toolResult")
             ]
         );
+        // The CLI traces no `tool` for an approved call: the confirm still goes after the text.
+        let recs = [
+            rec(json!({ "type": "text", "delta": "a" })),
+            rec(json!({ "type": "confirm", "name": "Write", "files": [] })),
+            rec(json!({ "type": "text", "delta": "b" })),
+            rec(json!({ "type": "toolResult" })),
+        ];
+        let n = normalize(&recs, Surface::Desktop);
+        assert_eq!(n[0], json!({ "type": "text", "text": "ab" }));
+        assert_eq!(n[1]["type"], "confirm");
+        assert_eq!(n[2]["type"], "toolResult");
     }
 }

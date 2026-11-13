@@ -110,6 +110,8 @@ fn start(
     let (tx, rx) = mpsc::channel::<Msg>();
     let ev_tx = tx.clone();
     let ev_root = root.clone();
+    // macOS reports the real path (`/private/var/…` for `/var/…`): events are mapped back onto `root`.
+    let canon = root.canonicalize().unwrap_or_else(|_| root.clone());
     let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
         let Ok(ev) = res else { return };
         if matches!(ev.kind, EventKind::Access(_)) {
@@ -118,6 +120,10 @@ fn start(
         let paths: Vec<PathBuf> = ev
             .paths
             .into_iter()
+            .map(|p| match p.strip_prefix(&canon) {
+                Ok(rel) if !p.starts_with(&ev_root) => ev_root.join(rel),
+                _ => p,
+            })
             .filter(|p| !internal(&ev_root, p))
             .collect();
         if !paths.is_empty() {
