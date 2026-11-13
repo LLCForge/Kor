@@ -41,6 +41,8 @@ pub mod taskbar;
 pub mod terminal;
 // OS notifications with click callbacks (ADR 0051).
 pub mod toast;
+// Virtual desktops / workspaces of windows for saved layouts (§27.7).
+pub mod vdesktop;
 pub mod wsl;
 
 /// Kor's user configuration directory: `%APPDATA%\kor`, `~/Library/Application Support/kor`,
@@ -208,6 +210,38 @@ impl Detach for std::process::Command {
             self.creation_flags(0x0000_0008 | 0x0000_0200);
         }
         self
+    }
+}
+
+/// Start `cmd` (already [`Detach`]ed) so it outlives the session that started it. On Windows a
+/// process started over SSH sits in the session's job object, which `OpenSSH` closes (killing
+/// the job) when the connection ends: ask to break away from it, and when the job does not allow
+/// that, start it inside the job after all.
+pub fn spawn_outliving(cmd: &mut std::process::Command) -> std::io::Result<std::process::Child> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt as _;
+        const DETACHED: u32 = 0x0000_0008 | 0x0000_0200;
+        const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+        cmd.creation_flags(DETACHED | CREATE_BREAKAWAY_FROM_JOB);
+        if let Ok(c) = cmd.spawn() {
+            return Ok(c);
+        }
+        cmd.creation_flags(DETACHED);
+    }
+    cmd.spawn()
+}
+
+/// Copy the symbolic link `src` to `dst` (a tree copy). Unix: the same link. Windows (creating
+/// links needs a privilege): a linked file is copied, a linked folder skipped (following it could
+/// loop).
+pub fn copy_link(src: &std::path::Path, dst: &std::path::Path) -> std::io::Result<()> {
+    #[cfg(unix)]
+    return std::os::unix::fs::symlink(std::fs::read_link(src)?, dst);
+    #[cfg(not(unix))]
+    match std::fs::metadata(src) {
+        Ok(m) if m.is_file() => std::fs::copy(src, dst).map(|_| ()),
+        _ => Ok(()),
     }
 }
 

@@ -1,5 +1,8 @@
 //! Real screen capture and input (feature `live`): `xcap` (GDI/DXGI, CoreGraphics, X11/Wayland
 //! portal) and `enigo` (`SendInput`, `CGEvent` with the Accessibility permission, X11 / libei).
+//!
+//! Long actions take a `step` callback ([`crate::step`] in the tools) and call it between their
+//! low-level events; an `Err` stops the action there (a held button is released first).
 
 #[cfg(not(target_env = "musl"))]
 use std::io::Cursor;
@@ -11,7 +14,18 @@ use serde::{Deserialize, Serialize};
 #[cfg(not(target_env = "musl"))]
 use xcap::Monitor;
 
-use crate::keys::{KeyName, shot_size, to_input};
+use crate::guard::STEP_PAUSE_MS;
+use crate::keys::{KeyName, chunks, shot_size, to_input};
+
+/// Called between two low-level events; `Err` stops the action.
+pub type Step<'a> = &'a dyn Fn() -> Result<(), String>;
+
+/// Characters typed between two human-first checks.
+const TYPE_CHUNK: usize = 16;
+
+fn pause() {
+    std::thread::sleep(std::time::Duration::from_millis(STEP_PAUSE_MS));
+}
 
 /// One monitor, physical pixels.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -158,26 +172,57 @@ pub fn click(x: i32, y: i32, right: bool, double: bool) -> Result<(), String> {
     Ok(())
 }
 
-/// Press at `from`, move there in small steps (apps track the motion), release at `to`.
-pub fn drag(from: (i32, i32), to: (i32, i32)) -> Result<(), String> {
+/// Press at `from`, move there in small steps (apps track the motion), release at `to`. A stop
+/// mid-way releases the button where the pointer is.
+pub fn drag(from: (i32, i32), to: (i32, i32), step: Step<'_>) -> Result<(), String> {
     let mut e = enigo()?;
     e.move_mouse(from.0, from.1, Coordinate::Abs)
         .map_err(|e| e.to_string())?;
     e.button(Button::Left, Direction::Press)
         .map_err(|e| e.to_string())?;
     let steps = 12;
+    let mut stopped = Ok(());
     for i in 1..=steps {
+        std::thread::sleep(std::time::Duration::from_millis(15));
+        // The pointer is where Kor put it; the user moving it shows up here.
+        stopped = step();
+        if stopped.is_err() {
+            break;
+        }
         let x = from.0 + (to.0 - from.0) * i / steps;
         let y = from.1 + (to.1 - from.1) * i / steps;
         let _ = e.move_mouse(x, y, Coordinate::Abs);
-        std::thread::sleep(std::time::Duration::from_millis(15));
     }
+    // Never leave the button held, even when stopped.
     e.button(Button::Left, Direction::Release)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+    stopped
 }
 
-pub fn type_text(text: &str) -> Result<(), String> {
-    enigo()?.text(text).map_err(|e| e.to_string())
+/// Type `text` in short chunks with a human-first check after each.
+pub fn type_text(text: &str, step: Step<'_>) -> Result<(), String> {
+    let mut e = enigo()?;
+    let parts = chunks(text, TYPE_CHUNK);
+    for (i, part) in parts.iter().enumerate() {
+        e.text(part).map_err(|e| e.to_string())?;
+        if i + 1 < parts.len() {
+            pause();
+            step()?;
+        }
+    }
+    Ok(())
+}
+
+/// Press `keys` `times` times (e.g. Backspace to erase typed text), checking in between.
+pub fn repeat_combo(keys: &[KeyName], times: usize, step: Step<'_>) -> Result<(), String> {
+    for i in 0..times {
+        if i > 0 && i % TYPE_CHUNK == 0 {
+            pause();
+            step()?;
+        }
+        combo(keys)?;
+    }
+    Ok(())
 }
 
 fn key_of(k: &KeyName) -> Key {
@@ -240,11 +285,19 @@ pub fn combo(keys: &[KeyName]) -> Result<(), String> {
     result
 }
 
-pub fn scroll(amount: i32, vertical: bool) -> Result<(), String> {
+/// Scroll one tick at a time with a human-first check between ticks.
+pub fn scroll(amount: i32, vertical: bool, step: Step<'_>) -> Result<(), String> {
     let axis = if vertical {
         Axis::Vertical
     } else {
         Axis::Horizontal
     };
-    enigo()?.scroll(amount, axis).map_err(|e| e.to_string())
+    let mut e = enigo()?;
+    for i in 0..amount.unsigned_abs() {
+        if i > 0 {
+            step()?;
+        }
+        e.scroll(amount.signum(), axis).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }

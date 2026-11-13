@@ -102,6 +102,20 @@ pub fn is_destructive_combo(combo: &str) -> bool {
         || (has("Control") && ch('w'))
 }
 
+/// `text` in pieces of at most `max` characters (never splitting a character), typed one by one
+/// so the human-first check runs in between.
+pub fn chunks(text: &str, max: usize) -> Vec<&str> {
+    let max = max.max(1);
+    let mut out = Vec::new();
+    let mut rest = text;
+    while !rest.is_empty() {
+        let end = rest.char_indices().nth(max).map_or(rest.len(), |(i, _)| i);
+        out.push(&rest[..end]);
+        rest = &rest[end..];
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,6 +129,14 @@ mod tests {
         assert_eq!(to_input(640, 360, (1280, 720), (2560, 1440)), (1280, 720));
         assert_eq!(to_input(0, 0, (1280, 720), (1920, 1080)), (0, 0));
         assert_eq!(to_input(5000, -3, (1280, 720), (1920, 1080)), (1918, 0));
+    }
+
+    #[test]
+    fn typing_is_split_on_character_boundaries() {
+        assert_eq!(chunks("abcdef", 4), ["abcd", "ef"]);
+        assert_eq!(chunks("ğüşıöç", 4), ["ğüşı", "öç"]);
+        assert!(chunks("", 4).is_empty());
+        assert_eq!(chunks("ab", 0), ["a", "b"]);
     }
 
     #[test]

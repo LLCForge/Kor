@@ -156,6 +156,8 @@ pub fn enabled() -> bool {
 #[cfg(feature = "computer")]
 fn act(action: &str, input: &Value) -> ToolOutput {
     use kor_computer::live;
+    // Human first between the low-level events of a long action, not only between actions.
+    let human = || kor_computer::step(action);
     let r: Result<ToolOutput, String> = (|| match action {
         "screenshot" => {
             let shot = live::screenshot()?;
@@ -184,14 +186,14 @@ fn act(action: &str, input: &Value) -> ToolOutput {
             let (x2, y2) = coord(input).ok_or("`coordinate` [x, y] is required")?;
             let from = live::map_point(x1, y1)?;
             let to = live::map_point(x2, y2)?;
-            live::drag(from, to)?;
+            live::drag(from, to, &human)?;
             Ok(ToolOutput::ok(format!(
                 "dragged ({x1}, {y1}) -> ({x2}, {y2})"
             )))
         }
         "type" => {
             let text = input["text"].as_str().ok_or("`text` is required")?;
-            live::type_text(text)?;
+            live::type_text(text, &human)?;
             Ok(ToolOutput::ok(format!(
                 "typed {} characters",
                 text.chars().count()
@@ -218,7 +220,7 @@ fn act(action: &str, input: &Value) -> ToolOutput {
                 "right" => (amount, false),
                 _ => (amount, true),
             };
-            live::scroll(n, vertical)?;
+            live::scroll(n, vertical, &human)?;
             Ok(ToolOutput::ok(format!("scrolled {dir} {amount}")))
         }
         "undo_last_action" => {
@@ -226,9 +228,8 @@ fn act(action: &str, input: &Value) -> ToolOutput {
                 .ok_or("nothing to undo: no desktop action was recorded in this session")?;
             let done = match reverse_of(&step.action, &step.input) {
                 Reverse::Backspace(n) => {
-                    for _ in 0..n.min(2_000) {
-                        live::combo(&parse_combo("backspace")?)?;
-                    }
+                    let times = n.min(2_000);
+                    live::repeat_combo(&parse_combo("backspace")?, times, &human)?;
                     format!("erased the {n} typed characters with Backspace")
                 }
                 Reverse::Shortcut(k) => {
