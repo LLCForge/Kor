@@ -602,10 +602,15 @@ pub fn latest_tag(root: &Path) -> Option<String> {
 
 /// Commits after `since` (all of HEAD when `None`), newest first, merges skipped.
 pub fn log(root: &Path, since: Option<&str>) -> Result<Vec<Entry>, FlowError> {
-    if since.is_some_and(|s| s.starts_with('-')) {
+    log_until(root, since, "HEAD")
+}
+
+/// Commits after `since` up to `until` (a tag or commit), newest first, merges skipped.
+pub fn log_until(root: &Path, since: Option<&str>, until: &str) -> Result<Vec<Entry>, FlowError> {
+    if since.is_some_and(|s| s.starts_with('-')) || until.starts_with('-') || until.is_empty() {
         return Err(FlowError::Git("invalid revision".into()));
     }
-    let range = since.map_or_else(|| "HEAD".to_owned(), |s| format!("{s}..HEAD"));
+    let range = since.map_or_else(|| until.to_owned(), |s| format!("{s}..{until}"));
     let out = git(
         root,
         &["log", "--no-merges", "--format=%h%x1f%B%x1e", &range, "--"],

@@ -97,6 +97,24 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
         })
 }
 
+/// `kor task "<goal>"` with the configured defaults (`kor pr ci --fix`, `kor pr issue --run`).
+pub(crate) fn run_goal(ctx: &Ctx, goal: String) -> anyhow::Result<bool> {
+    run(
+        ctx,
+        TaskArgs {
+            command: None,
+            goal: vec![goal],
+            agents: None,
+            model_per_role: Vec::new(),
+            budget_usd: None,
+            orchestrator_model: None,
+            test: None,
+            parallel: None,
+            on: None,
+        },
+    )
+}
+
 pub fn run(ctx: &Ctx, a: TaskArgs) -> anyhow::Result<bool> {
     if let Some(peer) = &a.on {
         return crate::peer_cmd::run_on(ctx, peer, &a.goal.join(" "));

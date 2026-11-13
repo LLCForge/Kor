@@ -1,4 +1,4 @@
-//! `kor pr create|review|respond|list|status` (§8.8, ADR 0040). Forge logic lives in
+//! `kor pr create|review|respond|list|status|ci|issue|release` (§8.8, §28.7, ADR 0040). Forge logic lives in
 //! `kor_runtime::forge` and `kor_runtime::review`; this module asks, prints and confirms.
 
 use std::fmt::Write as _;
@@ -63,6 +63,38 @@ pub enum PrCmd {
         #[arg(long)]
         json: bool,
     },
+    /// CI checks of the current commit; --fix starts a task that fixes the failing ones.
+    Ci {
+        #[arg(long)]
+        fix: bool,
+        #[arg(long, short)]
+        yes: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Turn an issue (Azure DevOps: work item) into a task.
+    Issue {
+        /// Issue number or URL.
+        target: String,
+        /// Start the task now (otherwise the task text is printed).
+        #[arg(long)]
+        run: bool,
+        #[arg(long, short)]
+        yes: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Publish release notes for a tag on the forge.
+    Release {
+        tag: String,
+        /// Previous tag (default: the tag before `tag`).
+        #[arg(long)]
+        since: Option<String>,
+        #[arg(long)]
+        draft: bool,
+        #[arg(long, short)]
+        yes: bool,
+    },
 }
 
 pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
@@ -72,6 +104,9 @@ pub fn localize(c: clap::Command, l: &Localizer) -> clap::Command {
         .mut_subcommand("respond", |s| s.about(l.t("cmd-pr-respond")))
         .mut_subcommand("list", |s| s.about(l.t("cmd-pr-list")))
         .mut_subcommand("status", |s| s.about(l.t("cmd-pr-status")))
+        .mut_subcommand("ci", |s| s.about(l.t("cmd-pr-ci")))
+        .mut_subcommand("issue", |s| s.about(l.t("cmd-pr-issue")))
+        .mut_subcommand("release", |s| s.about(l.t("cmd-pr-release")))
 }
 
 fn fail(l: &Localizer, e: &ForgeError) -> bool {
@@ -131,6 +166,7 @@ fn number(l: &Localizer, target: &str) -> Option<u64> {
     n
 }
 
+#[allow(clippy::too_many_lines)] // one arm per subcommand
 pub fn run(ctx: &Ctx, cmd: PrCmd) -> anyhow::Result<bool> {
     let l = &ctx.l;
     let Some(root) = repo(l)? else {
@@ -230,6 +266,210 @@ pub fn run(ctx: &Ctx, cmd: PrCmd) -> anyhow::Result<bool> {
             }
             Ok(true)
         }
+        PrCmd::Ci { fix, yes, json } => ci(ctx, &rt, &root, fix, yes, json),
+        PrCmd::Issue {
+            target,
+            run,
+            yes,
+            json,
+        } => issue(ctx, &rt, &root, &target, run, yes, json),
+        PrCmd::Release {
+            tag,
+            since,
+            draft,
+            yes,
+        } => Ok(release(ctx, &rt, &root, &tag, since, draft, yes)),
+    }
+}
+
+fn head_sha(root: &Path) -> Result<String, ForgeError> {
+    Ok(gitflow::git(root, &["rev-parse", "HEAD"])?
+        .trim()
+        .to_owned())
+}
+
+/// `kor pr ci`: the checks of HEAD, the failing logs, and with `--fix` a task to fix them.
+fn ci(
+    ctx: &Ctx,
+    rt: &tokio::runtime::Runtime,
+    root: &Path,
+    fix: bool,
+    yes: bool,
+    json: bool,
+) -> anyhow::Result<bool> {
+    let l = &ctx.l;
+    let (branch, sha) = match forge::current_branch(root).and_then(|b| Ok((b, head_sha(root)?))) {
+        Ok(p) => p,
+        Err(e) => return Ok(fail(l, &e)),
+    };
+    let f = match Forge::open(root) {
+        Ok(f) => f,
+        Err(e) => return Ok(fail(l, &e)),
+    };
+    let checks = match rt.block_on(f.checks(&sha)) {
+        Ok(c) => c,
+        Err(e) => return Ok(fail(l, &e)),
+    };
+    if json {
+        println!("{}", serde_json::to_string_pretty(&checks)?);
+        return Ok(!checks.iter().any(forge::Check::failed));
+    }
+    if checks.is_empty() {
+        println!(
+            "{}",
+            l.t_args(
+                "pr-ci-none",
+                &args!("sha" => sha[..sha.len().min(12)].to_owned())
+            )
+        );
+        return Ok(true);
+    }
+    for c in &checks {
+        println!("{:<8} {}  {}", c.state, c.name, c.url);
+    }
+    let failed: Vec<_> = checks.into_iter().filter(forge::Check::failed).collect();
+    if failed.is_empty() {
+        println!("{}", l.t("pr-ci-green"));
+        return Ok(true);
+    }
+    if !fix {
+        println!(
+            "{}",
+            l.t_args("pr-ci-failed-hint", &args!("n" => failed.len()))
+        );
+        return Ok(false);
+    }
+    let with_logs: Vec<_> = failed
+        .into_iter()
+        .map(|c| {
+            let log = rt.block_on(f.check_log(&c));
+            (c, log)
+        })
+        .collect();
+    let goal = forge::ci_goal(&branch, &sha, &with_logs);
+    if !crate::shell_cmd::confirm(
+        l,
+        &l.t_args(
+            "pr-ci-fix-confirm",
+            &args!("n" => with_logs.len(), "branch" => branch),
+        ),
+        yes,
+    ) {
+        return Ok(false);
+    }
+    crate::task_cmd::run_goal(ctx, goal)
+}
+
+/// `kor pr issue`: an issue as a task (printed, or started with `--run`).
+fn issue(
+    ctx: &Ctx,
+    rt: &tokio::runtime::Runtime,
+    root: &Path,
+    target: &str,
+    run: bool,
+    yes: bool,
+    json: bool,
+) -> anyhow::Result<bool> {
+    let l = &ctx.l;
+    let Some(num) = forge::pr_number(target) else {
+        eprintln!(
+            "{}",
+            l.t_args("pr-bad-target", &args!("target" => target.to_owned()))
+        );
+        return Ok(false);
+    };
+    let f = match Forge::open(root) {
+        Ok(f) => f,
+        Err(e) => return Ok(fail(l, &e)),
+    };
+    let i = match rt.block_on(f.issue(num)) {
+        Ok(i) => i,
+        Err(e) => return Ok(fail(l, &e)),
+    };
+    if json {
+        println!("{}", serde_json::to_string_pretty(&i)?);
+        return Ok(true);
+    }
+    let goal = forge::issue_goal(&i);
+    if !run {
+        println!("{goal}");
+        return Ok(true);
+    }
+    println!("#{} {}\n{}", i.number, i.title, i.url);
+    if !crate::shell_cmd::confirm(
+        l,
+        &l.t_args("pr-issue-confirm", &args!("number" => i.number)),
+        yes,
+    ) {
+        return Ok(false);
+    }
+    crate::task_cmd::run_goal(ctx, goal)
+}
+
+/// `kor pr release`: Keep a Changelog notes of `since..tag`, confirmed, then published.
+fn release(
+    ctx: &Ctx,
+    rt: &tokio::runtime::Runtime,
+    root: &Path,
+    tag: &str,
+    since: Option<String>,
+    draft: bool,
+    yes: bool,
+) -> bool {
+    let l = &ctx.l;
+    let sha = match gitflow::git(
+        root,
+        &[
+            "rev-parse",
+            "--verify",
+            "--quiet",
+            &format!("{tag}^{{commit}}"),
+        ],
+    ) {
+        Ok(s) if !tag.starts_with('-') => s.trim().to_owned(),
+        _ => {
+            eprintln!(
+                "{}",
+                l.t_args("pr-release-no-tag", &args!("tag" => tag.to_owned()))
+            );
+            return false;
+        }
+    };
+    let since = since.or_else(|| {
+        gitflow::git(
+            root,
+            &["describe", "--tags", "--abbrev=0", &format!("{tag}^")],
+        )
+        .ok()
+        .map(|t| t.trim().to_owned())
+        .filter(|t| !t.is_empty())
+    });
+    let entries = match gitflow::log_until(root, since.as_deref(), tag) {
+        Ok(e) => e,
+        Err(e) => return fail(l, &e.into()),
+    };
+    let notes = forge::release_notes(&entries);
+    let f = match Forge::open(root) {
+        Ok(f) => f,
+        Err(e) => return fail(l, &e),
+    };
+    println!("{tag}\n\n{notes}\n");
+    if !crate::shell_cmd::confirm(
+        l,
+        &l.t_args(
+            "pr-release-confirm",
+            &args!("tag" => tag.to_owned(), "forge" => f.remote.kind.id()),
+        ),
+        yes,
+    ) {
+        return false;
+    }
+    match rt.block_on(f.publish_release(tag, &sha, &notes, draft)) {
+        Ok(url) => {
+            println!("{}", l.t_args("pr-release-published", &args!("url" => url)));
+            true
+        }
+        Err(e) => fail(l, &e),
     }
 }
 

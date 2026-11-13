@@ -1,11 +1,13 @@
 //! Universal Git (§8.8, ADR 0040): one interface for GitHub, GitLab, Gitea/Forgejo, Bitbucket
-//! Cloud and Azure DevOps (Services and Server, §28.7, ADR 0063). The forge comes from the `origin` remote (self-hosted hosts in `[forge.hosts]`), the
+//! Cloud and Server/Data Center, and Azure DevOps (Services and Server, §28.7, ADR 0063). The forge comes from the `origin` remote (self-hosted hosts in `[forge.hosts]`), the
 //! token from the environment or the OS keychain (`kor auth login github|gitlab|gitea|bitbucket`),
 //! and every request goes through the network guard, so privacy/offline modes refuse non-local
 //! forges with their own localized message. `git push` runs the user's git.
 
 mod api;
 mod azure;
+mod bbs;
+mod ci;
 pub mod respond;
 
 use std::collections::BTreeMap;
@@ -21,6 +23,7 @@ use kor_secrets::{SecretStore, SecretString, account_for};
 use serde::Serialize;
 
 pub use api::{Comment, Forge, InlineNote, PrInfo, ReviewPosted};
+pub use ci::{Check, Issue, ci_goal, issue_goal, release_notes};
 
 /// Diff characters given to the model for a description.
 const MAX_DIFF: usize = 48_000;
@@ -62,6 +65,8 @@ pub enum ForgeError {
     Git(String),
     /// Unexpected response shape.
     Parse(String),
+    /// This forge has no API for the feature (`issues`, `releases`).
+    NotSupported(String),
 }
 
 impl fmt::Display for ForgeError {
@@ -72,6 +77,7 @@ impl fmt::Display for ForgeError {
             Self::NoToken(k) => write!(f, "no token for {k} (kor auth login {k})"),
             Self::Blocked(m) | Self::Network(m) | Self::Git(m) | Self::Parse(m) => f.write_str(m),
             Self::Http { status, body } => write!(f, "HTTP {status}: {body}"),
+            Self::NotSupported(what) => write!(f, "this forge has no API for {what}"),
         }
     }
 }
@@ -102,6 +108,9 @@ pub fn error_text(l: &Localizer, e: &ForgeError) -> String {
             l.t_args("forge-network", &args!("error" => m.clone()))
         }
         ForgeError::Git(m) => l.t_args("flow-git-failed", &args!("error" => m.clone())),
+        ForgeError::NotSupported(what) => {
+            l.t_args("forge-not-supported", &args!("what" => what.clone()))
+        }
     }
 }
 
@@ -119,16 +128,19 @@ pub enum Kind {
     Gitea,
     /// Bitbucket Cloud.
     Bitbucket,
+    /// Bitbucket Server / Data Center (self-hosted, REST API 1.0).
+    BitbucketServer,
     /// Azure DevOps Services (dev.azure.com, *.visualstudio.com) and Azure DevOps Server.
     Azure,
 }
 
 impl Kind {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::Github,
         Self::Gitlab,
         Self::Gitea,
         Self::Bitbucket,
+        Self::BitbucketServer,
         Self::Azure,
     ];
 
@@ -138,6 +150,7 @@ impl Kind {
             Self::Gitlab => "gitlab",
             Self::Gitea => "gitea",
             Self::Bitbucket => "bitbucket",
+            Self::BitbucketServer => "bitbucket-server",
             Self::Azure => "azure",
         }
     }
@@ -148,6 +161,9 @@ impl Kind {
             "gitlab" => Some(Self::Gitlab),
             "gitea" | "forgejo" | "codeberg" => Some(Self::Gitea),
             "bitbucket" => Some(Self::Bitbucket),
+            "bitbucket-server" | "bitbucket-datacenter" | "bitbucket-dc" | "stash" => {
+                Some(Self::BitbucketServer)
+            }
             "azure" | "azure-devops" | "azuredevops" | "ado" | "tfs" => Some(Self::Azure),
             _ => None,
         }
@@ -160,6 +176,7 @@ impl Kind {
             Self::Gitlab => &["GITLAB_TOKEN"],
             Self::Gitea => &["GITEA_TOKEN", "FORGEJO_TOKEN"],
             Self::Bitbucket => &["BITBUCKET_TOKEN"],
+            Self::BitbucketServer => &["BITBUCKET_SERVER_TOKEN"],
             // A personal access token; `SYSTEM_ACCESSTOKEN` inside Azure Pipelines.
             Self::Azure => &[
                 "AZURE_DEVOPS_TOKEN",
@@ -247,6 +264,9 @@ impl Remote {
         if kind == Kind::Azure {
             return azure::remote(&scheme, &authority, &host, path);
         }
+        if kind == Kind::BitbucketServer {
+            return bbs::remote(&scheme, &authority, &host, path);
+        }
         let (owner, repo) = path.rsplit_once('/').ok_or(ForgeError::NoRemote)?;
         if owner.is_empty() || repo.is_empty() {
             return Err(ForgeError::NoRemote);
@@ -261,7 +281,7 @@ impl Remote {
                 "https://api.bitbucket.org/2.0".to_owned()
             }
             Kind::Bitbucket => format!("{web}/2.0"),
-            Kind::Azure => unreachable!("handled above"),
+            Kind::Azure | Kind::BitbucketServer => unreachable!("handled above"),
         };
         Ok(Self {
             kind,
@@ -274,11 +294,16 @@ impl Remote {
     }
 }
 
+/// `[forge]` of the configuration that applies to `root` (defaults when it cannot be read).
+pub fn configured(root: &Path) -> kor_config::Forge {
+    kor_config::load(&kor_config::Paths::discover(root), std::env::vars(), &[])
+        .map(|l| l.config.forge)
+        .unwrap_or_default()
+}
+
 /// `[forge.hosts]` of the configuration that applies to `root` (empty when it cannot be read).
 pub fn configured_hosts(root: &Path) -> BTreeMap<String, String> {
-    kor_config::load(&kor_config::Paths::discover(root), std::env::vars(), &[])
-        .map(|l| l.config.forge.hosts)
-        .unwrap_or_default()
+    configured(root).hosts
 }
 
 /// URL of `origin` (else the first remote).
