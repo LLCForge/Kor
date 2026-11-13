@@ -19,5 +19,6 @@ kor-proxy = { version = "0.0.7", hash = "99d84ceeac20bd0a" }
 kor-runtime = { version = "0.6.9", hash = "6aad8dbcd8e471aa" }
 kor-sandbox = { version = "0.2.4", hash = "9d399b9b9556a7b0" }
 kor-secrets = { version = "0.2.2", hash = "02816a16c3a5abc8" }
+kor-server = { version = "0.0.1", hash = "1fa595b9fc62fe6b" }
 kor-tools = { version = "0.2.6", hash = "be4df1b28ace1fc7" }
 kor-web = { version = "0.0.4", hash = "9bca9ab1b262bdd4" }

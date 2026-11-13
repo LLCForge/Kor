@@ -98,7 +98,10 @@ export async function webdriverDriver(application: string, port = 4444): Promise
       }
     },
     contextClick: async (s) => {
-      const origin = { 'element-6066-11e4-a52e-4f735466cecf': await find(s) }
+      const el = { 'element-6066-11e4-a52e-4f735466cecf': await find(s) }
+      // An element outside the viewport is "move target out of bounds" for the pointer action.
+      await call('POST', `${sid}/execute/sync`, { script: 'arguments[0].scrollIntoView({ block: "center" })', args: [el] })
+      const origin = el
       const actions = [{ type: 'pointerMove', origin, x: 0, y: 0 }, { type: 'pointerDown', button: 2 }, { type: 'pointerUp', button: 2 }]
       await call('POST', `${sid}/actions`, { actions: [{ type: 'pointer', id: 'mouse', parameters: { pointerType: 'mouse' }, actions }] })
       await call('DELETE', `${sid}/actions`)

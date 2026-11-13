@@ -89,7 +89,7 @@ async function pair(panel: Page, served: Served): Promise<void> {
   if (!code) throw new Error(`kor chrome pair gave no code: ${r.stdout}${r.stderr}`)
   // The desktop starts the bridge in the background: the panel reaches it once it listens.
   await until(async () => (await panel.evaluate(() => document.querySelector('.setup')?.textContent ?? '')).length > 0, 30_000, 'the setup view')
-  await panel.locator('.setup input[type="text"]').fill(code)
+  await panel.locator('.setup input[type="text"]').first().fill(code)
   await panel.locator('.setup button.primary').click()
   await panel.locator('.chat').waitFor({ timeout: 30_000 })
 }
@@ -128,7 +128,7 @@ test('side panel loads: fixed extension id, setup view before pairing', async ()
     expect(id).toBe(EXTENSION_ID)
     await panel.locator('.setup').waitFor({ timeout: 15_000 })
     // A fresh profile has no pairing key: the pairing field is offered.
-    await expect(panel.locator('.setup input[type="text"]')).toBeVisible()
+    await expect(panel.locator('.setup input[type="text"]').first()).toBeVisible()
     expect(await panel.title()).toMatch(/Kor/)
 
     // §21.2 / §21.3 on the panel page (webview-lock.js): Kor's own menu in a text field (clipboard items
@@ -140,7 +140,7 @@ test('side panel loads: fixed extension id, setup view before pairing', async ()
       w.__korMenus = []
       addEventListener('contextmenu', (e) => { setTimeout(() => w.__korMenus.push(e.defaultPrevented), 0) }, true)
     })
-    await panel.locator('.setup input[type="text"]').click({ button: 'right' })
+    await panel.locator('.setup input[type="text"]').first().click({ button: 'right' })
     await expect(panel.locator('.kor-context-menu [role="menuitem"]')).toHaveText(['Kes', 'Kopyala', 'Yapıştır', 'Tümünü seç'])
     await panel.keyboard.press('Escape')
     await expect(panel.locator('.kor-context-menu')).toHaveCount(0)

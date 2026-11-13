@@ -455,10 +455,18 @@ fn pick(script: &Mutex<Script>, req: &Value, raw: &str) -> Option<Reply> {
     s.used[idx] = true;
     let mut reply = s.replies[idx].clone();
     if let Some(t) = reply.tool.as_mut()
-        && let Some(id) = last_saved(req)
+        && t.input.to_string().contains(SAVED_PLACEHOLDER)
     {
-        let text = t.input.to_string().replace(SAVED_PLACEHOLDER, &id);
-        t.input = serde_json::from_str(&text).unwrap_or_else(|_| t.input.clone());
+        // Only the conversation: tool descriptions and the system prompt are not tool results.
+        let msgs = req.get("messages").unwrap_or(req);
+        if let Some(id) = last_saved(msgs) {
+            let text = t.input.to_string().replace(SAVED_PLACEHOLDER, &id);
+            t.input = serde_json::from_str(&text).unwrap_or_else(|_| t.input.clone());
+        } else {
+            let last = msgs.as_array().and_then(|a| a.last()).map(Value::to_string);
+            let tail: String = last.unwrap_or_default().chars().take(2000).collect();
+            eprintln!("e2e mock: no `saved:` line for {SAVED_PLACEHOLDER}; last message: {tail}");
+        }
     }
     Some(reply)
 }
