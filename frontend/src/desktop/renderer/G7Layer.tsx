@@ -112,6 +112,7 @@ export function G7Layer(props: G7LayerProps) {
 
       {dialog?.kind === 'settings' && (
         <SettingsDialog
+          key={dialog.section ?? 'general'}
           open
           initialSection={dialog.section}
           onClose={closeG7Dialog}

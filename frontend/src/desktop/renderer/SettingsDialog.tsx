@@ -87,6 +87,7 @@ const SECTIONS: readonly SectionDef[] = [
   { id: 'keymap', label: 'Tuş düzeni', group: 'Tercihler', icon: <Keyboard size={16} aria-hidden="true" />, keywords: 'kısayol klavye vim emacs keymap tuş' },
   { id: 'automations', label: 'Otomasyonlar', group: 'Tercihler', icon: <Workflow size={16} aria-hidden="true" />, keywords: 'otomatik auto sıkıştırma özet bellek güncelleme yönlendirme ses plan soru eşiği doctor düzelt' },
   { id: 'about', label: 'Kor', group: 'Tercihler', icon: <Info size={16} aria-hidden="true" />, keywords: 'sürüm hakkında' },
+  { id: 'notifications', label: 'Onaylar ve bildirimler', group: 'Tercihler', icon: panelIcon('shellui'), keywords: 'onay kuyruğu bildirim tepsi pip durum penceresi sessiz saat beni çağır' },
   { id: 'chrome', label: 'Tarayıcı', group: 'Tercihler', icon: <Puzzle size={16} aria-hidden="true" />, keywords: 'chrome tarayıcı eklenti' },
   { id: 'system', label: 'Sistem', group: 'Bu bilgisayar', icon: <Cpu size={16} aria-hidden="true" />, keywords: 'sürüm sistem tauri webview sağlık disk bellek ram cpu gpu pil temizlik önbellek docker bilgisayar kullanımı katman pencere düzeni' },
   { id: 'prereqs', label: 'Sistem gereksinimleri', group: 'Bu bilgisayar', icon: panelIcon('prereqs'), keywords: 'gereksinim kurulum docker podman wsl xcode webview2 izin erişilebilirlik ekran kaydı mikrofon winget brew apt paket yöneticisi' },
@@ -181,6 +182,8 @@ export function SettingsDialog(props: SettingsDialogProps) {
         return <PrivacyPanel onSessionsCleared={props.onSessionsCleared} />
       case 'about':
         return <AboutSection />
+      case 'notifications':
+        return <PanelSection id="shellui" />
       case 'providers': // [g9] Bağdaştırıcılar + Sağlayıcılar paneli tek bölüm (Anahtarlar sekmesi = ProvidersSection)
         return <PanelSection id="providers" />
       case 'costs': // [g9]

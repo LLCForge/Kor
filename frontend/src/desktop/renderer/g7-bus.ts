@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react'
 import useSWR from 'swr'
 import { api } from './api.ts'
 
-export type SettingsSection = 'general' | 'models' | 'permissions' | 'appearance' | 'privacy' | 'about' | 'providers' | 'costs' | 'usage' | 'capabilities' | 'memory' | 'design' | 'system' | 'extensions' | 'mcp' | 'plugins' | 'agents' | 'chrome' | 'connections' | 'routines' | 'core' | 'shell' | 'osint' | 'templates' | 'readability' | 'keymap' | 'automations' | 'security' | 'compat' | 'offline' | 'team' | 'hooks' | 'tools' | 'mcpdev' | 'prereqs'
+export type SettingsSection = 'general' | 'models' | 'permissions' | 'appearance' | 'privacy' | 'about' | 'providers' | 'costs' | 'usage' | 'capabilities' | 'memory' | 'design' | 'system' | 'extensions' | 'mcp' | 'plugins' | 'agents' | 'chrome' | 'connections' | 'routines' | 'core' | 'shell' | 'osint' | 'templates' | 'readability' | 'keymap' | 'automations' | 'security' | 'compat' | 'offline' | 'team' | 'hooks' | 'tools' | 'mcpdev' | 'prereqs' | 'notifications'
 
 export type G7Dialog = { kind: 'settings'; section?: SettingsSection } | { kind: 'compare' } | { kind: 'probe'; models?: string[] }
 

@@ -4,6 +4,7 @@ import { FloatingRail } from './FloatingRail.tsx'
 import { ComposerStatusRow } from './ComposerStatusRow.tsx'
 import { CommandPalette, ShortcutsDialog, type PaletteActions } from './CommandPalette.tsx'
 import { openG7Dialog } from './g7-bus.ts'
+import { SETTINGS_VIEWS } from './view-catalog.ts'
 import { clearReviewComments, getReviewComments, mergeReviewIntoMessage } from './review-comments.ts'
 import { clearPreviewSelections, getPreviewSelections, mergePreviewIntoMessage } from './preview-store.ts'
 import { OPEN_QUEUE_EVENT } from './shellui/TitleItems.tsx'
@@ -523,6 +524,9 @@ export function App() {
     openFolder: () => void openFolder(),
     copyPath: () => { if (appState.root) void navigator.clipboard.writeText(appState.root) },
     openPanel: (view) => {
+      // Yapılandırma görünümleri Ayarlar'da yaşar; palet, kısayol ve `/komut` onları orada açar.
+      const section = SETTINGS_VIEWS[view]
+      if (section) return openG7Dialog({ kind: 'settings', section })
       panelDismissedRef.current = false
       setPanelOpen(true)
       requestAnimationFrame(() => window.dispatchEvent(new CustomEvent('panel:view', { detail: view })))

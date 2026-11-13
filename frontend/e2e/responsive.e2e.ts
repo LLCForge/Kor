@@ -119,7 +119,9 @@ test('no horizontal overflow from 800×600 to 3840×2160, side panels included',
         await p.evaluate((v: string) => window.dispatchEvent(new CustomEvent('kor:panel-open', { detail: v })), id)
         await p.waitForTimeout(350)
         problems.push(...(await p.evaluate(overflow)).map((x) => `${size.width}×${size.height} ${id}: ${x}`))
-        problems.push(...(await p.evaluate(panelOverflow)).map((x) => `${size.width}×${size.height} ${id}: ${x}`))
+        // Configuration views (view-catalog.ts SETTINGS_VIEWS) open as a Settings section, not in the side panel.
+        if (await p.locator('dialog[open]').count()) await p.keyboard.press('Escape')
+        else problems.push(...(await p.evaluate(panelOverflow)).map((x) => `${size.width}×${size.height} ${id}: ${x}`))
       }
       await p.screenshot({ path: join(REPO, 'docs', 'ui-audit', `responsive-${size.width}.png`) })
     }

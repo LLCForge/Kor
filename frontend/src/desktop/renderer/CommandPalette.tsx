@@ -10,6 +10,7 @@ import { api, errorMessage } from './api.ts'
 
 import { createElement } from 'react'
 import { PANELS, findPanel } from './panels/registry.ts'
+import { SETTINGS_VIEWS } from './view-catalog.ts'
 import { Bell, ListChecks, PictureInPicture2 } from 'lucide-react'
 import { shellui } from './shellui/bridge.ts'
 import { OPEN_BELL_EVENT } from './shellui/NotificationCenter.tsx'
@@ -170,7 +171,8 @@ export function CommandPalette({ actions, sessions }: { actions: PaletteActions;
       ]
       return [
         { id: 'back', label: 'Geri', icon: <ArrowLeft size={14} />, group: '', run: () => sub('views'), sub: true },
-        ...views.map(([id, label, icon]) => ({ id: `view:${id}`, label, icon, group: 'Görünüm', run: () => actions.openPanel(id) })),
+        // Ayarlar'da açılanlar ayrı grupta, sonda: ok tuşları görünen sırayı izlesin.
+        ...views.filter(([id]) => !SETTINGS_VIEWS[id]).concat(views.filter(([id]) => SETTINGS_VIEWS[id])).map(([id, label, icon]) => ({ id: `view:${id}`, label, icon, group: SETTINGS_VIEWS[id] ? 'Ayarlar' : 'Görünüm', run: () => actions.openPanel(id) })),
       ]
     }
     if (page === 'templates') {
