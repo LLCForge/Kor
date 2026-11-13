@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use kor_agent::media::MediaEnv;
 use kor_i18n::Localizer;
+use kor_providers::direct::{Direct, DirectKind};
 use kor_providers::fal::Fal;
 use kor_providers::huggingface::Hf;
 use kor_providers::media::VeniceMedia;
@@ -24,12 +25,75 @@ pub struct Clients {
     pub venice: Option<VeniceMedia>,
     /// Only with a token: Hub inference needs one.
     pub hf: Option<Hf>,
+    /// OpenAI Images, Imagen, Veo, Stability, Runway, Luma (with a key) and `ComfyUI` (local).
+    pub direct: Vec<Direct>,
+    /// `[media] comfyui_checkpoint`.
+    pub checkpoint: String,
+}
+
+/// The direct media providers (§20) with their keys: OpenAI and Google with the chat keys,
+/// Stability (`STABILITY_API_KEY`), Runway (`RUNWAYML_API_SECRET`) and Luma (`LUMAAI_API_KEY`)
+/// with their own (`kor auth login stability|runway|luma`), and `ComfyUI` when `[media] comfyui_url`
+/// is set. In privacy mode only `ComfyUI`: it runs on this machine (§20.4).
+pub fn direct_clients(
+    l: &Localizer,
+    media: &kor_config::MediaConfig,
+) -> Vec<(Direct, Option<kor_secrets::SecretString>)> {
+    let mut out = Vec::new();
+    if !crate::privacy_mode()
+        && let Ok(reg) = crate::registry(l, &mut Vec::new())
+    {
+        for kind in DirectKind::ALL {
+            let m = match kind {
+                DirectKind::ComfyUi => continue,
+                DirectKind::OpenAi => reg.get("openai").cloned(),
+                DirectKind::Imagen | DirectKind::Veo => reg.get("google").cloned(),
+                _ => reg
+                    .get(kind.id())
+                    .cloned()
+                    .or_else(|| Direct::builtin_manifest(kind)),
+            };
+            let Some(m) = m else { continue };
+            if let Ok(Some((key, _))) = crate::key_for(&m)
+                && let Ok(d) = Direct::new(kind, &m, Some(key.clone()))
+            {
+                out.push((d, Some(key)));
+            }
+        }
+    }
+    let url = media.comfyui_url.trim().trim_end_matches('/');
+    if !url.is_empty()
+        && let Some(t) = DirectKind::ComfyUi.manifest_toml()
+        && let Ok(m) = kor_providers::ProviderManifest::parse(
+            &t.replace("http://127.0.0.1:8188", url),
+            "comfyui",
+        )
+        && let Ok(d) = Direct::new(DirectKind::ComfyUi, &m, None)
+    {
+        out.push((d, None));
+    }
+    out
 }
 
 impl Clients {
     pub fn load(l: &Localizer) -> Self {
+        let media = kor_config::load(
+            &kor_config::Paths::discover(&std::env::current_dir().unwrap_or_default()),
+            std::env::vars(),
+            &[],
+        )
+        .map(|c| c.config.media)
+        .unwrap_or_default();
+        let direct = direct_clients(l, &media)
+            .into_iter()
+            .map(|(d, _)| d)
+            .collect();
         if crate::privacy_mode() {
-            return Self::default();
+            return Self {
+                direct,
+                checkpoint: media.comfyui_checkpoint,
+                ..Self::default()
+            };
         }
         Self {
             fal: crate::fal_client(l).map(|(f, _)| f),
@@ -37,11 +101,13 @@ impl Clients {
             hf: crate::hf_client(l, None)
                 .ok()
                 .and_then(|(h, k)| k.map(|_| h)),
+            direct,
+            checkpoint: media.comfyui_checkpoint,
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.fal.is_none() && self.venice.is_none() && self.hf.is_none()
+        self.fal.is_none() && self.venice.is_none() && self.hf.is_none() && self.direct.is_empty()
     }
 
     /// `fal`, `huggingface`, `venice`: which providers the catalog covers.
@@ -106,6 +172,11 @@ pub fn tools(c: &Clients, env: &MediaEnv) -> Vec<Arc<dyn kor_tools::Tool>> {
     }
     if let Some(s) = kor_agent::media::Studio::with_env(c.fal.clone(), c.hf.clone(), env.clone()) {
         out.extend(kor_agent::media::studio_tools(&s));
+    }
+    if let Some(d) =
+        kor_agent::media::DirectMedia::new(c.direct.clone(), c.checkpoint.clone(), env.clone())
+    {
+        out.extend(kor_agent::media::direct_tools(&d));
     }
     if !out.is_empty() {
         out.push(kor_agent::media::gallery_tool());

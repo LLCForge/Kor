@@ -1,7 +1,8 @@
 //! Image and video generation tools backed by Venice: `media_models`, `generate_image`,
 //! `generate_video`; and, backed by fal.ai and/or Hugging Face, `image_generate`, `image_edit`,
 //! `video_generate`, `speech_to_text`, `text_to_speech` (each with a `provider` field),
-//! `fal_run` and `fal_models` (see [`Studio`]). Files are written to `<project>/kor-media/`; each tool output names them on
+//! `fal_run` and `fal_models` (see [`Studio`]); and `direct_generate` for OpenAI Images, Imagen,
+//! Veo, Stability, Runway, Luma and a local `ComfyUI` ([`DirectMedia`]). Files are written to `<project>/kor-media/`; each tool output names them on
 //! `saved: <absolute path>` lines, which the desktop app turns into previews.
 //!
 //! Generation costs money, so both generators are `Execute` tools and ask before running unless a
@@ -26,6 +27,9 @@ use serde_json::{Map, Value, json};
 
 use crate::gallery::{self, Meta};
 use tokio::sync::OnceCell;
+
+mod direct;
+pub use direct::{DirectGenerate, DirectMedia, direct_tools};
 
 /// Cheapest Venice image model ($0.01); sized by width/height.
 pub const DEFAULT_IMAGE_MODEL: &str = "venice-sd35";
