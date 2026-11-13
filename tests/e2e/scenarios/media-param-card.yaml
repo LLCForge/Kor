@@ -1,0 +1,37 @@
+# §20.2 / §20.4: the model calls the image tool without an aspect ratio → the parameter card asks it
+# (only the mock model's options, default marked) → the default is taken → the paid call is approved →
+# the fake media provider returns its fixed PNG → gallery and cost ledger are updated.
+# Desktop: its agent and media tools live in the renderer core and call Venice at a fixed URL, so the
+# fake media provider (a manifest override) cannot reach them; CLI and TUI only.
+name: media-param-card
+title: "Medya: eksik parametre kartı → varsayılan → onay → görsel galeriye ve maliyete yazılır"
+surfaces: [cli, tui]
+project:
+  media: true
+  files:
+    README.md: "# Demo\n"
+mock:
+  - text: "Görseli üretiyorum."
+    tool:
+      name: generate_image
+      input: { prompt: "a red fox", model: kor-mock-image, format: png, name: fox }
+    usage: { prompt: 900, completion: 30 }
+  - text: "Görsel hazır."
+    usage: { prompt: 1000, completion: 8 }
+steps:
+  - prompt: "bir tilki resmi çiz"
+  - choose: default
+  - approve: "yes"
+expect:
+  events:
+    - status
+    - { type: text, text: "Görseli üretiyorum." }
+    - { type: confirm, name: generate_image }
+    - toolResult
+    - { type: text, text: "Görsel hazır." }
+  # The card's default reached the provider.
+  sent: ['"media":"image/generate"', '"aspect_ratio":"1:1"']
+  gallery:
+    - { kind: image, provider: venice, model: kor-mock-image, capability: image, prompt: "a red fox", cost: 0.01, parent: ~ }
+  # Two chat turns and one media line.
+  usage_requests: 3

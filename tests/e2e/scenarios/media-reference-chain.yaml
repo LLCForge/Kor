@@ -1,0 +1,39 @@
+# §20.3: generate an image → use it as the reference of the next generation (image-to-video: the
+# fake media provider's reference route; Venice's image endpoint takes no input image) → the
+# reference reaches the provider and the chain is kept (the gallery `parent`, which is what the
+# graph's `DerivedFrom` media edge is built from). `${SAVED}` is the file the first call saved.
+# Desktop: see media-param-card.yaml.
+name: media-reference-chain
+title: "Medya: üret → referans yap → referanslı üretim, zincir galeride"
+surfaces: [cli, tui]
+project:
+  media: true
+  config: "[permissions]\nallow = [\"generate_image\", \"generate_video\"]\n"
+  files:
+    README.md: "# Demo\n"
+mock:
+  - text: "Önce görsel."
+    tool:
+      name: generate_image
+      input: { prompt: "a red fox", model: kor-mock-image, aspect_ratio: "1:1", format: png, name: fox }
+  - text: "Şimdi onu referans alıyorum."
+    tool:
+      name: generate_video
+      input: { prompt: "the fox runs", model: kor-mock-video, image: "${SAVED}", duration: 5s, resolution: 720p, aspect_ratio: "16:9", action: video, name: foxrun }
+  - text: "Video hazır."
+steps:
+  - prompt: "bir tilki çiz, sonra onu videoya çevir"
+expect:
+  events:
+    - status
+    - { type: text, text: "Önce görsel." }
+    - { type: tool, name: generate_image }
+    - toolResult
+    - { type: text, text: "Şimdi onu referans alıyorum." }
+    - { type: tool, name: generate_video }
+    - toolResult
+    - { type: text, text: "Video hazır." }
+  sent: ['"media":"video/queue"', '"image_url":"data:image/png;base64,iVBORw0KGgo']
+  gallery:
+    - { kind: image, model: kor-mock-image, capability: image, parent: ~ }
+    - { kind: video, model: kor-mock-video, capability: image-to-video, action: video, parent: 0 }

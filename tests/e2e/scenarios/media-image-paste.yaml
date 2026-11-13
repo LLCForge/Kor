@@ -1,0 +1,22 @@
+# §20.3 / §10: `kor ask --image shot.png` — the pasted image is read locally (OCR; the isolated env
+# fixes its text, so no OCR engine is needed) and goes into the message the model gets.
+# TUI: `/paste` reads the system clipboard, which a test must not overwrite. Desktop: the composer's
+# paste needs the OS clipboard as well. CLI only.
+name: media-image-paste
+title: "Görsel yapıştırma: kor ask --image → görsel mesaja eklenir"
+surfaces: [cli]
+project:
+  files:
+    shot.png: "${PNG}"
+mock:
+  - text: "Görselde KOR E2E OCR yazıyor."
+    usage: { prompt: 300, completion: 9 }
+steps:
+  - command: "kor ask"
+    args: ["--image", "shot.png", "Bu ekran görüntüsünde ne yazıyor?"]
+expect:
+  events:
+    - status
+    - { type: text, text: "Görselde KOR E2E OCR yazıyor." }
+  sent: ["Bu ekran görüntüsünde ne yazıyor?", "[Image 1 (shot.png)", "KOR E2E OCR"]
+  usage_requests: 1
