@@ -12224,6 +12224,10 @@ Commands:
   install      Install a plugin
   uninstall    Uninstall a plugin
   list         List installed plugins
+  search       Search a plugin index (JSON file or URL from --index or KOR_PLUGIN_INDEX)
+  create       Create a WASM plugin project, or pack a Claude Code skill folder into one
+  revoke       Take back a capability from an installed plugin (all of them when none is given)
+  run          Run an installed WASM plugin with the capabilities it holds
   enable       Enable a plugin
   disable      Disable a plugin
   update       Update a plugin
@@ -12334,11 +12338,14 @@ Usage: kor plugin install [OPTIONS] <PLUGIN>
 
 Arguments:
   <PLUGIN>
-          Plugin name (`name@marketplace`)
+          `name@marketplace`, or a folder: a signed WASM plugin or a Claude Code skill
 
 Options:
       --lang <LANG>
           Interface language (tr, en, fr)
+
+      --yes
+          Grant the requested capabilities without asking
 
       --privacy-mode
           Privacy mode: local models only, no outbound calls from Kor
@@ -12373,6 +12380,102 @@ Options:
 List installed plugins
 
 Usage: kor plugin list [OPTIONS]
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor plugin search --help
+Search a plugin index (JSON file or URL from --index or KOR_PLUGIN_INDEX)
+
+Usage: kor plugin search [OPTIONS] [QUERY]...
+
+Arguments:
+  [QUERY]...
+          Words that must all appear in the name, description or tags
+
+Options:
+      --index <INDEX>
+          Index file or URL (JSON); Kor has no default index
+
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor plugin create --help
+Create a WASM plugin project, or pack a Claude Code skill folder into one
+
+Usage: kor plugin create [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          Folder to create (its name is the plugin's name)
+
+Options:
+      --from-skill <FROM_SKILL>
+          Skill folder (with SKILL.md) to pack instead of the starter project
+
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor plugin revoke --help
+Take back a capability from an installed plugin (all of them when none is given)
+
+Usage: kor plugin revoke [OPTIONS] <PLUGIN> [CAPABILITY]
+
+Arguments:
+  <PLUGIN>
+          Installed plugin id (`kor plugin list`)
+
+  [CAPABILITY]
+          fs.read, event.emit or tool:<Name>
+
+Options:
+      --lang <LANG>
+          Interface language (tr, en, fr)
+
+      --privacy-mode
+          Privacy mode: local models only, no outbound calls from Kor
+
+      --remote <REMOTE>
+          Run the agent on this server over SSH: user@host[:port] or a connections.toml id
+
+  -h, --help
+          Print help
+===== kor plugin run --help
+Run an installed WASM plugin with the capabilities it holds
+
+Usage: kor plugin run [OPTIONS] <PLUGIN> [INPUT]...
+
+Arguments:
+  <PLUGIN>
+          Installed plugin id (`kor plugin list`)
+
+  [INPUT]...
+          Input text passed to the plugin
 
 Options:
       --lang <LANG>

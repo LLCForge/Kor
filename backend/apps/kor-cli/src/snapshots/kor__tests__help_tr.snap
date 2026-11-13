@@ -12224,6 +12224,10 @@ Commands:
   install      Eklenti kur
   uninstall    Eklentiyi kaldır
   list         Kurulu eklentileri listele
+  search       Eklenti dizininde ara (--index ya da KOR_PLUGIN_INDEX ile verilen JSON dosyası veya URL)
+  create       WASM eklenti projesi oluştur ya da bir Claude Code skill klasörünü eklentiye paketle
+  revoke       Kurulu eklentiden bir yetkiyi geri al (verilmezse hepsini)
+  run          Kurulu bir WASM eklentisini sahip olduğu yetkilerle çalıştır
   enable       Eklentiyi aç
   disable      Eklentiyi kapat
   update       Eklentiyi güncelle
@@ -12334,11 +12338,14 @@ Usage: kor plugin install [OPTIONS] <PLUGIN>
 
 Arguments:
   <PLUGIN>
-          Eklenti adı (`ad@pazar-yeri`)
+          `ad@pazar` ya da bir klasör: imzalı WASM eklentisi veya Claude Code skill'i
 
 Options:
       --lang <LANG>
           Arayüz dili (tr, en, fr)
+
+      --yes
+          İstenen yetkileri sormadan ver
 
       --privacy-mode
           Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
@@ -12373,6 +12380,102 @@ Options:
 Kurulu eklentileri listele
 
 Usage: kor plugin list [OPTIONS]
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor plugin search --help
+Eklenti dizininde ara (--index ya da KOR_PLUGIN_INDEX ile verilen JSON dosyası veya URL)
+
+Usage: kor plugin search [OPTIONS] [QUERY]...
+
+Arguments:
+  [QUERY]...
+          Adda, açıklamada ya da etiketlerde hepsinin geçmesi gereken sözcükler
+
+Options:
+      --index <INDEX>
+          Dizin dosyası ya da URL'si (JSON); Kor'un varsayılan bir dizini yok
+
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor plugin create --help
+WASM eklenti projesi oluştur ya da bir Claude Code skill klasörünü eklentiye paketle
+
+Usage: kor plugin create [OPTIONS] <NAME>
+
+Arguments:
+  <NAME>
+          Oluşturulacak klasör (adı eklentinin adı olur)
+
+Options:
+      --from-skill <FROM_SKILL>
+          Başlangıç projesi yerine paketlenecek skill klasörü (SKILL.md içeren)
+
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor plugin revoke --help
+Kurulu eklentiden bir yetkiyi geri al (verilmezse hepsini)
+
+Usage: kor plugin revoke [OPTIONS] <PLUGIN> [CAPABILITY]
+
+Arguments:
+  <PLUGIN>
+          Kurulu eklenti kimliği (`kor plugin list`)
+
+  [CAPABILITY]
+          fs.read, event.emit ya da tool:<Ad>
+
+Options:
+      --lang <LANG>
+          Arayüz dili (tr, en, fr)
+
+      --privacy-mode
+          Gizlilik modu: yalnızca yerel modeller, Kor dışarıya hiç bağlanmaz
+
+      --remote <REMOTE>
+          Ajanı SSH ile bu sunucuda çalıştır: kullanıcı@sunucu[:port] ya da connections.toml kimliği
+
+  -h, --help
+          Print help
+===== kor plugin run --help
+Kurulu bir WASM eklentisini sahip olduğu yetkilerle çalıştır
+
+Usage: kor plugin run [OPTIONS] <PLUGIN> [INPUT]...
+
+Arguments:
+  <PLUGIN>
+          Kurulu eklenti kimliği (`kor plugin list`)
+
+  [INPUT]...
+          Eklentiye verilecek girdi metni
 
 Options:
       --lang <LANG>

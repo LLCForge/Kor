@@ -86,6 +86,7 @@ mod update;
 mod vault_cmd;
 mod visualize_cmd;
 mod voice_cmd;
+mod wasm_cmd;
 mod watch_cmd;
 mod web_cmd;
 
@@ -601,11 +602,33 @@ enum PluginCmd {
     },
     Install {
         plugin: String,
+        #[arg(long)]
+        yes: bool,
     },
     Uninstall {
         plugin: String,
     },
     List,
+    Search {
+        #[arg(num_args = 0..)]
+        query: Vec<String>,
+        #[arg(long)]
+        index: Option<String>,
+    },
+    Create {
+        name: String,
+        #[arg(long)]
+        from_skill: Option<std::path::PathBuf>,
+    },
+    Revoke {
+        plugin: String,
+        capability: Option<String>,
+    },
+    Run {
+        plugin: String,
+        #[arg(num_args = 0..)]
+        input: Vec<String>,
+    },
     Enable {
         plugin: String,
     },
@@ -1410,7 +1433,7 @@ fn run_cmd(ctx: &Ctx, cmd: Cmd) -> anyhow::Result<bool> {
         Cmd::Undo { list, session } => Ok(undo::run(ctx, list, session.as_deref())),
         Cmd::ChromeNativeHost => chrome::run_stdio().map(|()| true).map_err(Into::into),
         Cmd::Mcp { command } => mcp_cmd::run(ctx, command),
-        Cmd::Plugin { command } => Ok(plugin_cmd(&plugin_root(), command)),
+        Cmd::Plugin { command } => Ok(plugin_cmd(&ctx.l, &plugin_root(), command)),
         Cmd::Auth { command } => auth::run(ctx, command),
         Cmd::Config { command } => Ok(config_cmd(ctx, &command)),
         Cmd::Providers { command: None } => Ok(providers::list_providers(ctx)),
@@ -1636,7 +1659,7 @@ fn split_plugin(spec: &str) -> Option<(&str, &str)> {
     spec.split_once('@')
 }
 
-fn plugin_cmd(root: &std::path::Path, cmd: PluginCmd) -> bool {
+fn plugin_cmd(l: &Localizer, root: &std::path::Path, cmd: PluginCmd) -> bool {
     let report = |r: Result<(), String>| match r {
         Ok(()) => true,
         Err(e) => {
@@ -1667,32 +1690,44 @@ fn plugin_cmd(root: &std::path::Path, cmd: PluginCmd) -> bool {
                 report(kor_agent::plugins::remove_marketplace(root, &name))
             }
         },
-        PluginCmd::Install { plugin } => {
+        PluginCmd::Install { plugin, yes } => {
+            let folder = std::path::Path::new(&plugin);
+            if folder.is_dir() {
+                return wasm_cmd::install_dir(l, root, folder, yes);
+            }
             let Some((name, market)) = split_plugin(&plugin) else {
-                eprintln!("use name@marketplace");
+                eprintln!("use name@marketplace or a folder");
                 return false;
             };
-            kor_agent::plugins::install(root, market, name)
-                .map(|_path| ())
-                .map_or_else(
-                    |e| {
-                        eprintln!("{e}");
-                        false
-                    },
-                    |()| true,
-                )
+            match kor_agent::plugins::install(root, market, name) {
+                Ok(dir) => wasm_cmd::admit(l, root, market, name, &dir, yes),
+                Err(e) => {
+                    eprintln!("{e}");
+                    false
+                }
+            }
         }
         PluginCmd::Uninstall { plugin } => {
             let Some((name, market)) = split_plugin(&plugin) else {
-                eprintln!("use name@marketplace");
-                return false;
+                return wasm_cmd::uninstall_direct(root, &plugin);
             };
-            report(kor_agent::plugins::remove(root, market, name))
+            report(
+                kor_agent::plugins::remove(root, market, name)
+                    .and_then(|()| kor_agent::wasm_plugins::forget(root, &plugin)),
+            )
         }
         PluginCmd::List => {
-            println!("{}", root.display());
+            wasm_cmd::list(root);
             true
         }
+        PluginCmd::Search { query, index } => {
+            wasm_cmd::search(l, &query.join(" "), index.as_deref())
+        }
+        PluginCmd::Create { name, from_skill } => wasm_cmd::create(l, &name, from_skill.as_deref()),
+        PluginCmd::Revoke { plugin, capability } => {
+            wasm_cmd::revoke(l, root, &plugin, capability.as_deref())
+        }
+        PluginCmd::Run { plugin, input } => wasm_cmd::run(l, root, &plugin, &input.join(" ")),
         PluginCmd::Enable { plugin } | PluginCmd::Update { plugin } => {
             report(kor_agent::plugins::set_enabled(root, &plugin, true))
         }
@@ -1972,6 +2007,7 @@ mod tests {
         git(&["commit", "-m", "init"]);
         let cache = dir.path().join("plugins");
         assert!(plugin_cmd(
+            &Localizer::new(Lang::En),
             &cache,
             PluginCmd::Marketplace {
                 command: MarketCmd::Add {
@@ -1981,9 +2017,11 @@ mod tests {
             }
         ));
         assert!(plugin_cmd(
+            &Localizer::new(Lang::En),
             &cache,
             PluginCmd::Install {
                 plugin: "demo@local".into(),
+                yes: false,
             }
         ));
         assert!(
@@ -1996,12 +2034,14 @@ mod tests {
                 .is_file()
         );
         assert!(plugin_cmd(
+            &Localizer::new(Lang::En),
             &cache,
             PluginCmd::Uninstall {
                 plugin: "demo@local".into(),
             }
         ));
         assert!(plugin_cmd(
+            &Localizer::new(Lang::En),
             &cache,
             PluginCmd::Marketplace {
                 command: MarketCmd::Remove {
