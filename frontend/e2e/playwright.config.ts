@@ -28,8 +28,15 @@ export default defineConfig({
   projects: [
     // KOR_E2E_CHANNEL=msedge uses the installed Edge instead of a downloaded Chromium.
     { name: 'brand', testMatch: /brand\.e2e\.ts$/, use: { channel: process.env.KOR_E2E_CHANNEL } },
+    // macOS (§16.4): WKWebView has no automation protocol; the brand states in Playwright's WebKit are the
+    // closest engine an automated run reaches there (`npx playwright install webkit`).
+    { name: 'brand-webkit', testMatch: /brand\.e2e\.ts$/, use: { browserName: 'webkit' } },
     // responsive.e2e.ts: no horizontal overflow at 800×600 and 1920×1080 (same WebView2 attach).
-    { name: 'desktop', testMatch: /(desktop|responsive)\.e2e\.ts$/ },
+    // webview-lock.e2e.ts: §21.3 blocked shortcuts and right-click menus on the real app.
+    { name: 'desktop', testMatch: /(desktop|responsive|webview-lock)\.e2e\.ts$/ },
     { name: 'audit', testMatch: /ui-audit\.e2e\.ts$/ },
+    // §16.4 fourth surface: the Chrome extension's side panel in Playwright's Chromium (`npm run build:extension`);
+    // the scenarios also need the desktop app and KOR_E2E_SIDEPANEL=1 (sidepanel.e2e.ts).
+    { name: 'sidepanel', testMatch: /sidepanel\.e2e\.ts$/ },
   ],
 })

@@ -128,9 +128,10 @@ export function closeDesktop(app: ChildProcess): void {
 
 export interface Outcome { surface: string; events: unknown[]; problems: string[] }
 
-/** The same checker the CLI and TUI runs use (`kor_runtime::e2e::check_with`). */
-export function check(served: Served, scenarioFile: string, output: string): Outcome {
-  const outFile = join(served.root, 'output-desktop.txt')
+/** The same checker the CLI and TUI runs use (`kor_runtime::e2e::check_with`). `as` names the result
+ *  files: the side panel is checked against the desktop's trace (the desktop owns its sessions). */
+export function check(served: Served, scenarioFile: string, output: string, as = 'desktop'): Outcome {
+  const outFile = join(served.root, `output-${as}.txt`)
   writeFileSync(outFile, output)
   const [cmd, args] = helper(['check', '--scenario', scenarioFile, '--root', served.root, '--surface', 'desktop', '--output', outFile])
   const r = spawnSync(cmd, args, {
@@ -142,7 +143,7 @@ export function check(served: Served, scenarioFile: string, output: string): Out
   const outcome = JSON.parse(r.stdout) as Outcome
   const dir = join(FRONTEND, 'test-results/e2e')
   mkdirSync(dir, { recursive: true })
-  writeFileSync(join(dir, `${served.scenario.name}-desktop.json`), JSON.stringify(outcome, null, 2))
+  writeFileSync(join(dir, `${served.scenario.name}-${as}.json`), JSON.stringify(outcome, null, 2))
   return outcome
 }
 

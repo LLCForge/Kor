@@ -218,11 +218,13 @@ export function KorChrome() {
         openExternal: (url) => void api.openExternal(url).catch((err: unknown) => toast(errorMessage(err), 'error')),
       })
     let uninstall = install(false)
+    // Temizlikten sonra gelen yanıt kilidi yeniden kurmaz (StrictMode çift etkisi iki kilit bırakıyordu: Ctrl+= iki adım).
+    let disposed = false
     // Geliştirici build'inde devtools kısayolları açılır (karar Rust'ta: debug + KOR_DEVTOOLS=1 / --devtools).
     void webviewApi
       .devtools()
       .then((on) => {
-        if (!on) return
+        if (!on || disposed) return
         uninstall()
         uninstall = install(true)
       })
@@ -234,6 +236,7 @@ export function KorChrome() {
       setClosing(n)
     })
     return () => {
+      disposed = true
       uninstall()
       offClose()
     }
