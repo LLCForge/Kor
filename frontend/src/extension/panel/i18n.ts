@@ -49,6 +49,10 @@ const en: Dict = {
   'Çalışan göreve mesaj ekle… (Enter)': 'Add a message to the running task… (Enter)', 'Çalışıyor…': 'Working…', 'çıktı': 'output', 'önbellek': 'cache',
   'İlgili yerler': 'Related places', 'İzin ver': 'Allow', 'İzinli': 'Allowed', 'İçerik / IPv4': 'Content / IPv4', 'Şablon yok.': 'No templates.', 'Şablonlar': 'Templates',
   '… (kısaltıldı)': '… (truncated)',
+  // §20.3 galeri
+  'Galeri': 'Gallery', 'Galeri boş: Kor ile üretilen görsel, video ve sesler burada görünür.': 'The gallery is empty: images, videos and audio made with Kor show up here.',
+  'Aç': 'Open', 'Kopyala': 'Copy', 'İndir': 'Download', 'Kapat': 'Close', 'Kopyalandı': 'Copied', 'Kopyalanamadı.': 'Could not copy.',
+  'Medya alınamadı.': 'Could not load the media.', 'Daha fazla': 'More',
 }
 
 const fr: Dict = {
@@ -97,6 +101,10 @@ const fr: Dict = {
   'Çalışan göreve mesaj ekle… (Enter)': 'Ajouter un message à la tâche en cours… (Entrée)', 'Çalışıyor…': 'En cours…', 'çıktı': 'sortie', 'önbellek': 'cache',
   'İlgili yerler': 'Endroits liés', 'İzin ver': 'Autoriser', 'İzinli': 'Autorisés', 'İçerik / IPv4': 'Contenu / IPv4', 'Şablon yok.': 'Aucun modèle.', 'Şablonlar': 'Modèles',
   '… (kısaltıldı)': '… (tronqué)',
+  // §20.3 galeri
+  'Galeri': 'Galerie', 'Galeri boş: Kor ile üretilen görsel, video ve sesler burada görünür.': 'La galerie est vide : les images, vidéos et sons créés avec Kor apparaissent ici.',
+  'Aç': 'Ouvrir', 'Kopyala': 'Copier', 'İndir': 'Télécharger', 'Kapat': 'Fermer', 'Kopyalandı': 'Copié', 'Kopyalanamadı.': 'Copie impossible.',
+  'Medya alınamadı.': 'Impossible de charger le média.', 'Daha fazla': 'Plus',
 }
 
 export const DICTS: Record<string, Dict> = { en, fr }

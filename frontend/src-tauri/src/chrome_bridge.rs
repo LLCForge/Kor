@@ -2,15 +2,16 @@
 //! masaüstü açılınca başlar ([`start`]); yan panel Kor'un üçüncü istemcisidir. Her `kor:event` olayı
 //! eklentiye de gider (`chat.rs` `emit`), yan panelin istekleri [`client`] ile buraya gelir: sohbet,
 //! onay, durdur, oturumlar, maliyet, graf özeti, model, slash komutları ve şablonlar; dokümantasyon
-//! okuyucu (§27.11), form doldurucu (§27.12), sayfa → kod (§27.13). Değiştiren her istek denetim
-//! kaydına `source: "chrome"` ile yazılır. Arayüz yöntemleri `ns/chrome.rs`.
+//! okuyucu (§27.11), form doldurucu (§27.12), sayfa → kod (§27.13), medya galerisi (§20.3, salt okunur).
+//! Değiştiren her istek denetim kaydına `source: "chrome"` ile yazılır. Arayüz yöntemleri `ns/chrome.rs`.
 
 use std::collections::BTreeMap;
 use std::future::Future;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::OnceLock;
 
+use base64::Engine as _;
 use kor_runtime::browser_assist::{docs, forms, page_code};
 use serde_json::{Value, json};
 use tauri::{AppHandle, Manager};
@@ -210,6 +211,119 @@ fn expand_slash(root: &Path, text: &str) -> String {
     text.to_owned()
 }
 
+/// `galleryChunk` başına bayt: base64 olarak JSON içinde Chrome'un 1 MB yerel mesajlaşma sınırının altında kalır.
+const CHUNK: usize = 512 * 1024;
+/// Yan panelin indirdiği en büyük galeri dosyası (uzun bir video).
+const MAX_MEDIA: u64 = 200 * 1024 * 1024;
+/// Küçük resim kenarı (px).
+const THUMB: u32 = 160;
+/// Yan panelde listelenen en yeni öğe sayısı.
+const GALLERY_MAX: usize = 200;
+
+fn mime_of(path: &Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("jpg" | "jpeg") => "image/jpeg",
+        Some("webp") => "image/webp",
+        Some("gif") => "image/gif",
+        Some("mp4") => "video/mp4",
+        Some("webm") => "video/webm",
+        Some("mov") => "video/quicktime",
+        Some("mp3") => "audio/mpeg",
+        Some("wav") => "audio/wav",
+        Some("ogg") => "audio/ogg",
+        Some("flac") => "audio/flac",
+        Some("m4a") => "audio/mp4",
+        _ => "application/octet-stream",
+    }
+}
+
+/// Yan panel galerisi (§20.3): projedeki üretilmiş medya, yeniden eskiye, MIME türüyle.
+fn gallery_list(root: &Path) -> Value {
+    Value::Array(
+        kor_agent::gallery::list(root)
+            .into_iter()
+            .take(GALLERY_MAX)
+            .map(|i| {
+                let mime = mime_of(Path::new(&i.id));
+                let mut v = json!(i);
+                v["mime"] = json!(mime);
+                v
+            })
+            .collect(),
+    )
+}
+
+/// Galeri öğesi `id`'nin dosyası: yalnızca doğrudan `kor-media/` içindeki dosya. Yan dosyadaki `file`
+/// alanı proje içeriğidir (değiştirilmiş olabilir), izlenmez; bağlantıyla klasör dışına çıkan dosya reddedilir.
+fn gallery_file(root: &Path, id: &str) -> Result<PathBuf, String> {
+    let missing = || format!("Galeride yok: {id}");
+    kor_agent::gallery::get(root, id).ok_or_else(missing)?;
+    let dir = std::fs::canonicalize(kor_agent::gallery::dir(root)).map_err(|_| missing())?;
+    let p = std::fs::canonicalize(dir.join(id)).map_err(|_| missing())?;
+    if p.parent() == Some(dir.as_path()) {
+        Ok(p)
+    } else {
+        Err(missing())
+    }
+}
+
+/// Görsel öğe için küçük resim (data URL); video ve seste `null` (panel simge gösterir).
+fn gallery_thumb(root: &Path, id: &str) -> Result<Value, String> {
+    let p = gallery_file(root, id)?;
+    if kor_agent::gallery::kind_of(&p) != "image" {
+        return Ok(Value::Null);
+    }
+    let img = image::open(&p)
+        .map_err(|e| format!("Görsel açılamadı: {e}"))?
+        .thumbnail(THUMB, THUMB);
+    let mut out = std::io::Cursor::new(Vec::new());
+    // Saydam görsel PNG kalır (JPEG saydamlığı siyaha çevirir), diğerleri küçük JPEG.
+    let mime = if img.color().has_alpha() {
+        img.write_to(&mut out, image::ImageFormat::Png)
+            .map_err(|e| e.to_string())?;
+        "image/png"
+    } else {
+        image::DynamicImage::ImageRgb8(img.to_rgb8())
+            .write_to(&mut out, image::ImageFormat::Jpeg)
+            .map_err(|e| e.to_string())?;
+        "image/jpeg"
+    };
+    let data = base64::engine::general_purpose::STANDARD.encode(out.into_inner());
+    Ok(json!({ "data": format!("data:{mime};base64,{data}") }))
+}
+
+/// Dosyanın `offset`'ten başlayan en çok [`CHUNK`] baytı (base64); panel parçaları birleştirip açar,
+/// kopyalar ya da indirir.
+fn gallery_chunk(root: &Path, id: &str, offset: u64) -> Result<Value, String> {
+    use std::io::{Read, Seek, SeekFrom};
+    let p = gallery_file(root, id)?;
+    let mut f = std::fs::File::open(&p).map_err(|e| e.to_string())?;
+    let size = f.metadata().map_err(|e| e.to_string())?.len();
+    if size > MAX_MEDIA {
+        return Err("Dosya yan panel için çok büyük (200 MB üstü)".into());
+    }
+    if offset > size {
+        return Err("Geçersiz konum".into());
+    }
+    f.seek(SeekFrom::Start(offset)).map_err(|e| e.to_string())?;
+    let mut buf = Vec::with_capacity(CHUNK);
+    f.take(CHUNK as u64)
+        .read_to_end(&mut buf)
+        .map_err(|e| e.to_string())?;
+    Ok(json!({
+        "mime": mime_of(&p),
+        "size": size,
+        "offset": offset,
+        "data": base64::engine::general_purpose::STANDARD.encode(&buf),
+    }))
+}
+
 fn oneshot(
     root: &Path,
     state: &AppState,
@@ -314,6 +428,20 @@ async fn handle(app: &AppHandle, op: &str, v: &Value) -> Res {
             Ok(
                 json!({ "status": g.status(), "communities": g.communities().len(), "hotspots": hot, "docs": g.web_docs().len() }),
             )
+        }
+        "gallery" => crate::api::root(&state).map(|r| gallery_list(&r)),
+        "galleryThumb" => {
+            let root = crate::api::root(&state)?;
+            let id = v["id"].as_str().ok_or("Galeri kimliği eksik")?.to_owned();
+            // Görsel çözme CPU işidir; köprünün olay döngüsünü tutmasın.
+            tauri::async_runtime::spawn_blocking(move || gallery_thumb(&root, &id))
+                .await
+                .map_err(|e| e.to_string())?
+        }
+        "galleryChunk" => {
+            let root = crate::api::root(&state)?;
+            let id = v["id"].as_str().ok_or("Galeri kimliği eksik")?;
+            gallery_chunk(&root, id, v["offset"].as_u64().unwrap_or(0))
         }
         "commands" => {
             let root = crate::api::root(&state)?;
@@ -521,5 +649,64 @@ mod tests {
         let (_, att) = with_context(dir.path(), "x", &json!({"screenshot": png})).unwrap();
         assert!(att[0].starts_with(".kor/chrome/tab-") && dir.path().join(&att[0]).is_file());
         assert!(MUTATING.contains(&"chat") && !MUTATING.contains(&"sessions"));
+    }
+
+    #[test]
+    fn gallery_serves_only_files_inside_kor_media_in_chunks() {
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let media = kor_agent::gallery::dir(root);
+        std::fs::create_dir_all(&media).unwrap();
+        std::fs::write(root.join("secret.txt"), "top secret").unwrap();
+        image::RgbImage::from_pixel(400, 200, image::Rgb([200, 80, 20]))
+            .save(media.join("cat.png"))
+            .unwrap();
+        let big = vec![7u8; CHUNK + 10];
+        std::fs::write(media.join("clip.mp4"), &big).unwrap();
+        // The sidecar's `file` points outside the gallery: the id's own file is still what is read.
+        std::fs::write(
+            media.join("cat.png.kor.json"),
+            r#"{"id":"cat.png","file":"secret.txt","kind":"image","created":5}"#,
+        )
+        .unwrap();
+
+        let list = gallery_list(root);
+        let items = list.as_array().unwrap();
+        let ids: Vec<&str> = items.iter().filter_map(|i| i["id"].as_str()).collect();
+        assert!(ids.contains(&"cat.png") && ids.contains(&"clip.mp4"));
+        let clip = items.iter().find(|i| i["id"] == "clip.mp4").unwrap();
+        assert_eq!(clip["mime"], "video/mp4");
+
+        for bad in ["../secret.txt", "..", "", ".jobs", "nope.png", "a/b.png"] {
+            assert!(gallery_chunk(root, bad, 0).is_err(), "{bad}");
+            assert!(gallery_thumb(root, bad).is_err(), "{bad}");
+        }
+
+        let b64 = base64::engine::general_purpose::STANDARD;
+        let first = gallery_chunk(root, "cat.png", 0).unwrap();
+        let bytes = b64.decode(first["data"].as_str().unwrap()).unwrap();
+        assert!(bytes.starts_with(b"\x89PNG"));
+        assert_eq!(first["mime"], "image/png");
+
+        let a = gallery_chunk(root, "clip.mp4", 0).unwrap();
+        let b = gallery_chunk(root, "clip.mp4", CHUNK as u64).unwrap();
+        assert_eq!(a["size"], json!(CHUNK + 10));
+        let joined = [
+            b64.decode(a["data"].as_str().unwrap()).unwrap(),
+            b64.decode(b["data"].as_str().unwrap()).unwrap(),
+        ]
+        .concat();
+        assert_eq!(joined, big);
+        // One chunk fits Chrome's 1 MB native-messaging limit as JSON.
+        assert!(a.to_string().len() < 1024 * 1024);
+        assert!(gallery_chunk(root, "clip.mp4", (CHUNK + 11) as u64).is_err());
+
+        let thumb = gallery_thumb(root, "cat.png").unwrap();
+        let data = thumb["data"].as_str().unwrap();
+        assert!(data.starts_with("data:image/jpeg;base64,"));
+        let pic =
+            image::load_from_memory(&b64.decode(data.split_once(',').unwrap().1).unwrap()).unwrap();
+        assert_eq!((pic.width(), pic.height()), (THUMB, THUMB / 2));
+        assert_eq!(gallery_thumb(root, "clip.mp4").unwrap(), Value::Null);
     }
 }

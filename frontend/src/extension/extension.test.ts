@@ -11,6 +11,7 @@ import { Groups } from './tabs.ts'
 import { manifest, messages, CHROME_KEY } from './manifest.ts'
 import { reduce, empty, answered, fromTranscript } from './panel/events.ts'
 import { DICTS } from './panel/i18n.ts'
+import { downloadName, fetchMedia } from './panel/media.ts'
 import type { Ext, StorageArea, Tab } from './ext.ts'
 
 test('domain policy matches subdomains, blocks deny and narrows to allow', () => {
@@ -220,4 +221,25 @@ test('every panel string has English and French', () => {
     }
   }
   assert.deepEqual(missing, [])
+})
+
+test('gallery media arrives in chunks and is joined into one blob', async () => {
+  const file = new Uint8Array(1300).map((_, i) => i % 251)
+  const asked: number[] = []
+  const request = async (op: string, body: Record<string, unknown>) => {
+    assert.equal(op, 'galleryChunk')
+    assert.equal(body.id, 'cat.png')
+    const offset = Number(body.offset)
+    asked.push(offset)
+    const part = file.subarray(offset, offset + 512)
+    return { mime: 'image/png', size: file.length, offset, data: btoa(String.fromCharCode(...part)) }
+  }
+  const blob = await fetchMedia(request, 'cat.png')
+  assert.deepEqual(asked, [0, 512, 1024])
+  assert.equal(blob.type, 'image/png')
+  assert.deepEqual(new Uint8Array(await blob.arrayBuffer()), file)
+  // An empty file is one request; a file that shrinks while it is read is an error, not a loop.
+  assert.equal((await fetchMedia(async () => ({ mime: 'audio/wav', size: 0, offset: 0, data: '' }), 'x.wav')).size, 0)
+  await assert.rejects(fetchMedia(async () => ({ mime: 'video/mp4', size: 10, offset: 0, data: '' }), 'y.mp4'))
+  assert.equal(downloadName('a/b\\c.png'), 'a_b_c.png')
 })
