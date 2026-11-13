@@ -680,7 +680,8 @@ fn parse_mode(s: &str) -> Result<PermissionMode, String> {
 
 /// Localize clap's about/help strings. Clap's own built-ins stay English.
 #[allow(clippy::too_many_lines)] // one flat builder chain, one block per command
-fn localized_command(l: &Localizer) -> clap::Command {
+/// The localized command tree; `only` = the command line, see [`fill_help`].
+fn localized_command_for(l: &Localizer, only: Option<&[String]>) -> clap::Command {
     let provider = |c: clap::Command| c.mut_arg("provider", |a| a.help(l.t("arg-provider")));
     let c = Cli::command()
         .about(l.t("app-about"))
@@ -1049,13 +1050,28 @@ fn localized_command(l: &Localizer) -> clap::Command {
                 .mut_arg("max_tokens", |a| a.help(l.t("arg-max-tokens")))
                 .mut_arg("prompt", |a| a.help(l.t("arg-prompt")))
         });
-    fill_help(&Cli::command(), c, "", l)
+    fill_help(&Cli::command(), c, "", l, only)
+}
+
+/// The full localized tree (completions, `kor doctor`'s help check, the interactive screen).
+fn localized_command(l: &Localizer) -> clap::Command {
+    localized_command_for(l, None)
 }
 
 /// §12.2: help a command's own `localize` left empty or English (the doc comment) comes from
 /// `clihelp-*` Fluent ids: `clihelp-<path>` for a command; `clihelp-<path>--<arg>`, then
 /// `clihelp-<top command>--<arg>`, then `clihelp--<arg>` for an argument.
-fn fill_help(en: &clap::Command, mut c: clap::Command, path: &str, l: &Localizer) -> clap::Command {
+///
+/// With `only` (the command line), a command whose name is not on it gets just its `about` (its
+/// line in the parent's list): parsing never needs help text, and filling all ~100 commands' args
+/// was most of `kor help`'s start-up time (§32.1).
+fn fill_help(
+    en: &clap::Command,
+    mut c: clap::Command,
+    path: &str,
+    l: &Localizer,
+    only: Option<&[String]>,
+) -> clap::Command {
     let gap = |now: Option<String>, orig: Option<String>| {
         now.as_deref().is_none_or(|s| s.trim().is_empty()) || now == orig
     };
@@ -1063,6 +1079,13 @@ fn fill_help(en: &clap::Command, mut c: clap::Command, path: &str, l: &Localizer
     let id = |p: &str| format!("clihelp-{}", p.trim().replace(' ', "-"));
     if !path.is_empty() && gap(text(c.get_about()), text(en.get_about())) && l.has(&id(path)) {
         c = c.about(l.t(&id(path)));
+    }
+    let named = |w: &[String]| {
+        w.iter()
+            .any(|a| a == en.get_name() || en.get_all_aliases().any(|x| x == a))
+    };
+    if !path.is_empty() && only.is_some_and(|w| !named(w)) {
+        return c;
     }
     let top = path.split(' ').find(|s| !s.is_empty()).unwrap_or_default();
     for a in en.get_arguments() {
@@ -1091,7 +1114,7 @@ fn fill_help(en: &clap::Command, mut c: clap::Command, path: &str, l: &Localizer
     for s in en.get_subcommands().filter(|s| s.get_name() != "help") {
         let name = s.get_name().to_owned();
         let sub_path = format!("{path} {name}");
-        c = c.mut_subcommand(&name, |sc| fill_help(s, sc, sub_path.trim(), l));
+        c = c.mut_subcommand(&name, |sc| fill_help(s, sc, sub_path.trim(), l, only));
     }
     c
 }
@@ -1119,7 +1142,17 @@ struct Ctx {
     config: Result<Loaded, ConfigError>,
 }
 
+/// `kor --version` exactly as clap prints it, without config, i18n or the command tree (§32.1 < 30 ms).
+const VERSION_LINE: &str = concat!("kor ", env!("CARGO_PKG_VERSION"));
+
 fn main() -> ExitCode {
+    let mut args = std::env::args_os().skip(1);
+    if let (Some(a), None) = (args.next(), args.next())
+        && (a == "--version" || a == "-V")
+    {
+        println!("{VERSION_LINE}");
+        return ExitCode::SUCCESS;
+    }
     // The clap tree (~100 commands) overflows Windows' 1 MiB main-thread stack in debug builds.
     std::thread::Builder::new()
         .stack_size(16 * 1024 * 1024)
@@ -1160,7 +1193,7 @@ fn real_main() -> ExitCode {
         kor_runtime::apply_network_policy(&l, &c.config);
     }
 
-    let matches = localized_command(&l).get_matches_from(&argv);
+    let matches = localized_command_for(&l, Some(&argv)).get_matches_from(&argv);
     let cli = match Cli::from_arg_matches(&matches) {
         Ok(c) => c,
         Err(e) => e.exit(),
@@ -2009,6 +2042,45 @@ mod tests {
                 },
             }
         ));
+    }
+
+    /// The start-up shortcuts (§32.1) print exactly what the full tree prints.
+    #[test]
+    fn version_line_and_pruned_help_match_the_full_tree() {
+        assert_eq!(
+            Cli::command().render_version().trim_end(),
+            VERSION_LINE
+        );
+        let help = |c: &clap::Command, path: &[&str]| {
+            let mut c = c.clone().term_width(100).max_term_width(100);
+            c.build();
+            let mut at = &c;
+            for p in path {
+                at = at.find_subcommand(p).expect("subcommand exists");
+            }
+            at.clone().render_long_help().to_string()
+        };
+        for lang in [Lang::En, Lang::Tr] {
+            let l = Localizer::new(lang);
+            let full = localized_command(&l);
+            for path in [
+                &[][..],
+                &["proxy"][..],
+                &["proxy", "serve"][..],
+                &["graph"][..],
+            ] {
+                let argv: Vec<String> = std::iter::once("kor")
+                    .chain(path.iter().copied())
+                    .chain(["--help"])
+                    .map(str::to_owned)
+                    .collect();
+                assert_eq!(
+                    help(&localized_command_for(&l, Some(&argv)), path),
+                    help(&full, path),
+                    "{lang} {path:?}"
+                );
+            }
+        }
     }
 
     #[test]
