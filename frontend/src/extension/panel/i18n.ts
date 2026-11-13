@@ -4,6 +4,9 @@
 type Dict = Record<string, string>
 
 const en: Dict = {
+  'takım sunucusu üzerinden': 'through the team server', 'Başka bir makinedeki Kor (takım sunucusu)': 'Kor on another machine (team server)',
+  'Takım sunucusu': 'Team server', 'Makine adı': 'Machine name', 'Üye belirteci': 'Member token', 'Uzak bağlantı kaydedildi.': 'Remote connection saved.',
+  'O makinede kor peer serve çalışmalı; sunucu yalnızca iletileri aktarır, eşleştirme yine bu koddan yapılır.': 'That machine must run kor peer serve; the server only forwards messages, and pairing still uses the code.',
   'Ad': 'Name', 'Ad sunucusu 1': 'Name server 1', 'Ad sunucusu 2': 'Name server 2', 'Ad sunucusu 3': 'Name server 3', 'Ad sunucusu 4': 'Name server 4',
   'Adım': 'Step', 'Adım ekran görüntüsü': 'Step screenshot', 'Adımlar': 'Steps', 'Alan': 'Field', 'Alan adı': 'Domain',
   'Alanları kontrol edip formu siz gönderin.': 'Check the fields and submit the form yourself.', 'Alt ad': 'Subdomain', 'Ayarlar': 'Settings',
@@ -56,6 +59,9 @@ const en: Dict = {
 }
 
 const fr: Dict = {
+  'takım sunucusu üzerinden': "via le serveur d'équipe", 'Başka bir makinedeki Kor (takım sunucusu)': "Kor sur une autre machine (serveur d'équipe)",
+  'Takım sunucusu': "Serveur d'équipe", 'Makine adı': 'Nom de la machine', 'Üye belirteci': 'Jeton de membre', 'Uzak bağlantı kaydedildi.': 'Connexion distante enregistrée.',
+  'O makinede kor peer serve çalışmalı; sunucu yalnızca iletileri aktarır, eşleştirme yine bu koddan yapılır.': "Cette machine doit lancer kor peer serve ; le serveur ne fait que relayer les messages, l'appairage passe toujours par le code.",
   'Ad': 'Nom', 'Ad sunucusu 1': 'Serveur de noms 1', 'Ad sunucusu 2': 'Serveur de noms 2', 'Ad sunucusu 3': 'Serveur de noms 3', 'Ad sunucusu 4': 'Serveur de noms 4',
   'Adım': 'Étape', 'Adım ekran görüntüsü': "Capture de l'étape", 'Adımlar': 'Étapes', 'Alan': 'Champ', 'Alan adı': 'Domaine',
   'Alanları kontrol edip formu siz gönderin.': 'Vérifiez les champs et envoyez le formulaire vous-même.', 'Alt ad': 'Sous-domaine', 'Ayarlar': 'Réglages',

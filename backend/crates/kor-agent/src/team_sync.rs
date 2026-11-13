@@ -49,8 +49,8 @@ pub fn prepare_body(entries: &[(impl AsRef<str>, impl AsRef<str>)]) -> Result<Va
 }
 
 pub async fn push(base: &str, repo: &str, token: &str, body: &Value) -> Result<String, String> {
-    let client = kor_core::net::client_builder()
-        .timeout(std::time::Duration::from_secs(30))
+    // The team CA and this member's client certificate (mTLS) when `kor server join` stored them.
+    let client = crate::team_client::builder(std::time::Duration::from_secs(30))?
         .build()
         .map_err(|e| e.to_string())?;
     let response = client

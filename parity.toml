@@ -2311,6 +2311,42 @@ tui = "/peer remove"
 desktop = "peer.remove"
 
 [[feature]]
+name = "Takım sunucusu kur (kor server init)"
+cli = "kor server init"
+tui = "/server init"
+desktop = "server.init"
+
+[[feature]]
+name = "Takım sunucusuna üye ekle / çıkar"
+cli = "kor server add-member"
+tui = "/server add-member"
+desktop = "server.addMember"
+
+[[feature]]
+name = "Takım sunucusu ve bağlantı durumu"
+cli = "kor server status"
+tui = "/server status"
+desktop = "server.status"
+
+[[feature]]
+name = "Takım sunucusunu çalıştır"
+cli = "kor server start"
+tui = "/server start --background"
+desktop = "server.start"
+
+[[feature]]
+name = "Takıma paketle katıl (mTLS sertifikası + belirteç)"
+cli = "kor server join"
+tui = "/server join"
+desktop = "team.connect"
+
+[[feature]]
+name = "Takım sunucusuna SSO ile oturum aç (cihaz kodu)"
+cli = "kor server login"
+tui = "/server login"
+desktop = "team.login"
+
+[[feature]]
 name = "kor peer standby"
 cli = "kor peer standby"
 tui = "/peer standby --background"

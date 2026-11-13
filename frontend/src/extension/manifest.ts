@@ -21,7 +21,7 @@ export function manifest(target: Target, version: string): Record<string, unknow
     action: { default_title: '__MSG_action__', default_icon: icons },
     // `<all_urls>`: Chrome's tabs.captureVisibleTab (screenshots) refuses narrower host patterns.
     host_permissions: ['<all_urls>'],
-    content_security_policy: { extension_pages: "script-src 'self'; object-src 'none'; connect-src 'self' ws://127.0.0.1:49201" },
+    content_security_policy: { extension_pages: "script-src 'self'; object-src 'none'; connect-src 'self' ws://127.0.0.1:49201 wss:" },
   }
   if (target === 'firefox') {
     return {

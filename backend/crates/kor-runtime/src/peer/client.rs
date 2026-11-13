@@ -4,7 +4,8 @@
 //! existing encrypted overlay), its direct addresses, then SSH (`ssh <host> kor peer serve
 //! --stdio`, the user's own keys and known hosts). Every route carries the same Noise session,
 //! so the peer's key is checked whichever way the bytes travel. Privacy and offline mode allow
-//! loopback only (`kor_core::net`). A team-server relay is the Faz 8 path (spec §11), not here.
+//! loopback only (`kor_core::net`). Last comes the team server relay ([`super::relay`]) when this
+//! machine joined a team.
 
 use std::time::Duration;
 
@@ -187,6 +188,19 @@ pub async fn dial(node: &Node, e: &PeerEntry) -> Result<(Link, String), String> 
             // Somebody else answered on that address: never talk to it.
             Ok(_) => errors.push(format!("{}: a different key answered", r.label())),
             Err(err) => errors.push(format!("{}: {err}", r.label())),
+        }
+    }
+    if let Some(r) = &node.relay {
+        let label = format!("relay {}", r.server);
+        match super::relay::dial(&r.server, &r.material, &e.key).await {
+            Ok(io) => {
+                match noise::initiate(io, &node.identity, Mode::Session, None, &hello).await {
+                    Ok(link) if link.remote == key => return Ok((link, label)),
+                    Ok(_) => errors.push(format!("{label}: a different key answered")),
+                    Err(err) => errors.push(format!("{label}: {err}")),
+                }
+            }
+            Err(err) => errors.push(format!("{label}: {err}")),
         }
     }
     if errors.is_empty() {

@@ -61,6 +61,7 @@ mod replay;
 mod rules;
 mod security;
 mod seo;
+mod server;
 mod shell;
 mod shellui;
 mod system;
@@ -120,6 +121,7 @@ pub async fn call(method: &str, args: &[Value], app: &AppHandle, state: &AppStat
         projmem::NS => projmem::call(ns, name, args, app, state).await,
         "vault" | "audit" | "sandbox" => security::call(ns, name, args, app, state).await,
         team::NS => team::call(ns, name, args, app, state).await,
+        server::NS => server::call(ns, name, args, app, state).await,
         offline::NS => offline::call(ns, name, args, app, state).await,
         analysis::NS => analysis::call(ns, name, args, app, state).await,
         deps::NS => deps::call(ns, name, args, app, state).await,

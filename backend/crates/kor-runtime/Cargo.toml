@@ -45,6 +45,8 @@ kor-graph.workspace = true
 flate2 = "1"
 serde_yaml.workspace = true
 tokio-util.workspace = true
+# Team server relay route for peers (§31.1, backend/crates/kor-server/TEAM-SERVER.md).
+tokio-tungstenite.workspace = true
 # `kor daemon` (ADR 0039): webhook listener, HMAC, log_match, SMTP over TLS, trigger edits.
 base64.workspace = true
 bytes.workspace = true
@@ -58,8 +60,6 @@ rustls-platform-verifier = "0.7"
 subtle.workspace = true
 tokio-rustls = { version = "0.26", default-features = false }
 toml_edit.workspace = true
-# KaaS task event stream (`daemon::kaas`): server side of the WebSocket the tools crate already uses.
-tokio-tungstenite.workspace = true
 # Code metrics (`kor quality|debt|style|explain|dead-code`, ADR 0047): same grammar version as kor-graph.
 globset.workspace = true
 kor-memory.workspace = true
@@ -85,6 +85,8 @@ qrcode = { version = "0.14", default-features = false }
 futures.workspace = true
 tempfile.workspace = true
 wiremock.workspace = true
+# The peer relay test runs a real team server in-process.
+kor-server.workspace = true
 
 [lints]
 workspace = true

@@ -11281,6 +11281,10 @@
           "type": "boolean",
           "description": "Anahtarlıkta erişim belirteci var mı (değer gelmez)"
         },
+        "certificate": {
+          "type": "boolean",
+          "description": "Anahtarlıkta üye sertifikası (mTLS) var mı (`kor server join`)"
+        },
         "privacy": {
           "type": "boolean"
         }
@@ -11289,7 +11293,25 @@
         "server",
         "source",
         "token",
+        "certificate",
         "privacy"
+      ]
+    },
+    "TeamLogin": {
+      "type": "object",
+      "properties": {
+        "verificationUri": {
+          "type": "string",
+          "description": "Kullanıcının açacağı kimlik sağlayıcı sayfası"
+        },
+        "userCode": {
+          "type": "string",
+          "description": "O sayfada girilecek kod"
+        }
+      },
+      "required": [
+        "verificationUri",
+        "userCode"
       ]
     },
     "TeamCheck": {
@@ -27935,6 +27957,10 @@
     "team": {
       "title": "TeamApi"
     },
+    "server": {
+      "title": "ServerApi",
+      "description": "`kor server` (§11.1): masaüstüyle gelen CLI `--json` ile çalıştırılır"
+    },
     "shell": {
       "title": "ShellApi"
     },
@@ -39050,11 +39076,70 @@
               }
             ]
           }
+        },
+        {
+          "name": "bundlePath",
+          "optional": true,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         }
       ],
       "result": {
         "$ref": "#/$defs/TeamStatus"
       }
+    },
+    "team.login": {
+      "params": [
+        {
+          "name": "provider",
+          "optional": true,
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "$ref": "#/$defs/TeamLogin"
+      }
+    },
+    "server.init": {
+      "params": [
+        { "name": "domain", "schema": { "type": "string" } },
+        { "name": "admin", "schema": { "type": "string" } },
+        { "name": "team", "optional": true, "schema": { "type": "string" } }
+      ],
+      "result": {}
+    },
+    "server.addMember": {
+      "params": [
+        { "name": "email", "schema": { "type": "string" } },
+        { "name": "role", "optional": true, "schema": { "enum": ["admin", "member", "viewer"] } },
+        { "name": "remove", "optional": true, "schema": { "type": "boolean" } }
+      ],
+      "result": {}
+    },
+    "server.status": {
+      "params": [],
+      "result": {}
+    },
+    "server.start": {
+      "params": [],
+      "result": {}
     },
     "team.disconnect": {
       "params": [],
@@ -43831,6 +43916,17 @@
       "param": "e",
       "payload": {
         "$ref": "#/$defs/PeerEventPayload"
+      }
+    },
+    "kor:team/login": {
+      "param": "e",
+      "payload": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "role": { "type": "string" },
+          "error": { "type": "string" }
+        }
       }
     },
     "kor:peer/paired": {
