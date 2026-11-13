@@ -24,7 +24,8 @@ image.workspace = true
 crossterm.workspace = true
 dirs.workspace = true
 futures.workspace = true
-kor-agent.workspace = true
+# §12.1: WASM plugin runtime.
+kor-agent = { workspace = true, features = ["wasm"] }
 kor-compat.workspace = true
 kor-components.workspace = true
 kor-config.workspace = true

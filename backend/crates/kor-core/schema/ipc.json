@@ -29078,6 +29078,107 @@
         ]
       }
     },
+    "core.pluginSearch": {
+      "description": "kor plugin search <query> [--index <file|url>]: eşleşen dizin girdileri, metin olarak (§12.1).",
+      "params": [
+        {
+          "name": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "index",
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "type": "string"
+      }
+    },
+    "core.pluginCreate": {
+      "description": "kor plugin create <dir> [--from-skill <folder>], açık projede (§12.1).",
+      "params": [
+        {
+          "name": "name",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "fromSkill",
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "type": "string"
+      }
+    },
+    "core.pluginRevoke": {
+      "description": "kor plugin revoke <id> [capability] (§12.1).",
+      "params": [
+        {
+          "name": "id",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "capability",
+          "schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      ],
+      "result": {
+        "type": "string"
+      }
+    },
+    "core.pluginRun": {
+      "description": "kor plugin run <id> [input]: WASM eklentisinin çıktısı (§12.1).",
+      "params": [
+        {
+          "name": "id",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "input",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "type": "string"
+      }
+    },
     "core.privacy": {
       "description": "`privacy.mode` (kor --privacy-mode); `offline` = `[offline] enabled` / KOR_OFFLINE (ADR 0035).",
       "params": [],

@@ -57,6 +57,39 @@ pub async fn call(
             })
             .map(|()| marketplaces()),
         "pluginDoctor" => s(args, 0, m).and_then(|id| plugin_doctor(&root, id)),
+        // §12.1: WASM plugins run in the CLI (wasmtime lives there, not in the desktop).
+        "pluginSearch" => match s(args, 0, m) {
+            Ok(q) => {
+                let mut a = vec!["search", "--", q];
+                if let Some(i) = opt(args, 1) {
+                    a.splice(1..1, ["--index", i]);
+                }
+                kor_plugin(&root, &a).await
+            }
+            Err(e) => Err(e),
+        },
+        "pluginCreate" => match s(args, 0, m) {
+            Ok(name) => {
+                let mut a = vec!["create", name];
+                if let Some(f) = opt(args, 1) {
+                    a.extend(["--from-skill", f]);
+                }
+                kor_plugin(&root, &a).await
+            }
+            Err(e) => Err(e),
+        },
+        "pluginRevoke" => match s(args, 0, m) {
+            Ok(id) => {
+                let mut a = vec!["revoke", id];
+                a.extend(opt(args, 1));
+                kor_plugin(&root, &a).await
+            }
+            Err(e) => Err(e),
+        },
+        "pluginRun" => match (s(args, 0, m), s(args, 1, m)) {
+            (Ok(id), Ok(input)) => kor_plugin(&root, &["run", id, "--", input]).await,
+            (Err(e), _) | (_, Err(e)) => Err(e),
+        },
         // `kor update channel <name>`
         "updateChannel" => s(args, 0, m).and_then(|name| {
             kor_runtime::update::Channel::parse(name)
@@ -208,6 +241,34 @@ fn marketplaces() -> Value {
             .map(|m| json!({ "name": m.name, "path": m.path.to_string_lossy(), "plugins": m.plugins }))
             .collect(),
     )
+}
+
+fn opt(args: &[Value], i: usize) -> Option<&str> {
+    args.get(i)
+        .and_then(Value::as_str)
+        .filter(|v| !v.trim().is_empty())
+}
+
+/// `kor plugin <args>` açık projede; çıktı metni, hata durumunda stderr. Kurulum burada yok (onay
+/// istemi terminal ister); `revoke`/`run`/`search`/`create` soru sormaz.
+async fn kor_plugin(root: &Path, args: &[&str]) -> Res {
+    use kor_platform::NoWindow as _;
+    let out = tokio::process::Command::new(crate::kor_cli::path())
+        .arg("plugin")
+        .args(args)
+        .current_dir(root)
+        .stdin(std::process::Stdio::null())
+        .no_window()
+        .output()
+        .await
+        .map_err(|e| format!("{} ({e})", crate::kor_cli::MISSING))?;
+    if out.status.success() {
+        Ok(Value::String(
+            String::from_utf8_lossy(&out.stdout).trim_end().to_owned(),
+        ))
+    } else {
+        Err(String::from_utf8_lossy(&out.stderr).trim().to_owned())
+    }
 }
 
 /// `kor plugin doctor`: kurulu eklentinin manifest denetimi (kullanıcı ya da güvenilen proje).

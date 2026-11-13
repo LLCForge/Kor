@@ -341,6 +341,31 @@ cli = "kor plugin doctor"
 tui = "/plugin doctor"
 desktop = "core.pluginDoctor"
 
+# §12.1 WASM eklentileri: masaüstü yöntemleri paketle gelen `kor` CLI'ını çağırır (wasmtime yalnızca CLI'da).
+[[feature]]
+name = "Eklenti dizininde ara"
+cli = "kor plugin search"
+tui = "/plugin search"
+desktop = "core.pluginSearch"
+
+[[feature]]
+name = "Eklenti projesi oluştur (ya da skill klasörünü paketle)"
+cli = "kor plugin create"
+tui = "/plugin create"
+desktop = "core.pluginCreate"
+
+[[feature]]
+name = "Eklenti yetkisini geri al"
+cli = "kor plugin revoke"
+tui = "/plugin revoke"
+desktop = "core.pluginRevoke"
+
+[[feature]]
+name = "WASM eklentisini çalıştır"
+cli = "kor plugin run"
+tui = "/plugin run"
+desktop = "core.pluginRun"
+
 [[feature]]
 name = "Gizlilik modu"
 cli = "kor --privacy-mode"

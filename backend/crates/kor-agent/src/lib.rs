@@ -50,6 +50,8 @@ pub mod summarize;
 pub mod team_sync;
 pub mod toolcall;
 pub mod verify;
+#[cfg(feature = "wasm")]
+pub mod wasm_plugins;
 
 pub use agent::{
     Agent, AgentEvent, Approver, PermissionReply, PermissionRequest, ScopedRule, StopReason,

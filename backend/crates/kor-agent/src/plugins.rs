@@ -56,7 +56,7 @@ fn install_dir(root: &Path, market: &str, plugin: &str) -> PathBuf {
     root.join("cache").join(market).join(plugin)
 }
 
-fn safe(name: &str) -> bool {
+pub(crate) fn safe(name: &str) -> bool {
     !name.is_empty() && !name.contains(['/', '\\', '\0']) && !name.contains("..") && name.len() < 80
 }
 
@@ -104,7 +104,7 @@ fn manifest(dir: &Path) -> Option<PathBuf> {
     b.is_file().then_some(b)
 }
 
-fn copy_dir(from: &Path, to: &Path) -> Result<(), String> {
+pub(crate) fn copy_dir(from: &Path, to: &Path) -> Result<(), String> {
     fs::create_dir_all(to).map_err(|e| e.to_string())?;
     for ent in fs::read_dir(from).map_err(|e| e.to_string())? {
         let ent = ent.map_err(|e| e.to_string())?;
