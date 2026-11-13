@@ -43,6 +43,7 @@ import kimi from '../../../../assets/providers/kimi.svg'
 import kimi_color from '../../../../assets/providers/kimi-color.svg'
 import kling from '../../../../assets/providers/kling.svg'
 import kling_color from '../../../../assets/providers/kling-color.svg'
+import llamacpp from '../../../../assets/providers/llamacpp.svg'
 import lmstudio from '../../../../assets/providers/lmstudio.svg'
 import localai from '../../../../assets/providers/localai.svg'
 import localai_color from '../../../../assets/providers/localai-color.svg'
@@ -107,6 +108,7 @@ export const PROVIDER_LOGOS: Readonly<Record<string, { mono: string; color: stri
   "huggingface": { mono: huggingface, color: huggingface_color },
   "kimi": { mono: kimi, color: kimi_color },
   "kling": { mono: kling, color: kling_color },
+  "llamacpp": { mono: llamacpp, color: llamacpp },
   "lmstudio": { mono: lmstudio, color: lmstudio },
   "localai": { mono: localai, color: localai_color },
   "mancer": { mono: mancer, color: mancer_color },

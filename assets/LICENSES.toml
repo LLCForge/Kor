@@ -24,6 +24,11 @@ license = "LicenseRef-Trademark"
 source = "LocalAI (Ettore Di Giacinto) official mark, downloaded 2026-11-11 from https://raw.githubusercontent.com/mudler/LocalAI/master/core/http/static/favicon.svg (official LocalAI repository); sanitised (scripts/styles/ids removed, geometry and colours unchanged); nominative use only: providers/LICENSES.md"
 
 [[rule]]
+globs = ["providers/llamacpp.svg"]
+license = "LicenseRef-Trademark"
+source = "llama.cpp official icon (ggml-org/llama-brand, logo/svg/icon/icon-light.svg at commit f05540643c1ca2a18d732ed6491c839686da9a3a, the copy the llama.cpp web UI uses), downloaded 2026-11-13 from https://github.com/ggml-org/llama-brand; CC BY-NC 4.0 plus BRAND-USAGE.md's grant to reproduce and redistribute the mark, commercially and inside software, to identify llama.cpp, including rescaling and single-colour rendering. Rescaled 600 to 24 and drawn in currentColor (the mark is single-ink by design); shapes unchanged; nominative use only: providers/LICENSES.md"
+
+[[rule]]
 globs = ["providers/mancer.svg", "providers/mancer-color.svg"]
 license = "LicenseRef-Trademark"
 source = "Mancer official mark, downloaded 2026-11-11 from https://mancer.tech/resources/Phantom%20Favicon.svg; sanitised (scripts/styles/ids removed, geometry and colours unchanged); nominative use only: providers/LICENSES.md"

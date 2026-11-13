@@ -22,16 +22,27 @@ download URL of each is in `assets/LICENSES.toml`): `abliteration`, `arliai`, `l
 They were sanitised (scripts, styles, titles and unused ids removed; referenced ids namespaced) without changing
 geometry or colours; the single-colour file keeps only the mark's own shapes with `fill="currentColor"`.
 
-Providers with no official SVG mark found on the vendor's domain are drawn with the neutral letter badge:
-Abacus.AI, Oracle (OCI), Refuseless, Jan (its site logo is a raster image inside an SVG), KoboldCpp, llama.cpp and
-text-generation-webui.
+`llamacpp` comes from ggml-org's brand repository ([ggml-org/llama-brand](https://github.com/ggml-org/llama-brand),
+CC BY-NC 4.0 with an added grant in its `BRAND-USAGE.md` to redistribute the mark, commercially and inside software,
+to identify llama.cpp, including rescaling and single-colour rendering). It is a single-ink mark, so it has no
+colour file.
+
+Providers drawn with the neutral letter badge, and why (checked 2026-11-13):
+
+- Abacus.AI: the site's logos are raster (`.webp`/`.png`); no SVG mark or press kit on abacus.ai.
+- Oracle (OCI): Oracle's logo guidelines (oracle.com/legal/logos) require Oracle's written authorisation to use the
+  Oracle logo; OCI has no separate mark.
+- Refuseless: refuseless.com answers automated requests with a bot challenge only; no logo file could be read.
+- Jan: every SVG in the official repository (janhq/jan) wraps a PNG; the app icon is raster.
+- KoboldCpp: its own mark is the raster `niko.ico`; the SVG in its web UI is llama.cpp's mark inherited from upstream.
+- text-generation-webui: the repository has only a raster icon (`css/icon.png`).
 
 ## Trademarks
 
 The names and logos are trademarks of their respective owners (Anthropic, OpenAI, Google, DeepSeek, Alibaba Cloud
 (Qwen), xAI, Meta, NVIDIA, Black Forest Labs, Moonshot AI (Kimi), Zhipu AI (ChatGLM), AionLabs, Kuaishou (Kling),
 OpenRouter, Groq, Mistral AI, Ollama, Together AI, Venice.ai, Microsoft (Azure), Amazon Web Services (Bedrock,
-SageMaker), Cerebras, Cohere, fal, Abliteration.ai, Arli AI, LocalAI, Mancer, UncensoredLLM.ai, Fireworks AI, Hugging Face, LM Studio, vLLM, Perplexity, SambaNova, Z.ai, GitHub).
+SageMaker), Cerebras, Cohere, fal, Abliteration.ai, Arli AI, LocalAI, Mancer, UncensoredLLM.ai, ggml-org (llama.cpp), Fireworks AI, Hugging Face, LM Studio, vLLM, Perplexity, SambaNova, Z.ai, GitHub).
 Kor is not affiliated with or endorsed by them. The logos are shown only to identify the provider or model family
 the user selected (nominative use), following the owners' brand guidelines:
 
