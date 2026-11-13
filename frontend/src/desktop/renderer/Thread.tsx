@@ -1,5 +1,6 @@
 import { ArrowDown, Bell, RotateCw } from 'lucide-react'
-import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { trackedMemo } from './perfmon/tracked.tsx'
 import type { Approval } from '../../core/agent.ts'
 import type { FileDecisions } from '../ipc-review.ts' // [review]
 import { groupItems, settledItems, type Segment } from './activity.ts'
@@ -60,7 +61,7 @@ export function UserText({ text }: { text: string }) {
 }
 
 // [perf] Eylemler memo'nun içinde çizilir: JSX prop'u her çizimde yenilenip memo'yu boşa çıkarıyordu.
-const UserMessage = memo(function UserMessage({ item, at, extraActions, items, running, inPane }: { item: UserItem; at: number | undefined; extraActions?: ReactNode; items: readonly ChatItem[]; running: boolean; inPane: boolean }) {
+const UserMessage = trackedMemo('UserMessage', function UserMessage({ item, at, extraActions, items, running, inPane }: { item: UserItem; at: number | undefined; extraActions?: ReactNode; items: readonly ChatItem[]; running: boolean; inPane: boolean }) {
   const editing = useEditingId() === item.id
   if (editing) {
     return (
@@ -105,7 +106,7 @@ function AnswerHeader({ model }: { model: string }) {
   )
 }
 
-const AssistantMessage = memo(function AssistantMessage({
+const AssistantMessage = trackedMemo('AssistantMessage', function AssistantMessage({
   item,
   streaming,
   at,

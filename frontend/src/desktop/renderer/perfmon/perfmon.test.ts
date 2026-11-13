@@ -4,6 +4,7 @@ import assert from 'node:assert/strict'
 import { percentile, recordEvent, recordIpc, resetStats, setSlowSink, snapshot, type SlowEntry } from './stats.ts'
 import { causeOf } from './frames.ts'
 import { THREAD_WINDOW, isToggle, stat, syntheticThread, throttled, windowed } from './util.ts'
+import { RERENDER_TRACKING, noteRender, rerenderCounts, rerenderTotal, resetRerenders, sameValue } from './rerenders.ts'
 
 test('yüzdelikler yakın sıra ile, kor_runtime::budgets ile aynı', () => {
   const v = Array.from({ length: 100 }, (_, i) => i + 1)
@@ -84,4 +85,33 @@ test('uzun sohbet penceresi son bölümleri çizer, sonsuz pencere hepsini', () 
   const all = windowed(segs, Number.POSITIVE_INFINITY)
   assert.equal(all.hidden, 0)
   assert.equal(all.visible, segs)
+})
+
+test('gereksiz çizim sayacı: değerce aynı yeni props sayılır, kendi durumu ve gerçek değişiklik sayılmaz', () => {
+  resetRerenders()
+  assert.equal(RERENDER_TRACKING, true)
+  const a = { id: 1, items: [{ t: 'x' }], on: undefined }
+  // İlk çizim ve aynı props nesnesi (bileşenin kendi durumu değişti): gereksiz değil.
+  assert.equal(noteRender('Row', null, a), false)
+  assert.equal(noteRender('Row', a, a), false)
+  // Üst bileşen her çizimde yeni dizi verdi, değer aynı: gereksiz.
+  assert.equal(noteRender('Row', a, { id: 1, items: [{ t: 'x' }], on: undefined }), true)
+  // Değer değişti: gerekli.
+  assert.equal(noteRender('Row', a, { id: 1, items: [{ t: 'y' }], on: undefined }), false)
+  // Yeni kapanış farklı sayılır (yanlış alarm yok).
+  assert.equal(noteRender('Btn', { f: () => 1 }, { f: () => 1 }), false)
+  assert.deepEqual(rerenderCounts(), { Row: 1 })
+  assert.equal(rerenderTotal(), 1)
+  resetRerenders()
+  assert.equal(rerenderTotal(), 0)
+})
+
+test('değer eşitliği sınırlı: derinlik, sınıf örnekleri ve anahtar kümeleri', () => {
+  assert.equal(sameValue({ a: [1, 2] }, { a: [1, 2] }), true)
+  assert.equal(sameValue({ a: 1 }, { b: 1 }), false)
+  assert.equal(sameValue([1], { 0: 1 }), false)
+  assert.equal(sameValue(new Date(0), new Date(0)), false)
+  const deep = (n: number): unknown => (n === 0 ? 1 : { x: deep(n - 1) })
+  assert.equal(sameValue(deep(3), deep(3)), true)
+  assert.equal(sameValue(deep(10), deep(10)), false)
 })

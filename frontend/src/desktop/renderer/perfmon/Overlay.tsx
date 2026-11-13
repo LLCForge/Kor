@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { perfmonApi } from './api.ts'
 import { snapshot, type IpcSnapshot } from './stats.ts'
 import { isToggle } from './util.ts'
+import { RERENDER_TRACKING, rerenderTotal } from './rerenders.ts'
 import type { PerfmonApi } from '../../ipc-perfmon.ts'
 import './perfmon.css'
 
@@ -18,6 +19,8 @@ interface View {
   ipc: IpcSnapshot
   stats: Stats | null
   jsHeapMb: number | null
+  /** §32.2 gereksiz yeniden çizimler (yalnız geliştirici build'i). */
+  rerenders: number
 }
 
 /** Chromium'un standart dışı yığın bilgisi (WebView2); diğer motorlarda yok. */
@@ -74,7 +77,7 @@ function Body({ onClose }: { onClose: () => void }) {
     const publish = () => {
       const now = performance.now()
       const secs = (now - windowStart) / 1000
-      setView({ fps: secs > 0 ? frames / secs : 0, worstFrame: worst, ipc: snapshot(now), stats, jsHeapMb: jsHeapMb() })
+      setView({ fps: secs > 0 ? frames / secs : 0, worstFrame: worst, ipc: snapshot(now), stats, jsHeapMb: jsHeapMb(), rerenders: rerenderTotal() })
       frames = 0
       worst = 0
       windowStart = now
@@ -121,6 +124,14 @@ function Body({ onClose }: { onClose: () => void }) {
         <dd>{fmt(s?.rssMb, 0)} MB</dd>
         <dt>JS yığını</dt>
         <dd>{fmt(view?.jsHeapMb, 0)} MB</dd>
+        {RERENDER_TRACKING && (
+          <>
+            <dt>Gereksiz render</dt>
+            <dd className={view && view.rerenders > 0 ? 'kpm-bad' : undefined} data-kor-cmd="perfmon.rerenders">
+              {view ? view.rerenders : '–'}
+            </dd>
+          </>
+        )}
         <dt>İşçi / görev</dt>
         <dd>
           {s?.workers ?? '–'} / {s?.tasks ?? '–'}

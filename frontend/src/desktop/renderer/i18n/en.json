@@ -4899,6 +4899,7 @@
   "Son çağrı": "Last call",
   "Olay / sn": "Events / s",
   "JS yığını": "JS heap",
+  "Gereksiz render": "Unnecessary re-renders",
   "İşçi / görev": "Workers / tasks",
   "En yavaş nedenler": "Slowest causes",
   "Daha eski mesajları göster": "Show older messages",
